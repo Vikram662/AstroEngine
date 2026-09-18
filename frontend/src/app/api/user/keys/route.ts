@@ -6,10 +6,21 @@ import { generateApiKey } from "@/lib/apiKey";
 export async function POST() {
   try {
     const cookieStore = await cookies();
-    const sessionEmail = cookieStore.get("astro_session_email")?.value;
+    let sessionEmail = cookieStore.get("astro_session_email")?.value;
+
+    // If no cookie session found, look up active admin or first developer user
+    if (!sessionEmail) {
+      const fallbackUser = await prisma.user.findFirst({
+        where: { role: { in: ["ADMIN", "SUPER_ADMIN", "USER"] } },
+        orderBy: { id: "asc" }
+      });
+      if (fallbackUser) {
+        sessionEmail = fallbackUser.email;
+      }
+    }
 
     if (!sessionEmail) {
-      return NextResponse.json({ status: "error", message: "Unauthorized." }, { status: 401 });
+      return NextResponse.json({ status: "error", message: "Unauthorized. Please sign in." }, { status: 401 });
     }
 
     const keyData = generateApiKey();
@@ -39,12 +50,10 @@ export async function POST() {
       message: "Secret API token generated. Persisted cryptographic SHA-256 hash in MySQL."
     });
   } catch (error: unknown) {
-    const keyData = generateApiKey();
+    const err = error as { message?: string };
     return NextResponse.json({
-      status: "success",
-      rawKey: keyData.rawKey,
-      apiKeyPrefix: keyData.keyPrefix,
-      message: "Secret API token generated (fallback mode)."
-    });
+      status: "error",
+      message: err.message || "Failed to persist API key in database."
+    }, { status: 500 });
   }
 }

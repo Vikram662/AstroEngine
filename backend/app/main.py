@@ -251,10 +251,10 @@ Every API response automatically returns live subscription balance metadata in b
 
 #### Response JSON `quota` Object:
 ```json
-{
+{{
   "status": "success",
   "language": "en",
-  "quota": {
+  "quota": {{
     "plan": "STARTER",
     "plan_name": "Starter Plan",
     "plan_price_monthly": 4999.0,
@@ -263,9 +263,9 @@ Every API response automatically returns live subscription balance metadata in b
     "remaining_quota": 34858,
     "deduction_type": "QUOTA",
     "wallet_balance": 150.00
-  },
-  "data": { ... }
-}
+  }},
+  "data": {{ ... }}
+}}
 ```
 
 | Field | Type | Description |

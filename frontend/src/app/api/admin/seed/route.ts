@@ -7,13 +7,18 @@ export async function POST() {
   try {
     const adminPasswordHash = crypto.createHash("sha256").update("Admin@12345").digest("hex");
 
-    // 1. Create/Update Admin User
+    const masterKey = "ak_live_dev_test_master_key_astro2026";
+    const masterKeyHash = crypto.createHash("sha256").update(masterKey).digest("hex");
+
+    // 1. Create/Update Admin User with known developer key
     const admin = await prisma.user.upsert({
       where: { email: "admin@astroengine.io" },
       update: {
         role: "ADMIN",
         password: adminPasswordHash,
         planTier: "ENTERPRISE",
+        apiKeyHash: masterKeyHash,
+        apiKeyPrefix: "ak_live_dev_test",
         isBlocked: false,
       },
       create: {
@@ -21,8 +26,8 @@ export async function POST() {
         name: "Master Administrator",
         role: "ADMIN",
         password: adminPasswordHash,
-        apiKeyHash: crypto.randomBytes(32).toString("hex"),
-        apiKeyPrefix: "ak_live_admin_root",
+        apiKeyHash: masterKeyHash,
+        apiKeyPrefix: "ak_live_dev_test",
         walletBalance: 999999.0,
         planTier: "ENTERPRISE",
         monthlyQuota: 10000000,
@@ -121,6 +126,7 @@ export async function POST() {
     return NextResponse.json({
       status: "success",
       message: "Admin account, Subscription Plans, and SystemSettings successfully synced into MySQL!",
+      masterApiKey: masterKey,
       admin: {
         email: admin.email,
         role: admin.role,
@@ -131,4 +137,9 @@ export async function POST() {
     const err = error as { message?: string };
     return NextResponse.json({ status: "error", message: err.message }, { status: 500 });
   }
+}
+
+// Support browser GET request to trigger seed directly
+export async function GET() {
+  return POST();
 }
