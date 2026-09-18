@@ -1,0 +1,151 @@
+{
+  "info": {
+    "name": "AstroEngine B2B API Suite",
+    "_postman_id": "7f8b9e1a-4c2d-4e9f-8a1b-3c5d7e9f0a2b",
+    "description": "High-Performance B2B Vedic + Western Astrology Engine (117+ Endpoints) powered by pyswisseph C-bindings.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8000",
+      "type": "string"
+    },
+    {
+      "key": "apiKey",
+      "value": "ak_live_your_api_token",
+      "type": "string"
+    }
+  ],
+  "auth": {
+    "type": "apikey",
+    "apikey": [
+      { "key": "key", "value": "x-api-key", "type": "string" },
+      { "key": "value", "value": "{{apiKey}}", "type": "string" },
+      { "key": "in", "value": "header", "type": "string" }
+    ]
+  },
+  "item": [
+    {
+      "name": "Core Astronomy & Geolocation",
+      "item": [
+        {
+          "name": "Planetary Positions",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dob\": \"1995-10-05\",\n  \"tob\": \"14:30\",\n  \"lat\": 28.6139,\n  \"lon\": 77.2090,\n  \"tz\": 5.5,\n  \"lang\": \"en\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/v1/core/planets/positions", "host": ["{{baseUrl}}"], "path": ["api", "v1", "core", "planets", "positions"] }
+          }
+        },
+        {
+          "name": "House Cusps",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dob\": \"1995-10-05\",\n  \"tob\": \"14:30\",\n  \"lat\": 28.6139,\n  \"lon\": 77.2090,\n  \"tz\": 5.5,\n  \"lang\": \"en\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/v1/core/houses/cusps", "host": ["{{baseUrl}}"], "path": ["api", "v1", "core", "houses", "cusps"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Panchang & Muhurat",
+      "item": [
+        {
+          "name": "Daily Panchang",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dob\": \"2026-09-18\",\n  \"tob\": \"06:00\",\n  \"lat\": 28.6139,\n  \"lon\": 77.2090,\n  \"tz\": 5.5,\n  \"lang\": \"hi\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/v1/panchang/daily", "host": ["{{baseUrl}}"], "path": ["api", "v1", "panchang", "daily"] }
+          }
+        },
+        {
+          "name": "Advanced Muhurats (Rahu Kaal, Choghadiya)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dob\": \"2026-09-18\",\n  \"tob\": \"06:00\",\n  \"lat\": 28.6139,\n  \"lon\": 77.2090,\n  \"tz\": 5.5,\n  \"lang\": \"hi\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/v1/panchang/advanced", "host": ["{{baseUrl}}"], "path": ["api", "v1", "panchang", "advanced"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Parashari Kundli",
+      "item": [
+        {
+          "name": "Lagna Kundli D1",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dob\": \"1995-10-05\",\n  \"tob\": \"14:30\",\n  \"lat\": 28.6139,\n  \"lon\": 77.2090,\n  \"tz\": 5.5,\n  \"lang\": \"en\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/v1/parashari/chart/d1", "host": ["{{baseUrl}}"], "path": ["api", "v1", "parashari", "chart", "d1"] }
+          }
+        },
+        {
+          "name": "Navamsha Chart D9",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dob\": \"1995-10-05\",\n  \"tob\": \"14:30\",\n  \"lat\": 28.6139,\n  \"lon\": 77.2090,\n  \"tz\": 5.5,\n  \"lang\": \"en\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/v1/parashari/chart/d9", "host": ["{{baseUrl}}"], "path": ["api", "v1", "parashari", "chart", "d9"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dasha Engine",
+      "item": [
+        {
+          "name": "Current Running Dasha (MD > AD > PD)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dob\": \"1995-10-05\",\n  \"tob\": \"14:30\",\n  \"lat\": 24.5854,\n  \"lon\": 73.7125,\n  \"tz\": 5.5,\n  \"lang\": \"en\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/v1/dasha/vimshottari/current", "host": ["{{baseUrl}}"], "path": ["api", "v1", "dasha", "vimshottari", "current"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Matchmaking 36-Guna",
+      "item": [
+        {
+          "name": "Ashtakoota 36-Guna Milan",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"boy\": { \"dob\": \"1994-08-12\", \"tob\": \"10:15\", \"lat\": 28.6139, \"lon\": 77.2090, \"tz\": 5.5 },\n  \"girl\": { \"dob\": \"1996-03-24\", \"tob\": \"18:45\", \"lat\": 19.0760, \"lon\": 72.8777, \"tz\": 5.5 },\n  \"lang\": \"en\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/v1/matchmaking/ashtakoota", "host": ["{{baseUrl}}"], "path": ["api", "v1", "matchmaking", "ashtakoota"] }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,319 @@
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  USER
+  SUPPORT_ADMIN
+  BILLING_ADMIN
+  AUDITOR
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum TeamMemberRole {
+  VIEWER
+  OPERATOR
+}
+
+enum TransactionStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+enum PlanTier {
+  STARTER
+  PRO
+  ENTERPRISE
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+}
+
+enum PdfJobStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+model User {
+  id                    String    @id @default(uuid())
+  clerkId               String?   @unique
+  email                 String    @unique
+  emailVerified         Boolean   @default(false)
+  password              String?   // Password hash for auth
+  name                  String?
+  role                  Role      @default(USER)
+
+  // Onboarding & analytics (§8.2.0)
+  signupSource          String?   // 'pricing_page' | 'landing_page' | 'playground' | 'team_invite'
+  signupIp              String?
+  onboardingCompletedAt DateTime?
+
+  // API Keys (§12.1 & §8.2.2)
+  apiKeyHash            String    @unique
+  apiKeyPrefix          String    // e.g. "ak_live_a1b2"
+  apiKeyCreatedAt       DateTime  @default(now())
+  apiKeyLastUsedAt      DateTime?
+  allowedIps            Json?     // ["203.0.113.4"]
+
+  // Sandbox mode key (§8.2.2)
+  apiKeyTestHash        String?   @unique
+  apiKeyTestPrefix      String?
+
+  walletBalance         Float     @default(100.00) // ₹100 free test credits
+  planTier              PlanTier  @default(STARTER)
+  monthlyQuota          Int       @default(35000)
+  monthlyUsage          Int       @default(0)
+  overageAllowed        Boolean   @default(true)
+  rateLimitPerMin       Int       @default(60)
+  isBlocked             Boolean   @default(false)
+  brandingConfig        Json?     // { logoUrl, brandName, website, primaryColor, contactPhone }
+  piiRetentionDays      Int       @default(365)
+
+  // Auto-recharge (§8.2.6)
+  autoRechargeEnabled   Boolean   @default(false)
+  autoRechargeThreshold Float?
+  autoRechargeAmount    Float?
+
+  accountWebhookUrl     String?   // §8.2.7 account-level events webhook
+  accountWebhookSecret  String?   // HMAC signing secret for webhook payloads
+  notificationPrefs     Json?     // { emailLowBalance, emailQuotaWarning, emailSpikeAlert, emailPdfReady }
+
+  transactions          Transaction[]
+  apiLogs               ApiRequestLog[]
+  pdfJobs               PdfGenerationJob[]
+  teamMembers           TeamMember[]       // §8.2.8 Enterprise sub-users
+  subscription          Subscription?      // §8.2.6 Monthly recurring plan
+  securityEvents        SecurityEventLog[] // §8.3.11
+  supportTickets        SupportTicket[]
+
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+}
+
+// §8.2.8 — Enterprise-tier sub-users under master account
+model TeamMember {
+  id           String         @id @default(uuid())
+  ownerId      String
+  owner        User           @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  email        String
+  role         TeamMemberRole @default(VIEWER)
+  apiKeyHash   String?        @unique
+  apiKeyPrefix String?
+  invitedAt    DateTime       @default(now())
+  acceptedAt   DateTime?
+
+  @@unique([ownerId, email])
+}
+
+model ApiRequestLog {
+  id             BigInt   @id @default(autoincrement())
+  userId         String
+  endpoint       String
+  module         String
+  creditsCost    Float
+  ipAddress      String?
+  responseTime   Int                                // milliseconds
+  statusCode     Int
+  idempotencyKey String?                            // §12.6 — dedupes retried requests
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt      DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([idempotencyKey])
+}
+
+model PdfGenerationJob {
+  id             String       @id @default(uuid())
+  userId         String
+  reportType     String                            // 'brihat_kundli', 'matchmaking', etc.
+  language       String       @default("hi")
+  status         PdfJobStatus @default(PENDING)
+  fileUrl        String?                           // Cloudflare R2 pre-signed URL
+  creditsCost    Float
+  idempotencyKey String?      @unique               // §12.6 — one job per key
+  webhookUrl     String?                            // §12.13 — optional client callback
+  failureReason  String?                            // set on FAILED
+  refunded       Boolean      @default(false)       // true once creditsCost auto-refunded on FAILED
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now())
+
+  @@index([userId, status])
+}
+
+model Transaction {
+  id               String            @id @default(uuid())
+  userId           String
+  amount           Float
+  creditsAdded     Float
+  paymentGateway   String                          // 'RAZORPAY', 'STRIPE'
+  gatewayOrderId   String?
+  gatewayPaymentId String?
+  webhookVerified  Boolean           @default(false) // §12.2 — must be true before credits are added
+  status           TransactionStatus @default(PENDING)
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt        DateTime          @default(now())
+
+  @@index([userId, status])
+}
+
+// §8.2.6 — Recurring monthly plan (Razorpay Subscriptions)
+model Subscription {
+  id                String             @id @default(uuid())
+  userId            String             @unique
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  planTier          PlanTier
+  gatewaySubId      String?            @unique
+  status            SubscriptionStatus @default(ACTIVE)
+  currentPeriodEnd  DateTime
+  gracePeriodEndsAt DateTime?
+  isComped          Boolean            @default(false)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  @@index([status, currentPeriodEnd])
+}
+
+// §12.5 — Admin audit trail
+model AuditLog {
+  id          String   @id @default(uuid())
+  actorUserId String                                // admin performing action
+  actorRole   Role     @default(ADMIN)
+  action      String                                // 'USER_BLOCKED', 'CREDIT_ADD', 'TIER_CHANGE'
+  targetType  String?                               // 'User', 'Transaction', 'PdfGenerationJob'
+  targetId    String?
+  metadata    Json?                                 // old vs new state
+  createdAt   DateTime @default(now())
+
+  @@index([actorUserId, createdAt])
+}
+
+// §8.3.11 — External/security-facing events
+model SecurityEventLog {
+  id        String   @id @default(uuid())
+  eventType String   // 'AUTH_FAILED', 'WEBHOOK_SIGNATURE_INVALID', 'IP_BLOCKED', 'SSRF_BLOCKED', 'RATE_LIMIT_BANNED'
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ipAddress String?
+  detail    Json?
+  createdAt DateTime @default(now())
+
+  @@index([eventType, createdAt])
+  @@index([userId, createdAt])
+}
+
+model AstrologicalPrediction {
+  id          Int      @id @default(autoincrement())
+  ruleKey     String                                // e.g. "SUN_HOUSE_10", "TITHI_SHUKLA_1"
+  lang        String   @default("en")               // 'en', 'hi', 'gu', 'mr', 'ta', 'te'
+  category    String                                // 'PLANET_IN_HOUSE', 'YOGA', 'TRANSIT'
+  title       String
+  description String   @db.Text
+  remedy      String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([ruleKey, lang])
+  @@index([ruleKey, lang])
+}
+
+model SubscriptionPlan {
+  id              String   @id @default(uuid())
+  tier            PlanTier @unique
+  name            String
+  priceMonthly    Float
+  includedQuota   Int
+  rateLimitPerMin Int
+  overageCost     Float
+  features        Json     // List of features [ "All 117 Endpoints", ... ]
+  isPopular       Boolean  @default(false)
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model WalletRechargeTier {
+  id           String   @id @default(uuid())
+  amount       Float    @unique
+  credits      Float
+  bonusPercent Int      @default(0)
+  label        String
+  isPopular    Boolean  @default(false)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+// Support & Ticket System
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum TicketCategory {
+  API_INTEGRATION
+  BILLING_PAYMENTS
+  ACCURACY_CALCULATION
+  FEATURE_REQUEST
+  OTHER
+}
+
+model SupportTicket {
+  id           String          @id @default(uuid())
+  ticketNumber String          @unique // e.g. "TCK-1001"
+  userId       String
+  user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject      String
+  category     TicketCategory  @default(API_INTEGRATION)
+  priority     TicketPriority  @default(MEDIUM)
+  status       TicketStatus    @default(OPEN)
+  messages     TicketMessage[]
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  @@index([userId, status])
+  @@index([status, priority])
+}
+
+model TicketMessage {
+  id         String        @id @default(uuid())
+  ticketId   String
+  ticket     SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  senderRole Role          @default(USER) // USER or ADMIN
+  senderName String?
+  message    String        @db.Text
+  createdAt  DateTime      @default(now())
+
+  @@index([ticketId, createdAt])
+}
+
+// Global System Configuration & Dynamic Settings
+model SystemSetting {
+  id          String   @id @default(uuid())
+  key         String   @unique // e.g. "DEFAULT_FREE_CREDITS", "MAINTENANCE_MODE", "DEFAULT_STARTER_RPM"
+  value       String   @db.Text // JSON string or raw value
+  category    String   @default("GENERAL") // 'GENERAL', 'BILLING', 'LIMITS', 'MAINTENANCE'
+  description String?
+  updatedAt   DateTime @updatedAt
+}
+
