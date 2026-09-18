@@ -83,12 +83,15 @@ def get_dynamic_plans_markdown() -> str:
     Fetch active subscription plans dynamically from Next.js /api/plans (MySQL database)
     and format them into a markdown table for ReDoc / OpenAPI documentation.
     """
-    import httpx
+    import urllib.request
+    import json
     try:
         base_url = (settings.NEXT_APP_URL or "http://localhost:3000").rstrip("/")
-        resp = httpx.get(f"{base_url}/api/plans", timeout=2.5)
-        if resp.status_code == 200:
-            plans_data = resp.json().get("data", [])
+        req = urllib.request.Request(f"{base_url}/api/plans")
+        with urllib.request.urlopen(req, timeout=2.5) as resp:
+            if resp.status == 200:
+                payload = json.loads(resp.read().decode("utf-8"))
+                plans_data = payload.get("data", [])
             if plans_data:
                 rows = []
                 for p in plans_data:
@@ -239,6 +242,49 @@ AstroEngine enforces sliding-window rate limiting per API key and a dual-tier co
 2. **Seamless Wallet Credit Fallback:** Once your monthly included quota reaches `0`, calls transition automatically into **Overage Mode**. Calls are charged against your prepaid wallet balance at the plan's overage rate (e.g. ₹0.02/call for Starter, ₹0.015/call for Pro, ₹0.01/call for Enterprise) without interrupting your live production traffic.
 3. **Double Exhaustion & Grace Handling:** When both the monthly quota **and** wallet balance are depleted, the gateway rejects subsequent calls with **`HTTP 403 Forbidden` (`QUOTA_AND_CREDITS_EXHAUSTED`)** and provides a direct recharge URL (`/billing`) with real-time balance metrics.
 4. **Rate Limit Throttling (`429 Too Many Requests`):** If bursts exceed the plan's RPM threshold (e.g., 60 RPM on Starter, 300 RPM on Pro, 1,200 RPM on Enterprise), the engine returns HTTP 429 with a `Retry-After: <seconds>` header.
+
+---
+
+### Real-Time Live Quota & Consumption Telemetry
+
+Every API response automatically returns live subscription balance metadata in both the **JSON body** and **HTTP response headers**:
+
+#### Response JSON `quota` Object:
+```json
+{
+  "status": "success",
+  "language": "en",
+  "quota": {
+    "plan": "STARTER",
+    "plan_name": "Starter Plan",
+    "plan_price_monthly": 4999.0,
+    "monthly_quota": 35000,
+    "monthly_usage": 142,
+    "remaining_quota": 34858,
+    "deduction_type": "QUOTA",
+    "wallet_balance": 150.00
+  },
+  "data": { ... }
+}
+```
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `plan` | string | Subscription plan tier code (`STARTER`, `PRO`, `ENTERPRISE`) |
+| `plan_name` | string | Live plan display title configured in database |
+| `plan_price_monthly` | number | Active monthly subscription fee in INR |
+| `monthly_quota` | integer | Total calls included for current monthly billing cycle |
+| `monthly_usage` | integer | Calls consumed so far this month |
+| `remaining_quota` | integer | Remaining free plan calls before overage applies |
+| `deduction_type` | string | `QUOTA` (plan quota used) or `WALLET_CREDIT` (prepaid overage) |
+| `wallet_balance` | number | Available prepaid wallet balance in INR |
+
+#### Live HTTP Response Headers:
+* `x-plan-tier`: Active plan code
+* `x-quota-monthly`: Included monthly limit
+* `x-quota-remaining`: Remaining monthly balance
+* `x-quota-deduction-type`: Quota or Wallet deduction source
+* `x-wallet-balance`: Real-time prepaid INR balance
 
 ---
 
@@ -463,6 +509,8 @@ def custom_openapi():
         "language": "en",
         "quota": {
             "plan": "STARTER",
+            "plan_name": "Starter Plan",
+            "plan_price_monthly": 4999.0,
             "monthly_quota": 35000,
             "monthly_usage": 142,
             "remaining_quota": 34858,

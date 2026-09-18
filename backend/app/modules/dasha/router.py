@@ -1,8 +1,7 @@
-import swisseph as swe
 from fastapi import APIRouter, Depends
 from app.schemas.common import BirthDataRequest, StandardResponse
 from app.core.security import verify_api_key
-from app.core.swisseph import calculate_julian_day
+from app.core.swisseph import calculate_moon_longitude
 from app.modules.dasha.calculator import (
     calculate_vimshottari_mahadasha,
     calculate_antardashas,
@@ -16,11 +15,8 @@ router = APIRouter(prefix="/api/v1/dasha", tags=["Dasha Systems"])
 
 def get_moon_longitude(dob: str, tob: str, tz: float) -> float:
     """Calculate Moon sidereal longitude for Dasha calculation."""
-    jd_ut = calculate_julian_day(dob, tob, tz)
-    swe.set_sid_mode(swe.SIDM_LAHIRI, 0, 0)
-    flags = swe.FLG_SWIEPH | swe.FLG_SPEED | swe.FLG_SIDEREAL
-    moon_res, _ = swe.calc_ut(jd_ut, swe.MOON, flags)
-    return moon_res[0]
+    return calculate_moon_longitude(dob, tob, tz)
+
 
 @router.post("/vimshottari/mahadasha", response_model=StandardResponse)
 async def get_mahadashas(

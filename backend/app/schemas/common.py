@@ -103,7 +103,9 @@ class BirthDataRequest(BaseModel):
     lang: Optional[str] = Field("en", description="Localization output language: en, hi, gu, mr, ta, te", example="en")
 
 class QuotaInfo(BaseModel):
-    plan: str = Field(..., description="Active subscription plan tier (STARTER, PRO, ENTERPRISE)", example="STARTER")
+    plan: str = Field(..., description="Active subscription plan tier code (STARTER, PRO, ENTERPRISE)", example="STARTER")
+    plan_name: Optional[str] = Field(None, description="Human-readable dynamic plan name configured in Database", example="Starter Plan")
+    plan_price_monthly: Optional[float] = Field(None, description="Monthly subscription price in INR from Database", example=4999.0)
     monthly_quota: int = Field(..., description="Total included calls in the monthly plan", example=35000)
     monthly_usage: int = Field(..., description="Calls consumed in current billing month", example=1240)
     remaining_quota: int = Field(..., description="Calls remaining before wallet overage applies", example=33760)
@@ -118,6 +120,8 @@ class StandardResponse(BaseModel):
                 "language": "en",
                 "quota": {
                     "plan": "STARTER",
+                    "plan_name": "Starter Plan",
+                    "plan_price_monthly": 4999.0,
                     "monthly_quota": 35000,
                     "monthly_usage": 1240,
                     "remaining_quota": 33760,

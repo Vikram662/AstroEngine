@@ -148,3 +148,12 @@ def get_zodiac_sign_info(longitude: float) -> Dict[str, Any]:
         "degree": round(degree_in_sign, 4),
         "ruler": sign_meta["ruler"]
     }
+
+def calculate_moon_longitude(dob: str, tob: str, tz: float) -> float:
+    """Calculate Moon sidereal Lahiri longitude for Dasha calculations."""
+    jd_ut = calculate_julian_day(dob, tob, tz)
+    swe.set_sid_mode(swe.SIDM_LAHIRI, 0, 0)
+    flags = swe.FLG_SWIEPH | swe.FLG_SPEED | swe.FLG_SIDEREAL
+    moon_res, _ = swe.calc_ut(jd_ut, swe.MOON, flags)
+    return float(moon_res[0])
+
