@@ -54,11 +54,13 @@ async def verify_api_key(
         "x-internal-secret": settings.INTERNAL_SECRET_KEY,
         "Content-Type": "application/json"
     }
+    cleaned_api_key = x_api_key.strip().strip('"').strip("'")
     payload = {
-        "apiKey": x_api_key.strip(),
+        "apiKey": cleaned_api_key,
         "endpoint": endpoint,
         "module": module_name
     }
+    print(f"[SECURITY] Checking API Key: {cleaned_api_key[:16]}... len={len(cleaned_api_key)}")
 
     try:
         async with httpx.AsyncClient(timeout=4.0) as client:
