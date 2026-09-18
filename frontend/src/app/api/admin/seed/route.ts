@@ -3,14 +3,21 @@ import { prisma } from "@/lib/prisma";
 import { hashNewPassword } from "@/app/api/auth/session/route";
 import crypto from "crypto";
 
-const INTERNAL_SECRET = process.env.ASTRO_INTERNAL_SECRET || "c9f82d1a6e3b5c7f8a9e0d1b2";
+function getInternalSecret(): string {
+  const secret = process.env.ASTRO_INTERNAL_SECRET;
+  if (!secret) {
+    throw new Error("CRITICAL SECURITY ERROR: ASTRO_INTERNAL_SECRET must be configured in environment.");
+  }
+  return secret;
+}
 
 // POST /api/admin/seed - Strictly authenticated seed endpoint
 export async function POST(req: NextRequest) {
   try {
     // 1. Strict Server-Side Super-Admin / Internal Secret Verification
+    const internalSecret = getInternalSecret();
     const authHeader = req.headers.get("x-internal-secret");
-    if (authHeader !== INTERNAL_SECRET) {
+    if (!authHeader || authHeader !== internalSecret) {
       return NextResponse.json(
         { status: "error", message: "Forbidden: Invalid authorization handshake secret." },
         { status: 403 }

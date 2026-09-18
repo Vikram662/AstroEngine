@@ -2,13 +2,20 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
 
-const INTERNAL_SECRET = process.env.ASTRO_INTERNAL_SECRET || "c9f82d1a6e3b5c7f8a9e0d1b2";
+function getInternalSecret(): string {
+  const secret = process.env.ASTRO_INTERNAL_SECRET;
+  if (!secret) {
+    throw new Error("CRITICAL SECURITY ERROR: ASTRO_INTERNAL_SECRET must be configured in environment.");
+  }
+  return secret;
+}
 
 // POST /api/internal/verify-key - Fast verification & quota/wallet debit for Python FastAPI engine
 export async function POST(req: NextRequest) {
   try {
+    const internalSecret = getInternalSecret();
     const authHeader = req.headers.get("x-internal-secret");
-    if (authHeader !== INTERNAL_SECRET) {
+    if (!authHeader || authHeader !== internalSecret) {
       return NextResponse.json(
         { status: "error", message: "Forbidden internal handshake" },
         { status: 403 }

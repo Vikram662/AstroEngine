@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getVerifiedSession } from "@/lib/authGuard";
+import { Prisma } from "@prisma/client";
 
 export interface AddonItem {
   id: string;
@@ -126,7 +127,7 @@ export async function POST(req: NextRequest) {
         // Prevent replay attacks
         if (gatewayPaymentId) {
           const existingTx = await prisma.transaction.findFirst({
-            where: { gatewayPaymentId }
+            where: { gatewayPaymentId, status: "SUCCESS" }
           });
           if (existingTx) {
             return NextResponse.json({
@@ -136,17 +137,72 @@ export async function POST(req: NextRequest) {
           }
         }
 
-        await prisma.transaction.create({
-          data: {
+        // Verify server-side pending order to bind exact amount and prevent tampering
+        const pendingOrder = await prisma.transaction.findFirst({
+          where: {
+            gatewayOrderId,
             userId: user.id,
-            amount: addon.priceMonthly,
-            creditsAdded: 0,
-            paymentGateway: "RAZORPAY",
-            gatewayPaymentId: gatewayPaymentId || `pay_addon_${Date.now()}`,
-            gatewayOrderId: gatewayOrderId,
-            webhookVerified: true,
-            status: "SUCCESS"
+            status: "PENDING"
           }
+        });
+
+        if (!pendingOrder) {
+          return NextResponse.json({
+            status: "error",
+            message: "No pending payment order found matching this order ID for your account."
+          }, { status: 400 });
+        }
+
+        if (pendingOrder.amount < addon.priceMonthly) {
+          return NextResponse.json({
+            status: "error",
+            message: `Order amount (₹${pendingOrder.amount}) does not match addon price (₹${addon.priceMonthly}).`
+          }, { status: 400 });
+        }
+
+        // ATOMIC RACE-CONDITION SAFE SETTLEMENT:
+        try {
+          await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+            const updateResult = await tx.transaction.updateMany({
+              where: {
+                id: pendingOrder.id,
+                status: "PENDING"
+              },
+              data: {
+                gatewayPaymentId: gatewayPaymentId || `pay_addon_${Date.now()}`,
+                webhookVerified: true,
+                status: "SUCCESS"
+              }
+            });
+
+            if (updateResult.count !== 1) {
+              throw new Error("ORDER_ALREADY_SETTLED");
+            }
+
+            activeAddons.push(addonId);
+            await tx.user.update({
+              where: { id: user.id },
+              data: {
+                activeAddons: activeAddons,
+                walletBalance: newBalance
+              }
+            });
+          });
+        } catch (txErr: any) {
+          if (txErr?.message === "ORDER_ALREADY_SETTLED") {
+            return NextResponse.json({
+              status: "error",
+              message: "Payment order has already been processed or settled concurrently."
+            }, { status: 409 });
+          }
+          throw txErr;
+        }
+
+        return NextResponse.json({
+          status: "success",
+          message: `Successfully activated ${addon.name} Add-on via Razorpay Gateway!`,
+          activeAddons,
+          walletBalance: user.walletBalance
         });
       }
       // OPTION 2: Pay from Wallet
@@ -163,36 +219,41 @@ export async function POST(req: NextRequest) {
 
         if (user.planTier !== "ENTERPRISE") {
           newBalance = Math.max(0, user.walletBalance - addon.priceMonthly);
-          await prisma.transaction.create({
+        }
+
+        activeAddons.push(addonId);
+
+        const updatedUser = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+          if (user.planTier !== "ENTERPRISE") {
+            await tx.transaction.create({
+              data: {
+                userId: user.id,
+                amount: -addon.priceMonthly,
+                creditsAdded: -addon.priceMonthly,
+                paymentGateway: "WALLET_INTERNAL",
+                gatewayPaymentId: `addon_${addonId}_${Date.now()}`,
+                webhookVerified: true,
+                status: "SUCCESS"
+              }
+            });
+          }
+
+          return await tx.user.update({
+            where: { id: user.id },
             data: {
-              userId: user.id,
-              amount: -addon.priceMonthly,
-              creditsAdded: -addon.priceMonthly,
-              paymentGateway: "WALLET_INTERNAL",
-              gatewayPaymentId: `addon_${addonId}_${Date.now()}`,
-              webhookVerified: true,
-              status: "SUCCESS"
+              activeAddons: activeAddons,
+              walletBalance: newBalance
             }
           });
-        }
+        });
+
+        return NextResponse.json({
+          status: "success",
+          message: `Successfully activated ${addon.name} Add-on via Wallet Balance!`,
+          activeAddons,
+          walletBalance: updatedUser.walletBalance
+        });
       }
-
-      activeAddons.push(addonId);
-
-      const updatedUser = await prisma.user.update({
-        where: { id: user.id },
-        data: {
-          activeAddons: activeAddons,
-          walletBalance: newBalance
-        }
-      });
-
-      return NextResponse.json({
-        status: "success",
-        message: `Successfully activated ${addon.name} Add-on via ${paymentMethod === "GATEWAY" ? "Razorpay Gateway" : "Wallet Balance"}!`,
-        activeAddons,
-        walletBalance: updatedUser.walletBalance
-      });
 
     } else if (action === "deactivate") {
       activeAddons = activeAddons.filter((id) => id !== addonId);

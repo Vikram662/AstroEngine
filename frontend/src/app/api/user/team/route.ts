@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getVerifiedSession } from "@/lib/authGuard";
-import crypto from "crypto";
 
 export async function GET() {
   try {
@@ -57,11 +56,10 @@ export async function POST(req: NextRequest) {
 
     const newMember = await prisma.teamMember.create({
       data: {
-        userId: user.id,
+        ownerId: user.id,
         email,
-        role: role || "DEVELOPER",
-        status: "INVITED",
-        inviteToken: crypto.randomBytes(16).toString("hex")
+        role: role === "OPERATOR" ? "OPERATOR" : "VIEWER",
+        invitedAt: new Date()
       }
     });
 
@@ -100,7 +98,7 @@ export async function DELETE(req: NextRequest) {
 
     // Ensure member belongs to this authenticated user
     const existing = await prisma.teamMember.findFirst({
-      where: { id, userId: user.id }
+      where: { id, ownerId: user.id }
     });
 
     if (!existing) {

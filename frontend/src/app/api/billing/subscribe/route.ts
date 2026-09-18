@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getVerifiedSession } from "@/lib/authGuard";
+import { Prisma } from "@prisma/client";
 import crypto from "crypto";
 
 export async function POST(req: NextRequest) {
@@ -210,63 +211,112 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      const verifiedOrderId = gatewayOrderId || `order_sub_${crypto.randomBytes(6).toString("hex")}`;
-      const verifiedPaymentId = gatewayPaymentId || `pay_sub_${crypto.randomBytes(6).toString("hex")}`;
+      // Verify server-side pending order to bind exact amount and prevent tampering
+      if (!gatewayOrderId) {
+        return NextResponse.json({
+          status: "error",
+          message: "gatewayOrderId is required for gateway subscription upgrade."
+        }, { status: 400 });
+      }
 
-      // Update user plan tier & quota
-      await prisma.user.update({
-        where: { email: sessionEmail },
-        data: {
-          planTier: plan.tier,
-          monthlyQuota: plan.includedQuota,
-          rateLimitPerMin: plan.rateLimitPerMin,
+      const pendingOrder = await prisma.transaction.findFirst({
+        where: {
+          gatewayOrderId,
+          userId: user.id,
+          status: "PENDING"
         }
       });
 
+      if (!pendingOrder) {
+        return NextResponse.json({
+          status: "error",
+          message: "No pending payment order found matching this order ID for your account."
+        }, { status: 400 });
+      }
+
+      if (pendingOrder.amount < netPayablePrice) {
+        return NextResponse.json({
+          status: "error",
+          message: `Order amount (₹${pendingOrder.amount}) does not match net payable price (₹${netPayablePrice}).`
+        }, { status: 400 });
+      }
+
+      const verifiedPaymentId = gatewayPaymentId || `pay_sub_${crypto.randomBytes(6).toString("hex")}`;
       const nextRenewal = new Date();
       nextRenewal.setDate(nextRenewal.getDate() + 30);
 
-      const sub = await prisma.subscription.upsert({
-        where: { userId: user.id },
-        update: {
-          planTier: plan.tier,
-          status: "ACTIVE",
-          currentPeriodEnd: nextRenewal,
-        },
-        create: {
-          userId: user.id,
-          planTier: plan.tier,
-          gatewaySubId: `sub_rzp_${crypto.randomBytes(6).toString("hex")}`,
-          status: "ACTIVE",
-          currentPeriodEnd: nextRenewal,
-        }
-      });
+      // Interactive transaction rolls back automatically if count !== 1, preventing double activation/upgrades
+      let subResult;
+      try {
+        subResult = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+          const updateResult = await tx.transaction.updateMany({
+            where: {
+              id: pendingOrder.id,
+              status: "PENDING"
+            },
+            data: {
+              gatewayPaymentId: verifiedPaymentId,
+              webhookVerified: true,
+              status: "SUCCESS"
+            }
+          });
 
-      // Verified gateway settled transaction
-      const tx = await prisma.transaction.create({
-        data: {
-          userId: user.id,
-          amount: netPayablePrice,
-          creditsAdded: 0,
-          paymentGateway: "RAZORPAY",
-          gatewayOrderId: verifiedOrderId,
-          gatewayPaymentId: verifiedPaymentId,
-          webhookVerified: true,
-          status: "SUCCESS"
+          if (updateResult.count !== 1) {
+            throw new Error("ORDER_ALREADY_SETTLED");
+          }
+
+          const updatedUser = await tx.user.update({
+            where: { email: sessionEmail },
+            data: {
+              planTier: plan.tier,
+              monthlyQuota: plan.includedQuota,
+              rateLimitPerMin: plan.rateLimitPerMin,
+            }
+          });
+
+          const sub = await tx.subscription.upsert({
+            where: { userId: user.id },
+            update: {
+              planTier: plan.tier,
+              status: "ACTIVE",
+              currentPeriodEnd: nextRenewal,
+            },
+            create: {
+              userId: user.id,
+              planTier: plan.tier,
+              gatewaySubId: `sub_rzp_${crypto.randomBytes(6).toString("hex")}`,
+              status: "ACTIVE",
+              currentPeriodEnd: nextRenewal,
+            }
+          });
+
+          const settledTx = await tx.transaction.findUnique({
+            where: { id: pendingOrder.id }
+          });
+
+          return { updatedUser, sub, settledTx };
+        });
+      } catch (txErr: any) {
+        if (txErr?.message === "ORDER_ALREADY_SETTLED") {
+          return NextResponse.json({
+            status: "error",
+            message: "Payment order has already been processed or settled concurrently."
+          }, { status: 409 });
         }
-      });
+        throw txErr;
+      }
 
       return NextResponse.json({
         status: "success",
         message: proratedDiscount > 0
           ? `Plan upgraded to ${plan.name} via Razorpay! Adjusted for ${remainingDays} unused days (-₹${proratedDiscount.toFixed(2)}). Paid ₹${netPayablePrice.toFixed(2)}.`
-          : `Plan upgraded to ${plan.name} via Razorpay! Payment verified and settled.`,
+          : `Plan upgraded to ${plan.name} via Razorpay successfully! Paid ₹${netPayablePrice.toFixed(2)}.`,
         plan: plan.name,
         monthlyQuota: plan.includedQuota,
         proratedDiscount,
         netPaid: netPayablePrice,
-        subscription: sub,
-        transaction: tx
+        subscription: subResult.sub,
+        transaction: subResult.settledTx
       });
     }
 
