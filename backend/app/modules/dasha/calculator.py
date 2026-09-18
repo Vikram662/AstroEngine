@@ -1,4 +1,3 @@
-import swisseph as swe
 from datetime import datetime, timedelta
 from typing import Dict, Any, List
 from app.core.swisseph import calculate_julian_day, get_nakshatra_info
