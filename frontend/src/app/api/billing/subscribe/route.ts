@@ -29,17 +29,20 @@ export async function POST(req: NextRequest) {
     }
 
     const user = await prisma.user.findUnique({
-      where: { email: sessionEmail }
+      where: { email: sessionEmail },
+      include: {
+        subscription: true
+      }
     });
 
     if (!user) {
       return NextResponse.json({ status: "error", message: "User not found" }, { status: 404 });
     }
 
-    const price = plan.priceMonthly || 0;
+    const newPlanPrice = plan.priceMonthly || 0;
 
     // Free plan (e.g. STARTER)
-    if (price === 0) {
+    if (newPlanPrice === 0) {
       await prisma.user.update({
         where: { email: sessionEmail },
         data: {
@@ -57,23 +60,51 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    // Proration logic: calculate remaining days and unused value of current active plan
+    let proratedDiscount = 0;
+    let currentPlanName = user.planTier;
+    let remainingDays = 0;
+
+    if (user.subscription && user.subscription.currentPeriodEnd) {
+      const now = new Date();
+      const periodEnd = new Date(user.subscription.currentPeriodEnd);
+      const diffTime = periodEnd.getTime() - now.getTime();
+      remainingDays = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+
+      if (remainingDays > 0 && remainingDays <= 30) {
+        // Fetch current plan price to calculate daily rate
+        const currentPlan = await prisma.subscriptionPlan.findUnique({
+          where: { tier: user.planTier }
+        });
+
+        if (currentPlan && currentPlan.priceMonthly > 0) {
+          const dailyRate = currentPlan.priceMonthly / 30;
+          // Unused value for the remaining days
+          proratedDiscount = Math.round(dailyRate * remainingDays * 100) / 100;
+        }
+      }
+    }
+
+    // Net payable amount after prorated credit adjustment
+    const netPayablePrice = Math.max(0, Math.round((newPlanPrice - proratedDiscount) * 100) / 100);
+
     // Option A: Pay using live Wallet Balance
     if (paymentMethod === "WALLET") {
-      if (user.walletBalance < price) {
+      if (user.walletBalance < netPayablePrice) {
         return NextResponse.json({
           status: "error",
           insufficientBalance: true,
-          requiredAmount: price,
+          requiredAmount: netPayablePrice,
           currentBalance: user.walletBalance,
-          message: `Insufficient wallet balance (₹${user.walletBalance.toFixed(2)}). Plan price is ₹${price.toFixed(2)}. Please recharge your wallet or choose Payment Gateway checkout.`
+          message: `Insufficient wallet balance (₹${user.walletBalance.toFixed(2)}). Adjusted plan price after ₹${proratedDiscount.toFixed(2)} prorated credit is ₹${netPayablePrice.toFixed(2)}. Please recharge your wallet or choose Payment Gateway checkout.`
         }, { status: 400 });
       }
 
-      // Deduct from wallet balance
+      // Deduct net payable from wallet balance
       await prisma.user.update({
         where: { email: sessionEmail },
         data: {
-          walletBalance: { decrement: price },
+          walletBalance: { decrement: netPayablePrice },
           planTier: plan.tier,
           monthlyQuota: plan.includedQuota,
           rateLimitPerMin: plan.rateLimitPerMin,
@@ -99,11 +130,11 @@ export async function POST(req: NextRequest) {
         }
       });
 
-      // Immutable settled transaction from Wallet
+      // Immutable settled transaction from Wallet (with metadata for prorated credit)
       const tx = await prisma.transaction.create({
         data: {
           userId: user.id,
-          amount: price,
+          amount: netPayablePrice,
           creditsAdded: 0,
           paymentGateway: "WALLET",
           gatewayOrderId: `wallet_sub_${crypto.randomBytes(6).toString("hex")}`,
@@ -115,9 +146,13 @@ export async function POST(req: NextRequest) {
 
       return NextResponse.json({
         status: "success",
-        message: `Plan upgraded to ${plan.name} successfully! ₹${price.toFixed(2)} deducted from your wallet.`,
+        message: proratedDiscount > 0 
+          ? `Plan upgraded to ${plan.name}! Adjusted for ${remainingDays} unused days (-₹${proratedDiscount.toFixed(2)}). Paid ₹${netPayablePrice.toFixed(2)} from wallet.`
+          : `Plan upgraded to ${plan.name} successfully! ₹${netPayablePrice.toFixed(2)} deducted from your wallet.`,
         plan: plan.name,
         monthlyQuota: plan.includedQuota,
+        proratedDiscount,
+        netPaid: netPayablePrice,
         subscription: sub,
         transaction: tx
       });
@@ -161,7 +196,7 @@ export async function POST(req: NextRequest) {
       const tx = await prisma.transaction.create({
         data: {
           userId: user.id,
-          amount: price,
+          amount: netPayablePrice,
           creditsAdded: 0,
           paymentGateway: "RAZORPAY",
           gatewayOrderId: verifiedOrderId,
@@ -173,9 +208,13 @@ export async function POST(req: NextRequest) {
 
       return NextResponse.json({
         status: "success",
-        message: `Plan upgraded to ${plan.name} via Razorpay! Payment verified and settled.`,
+        message: proratedDiscount > 0
+          ? `Plan upgraded to ${plan.name} via Razorpay! Adjusted for ${remainingDays} unused days (-₹${proratedDiscount.toFixed(2)}). Paid ₹${netPayablePrice.toFixed(2)}.`
+          : `Plan upgraded to ${plan.name} via Razorpay! Payment verified and settled.`,
         plan: plan.name,
         monthlyQuota: plan.includedQuota,
+        proratedDiscount,
+        netPaid: netPayablePrice,
         subscription: sub,
         transaction: tx
       });

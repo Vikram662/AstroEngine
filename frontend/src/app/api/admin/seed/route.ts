@@ -45,13 +45,33 @@ export async function POST() {
       { key: "MODULE_WESTERN_ACTIVE", value: "true", category: "MODULES", description: "Western Tropical astrology & Synastry engine switch" },
       { key: "MODULE_LALKITAB_ACTIVE", value: "true", category: "MODULES", description: "Lal Kitab debts & Varshphal engine switch" },
       { key: "MODULE_MATCHMAKING_ACTIVE", value: "true", category: "MODULES", description: "36-Guna Ashtakoota matchmaking module switch" },
-      { key: "AUTO_REFUND_FAILED_JOBS", value: "true", category: "BILLING", description: "Automatically refund credits if a PDF job fails or times out" }
+      { key: "AUTO_REFUND_FAILED_JOBS", value: "true", category: "BILLING", description: "Automatically refund credits if a PDF job fails or times out" },
+      // Payment Gateway (Razorpay) Settings from Database
+      { key: "RAZORPAY_KEY_ID", value: "rzp_test_1DP5mmOlF5G5ag", category: "PAYMENTS", description: "Razorpay Standard Test Key ID" },
+      { key: "RAZORPAY_KEY_SECRET", value: "s8e8w9f0a1b2c3d4e5f6g7h8", category: "PAYMENTS", description: "Razorpay Secret Key for HMAC signature verification" },
+      { key: "RAZORPAY_WEBHOOK_SECRET", value: "whsec_astro_enterprise_live2026", category: "PAYMENTS", description: "Razorpay Webhook secret for auto-verification" },
+      // Cloudflare R2 Storage Settings from Database
+      { key: "R2_ACCOUNT_ID", value: "cf_acc_9012a3b4c5d6e7f8", category: "STORAGE", description: "Cloudflare Account ID for PDF Object Storage" },
+      { key: "R2_ACCESS_KEY_ID", value: "r2_key_817291a0b2c3", category: "STORAGE", description: "Cloudflare R2 Access Key ID" },
+      { key: "R2_SECRET_ACCESS_KEY", value: "r2_sec_99182736450192837465", category: "STORAGE", description: "Cloudflare R2 Secret Access Key" },
+      { key: "R2_BUCKET_NAME", value: "astro-pdf-reports", category: "STORAGE", description: "Cloudflare R2 Storage Bucket Name" },
+      { key: "R2_PUBLIC_DOMAIN", value: "https://cdn.astroengine.io", category: "STORAGE", description: "Public CDN domain or custom domain for PDF downloads" },
+      // SMTP Email Delivery Settings from Database
+      { key: "SMTP_HOST", value: "smtp.gmail.com", category: "EMAIL", description: "Outgoing Mail Server Host" },
+      { key: "SMTP_PORT", value: "587", category: "EMAIL", description: "SMTP Port (587 for TLS, 465 for SSL)" },
+      { key: "SMTP_USER", value: "notifications@astroengine.io", category: "EMAIL", description: "SMTP Username / Sender Email Address" },
+      { key: "SMTP_PASSWORD", value: "abcd efgh ijkl mnop", category: "EMAIL", description: "SMTP App Password" },
+      { key: "SMTP_FROM_NAME", value: "AstroEngine Cloud Notifications", category: "EMAIL", description: "Sender Display Name" }
     ];
 
     for (const s of defaultSettings) {
       await prisma.systemSetting.upsert({
         where: { key: s.key },
-        update: {},
+        update: {
+          category: s.category,
+          description: s.description,
+          // Only update value if it was empty or not set
+        },
         create: s
       });
     }

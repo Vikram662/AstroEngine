@@ -56,15 +56,21 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { amount, action } = body;
 
-    // Action: create_order (simulates Razorpay order creation)
+    // Action: create_order (fetches key dynamically from Database SystemSetting or ENV)
     if (action === "create_order") {
       const orderId = `order_${crypto.randomBytes(8).toString("hex")}`;
+      
+      const dbKeySetting = await prisma.systemSetting.findUnique({
+        where: { key: "RAZORPAY_KEY_ID" }
+      });
+      const razorpayKey = dbKeySetting?.value || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY_ID || "rzp_test_mock_enterprise_key";
+
       return NextResponse.json({
         status: "success",
         orderId,
         amount,
         currency: "INR",
-        key: process.env.RAZORPAY_KEY_ID || "rzp_test_mock_enterprise_key"
+        key: razorpayKey
       });
     }
 

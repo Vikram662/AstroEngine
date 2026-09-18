@@ -50,14 +50,17 @@ export default function BillingPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [transactions, setTransactions] = useState<any[]>([]);
 
+  const [userSubscription, setUserSubscription] = useState<{ currentPeriodEnd?: string } | null>(null);
+
   const fetchUserData = () => {
-    // Fetch live user balance and current plan
+    // Fetch live user balance, current plan, and active subscription cycle
     axios.get("/api/user/me")
       .then(res => {
         if (res.data?.data) {
           setWalletBalance(res.data.data.walletBalance || 0);
           setCurrentPlanTier(res.data.data.planTier || "STARTER");
           setCurrentQuota(res.data.data.monthlyQuota || 35000);
+          setUserSubscription(res.data.data.subscription || null);
         }
       })
       .catch(() => {});
@@ -119,27 +122,82 @@ export default function BillingPage() {
 
     try {
       if (method === "GATEWAY") {
-        // Step 1: Create real payment order
+        // Step 1: Create real payment order & retrieve Razorpay Key from DB
+        const currentPlanObj = plans.find(p => p.tier === currentPlanTier);
+        const currentPlanCost = currentPlanObj?.priceMonthly || 0;
+        let unusedDays = 0;
+        let creditDiscount = 0;
+        if (userSubscription?.currentPeriodEnd && currentPlanCost > 0) {
+          const diffTime = new Date(userSubscription.currentPeriodEnd).getTime() - new Date().getTime();
+          unusedDays = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+          if (unusedDays > 0 && unusedDays <= 30) {
+            creditDiscount = Math.round((currentPlanCost / 30) * unusedDays * 100) / 100;
+          }
+        }
+        const netPayable = Math.max(0, Math.round(((selectedPlanForUpgrade?.priceMonthly || 0) - creditDiscount) * 100) / 100);
+
         const orderRes = await axios.post("/api/billing/recharge", {
           action: "create_order",
-          amount: selectedPlanForUpgrade?.priceMonthly || 0
+          amount: netPayable
         });
 
-        const orderId = orderRes.data.orderId;
+        const { orderId, key, amount, currency } = orderRes.data;
 
-        // Step 2: Settle and verify upgrade via Gateway
-        const res = await axios.post("/api/billing/subscribe", { 
-          planTier: tier,
-          paymentMethod: "GATEWAY",
-          gatewayOrderId: orderId
-        });
+        // Check if Razorpay SDK script is loaded
+        if (typeof window !== "undefined" && (window as any).Razorpay) {
+          const options = {
+            key: key || "rzp_test_mock_enterprise_key",
+            amount: Math.round(amount * 100), // in paise
+            currency: currency || "INR",
+            name: "AstroEngine Cloud",
+            description: `Upgrade to ${tier} Subscription Plan`,
+            order_id: orderId,
+            handler: async function (response: any) {
+              try {
+                // Settle and verify upgrade via Gateway only AFTER successful user payment
+                const res = await axios.post("/api/billing/subscribe", { 
+                  planTier: tier,
+                  paymentMethod: "GATEWAY",
+                  gatewayOrderId: response.razorpay_order_id || orderId,
+                  gatewayPaymentId: response.razorpay_payment_id
+                });
 
-        if (res.data?.status === "success") {
-          setSuccessMessage(res.data.message || `Subscribed to ${tier} plan successfully via Gateway!`);
-          setSelectedPlanForUpgrade(null);
-          fetchUserData();
+                if (res.data?.status === "success") {
+                  setSuccessMessage(res.data.message || `Subscribed to ${tier} plan successfully via Gateway!`);
+                  setSelectedPlanForUpgrade(null);
+                  fetchUserData();
+                } else {
+                  setErrorMessage(res.data?.message || "Payment verified but subscription activation failed.");
+                }
+              } catch (subErr: any) {
+                setErrorMessage(subErr.response?.data?.message || "Failed to confirm subscription.");
+              } finally {
+                setSubscribingTier(null);
+              }
+            },
+            prefill: {
+              name: "Developer",
+              email: "dev@client.com"
+            },
+            theme: {
+              color: "#0f172a"
+            },
+            modal: {
+              ondismiss: function () {
+                setSubscribingTier(null);
+                setErrorMessage("Payment checkout cancelled by user.");
+              }
+            }
+          };
+
+          const rzp = new (window as any).Razorpay(options);
+          rzp.open();
+          return;
         } else {
-          setErrorMessage(res.data?.message || "Failed to upgrade plan.");
+          // If popup is blocked or script failed to load
+          setErrorMessage("Razorpay Checkout SDK is still loading. Please try again in a few moments.");
+          setSubscribingTier(null);
+          return;
         }
       } else {
         // Pay using live Wallet Balance
@@ -160,7 +218,9 @@ export default function BillingPage() {
       const error = err as { response?: { data?: { message?: string } }; message?: string };
       setErrorMessage(error.response?.data?.message || error.message || "Failed to subscribe to plan.");
     } finally {
-      setSubscribingTier(null);
+      if (method === "WALLET") {
+        setSubscribingTier(null);
+      }
     }
   };
 
@@ -176,25 +236,64 @@ export default function BillingPage() {
         amount: selectedTier
       });
 
-      const { orderId } = orderRes.data;
+      const { orderId, key, amount, currency } = orderRes.data;
 
-      // Step 2: Complete and verify payment transaction
-      const verifyRes = await axios.post("/api/billing/recharge", {
-        action: "verify_and_credit",
-        amount: selectedTier,
-        orderId
-      });
+      // Launch real Razorpay popup checkout
+      if (typeof window !== "undefined" && (window as any).Razorpay) {
+        const options = {
+          key: key || "rzp_test_mock_enterprise_key",
+          amount: Math.round(amount * 100),
+          currency: currency || "INR",
+          name: "AstroEngine Cloud",
+          description: `Prepaid Wallet Recharge ₹${selectedTier}`,
+          order_id: orderId,
+          handler: async function (response: any) {
+            try {
+              // Complete and verify payment transaction only AFTER user completes payment
+              const verifyRes = await axios.post("/api/billing/recharge", {
+                action: "verify_and_credit",
+                amount: selectedTier,
+                orderId: response.razorpay_order_id || orderId,
+                gatewayPaymentId: response.razorpay_payment_id
+              });
 
-      if (verifyRes.data.status === "success") {
-        fetchUserData();
-        setSuccessMessage(verifyRes.data.message || "Recharge successful! Credits added to your wallet.");
+              if (verifyRes.data.status === "success") {
+                fetchUserData();
+                setSuccessMessage(verifyRes.data.message || "Recharge successful! Credits added to your wallet.");
+              } else {
+                setErrorMessage("Payment verification failed.");
+              }
+            } catch (vErr: any) {
+              setErrorMessage(vErr.response?.data?.message || "Payment verification failed.");
+            } finally {
+              setIsProcessing(false);
+            }
+          },
+          prefill: {
+            name: "Developer",
+            email: "dev@client.com"
+          },
+          theme: {
+            color: "#0f172a"
+          },
+          modal: {
+            ondismiss: function () {
+              setIsProcessing(false);
+              setErrorMessage("Recharge checkout cancelled by user.");
+            }
+          }
+        };
+
+        const rzp = new (window as any).Razorpay(options);
+        rzp.open();
+        return;
       } else {
-        setErrorMessage("Payment verification failed.");
+        setErrorMessage("Razorpay Checkout SDK is still loading. Please refresh and try again.");
+        setIsProcessing(false);
       }
     } catch (err: unknown) {
       const error = err as { message?: string };
       setErrorMessage(error.message || "Failed to process recharge transaction.");
-    } finally {
       setIsProcessing(false);
     }
   };
@@ -447,88 +546,129 @@ export default function BillingPage() {
               </button>
             </div>
 
-            {/* Plan Price Summary */}
-            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
-              <div>
-                <div className="text-xs text-slate-500 font-semibold">Monthly Subscription Price</div>
-                <div className="text-xl font-extrabold text-slate-900 font-mono mt-0.5">
-                  ₹{selectedPlanForUpgrade.priceMonthly.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-                </div>
-              </div>
-              <div className="text-right text-xs text-slate-600 font-medium">
-                <div>{selectedPlanForUpgrade.includedQuota.toLocaleString()} calls / mo</div>
-                <div className="text-[11px] text-slate-400">{selectedPlanForUpgrade.rateLimitPerMin} RPM</div>
-              </div>
-            </div>
+            {/* Proration Calculation Banner */}
+            {(() => {
+              const currentPlanObj = plans.find(p => p.tier === currentPlanTier);
+              const currentPlanCost = currentPlanObj?.priceMonthly || 0;
+              let unusedDays = 0;
+              let creditDiscount = 0;
 
-            {/* Option 1: Live Wallet Balance */}
-            <div className="p-4 rounded-xl border border-slate-200 hover:border-slate-300 transition space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="p-2 rounded-lg bg-blue-50 text-blue-700">
-                    <Wallet className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <div className="text-xs font-bold text-slate-900">Option 1: Pay via Wallet Balance</div>
-                    <div className="text-[11px] text-slate-500">
-                      Available: <strong className="text-slate-800 font-mono">₹{walletBalance.toFixed(2)}</strong>
+              if (userSubscription?.currentPeriodEnd && currentPlanCost > 0) {
+                const diffTime = new Date(userSubscription.currentPeriodEnd).getTime() - new Date().getTime();
+                unusedDays = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+                if (unusedDays > 0 && unusedDays <= 30) {
+                  creditDiscount = Math.round((currentPlanCost / 30) * unusedDays * 100) / 100;
+                }
+              }
+
+              const netPayable = Math.max(0, Math.round((selectedPlanForUpgrade.priceMonthly - creditDiscount) * 100) / 100);
+
+              return (
+                <div className="space-y-4">
+                  {creditDiscount > 0 ? (
+                    <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs space-y-1">
+                      <div className="font-bold flex items-center justify-between">
+                        <span>Prorated Upgrade Credit Applied:</span>
+                        <span className="font-mono text-emerald-700">-₹{creditDiscount.toFixed(2)}</span>
+                      </div>
+                      <p className="text-[11px] text-emerald-800">
+                        You have <strong>{unusedDays} days remaining</strong> in your current {currentPlanTier} plan. Unused amount has been automatically credited toward this upgrade.
+                      </p>
+                    </div>
+                  ) : null}
+
+                  {/* Plan Price Summary */}
+                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+                    <div>
+                      <div className="text-xs text-slate-500 font-semibold">
+                        {creditDiscount > 0 ? "Adjusted Net Payable Price" : "Monthly Subscription Price"}
+                      </div>
+                      <div className="text-xl font-extrabold text-slate-900 font-mono mt-0.5">
+                        ₹{netPayable.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                        {creditDiscount > 0 && (
+                          <span className="text-xs text-slate-400 line-through font-normal ml-2">
+                            ₹{selectedPlanForUpgrade.priceMonthly.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-right text-xs text-slate-600 font-medium">
+                      <div>{selectedPlanForUpgrade.includedQuota.toLocaleString()} calls / mo</div>
+                      <div className="text-[11px] text-slate-400">{selectedPlanForUpgrade.rateLimitPerMin} RPM</div>
                     </div>
                   </div>
-                </div>
-              </div>
 
-              {walletBalance >= selectedPlanForUpgrade.priceMonthly ? (
-                <button
-                  onClick={() => executeUpgrade(selectedPlanForUpgrade.tier, "WALLET")}
-                  disabled={subscribingTier === selectedPlanForUpgrade.tier}
-                  className="w-full py-2.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center justify-center gap-2 transition disabled:opacity-50"
-                >
-                  {subscribingTier === selectedPlanForUpgrade.tier ? (
-                    <>
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      <span>Processing Debit...</span>
-                    </>
-                  ) : (
-                    <span>Pay ₹{selectedPlanForUpgrade.priceMonthly.toLocaleString()} from Wallet</span>
-                  )}
-                </button>
-              ) : (
-                <div className="text-xs text-amber-700 bg-amber-50 p-2.5 rounded-lg border border-amber-200">
-                  <span>Insufficient balance (Short by ₹{(selectedPlanForUpgrade.priceMonthly - walletBalance).toFixed(2)}). Recharge wallet or use Payment Gateway below.</span>
-                </div>
-              )}
-            </div>
+                  {/* Option 1: Live Wallet Balance */}
+                  <div className="p-4 rounded-xl border border-slate-200 hover:border-slate-300 transition space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="p-2 rounded-lg bg-blue-50 text-blue-700">
+                          <Wallet className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <div className="text-xs font-bold text-slate-900">Option 1: Pay via Wallet Balance</div>
+                          <div className="text-[11px] text-slate-500">
+                            Available: <strong className="text-slate-800 font-mono">₹{walletBalance.toFixed(2)}</strong>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
 
-            {/* Option 2: Direct Payment Gateway Checkout */}
-            <div className="p-4 rounded-xl border border-slate-200 hover:border-slate-300 transition space-y-3">
-              <div className="flex items-center gap-2">
-                <div className="p-2 rounded-lg bg-emerald-50 text-emerald-700">
-                  <CreditCard className="w-4 h-4" />
-                </div>
-                <div>
-                  <div className="text-xs font-bold text-slate-900">Option 2: Pay via Razorpay Gateway</div>
-                  <div className="text-[11px] text-slate-500">UPI, Credit/Debit Cards, NetBanking, Corporate</div>
-                </div>
-              </div>
+                    {walletBalance >= netPayable ? (
+                      <button
+                        onClick={() => executeUpgrade(selectedPlanForUpgrade.tier, "WALLET")}
+                        disabled={subscribingTier === selectedPlanForUpgrade.tier}
+                        className="w-full py-2.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center justify-center gap-2 transition disabled:opacity-50"
+                      >
+                        {subscribingTier === selectedPlanForUpgrade.tier ? (
+                          <>
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            <span>Processing Debit...</span>
+                          </>
+                        ) : (
+                          <span>Pay ₹{netPayable.toLocaleString("en-IN", { minimumFractionDigits: 2 })} from Wallet</span>
+                        )}
+                      </button>
+                    ) : (
+                      <div className="text-xs text-amber-700 bg-amber-50 p-2.5 rounded-lg border border-amber-200">
+                        <span>Insufficient balance (Short by ₹{(netPayable - walletBalance).toFixed(2)}). Recharge wallet or use Payment Gateway below.</span>
+                      </div>
+                    )}
+                  </div>
 
-              <button
-                onClick={() => executeUpgrade(selectedPlanForUpgrade.tier, "GATEWAY")}
-                disabled={subscribingTier === selectedPlanForUpgrade.tier}
-                className="w-full py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-2 transition disabled:opacity-50 shadow-xs"
-              >
-                {subscribingTier === selectedPlanForUpgrade.tier ? (
-                  <>
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    <span>Opening Gateway & Verifying...</span>
-                  </>
-                ) : (
-                  <>
-                    <CreditCard className="w-3.5 h-3.5" />
-                    <span>Pay ₹{selectedPlanForUpgrade.priceMonthly.toLocaleString()} with Razorpay</span>
-                  </>
-                )}
-              </button>
-            </div>
+                  {/* Option 2: Direct Payment Gateway Checkout */}
+                  <div className="p-4 rounded-xl border border-slate-200 hover:border-slate-300 transition space-y-3">
+                    <div className="flex items-center gap-2">
+                      <div className="p-2 rounded-lg bg-emerald-50 text-emerald-700">
+                        <CreditCard className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-slate-900">Option 2: Pay via Razorpay Gateway</div>
+                        <div className="text-[11px] text-slate-500">UPI, Credit/Debit Cards, NetBanking, Corporate</div>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => executeUpgrade(selectedPlanForUpgrade.tier, "GATEWAY")}
+                      disabled={subscribingTier === selectedPlanForUpgrade.tier}
+                      className="w-full py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-2 transition disabled:opacity-50 shadow-xs"
+                    >
+                      {subscribingTier === selectedPlanForUpgrade.tier ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          <span>Opening Gateway & Verifying...</span>
+                        </>
+                      ) : (
+                        <>
+                          <CreditCard className="w-3.5 h-3.5" />
+                          <span>Pay ₹{netPayable.toLocaleString("en-IN", { minimumFractionDigits: 2 })} with Razorpay</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
 
             <div className="text-[11px] text-center text-slate-400">
               Transactions generate compliant GST Tax Invoices immediately upon settlement.
