@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="{{ lang }}">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ branding.company_name or "AstroEngine" }} — {{ report_title }}</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 20mm 15mm 20mm 15mm;
+            @bottom-right {
+                content: "Page " counter(page);
+                font-size: 9pt;
+                color: #64748b;
+            }
+            @bottom-left {
+                content: "{{ branding.website or 'www.astroengine.io' }}";
+                font-size: 9pt;
+                color: #64748b;
+            }
+        }
+        body {
+            font-family: 'Noto Sans', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #1e293b;
+            line-height: 1.5;
+            background: #ffffff;
+            margin: 0;
+            padding: 0;
+        }
+        .header-bar {
+            border-bottom: 3px solid {{ branding.primary_color or '#b45309' }};
+            padding-bottom: 15px;
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .brand-title {
+            font-size: 22pt;
+            font-weight: bold;
+            color: {{ branding.primary_color or '#b45309' }};
+            margin: 0;
+        }
+        .report-name {
+            font-size: 14pt;
+            color: #475569;
+            margin-top: 4px;
+        }
+        .profile-table, .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 25px;
+        }
+        .profile-table td {
+            padding: 8px 12px;
+            border: 1px solid #e2e8f0;
+            font-size: 10pt;
+        }
+        .profile-table .label {
+            background-color: #f8fafc;
+            font-weight: 600;
+            width: 25%;
+            color: #334155;
+        }
+        .section-heading {
+            font-size: 14pt;
+            font-weight: bold;
+            color: {{ branding.primary_color or '#b45309' }};
+            border-bottom: 1.5px solid #e2e8f0;
+            padding-bottom: 6px;
+            margin-top: 25px;
+            margin-bottom: 15px;
+        }
+        .chart-container {
+            text-align: center;
+            margin: 20px 0;
+            max-width: 380px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .data-table th {
+            background-color: {{ branding.primary_color or '#b45309' }};
+            color: #ffffff;
+            padding: 8px;
+            font-size: 9.5pt;
+            text-align: left;
+        }
+        .data-table td {
+            padding: 7px 8px;
+            border: 1px solid #cbd5e1;
+            font-size: 9pt;
+        }
+        .data-table tr:nth-child(even) {
+            background-color: #f8fafc;
+        }
+        .footer-note {
+            font-size: 8.5pt;
+            color: #94a3b8;
+            text-align: center;
+            margin-top: 40px;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header-bar">
+        <div>
+            <h1 class="brand-title">{{ branding.company_name or "AstroEngine" }}</h1>
+            <div class="report-name">{{ report_title }}</div>
+        </div>
+        <div style="text-align:right; font-size:9pt; color:#64748b;">
+            <div><strong>Contact:</strong> {{ branding.contact_number or "+91 98765 43210" }}</div>
+            <div><strong>Website:</strong> {{ branding.website or "www.astroengine.io" }}</div>
+        </div>
+    </div>
+
+    <div class="section-heading">Native Profile & Birth Details</div>
+    <table class="profile-table">
+        <tr>
+            <td class="label">Date of Birth</td>
+            <td>{{ birth_data.dob }}</td>
+            <td class="label">Time of Birth</td>
+            <td>{{ birth_data.tob }}</td>
+        </tr>
+        <tr>
+            <td class="label">Latitude / Longitude</td>
+            <td>{{ birth_data.lat }}° N, {{ birth_data.lon }}° E</td>
+            <td class="label">Timezone</td>
+            <td>UTC +{{ birth_data.tz }}</td>
+        </tr>
+        <tr>
+            <td class="label">Ascendant (Lagna)</td>
+            <td><strong>{{ chart.ascendant.sign.name }} ({{ chart.ascendant.sign.id }})</strong> — {{ chart.ascendant.full_degree }}°</td>
+            <td class="label">Ayanamsa</td>
+            <td>Lahiri (Chitra Paksha)</td>
+        </tr>
+    </table>
+
+    <div class="section-heading">Lagna Kundli (Birth Chart)</div>
+    <div class="chart-container">
+        {{ svg_chart | safe }}
+    </div>
+
+    <div class="section-heading">Planetary Coordinates & Placements</div>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Planet</th>
+                <th>Full Degree</th>
+                <th>Zodiac Sign</th>
+                <th>House</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in chart.planets %}
+            <tr>
+                <td><strong>{{ p.name }}</strong></td>
+                <td>{{ p.full_degree if p.full_degree is defined else '--' }}°</td>
+                <td>{{ p.sign.name }} ({{ p.sign.id }})</td>
+                <td>House {{ p.house }}</td>
+                <td>{{ "Vakri (Retrograde)" if p.is_retrograde else "Margi (Direct)" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="footer-note">
+        Generated by {{ branding.company_name or "AstroEngine B2B API Suite" }} • High-precision Swiss Ephemeris calculations.
+    </div>
+</body>
+</html>

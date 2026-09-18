@@ -1,0 +1,92 @@
+﻿# ==========================================
+# AstroEngine Enterprise — .gitignore
+# ==========================================
+
+# Environment & Secrets (Never commit credentials!)
+.env
+.env.local
+.env.*.local
+*.env
+backend/.env
+
+# Python Virtual Environments & Packages
+venv/
+.venv/
+env/
+ENV/
+backend/venv/
+backend/.venv/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Swiss Ephemeris data files (large binary assets, download on host/server)
+backend/ephe/*.se1
+ephe/*.se1
+
+# Pytest & Testing caches
+.pytest_cache/
+backend/.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+.hypothesis/
+
+# Node.js & Frontend (Next.js / Prisma)
+node_modules/
+frontend/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-debug.log*
+
+# Next.js Build Output
+.next/
+frontend/.next/
+out/
+frontend/out/
+
+# Prisma Artifacts & Local DBs
+*.db
+*.sqlite
+*.sqlite3
+backend/*.db
+
+# IDE & Editor specific files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs & Temporary Files
+logs/
+*.log
+npm-debug.log*
+scratch/
+tmp/
+temp/
