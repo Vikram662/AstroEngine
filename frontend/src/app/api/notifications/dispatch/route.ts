@@ -1,11 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendNotificationEmail } from "@/lib/email";
+import { requireAdminSession } from "@/lib/authGuard";
+
+const INTERNAL_SECRET = process.env.ASTRO_INTERNAL_SECRET;
 
 // Event types based on §14:
 // 'LOW_BALANCE' | 'QUOTA_80' | 'QUOTA_100' | 'ERROR_SPIKE' | 'PDF_READY' | 'PDF_FAILED'
 export async function POST(req: NextRequest) {
   try {
+    // Strict Internal/Admin Authorization Guard:
+    const authHeader = req.headers.get("x-internal-secret");
+    const isInternalAuth = INTERNAL_SECRET && authHeader === INTERNAL_SECRET;
+    
+    if (!isInternalAuth) {
+      const admin = await requireAdminSession();
+      if (!admin) {
+        return NextResponse.json(
+          { status: "error", message: "Forbidden: Internal engine secret or admin session required." },
+          { status: 403 }
+        );
+      }
+    }
+
     const body = await req.json();
     const { userId, eventType, data } = body;
 
@@ -102,26 +119,34 @@ export async function POST(req: NextRequest) {
     let webhookResult = null;
     if (user.accountWebhookUrl) {
       try {
-        const crypto = await import("crypto");
-        const payload = JSON.stringify({
-          event: eventType,
-          userId: user.id,
-          timestamp: new Date().toISOString(),
-          data
-        });
-        const signature = user.accountWebhookSecret 
-          ? crypto.createHmac("sha256", user.accountWebhookSecret).update(payload).digest("hex")
-          : "";
+        const { validateSafeWebhookUrl } = await import("@/lib/ssrf");
+        const safetyCheck = await validateSafeWebhookUrl(user.accountWebhookUrl);
 
-        const whRes = await fetch(user.accountWebhookUrl, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-astroengine-signature": signature
-          },
-          body: payload
-        });
-        webhookResult = { delivered: whRes.ok, status: whRes.status };
+        if (!safetyCheck.valid) {
+          webhookResult = { delivered: false, error: `SSRF Blocked: ${safetyCheck.reason}` };
+        } else {
+          const crypto = await import("crypto");
+          const payload = JSON.stringify({
+            event: eventType,
+            userId: user.id,
+            timestamp: new Date().toISOString(),
+            data
+          });
+          const signature = user.accountWebhookSecret 
+            ? crypto.createHmac("sha256", user.accountWebhookSecret).update(payload).digest("hex")
+            : "";
+
+          const whRes = await fetch(user.accountWebhookUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-astroengine-signature": signature
+            },
+            body: payload,
+            signal: AbortSignal.timeout(5000)
+          });
+          webhookResult = { delivered: whRes.ok, status: whRes.status };
+        }
       } catch (err: unknown) {
         const error = err as { message?: string };
         webhookResult = { delivered: false, error: error.message };

@@ -1,19 +1,17 @@
-import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getVerifiedSession } from "@/lib/authGuard";
 import crypto from "crypto";
 
 export async function GET() {
   try {
-    const cookieStore = await cookies();
-    const sessionEmail = cookieStore.get("astro_session_email")?.value;
-
-    if (!sessionEmail) {
+    const session = await getVerifiedSession();
+    if (!session || !session.email) {
       return NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 401 });
     }
 
     const user = await prisma.user.findUnique({
-      where: { email: sessionEmail },
+      where: { email: session.email },
       include: {
         teamMembers: {
           orderBy: { invitedAt: "desc" }
@@ -37,15 +35,13 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const cookieStore = await cookies();
-    const sessionEmail = cookieStore.get("astro_session_email")?.value;
-
-    if (!sessionEmail) {
+    const session = await getVerifiedSession();
+    if (!session || !session.email) {
       return NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 401 });
     }
 
     const user = await prisma.user.findUnique({
-      where: { email: sessionEmail }
+      where: { email: session.email }
     });
 
     if (!user) {
@@ -59,24 +55,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ status: "error", message: "Email is required" }, { status: 400 });
     }
 
-    const rawKey = `ak_live_sub_${crypto.randomBytes(16).toString("hex")}`;
-    const apiKeyHash = crypto.createHash("sha256").update(rawKey).digest("hex");
-    const apiKeyPrefix = rawKey.substring(0, 15);
-
-    const member = await prisma.teamMember.create({
+    const newMember = await prisma.teamMember.create({
       data: {
-        ownerId: user.id,
+        userId: user.id,
         email,
-        role: role === "OPERATOR" ? "OPERATOR" : "VIEWER",
-        apiKeyHash,
-        apiKeyPrefix,
-        invitedAt: new Date()
+        role: role || "DEVELOPER",
+        status: "INVITED",
+        inviteToken: crypto.randomBytes(16).toString("hex")
       }
     });
 
     return NextResponse.json({
       status: "success",
-      member
+      message: `Invitation sent to ${email}`,
+      member: newMember
     });
   } catch (error: unknown) {
     const err = error as { message?: string };
@@ -86,15 +78,13 @@ export async function POST(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
-    const cookieStore = await cookies();
-    const sessionEmail = cookieStore.get("astro_session_email")?.value;
-
-    if (!sessionEmail) {
+    const session = await getVerifiedSession();
+    if (!session || !session.email) {
       return NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 401 });
     }
 
     const user = await prisma.user.findUnique({
-      where: { email: sessionEmail }
+      where: { email: session.email }
     });
 
     if (!user) {
@@ -106,6 +96,15 @@ export async function DELETE(req: NextRequest) {
 
     if (!id) {
       return NextResponse.json({ status: "error", message: "Member ID required" }, { status: 400 });
+    }
+
+    // Ensure member belongs to this authenticated user
+    const existing = await prisma.teamMember.findFirst({
+      where: { id, userId: user.id }
+    });
+
+    if (!existing) {
+      return NextResponse.json({ status: "error", message: "Team member not found or unauthorized." }, { status: 404 });
     }
 
     await prisma.teamMember.delete({

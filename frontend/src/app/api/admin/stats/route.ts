@@ -1,15 +1,13 @@
-import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAdminSession } from "@/lib/authGuard";
 
 // GET /api/admin/stats - Live aggregated KPIs directly from MySQL
 export async function GET() {
   try {
-    const cookieStore = await cookies();
-    const sessionRole = cookieStore.get("astro_session_role")?.value;
-
-    if (sessionRole !== "ADMIN" && sessionRole !== "SUPER_ADMIN") {
-      return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
+    const admin = await requireAdminSession();
+    if (!admin) {
+      return NextResponse.json({ status: "error", message: "Forbidden: Admin authorization required." }, { status: 403 });
     }
 
     // 1. Total Tenants & Tier breakdown

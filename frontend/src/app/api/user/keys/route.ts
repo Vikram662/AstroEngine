@@ -1,27 +1,16 @@
-import { cookies } from "next/headers";
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { generateApiKey } from "@/lib/apiKey";
+import { getVerifiedSession } from "@/lib/authGuard";
 
 export async function POST() {
   try {
-    const cookieStore = await cookies();
-    let sessionEmail = cookieStore.get("astro_session_email")?.value;
-
-    // If no cookie session found, look up active admin or first developer user
-    if (!sessionEmail) {
-      const fallbackUser = await prisma.user.findFirst({
-        where: { role: { in: ["ADMIN", "SUPER_ADMIN", "USER"] } },
-        orderBy: { id: "asc" }
-      });
-      if (fallbackUser) {
-        sessionEmail = fallbackUser.email;
-      }
-    }
-
-    if (!sessionEmail) {
+    const session = await getVerifiedSession();
+    if (!session || !session.email) {
       return NextResponse.json({ status: "error", message: "Unauthorized. Please sign in." }, { status: 401 });
     }
+
+    const sessionEmail = session.email;
 
     const keyData = generateApiKey();
 

@@ -1,15 +1,15 @@
-import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getVerifiedSession } from "@/lib/authGuard";
 
 export async function POST(req: NextRequest) {
   try {
-    const cookieStore = await cookies();
-    const sessionEmail = cookieStore.get("astro_session_email")?.value;
-
-    if (!sessionEmail) {
+    const session = await getVerifiedSession();
+    if (!session || !session.email) {
       return NextResponse.json({ status: "error", message: "Unauthorized." }, { status: 401 });
     }
+
+    const sessionEmail = session.email;
 
     const body = await req.json();
     const { brandName, website, contactPhone, primaryColor } = body;

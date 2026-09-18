@@ -1,24 +1,42 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { hashNewPassword } from "@/app/api/auth/session/route";
 import crypto from "crypto";
 
-// POST /api/admin/seed - Direct browser/API triggered seed
-export async function POST() {
-  try {
-    const adminPasswordHash = crypto.createHash("sha256").update("Admin@12345").digest("hex");
+const INTERNAL_SECRET = process.env.ASTRO_INTERNAL_SECRET || "c9f82d1a6e3b5c7f8a9e0d1b2";
 
-    const masterKey = "ak_live_dev_test_master_key_astro2026";
+// POST /api/admin/seed - Strictly authenticated seed endpoint
+export async function POST(req: NextRequest) {
+  try {
+    // 1. Strict Server-Side Super-Admin / Internal Secret Verification
+    const authHeader = req.headers.get("x-internal-secret");
+    if (authHeader !== INTERNAL_SECRET) {
+      return NextResponse.json(
+        { status: "error", message: "Forbidden: Invalid authorization handshake secret." },
+        { status: 403 }
+      );
+    }
+
+    // 2. Production safety lock
+    if (process.env.NODE_ENV === "production" && process.env.ALLOW_PROD_SEED !== "true") {
+      return NextResponse.json(
+        { status: "error", message: "Seed endpoint is permanently disabled in production environments." },
+        { status: 403 }
+      );
+    }
+
+    const adminPassword = process.env.ADMIN_INITIAL_PASSWORD || `Admin@${crypto.randomBytes(4).toString("hex")}`;
+    const adminPasswordHash = hashNewPassword(adminPassword);
+
+    const masterKey = process.env.ASTRO_MASTER_API_KEY || `ak_live_${crypto.randomBytes(24).toString("hex")}`;
     const masterKeyHash = crypto.createHash("sha256").update(masterKey).digest("hex");
 
-    // 1. Create/Update Admin User with known developer key
+    // 1. Create/Update Admin User with secure generated key
     const admin = await prisma.user.upsert({
       where: { email: "admin@astroengine.io" },
       update: {
         role: "ADMIN",
-        password: adminPasswordHash,
         planTier: "ENTERPRISE",
-        apiKeyHash: masterKeyHash,
-        apiKeyPrefix: "ak_live_dev_test",
         isBlocked: false,
       },
       create: {
@@ -27,7 +45,7 @@ export async function POST() {
         role: "ADMIN",
         password: adminPasswordHash,
         apiKeyHash: masterKeyHash,
-        apiKeyPrefix: "ak_live_dev_test",
+        apiKeyPrefix: masterKey.substring(0, 16),
         walletBalance: 999999.0,
         planTier: "ENTERPRISE",
         monthlyQuota: 10000000,
@@ -313,7 +331,6 @@ export async function POST() {
     return NextResponse.json({
       status: "success",
       message: "Admin account, Subscription Plans, Addon Packages, and SystemSettings successfully synced into MySQL!",
-      masterApiKey: masterKey,
       admin: {
         email: admin.email,
         role: admin.role,
@@ -324,9 +341,4 @@ export async function POST() {
     const err = error as { message?: string };
     return NextResponse.json({ status: "error", message: err.message }, { status: 500 });
   }
-}
-
-// Support browser GET request to trigger seed directly
-export async function GET() {
-  return POST();
 }

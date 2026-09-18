@@ -1,27 +1,24 @@
-import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getVerifiedSession } from "@/lib/authGuard";
 
 // GET /api/support - List user tickets (or all tickets if ADMIN)
 export async function GET(req: NextRequest) {
   try {
-    const cookieStore = await cookies();
-    const sessionEmail = cookieStore.get("astro_session_email")?.value;
-    const sessionRole = cookieStore.get("astro_session_role")?.value;
-
-    if (!sessionEmail) {
+    const session = await getVerifiedSession();
+    if (!session || !session.email) {
       return NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 401 });
     }
 
     const user = await prisma.user.findUnique({
-      where: { email: sessionEmail }
+      where: { email: session.email }
     });
 
     if (!user) {
       return NextResponse.json({ status: "error", message: "User not found" }, { status: 404 });
     }
 
-    const isAdmin = sessionRole === "ADMIN" || sessionRole === "SUPER_ADMIN";
+    const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
     const url = new URL(req.url);
     const filterAll = url.searchParams.get("all") === "true";
 
@@ -55,15 +52,13 @@ export async function GET(req: NextRequest) {
 // POST /api/support - Create a new support ticket
 export async function POST(req: NextRequest) {
   try {
-    const cookieStore = await cookies();
-    const sessionEmail = cookieStore.get("astro_session_email")?.value;
-
-    if (!sessionEmail) {
+    const session = await getVerifiedSession();
+    if (!session || !session.email) {
       return NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 401 });
     }
 
     const user = await prisma.user.findUnique({
-      where: { email: sessionEmail }
+      where: { email: session.email }
     });
 
     if (!user) {

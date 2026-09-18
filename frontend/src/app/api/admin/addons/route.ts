@@ -1,20 +1,13 @@
-import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-
-// Helper to check admin permission
-async function verifyAdmin() {
-  const cookieStore = await cookies();
-  const sessionRole = cookieStore.get("astro_session_role")?.value;
-  return sessionRole === "ADMIN" || sessionRole === "SUPER_ADMIN";
-}
+import { requireAdminSession } from "@/lib/authGuard";
 
 // GET /api/admin/addons - Admin gets all addons directly from MySQL
 export async function GET() {
   try {
-    const isAdmin = await verifyAdmin();
-    if (!isAdmin) {
-      return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
+    const admin = await requireAdminSession();
+    if (!admin) {
+      return NextResponse.json({ status: "error", message: "Forbidden: Admin authorization required." }, { status: 403 });
     }
 
     const addons = await (prisma as any).addonPackage.findMany({
@@ -31,12 +24,12 @@ export async function GET() {
   }
 }
 
-// POST /api/admin/addons - Create or Update an Addon package
+// POST /api/admin/addons - Create or update an addon package directly in MySQL
 export async function POST(req: NextRequest) {
   try {
-    const isAdmin = await verifyAdmin();
-    if (!isAdmin) {
-      return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
+    const admin = await requireAdminSession();
+    if (!admin) {
+      return NextResponse.json({ status: "error", message: "Forbidden: Admin authorization required." }, { status: 403 });
     }
 
     const body = await req.json();
@@ -98,9 +91,9 @@ export async function POST(req: NextRequest) {
 // DELETE /api/admin/addons - Delete or toggle inactive
 export async function DELETE(req: NextRequest) {
   try {
-    const isAdmin = await verifyAdmin();
-    if (!isAdmin) {
-      return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
+    const admin = await requireAdminSession();
+    if (!admin) {
+      return NextResponse.json({ status: "error", message: "Forbidden: Admin authorization required." }, { status: 403 });
     }
 
     const { searchParams } = new URL(req.url);

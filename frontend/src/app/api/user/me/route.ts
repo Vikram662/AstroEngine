@@ -1,15 +1,16 @@
-import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getVerifiedSession } from "@/lib/authGuard";
+import { hashPassword, verifyPassword } from "@/lib/session";
 
 export async function GET() {
   try {
-    const cookieStore = await cookies();
-    const sessionEmail = cookieStore.get("astro_session_email")?.value;
-
-    if (!sessionEmail) {
+    const session = await getVerifiedSession();
+    if (!session || !session.email) {
       return NextResponse.json({ status: "error", message: "Unauthorized. Please sign in." }, { status: 401 });
     }
+
+    const sessionEmail = session.email;
 
     let user = await prisma.user.findUnique({
       where: { email: sessionEmail },
@@ -27,7 +28,7 @@ export async function GET() {
     }
 
     // Format logs with BigInt converted to string
-    const formattedLogs = user.apiLogs.map((l: { id: bigint; createdAt: Date; [key: string]: unknown }) => ({
+    const formattedLogs = user.apiLogs.map((l: { id: bigint; createdAt: Date;[key: string]: unknown }) => ({
       ...l,
       id: l.id.toString(),
       createdAt: l.createdAt.toISOString()
@@ -59,17 +60,16 @@ export async function GET() {
 
 export async function PATCH(req: Request) {
   try {
-    const cookieStore = await cookies();
-    const sessionEmail = cookieStore.get("astro_session_email")?.value;
-
-    if (!sessionEmail) {
+    const session = await getVerifiedSession();
+    if (!session || !session.email) {
       return NextResponse.json({ status: "error", message: "Unauthorized." }, { status: 401 });
     }
 
+    const sessionEmail = session.email;
     const body = await req.json();
-    const { 
-      name, 
-      currentPassword, 
+    const {
+      name,
+      currentPassword,
       newPassword,
       accountWebhookUrl,
       accountWebhookSecret,
@@ -87,18 +87,40 @@ export async function PATCH(req: Request) {
 
     const updateData: Record<string, unknown> = {};
     if (name !== undefined) updateData.name = name;
-    if (accountWebhookUrl !== undefined) updateData.accountWebhookUrl = accountWebhookUrl;
+
+    // Validate accountWebhookUrl against SSRF
+    if (accountWebhookUrl !== undefined) {
+      if (accountWebhookUrl && accountWebhookUrl.trim()) {
+        const { validateSafeWebhookUrl } = await import("@/lib/ssrf");
+        const safetyCheck = await validateSafeWebhookUrl(accountWebhookUrl.trim());
+        if (!safetyCheck.valid) {
+          return NextResponse.json({
+            status: "error",
+            message: `Invalid webhook URL: ${safetyCheck.reason}`
+          }, { status: 400 });
+        }
+        updateData.accountWebhookUrl = accountWebhookUrl.trim();
+      } else {
+        updateData.accountWebhookUrl = null;
+      }
+    }
+
     if (accountWebhookSecret !== undefined) updateData.accountWebhookSecret = accountWebhookSecret;
     if (notificationPrefs !== undefined) updateData.notificationPrefs = notificationPrefs;
     if (taxProfile !== undefined) updateData.taxProfile = taxProfile;
 
     if (newPassword) {
-      const crypto = await import("crypto");
-      const currentHashed = crypto.createHash("sha256").update(currentPassword || "").digest("hex");
-      if (user.password && user.password !== currentHashed) {
+      if (!currentPassword) {
+        return NextResponse.json({ status: "error", message: "Current password is required." }, { status: 400 });
+      }
+      const isMatch = verifyPassword(currentPassword, user.password || "");
+      if (!isMatch) {
         return NextResponse.json({ status: "error", message: "Current password does not match." }, { status: 400 });
       }
-      updateData.password = crypto.createHash("sha256").update(newPassword).digest("hex");
+      if (newPassword.length < 8) {
+        return NextResponse.json({ status: "error", message: "New password must be at least 8 characters long." }, { status: 400 });
+      }
+      updateData.password = hashPassword(newPassword);
     }
 
     const updated = await prisma.user.update({

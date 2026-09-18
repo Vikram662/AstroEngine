@@ -1,6 +1,6 @@
-import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getVerifiedSession } from "@/lib/authGuard";
 
 // POST /api/support/[id]/reply - Reply to a ticket or update status
 export async function POST(
@@ -9,16 +9,13 @@ export async function POST(
 ) {
   try {
     const { id } = await params;
-    const cookieStore = await cookies();
-    const sessionEmail = cookieStore.get("astro_session_email")?.value;
-    const sessionRole = cookieStore.get("astro_session_role")?.value;
-
-    if (!sessionEmail) {
+    const session = await getVerifiedSession();
+    if (!session || !session.email) {
       return NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 401 });
     }
 
     const user = await prisma.user.findUnique({
-      where: { email: sessionEmail }
+      where: { email: session.email }
     });
 
     if (!user) {
@@ -33,7 +30,7 @@ export async function POST(
       return NextResponse.json({ status: "error", message: "Ticket not found" }, { status: 404 });
     }
 
-    const isAdmin = sessionRole === "ADMIN" || sessionRole === "SUPER_ADMIN";
+    const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
     if (!isAdmin && ticket.userId !== user.id) {
       return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
     }

@@ -177,7 +177,8 @@ export default function BillingPage() {
                   planTier: tier,
                   paymentMethod: "GATEWAY",
                   gatewayOrderId: response.razorpay_order_id || orderId,
-                  gatewayPaymentId: response.razorpay_payment_id
+                  gatewayPaymentId: response.razorpay_payment_id,
+                  gatewaySignature: response.razorpay_signature
                 });
 
                 if (res.data?.status === "success") {
@@ -271,8 +272,9 @@ export default function BillingPage() {
               const verifyRes = await axios.post("/api/billing/recharge", {
                 action: "verify_and_credit",
                 amount: selectedTier,
-                orderId: response.razorpay_order_id || orderId,
-                gatewayPaymentId: response.razorpay_payment_id
+                razorpayOrderId: response.razorpay_order_id || orderId,
+                razorpayPaymentId: response.razorpay_payment_id,
+                razorpaySignature: response.razorpay_signature
               });
 
               if (verifyRes.data.status === "success") {

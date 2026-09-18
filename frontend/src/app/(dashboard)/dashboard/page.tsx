@@ -183,7 +183,7 @@ export default function DashboardOverviewPage() {
         </h2>
         <div className="bg-slate-950 p-4 rounded-lg font-mono text-xs text-slate-100 overflow-x-auto leading-relaxed border border-slate-800">
           <div className="text-slate-400 mb-1"># Authenticated POST request to calculate Lagna Kundli</div>
-          <div>curl -X POST &quot;http://localhost:8000/api/v1/parashari/chart/d1&quot; \</div>
+          <div>curl -X POST &quot;{process.env.NEXT_PUBLIC_ASTRO_ENGINE_URL || "http://localhost:8000"}/api/v1/parashari/chart/d1&quot; \</div>
           <div className="pl-4">-H &quot;x-api-key: ak_live_your_api_key&quot; \</div>
           <div className="pl-4">-H &quot;Content-Type: application/json&quot; \</div>
           <div className="pl-4">-d &apos;{JSON.stringify({ dob: "1995-10-05", tob: "14:30", lat: 24.5854, lon: 73.7125, tz: 5.5, lang: "en" })}&apos;</div>

@@ -1,22 +1,49 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAdminSession } from "@/lib/authGuard";
 
 export async function GET(req: NextRequest) {
   try {
+    const admin = await requireAdminSession();
+    if (!admin) {
+      return NextResponse.json({ status: "error", message: "Forbidden: Admin authorization required." }, { status: 403 });
+    }
+
     const { searchParams } = new URL(req.url);
     const type = searchParams.get("type"); // "users" | "billing" | "audit" | "prompts" | "usage"
 
     if (type === "users") {
       let users = await prisma.user.findMany({
         orderBy: { createdAt: "desc" },
-        take: 50
+        take: 50,
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          planTier: true,
+          walletBalance: true,
+          monthlyUsage: true,
+          monthlyQuota: true,
+          rateLimitPerMin: true,
+          isBlocked: true,
+          apiKeyPrefix: true,
+          apiKeyCreatedAt: true,
+          apiKeyLastUsedAt: true,
+          createdAt: true,
+          updatedAt: true
+        }
       });
       return NextResponse.json({ status: "success", data: users });
     }
 
     if (type === "billing") {
       let txs = await prisma.transaction.findMany({
-        include: { user: true },
+        include: {
+          user: {
+            select: { id: true, name: true, email: true, planTier: true }
+          }
+        },
         orderBy: { createdAt: "desc" },
         take: 50
       });
@@ -41,7 +68,11 @@ export async function GET(req: NextRequest) {
 
     if (type === "usage" || type === "traffic") {
       const logs = await prisma.apiRequestLog.findMany({
-        include: { user: true },
+        include: {
+          user: {
+            select: { id: true, email: true }
+          }
+        },
         orderBy: { createdAt: "desc" },
         take: 100
       });
@@ -76,6 +107,11 @@ export async function GET(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   try {
+    const admin = await requireAdminSession();
+    if (!admin) {
+      return NextResponse.json({ status: "error", message: "Forbidden: Admin authorization required." }, { status: 403 });
+    }
+
     const body = await req.json();
     const { userId, isBlocked, addCredit, planTier, activeAddons } = body;
 

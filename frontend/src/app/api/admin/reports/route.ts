@@ -1,15 +1,13 @@
-import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAdminSession } from "@/lib/authGuard";
 
 // GET /api/admin/reports - Live module popularity & CSV generator from MySQL
 export async function GET(req: NextRequest) {
   try {
-    const cookieStore = await cookies();
-    const sessionRole = cookieStore.get("astro_session_role")?.value;
-
-    if (sessionRole !== "ADMIN" && sessionRole !== "SUPER_ADMIN") {
-      return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
+    const admin = await requireAdminSession();
+    if (!admin) {
+      return NextResponse.json({ status: "error", message: "Forbidden: Admin authorization required." }, { status: 403 });
     }
 
     const { searchParams } = new URL(req.url);

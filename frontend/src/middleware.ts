@@ -1,14 +1,16 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { verifySessionToken } from "@/lib/webSession";
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const role = request.cookies.get("astro_session_role")?.value;
-  const email = request.cookies.get("astro_session_email")?.value;
+  const token = request.cookies.get("astro_session_token")?.value;
+  const session = await verifySessionToken(token);
 
-  const isAuthenticated = Boolean(email && role);
+  const isAuthenticated = Boolean(session && session.userId);
+  const role = session?.role;
 
-  // 1. Protect Admin routes: Strictly only ADMIN / SUPER_ADMIN permitted (§14.16)
+  // 1. Protect Admin routes: Strictly only verified ADMIN / SUPER_ADMIN permitted (§14.16)
   if (pathname.startsWith("/admin")) {
     if (!isAuthenticated || (role !== "ADMIN" && role !== "SUPER_ADMIN")) {
       const redirectUrl = new URL("/login?error=admin_only", request.url);
@@ -24,6 +26,7 @@ export function middleware(request: NextRequest) {
     pathname === "/pdf-reports" || pathname.startsWith("/pdf-reports/") ||
     pathname === "/branding" || pathname.startsWith("/branding/") ||
     pathname === "/billing" || pathname.startsWith("/billing/") ||
+    pathname === "/invoices" || pathname.startsWith("/invoices/") ||
     pathname === "/team" || pathname.startsWith("/team/") ||
     pathname === "/support" || pathname.startsWith("/support/") ||
     pathname === "/profile" || pathname.startsWith("/profile/") ||

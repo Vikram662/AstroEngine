@@ -146,8 +146,10 @@ export default function DocsPage() {
 
   const getSnippet = () => {
     const payloadStr = JSON.stringify(activeDoc.samplePayload, null, 2);
+    const apiBaseUrl = (process.env.NEXT_PUBLIC_ASTRO_ENGINE_URL || "http://localhost:8000").replace(/\/$/, "");
+
     if (activeTab === "curl") {
-      return `curl -X ${activeDoc.method} "http://localhost:8000${activeDoc.path}" \\
+      return `curl -X ${activeDoc.method} "${apiBaseUrl}${activeDoc.path}" \\
   -H "x-api-key: ak_live_your_api_token" \\
   -H "Content-Type: application/json" \\
   -d '${payloadStr}'`;
@@ -155,7 +157,7 @@ export default function DocsPage() {
     if (activeTab === "node") {
       return `import axios from 'axios';
 
-const response = await axios.${activeDoc.method.toLowerCase()}('http://localhost:8000${activeDoc.path}', 
+const response = await axios.${activeDoc.method.toLowerCase()}('${apiBaseUrl}${activeDoc.path}', 
   ${payloadStr},
   {
     headers: {
@@ -169,7 +171,7 @@ console.log(response.data);`;
     if (activeTab === "python") {
       return `import requests
 
-url = "http://localhost:8000${activeDoc.path}"
+url = "${apiBaseUrl}${activeDoc.path}"
 headers = {
     "x-api-key": "ak_live_your_api_token",
     "Content-Type": "application/json"
@@ -180,7 +182,7 @@ response = requests.${activeDoc.method.toLowerCase()}(url, json=payload, headers
 print(response.json())`;
     }
     return `<?php
-$ch = curl_init("http://localhost:8000${activeDoc.path}");
+$ch = curl_init("${apiBaseUrl}${activeDoc.path}");
 curl_setopt_array($ch, [
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_POST => true,

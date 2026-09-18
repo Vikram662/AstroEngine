@@ -1,6 +1,6 @@
-import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getVerifiedSession } from "@/lib/authGuard";
 
 // GET /api/billing/invoice/[id] - Generates a printable Tax Invoice / GST Invoice HTML
 export async function GET(
@@ -9,11 +9,8 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const cookieStore = await cookies();
-    const sessionEmail = cookieStore.get("astro_session_email")?.value;
-    const sessionRole = cookieStore.get("astro_session_role")?.value;
-
-    if (!sessionEmail) {
+    const session = await getVerifiedSession();
+    if (!session || !session.email) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
@@ -27,7 +24,7 @@ export async function GET(
     }
 
     // Only account owner or admin can download invoice
-    if (tx.user.email !== sessionEmail && sessionRole !== "ADMIN" && sessionRole !== "SUPER_ADMIN") {
+    if (tx.user.email !== session.email && session.role !== "ADMIN" && session.role !== "SUPER_ADMIN") {
       return new NextResponse("Forbidden", { status: 403 });
     }
 

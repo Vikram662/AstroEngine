@@ -1,13 +1,55 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { createSessionToken, hashPassword, verifyPassword } from "@/lib/session";
 import crypto from "crypto";
 
-function hashPassword(password: string): string {
-  return crypto.createHash("sha256").update(password).digest("hex");
+export const hashNewPassword = hashPassword;
+
+// Memory-based rate limiter for login protection: 5 attempts per IP in 5 minutes
+const loginAttempts = new Map<string, { count: number; firstAttempt: number }>();
+
+function isRateLimited(ip: string): boolean {
+  const now = Date.now();
+  const record = loginAttempts.get(ip);
+  if (!record) return false;
+
+  // 5 minute window
+  if (now - record.firstAttempt > 5 * 60 * 1000) {
+    loginAttempts.delete(ip);
+    return false;
+  }
+  return record.count >= 6;
 }
+
+function recordFailedAttempt(ip: string) {
+  const now = Date.now();
+  const record = loginAttempts.get(ip);
+  if (!record || now - record.firstAttempt > 5 * 60 * 1000) {
+    loginAttempts.set(ip, { count: 1, firstAttempt: now });
+  } else {
+    record.count += 1;
+  }
+}
+
+function clearFailedAttempts(ip: string) {
+  loginAttempts.delete(ip);
+}
+
+const verifyPasswordHash = verifyPassword;
+
+
 
 export async function POST(req: NextRequest) {
   try {
+    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+
+    if (isRateLimited(ip)) {
+      return NextResponse.json(
+        { status: "error", message: "Too many failed login attempts. Please wait 5 minutes." },
+        { status: 429 }
+      );
+    }
+
     const body = await req.json();
     const { email, password, action } = body;
 
@@ -18,11 +60,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const hashedPassword = hashPassword(password);
+    const normalizedEmail = email.toLowerCase().trim();
 
     // ACTION 1: Register (For normal users)
     if (action === "register") {
-      const existing = await prisma.user.findUnique({ where: { email } });
+      const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
       if (existing) {
         return NextResponse.json(
           { status: "error", message: "An account with this email already exists." },
@@ -30,7 +72,6 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      // Fetch dynamic signup defaults configured by Admin in SystemSetting table
       const freeCreditsSetting = await prisma.systemSetting.findUnique({
         where: { key: "DEFAULT_FREE_CREDITS" }
       });
@@ -45,14 +86,18 @@ export async function POST(req: NextRequest) {
       const initialQuota = monthlyQuotaSetting ? parseInt(monthlyQuotaSetting.value, 10) : 35000;
       const initialRpm = starterRpmSetting ? parseInt(starterRpmSetting.value, 10) : 60;
 
+      const { generateApiKey } = await import("@/lib/apiKey");
+      const keyData = generateApiKey();
+
       const newUser = await prisma.user.create({
         data: {
-          email,
-          password: hashedPassword,
-          name: email.split("@")[0],
+          email: normalizedEmail,
+          password: hashNewPassword(password),
+          name: normalizedEmail.split("@")[0],
           role: "USER",
-          apiKeyHash: crypto.randomBytes(32).toString("hex"),
-          apiKeyPrefix: `ak_live_${crypto.randomBytes(4).toString("hex")}`,
+          apiKeyHash: keyData.keyHash,
+          apiKeyPrefix: keyData.keyPrefix,
+          apiKeyCreatedAt: new Date(),
           walletBalance: isNaN(initialCredits) ? 100.0 : initialCredits,
           planTier: "STARTER",
           monthlyQuota: isNaN(initialQuota) ? 35000 : initialQuota,
@@ -61,47 +106,39 @@ export async function POST(req: NextRequest) {
         }
       });
 
+      const token = createSessionToken({
+        userId: newUser.id,
+        email: newUser.email,
+        role: newUser.role
+      });
+
       const response = NextResponse.json({
         status: "success",
         message: "Account created successfully.",
         role: newUser.role
       });
 
-      response.cookies.set("astro_session_role", newUser.role, { path: "/", httpOnly: false });
-      response.cookies.set("astro_session_email", newUser.email, { path: "/", httpOnly: false });
+      const isProd = process.env.NODE_ENV === "production";
+      response.cookies.set("astro_session_token", token, {
+        path: "/",
+        httpOnly: true,
+        secure: isProd,
+        sameSite: "lax",
+        maxAge: 72 * 3600
+      });
+      // Safe non-sensitive UI indicators only
+      response.cookies.set("astro_session_role", newUser.role, { path: "/", httpOnly: true, secure: isProd, sameSite: "lax" });
+      response.cookies.set("astro_session_email", newUser.email, { path: "/", httpOnly: true, secure: isProd, sameSite: "lax" });
+
+      clearFailedAttempts(ip);
       return response;
     }
 
     // ACTION 2: Sign In
-    let user = await prisma.user.findUnique({ where: { email } });
+    const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
 
-    // Seed Super Admin automatically if logging in with default master admin credentials
-    if (!user && email === "admin@astroengine.io") {
-      user = await prisma.user.create({
-        data: {
-          email: "admin@astroengine.io",
-          password: hashPassword("Admin@12345"),
-          name: "Master Administrator",
-          role: "ADMIN",
-          apiKeyHash: crypto.randomBytes(32).toString("hex"),
-          apiKeyPrefix: "ak_live_admin_root",
-          walletBalance: 999999.0,
-          planTier: "ENTERPRISE",
-          monthlyQuota: 1000000,
-          monthlyUsage: 0
-        }
-      });
-    }
-
-    if (!user) {
-      return NextResponse.json(
-        { status: "error", message: "Account not found. Please check your credentials." },
-        { status: 401 }
-      );
-    }
-
-    // Validate Password
-    if (user.password && user.password !== hashedPassword) {
+    if (!user || !verifyPasswordHash(password, user.password || "")) {
+      recordFailedAttempt(ip);
       return NextResponse.json(
         { status: "error", message: "Invalid email or password." },
         { status: 401 }
@@ -115,14 +152,40 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    clearFailedAttempts(ip);
+
+    // If password was stored in legacy single-pass sha256, upgrade to scrypt transparently
+    if (user.password && !user.password.startsWith("scrypt$")) {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { password: hashNewPassword(password) }
+      });
+    }
+
+    const token = createSessionToken({
+      userId: user.id,
+      email: user.email,
+      role: user.role
+    });
+
     const response = NextResponse.json({
       status: "success",
       message: `Signed in successfully as ${user.role}`,
       role: user.role
     });
 
-    response.cookies.set("astro_session_role", user.role, { path: "/", httpOnly: false });
-    response.cookies.set("astro_session_email", user.email, { path: "/", httpOnly: false });
+    const isProd = process.env.NODE_ENV === "production";
+    response.cookies.set("astro_session_token", token, {
+      path: "/",
+      httpOnly: true,
+      secure: isProd,
+      sameSite: "lax",
+      maxAge: 72 * 3600
+    });
+    // Set httpOnly on all session cookies to prevent document.cookie forgery
+    response.cookies.set("astro_session_role", user.role, { path: "/", httpOnly: true, secure: isProd, sameSite: "lax" });
+    response.cookies.set("astro_session_email", user.email, { path: "/", httpOnly: true, secure: isProd, sameSite: "lax" });
+
     return response;
   } catch (err: unknown) {
     const error = err as { message?: string };
@@ -132,6 +195,7 @@ export async function POST(req: NextRequest) {
 
 export async function DELETE() {
   const response = NextResponse.json({ status: "success", message: "Logged out" });
+  response.cookies.set("astro_session_token", "", { path: "/", maxAge: 0 });
   response.cookies.set("astro_session_role", "", { path: "/", maxAge: 0 });
   response.cookies.set("astro_session_email", "", { path: "/", maxAge: 0 });
   return response;

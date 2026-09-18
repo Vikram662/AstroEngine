@@ -30,31 +30,15 @@ export async function POST(req: NextRequest) {
     const cleanedKey = apiKey.trim();
     const keyHash = crypto.createHash("sha256").update(cleanedKey).digest("hex");
 
-    console.log("[VERIFY-KEY] Incoming apiKey:", cleanedKey);
-    console.log("[VERIFY-KEY] Computed keyHash:", keyHash);
-
-    // Look up user by apiKeyHash or apiKeyPrefix
+    // Look up user strictly by cryptographic apiKeyHash
     let user = await prisma.user.findFirst({
       where: {
-        OR: [
-          { apiKeyHash: keyHash },
-          { apiKeyHash: cleanedKey }, // fallback if stored unhashed
-          { apiKeyPrefix: cleanedKey.substring(0, 16) }
-        ]
+        apiKeyHash: keyHash
       },
       include: {
         subscription: true
       }
     });
-
-    if (!user) {
-      const allUsers = await prisma.user.findMany({
-        select: { id: true, email: true, apiKeyPrefix: true, apiKeyHash: true }
-      });
-      console.log("[VERIFY-KEY] User not found! DB Users:", JSON.stringify(allUsers));
-    }
-
-    console.log("[VERIFY-KEY] Found user:", user ? { id: user.id, email: user.email, planTier: user.planTier } : "NULL");
 
     if (!user) {
       return NextResponse.json({

@@ -1,6 +1,6 @@
-import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getVerifiedSession } from "@/lib/authGuard";
 
 export interface AddonItem {
   id: string;
@@ -12,17 +12,12 @@ export interface AddonItem {
   icon: string;
 }
 
-// Helper to get active user
+// Helper to get strictly authenticated user
 async function getAuthUser() {
-  const cookieStore = await cookies();
-  const sessionEmail = cookieStore.get("astro_session_email")?.value;
-  if (sessionEmail) {
-    const user = await prisma.user.findUnique({ where: { email: sessionEmail } });
-    if (user) return user;
-  }
-  return await prisma.user.findFirst({
-    where: { isBlocked: false },
-    orderBy: { createdAt: "asc" }
+  const session = await getVerifiedSession();
+  if (!session || !session.email) return null;
+  return await prisma.user.findUnique({
+    where: { email: session.email }
   });
 }
 
@@ -88,6 +83,59 @@ export async function POST(req: NextRequest) {
 
       // OPTION 1: Pay via Razorpay Gateway directly
       if (paymentMethod === "GATEWAY") {
+        const { gatewaySignature } = body;
+        const dbSecretSetting = await prisma.systemSetting.findUnique({
+          where: { key: "RAZORPAY_KEY_SECRET" }
+        });
+        const razorpaySecret = dbSecretSetting?.value || process.env.RAZORPAY_KEY_SECRET;
+        if (!razorpaySecret) {
+          return NextResponse.json({
+            status: "error",
+            message: "Razorpay Secret is not configured. Payment verification impossible."
+          }, { status: 500 });
+        }
+
+        if (!gatewayOrderId || !gatewayPaymentId || !gatewaySignature) {
+          if (process.env.NODE_ENV === "production") {
+            return NextResponse.json({
+              status: "error",
+              message: "Missing Razorpay payment verification parameters."
+            }, { status: 400 });
+          }
+        } else {
+          const crypto = await import("crypto");
+          const bodyToSign = `${gatewayOrderId}|${gatewayPaymentId}`;
+          const expectedSignature = crypto
+            .createHmac("sha256", razorpaySecret)
+            .update(bodyToSign)
+            .digest("hex");
+
+          const isSigValid = crypto.timingSafeEqual(
+            Buffer.from(expectedSignature, "utf-8"),
+            Buffer.from(gatewaySignature, "utf-8")
+          );
+
+          if (!isSigValid) {
+            return NextResponse.json({
+              status: "error",
+              message: "Cryptographic payment verification failed. Invalid Razorpay signature."
+            }, { status: 400 });
+          }
+        }
+
+        // Prevent replay attacks
+        if (gatewayPaymentId) {
+          const existingTx = await prisma.transaction.findFirst({
+            where: { gatewayPaymentId }
+          });
+          if (existingTx) {
+            return NextResponse.json({
+              status: "error",
+              message: "This payment has already been credited."
+            }, { status: 400 });
+          }
+        }
+
         await prisma.transaction.create({
           data: {
             userId: user.id,

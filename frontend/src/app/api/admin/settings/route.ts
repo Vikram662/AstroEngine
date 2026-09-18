@@ -1,10 +1,15 @@
-import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAdminSession } from "@/lib/authGuard";
 
-// GET /api/admin/settings - Read ALL dynamic system settings directly from MySQL table
+// GET /api/admin/settings - Read ALL dynamic system settings directly from MySQL table (Admin Only)
 export async function GET() {
   try {
+    const admin = await requireAdminSession();
+    if (!admin) {
+      return NextResponse.json({ status: "error", message: "Forbidden: Admin authorization required." }, { status: 403 });
+    }
+
     // Default system keys definitions
     const standardKeys = [
       { key: "RAZORPAY_KEY_ID", value: "rzp_test_1DP5mmOlF5G5ag", category: "PAYMENTS", description: "Razorpay Standard Test Key ID" },
@@ -53,11 +58,9 @@ export async function GET() {
 // POST /api/admin/settings - Save or Add any dynamic setting from Admin panel
 export async function POST(req: NextRequest) {
   try {
-    const cookieStore = await cookies();
-    const sessionRole = cookieStore.get("astro_session_role")?.value;
-
-    if (sessionRole !== "ADMIN" && sessionRole !== "SUPER_ADMIN") {
-      return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
+    const admin = await requireAdminSession();
+    if (!admin) {
+      return NextResponse.json({ status: "error", message: "Forbidden: Admin authorization required." }, { status: 403 });
     }
 
     const body = await req.json();
@@ -92,11 +95,9 @@ export async function POST(req: NextRequest) {
 // DELETE /api/admin/settings - Delete a custom setting key dynamically
 export async function DELETE(req: NextRequest) {
   try {
-    const cookieStore = await cookies();
-    const sessionRole = cookieStore.get("astro_session_role")?.value;
-
-    if (sessionRole !== "ADMIN" && sessionRole !== "SUPER_ADMIN") {
-      return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
+    const admin = await requireAdminSession();
+    if (!admin) {
+      return NextResponse.json({ status: "error", message: "Forbidden: Admin authorization required." }, { status: 403 });
     }
 
     const { key } = await req.json();

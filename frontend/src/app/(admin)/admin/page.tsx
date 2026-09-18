@@ -154,7 +154,7 @@ export default function AdminOverviewPage() {
               <Server className="w-4 h-4 text-slate-600" />
               <div>
                 <div className="font-bold text-slate-900">FastAPI C-Core Runtime (/health)</div>
-                <div className="text-slate-500 text-[11px] font-mono">http://localhost:8000/health (Swiss Ephemeris Engine)</div>
+                <div className="text-slate-500 text-[11px] font-mono">{process.env.NEXT_PUBLIC_ASTRO_ENGINE_URL || "http://localhost:8000"}/health (Swiss Ephemeris Engine)</div>
               </div>
             </div>
             <span className="px-2.5 py-1 rounded bg-emerald-100 text-emerald-800 font-semibold border border-emerald-200 text-[11px]">
