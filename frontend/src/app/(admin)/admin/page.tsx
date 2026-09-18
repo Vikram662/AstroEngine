@@ -27,6 +27,10 @@ interface AdminStats {
   totalRevenue: number;
   totalApiRequests: number;
   avgLatency: number;
+  dbHealth?: {
+    status: string;
+    latencyMs: number;
+  };
   pdfStats: {
     failedJobs24h: number;
     activeProcessing: number;
@@ -166,8 +170,12 @@ export default function AdminOverviewPage() {
                 <div className="text-slate-500 text-[11px] font-mono">astroengine_db@localhost:3306</div>
               </div>
             </div>
-            <span className="px-2.5 py-1 rounded bg-emerald-100 text-emerald-800 font-semibold border border-emerald-200 text-[11px]">
-              Connected • 0.8ms Query Latency
+            <span className={`px-2.5 py-1 rounded font-semibold border text-[11px] ${
+              stats?.dbHealth?.status === "Connected"
+                ? "bg-emerald-100 text-emerald-800 border-emerald-200"
+                : "bg-rose-100 text-rose-800 border-rose-200"
+            }`}>
+              {stats?.dbHealth ? `${stats.dbHealth.status} • ${stats.dbHealth.latencyMs}ms Query Latency` : "Checking connection..."}
             </span>
           </div>
         </div>

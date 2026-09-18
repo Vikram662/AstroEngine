@@ -39,7 +39,7 @@ export default function TeamPage() {
             id: m.id,
             email: m.email,
             role: m.role,
-            apiKeyPrefix: m.apiKeyPrefix || "ak_live_sub_demo",
+            apiKeyPrefix: m.apiKeyPrefix || "",
             invitedAt: new Date(m.invitedAt).toLocaleDateString(),
             status: m.acceptedAt ? "ACTIVE" : "PENDING"
           })));

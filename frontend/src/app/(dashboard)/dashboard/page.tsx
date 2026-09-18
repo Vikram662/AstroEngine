@@ -37,8 +37,8 @@ export default function DashboardOverviewPage() {
       id: string;
       endpoint: string;
       statusCode: number;
-      latencyMs: number;
-      cost: number;
+      responseTime: number;
+      creditsCost: number;
       createdAt: string;
     }>;
   } | null>(null);
@@ -62,10 +62,10 @@ export default function DashboardOverviewPage() {
       .finally(() => setLoading(false));
   }, [router]);
 
-  const walletBalance = userData?.walletBalance ?? 100.0;
+  const walletBalance = userData?.walletBalance ?? 0.0;
   const monthlyUsage = userData?.monthlyUsage ?? 0;
-  const monthlyQuota = userData?.monthlyQuota ?? 35000;
-  const usagePercentage = Math.min(100, Math.round((monthlyUsage / monthlyQuota) * 100));
+  const monthlyQuota = userData?.monthlyQuota ?? (userData?.planDetails?.includedQuota ?? 0);
+  const usagePercentage = monthlyQuota > 0 ? Math.min(100, Math.round((monthlyUsage / monthlyQuota) * 100)) : 0;
 
   return (
     <div className="space-y-6">
@@ -221,8 +221,8 @@ export default function DashboardOverviewPage() {
                         {log.statusCode} {log.statusCode === 200 ? "OK" : "ERROR"}
                       </span>
                     </td>
-                    <td className="px-6 py-3.5 text-slate-600">{log.latencyMs}ms</td>
-                    <td className="px-6 py-3.5 text-slate-600 font-sans font-medium">₹{(log.cost ?? 0).toFixed(2)}</td>
+                    <td className="px-6 py-3.5 text-slate-600">{log.responseTime}ms</td>
+                    <td className="px-6 py-3.5 text-slate-600 font-sans font-medium">₹{(log.creditsCost ?? 0).toFixed(2)}</td>
                     <td className="px-6 py-3.5 text-slate-500 font-sans">
                       {new Date(log.createdAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
                     </td>

@@ -102,12 +102,28 @@ class BirthDataRequest(BaseModel):
     ayanamsa: Optional[str] = Field(default="LAHIRI", description="Internal calculation mode (defaults to LAHIRI)")
     lang: Optional[str] = Field("en", description="Localization output language: en, hi, gu, mr, ta, te", example="en")
 
+class QuotaInfo(BaseModel):
+    plan: str = Field(..., description="Active subscription plan tier (STARTER, PRO, ENTERPRISE)", example="STARTER")
+    monthly_quota: int = Field(..., description="Total included calls in the monthly plan", example=35000)
+    monthly_usage: int = Field(..., description="Calls consumed in current billing month", example=1240)
+    remaining_quota: int = Field(..., description="Calls remaining before wallet overage applies", example=33760)
+    deduction_type: str = Field("QUOTA", description="Deduction source for this call: QUOTA or WALLET_CREDIT", example="QUOTA")
+    wallet_balance: Optional[float] = Field(None, description="Prepaid wallet credit balance in INR", example=250.00)
+
 class StandardResponse(BaseModel):
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
                 "status": "success",
                 "language": "en",
+                "quota": {
+                    "plan": "STARTER",
+                    "monthly_quota": 35000,
+                    "monthly_usage": 1240,
+                    "remaining_quota": 33760,
+                    "deduction_type": "QUOTA",
+                    "wallet_balance": 250.00
+                },
                 "data": {
                     "ayanamsa": {
                         "name": "LAHIRI",
@@ -126,25 +142,7 @@ class StandardResponse(BaseModel):
                                 "pada": 3,
                                 "lord": "Moon"
                             }
-                        },
-                        "Moon": {
-                            "longitude": 312.45,
-                            "sign": "Aquarius",
-                            "sign_num": 11,
-                            "house": 3,
-                            "speed": 13.2,
-                            "is_retrograde": False,
-                            "nakshatra": {
-                                "name": "Shatabhisha",
-                                "pada": 2,
-                                "lord": "Rahu"
-                            }
                         }
-                    },
-                    "ascendant": {
-                        "longitude": 245.12,
-                        "sign": "Sagittarius",
-                        "degree_in_sign": 5.12
                     }
                 }
             }
@@ -152,6 +150,7 @@ class StandardResponse(BaseModel):
     )
     status: Literal["success", "error"] = Field("success", description="Indicates call success status ('success')")
     language: str = Field("en", description="Active response language locale code ('en', 'hi', 'gu', 'mr', 'ta', 'te')", example="en")
+    quota: Optional[QuotaInfo] = Field(None, description="Real-time subscription quota balance and plan usage breakdown")
     data: Dict[str, Any] = Field(..., description="High-precision astrological payload corresponding to the endpoint")
 
 # Endpoint response schemas for ReDoc documentation

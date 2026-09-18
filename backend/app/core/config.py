@@ -18,6 +18,8 @@ class Settings(BaseSettings):
     R2_PUBLIC_DOMAIN: Optional[str] = None
     DATABASE_URL: Optional[str] = None
     SENTRY_DSN: Optional[str] = None
+    NEXT_APP_URL: Optional[str] = None
+    CORS_ORIGINS: Optional[str] = None
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

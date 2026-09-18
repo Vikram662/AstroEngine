@@ -25,24 +25,24 @@ export async function GET() {
       take: 100
     });
 
-    const serialized = logs.map((l: { id: bigint; createdAt: Date; latencyMs?: number; statusCode?: number; cost?: number; [key: string]: unknown }) => ({
+    const serialized = logs.map((l: { id: bigint; createdAt: Date; responseTime: number; statusCode: number; creditsCost: number; [key: string]: unknown }) => ({
       ...l,
       id: l.id.toString(),
-      responseTime: l.latencyMs || 0,
-      creditsCost: l.cost || 0,
+      responseTime: l.responseTime || 0,
+      creditsCost: l.creditsCost || 0,
       createdAt: l.createdAt.toISOString().replace("T", " ").substring(0, 19)
     }));
 
     // Dynamic aggregates from user's actual database records
     const totalCalls = logs.length;
     const avgLatency = totalCalls > 0
-      ? Math.round(logs.reduce((acc: number, curr: { latencyMs?: number | null }) => acc + (curr.latencyMs || 0), 0) / totalCalls)
+      ? Math.round(logs.reduce((acc: number, curr: { responseTime?: number | null }) => acc + (curr.responseTime || 0), 0) / totalCalls)
       : 0;
     const successCount = logs.filter((l: { statusCode?: number }) => (l.statusCode ?? 200) >= 200 && (l.statusCode ?? 200) < 300).length;
     const successRate = totalCalls > 0
       ? ((successCount / totalCalls) * 100).toFixed(1)
       : "100.0";
-    const totalCreditsDeducted = logs.reduce((acc: number, curr: { cost?: number | null }) => acc + (curr.cost || 0), 0);
+    const totalCreditsDeducted = logs.reduce((acc: number, curr: { creditsCost?: number | null }) => acc + (curr.creditsCost || 0), 0);
 
     return NextResponse.json({
       status: "success",

@@ -13,9 +13,9 @@ import {
 } from "lucide-react";
 
 export default function BrandingPage() {
-  const [brandName, setBrandName] = useState("Vedic Astrology Enterprise Inc.");
-  const [website, setWebsite] = useState("https://vedicenterprise.io");
-  const [phone, setPhone] = useState("+91 98765 43210");
+  const [brandName, setBrandName] = useState("");
+  const [website, setWebsite] = useState("");
+  const [phone, setPhone] = useState("");
   const [primaryColor, setPrimaryColor] = useState("#0f172a");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);

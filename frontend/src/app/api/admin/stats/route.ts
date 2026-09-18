@@ -28,9 +28,9 @@ export async function GET() {
     // 3. API Telemetry logs count & latency
     const totalApiRequests = await prisma.apiRequestLog.count();
     const latencyAgg = await prisma.apiRequestLog.aggregate({
-      _avg: { latencyMs: true }
+      _avg: { responseTime: true }
     });
-    const avgLatency = Math.round(latencyAgg._avg.latencyMs || 12);
+    const avgLatency = latencyAgg._avg.responseTime ? Math.round(latencyAgg._avg.responseTime) : 0;
 
     // 4. PDF Worker Pipeline Health
     const failedPdfJobs = await prisma.pdfGenerationJob.count({
@@ -39,6 +39,11 @@ export async function GET() {
     const activePdfJobs = await prisma.pdfGenerationJob.count({
       where: { status: "PROCESSING" }
     });
+
+    // 5. Live DB Query Latency Check
+    const dbStartTime = Date.now();
+    await prisma.$queryRaw`SELECT 1`;
+    const dbLatencyMs = Date.now() - dbStartTime;
 
     return NextResponse.json({
       status: "success",
@@ -52,6 +57,10 @@ export async function GET() {
         totalRevenue,
         totalApiRequests,
         avgLatency,
+        dbHealth: {
+          status: "Connected",
+          latencyMs: dbLatencyMs
+        },
         pdfStats: {
           failedJobs24h: failedPdfJobs,
           activeProcessing: activePdfJobs,

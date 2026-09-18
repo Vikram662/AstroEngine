@@ -78,10 +78,44 @@ GLOBAL_RESPONSES = {
     500: {"description": "Internal Server Error — Calculation or C-binding execution error."}
 }
 
-app = FastAPI(
-    title="AstroEngine B2B API Suite",
-    description="""
-# AstroEngine Enterprise B2B API Suite
+def get_dynamic_plans_markdown() -> str:
+    """
+    Fetch active subscription plans dynamically from Next.js /api/plans (MySQL database)
+    and format them into a markdown table for ReDoc / OpenAPI documentation.
+    """
+    import httpx
+    try:
+        base_url = (settings.NEXT_APP_URL or "http://localhost:3000").rstrip("/")
+        resp = httpx.get(f"{base_url}/api/plans", timeout=2.5)
+        if resp.status_code == 200:
+            plans_data = resp.json().get("data", [])
+            if plans_data:
+                rows = []
+                for p in plans_data:
+                    name = p.get("name", p.get("tier", ""))
+                    price = f"₹{int(p.get('priceMonthly', 0)):,}" if p.get('priceMonthly') else "Free / ₹0"
+                    quota = f"{int(p.get('includedQuota', 0)):,} calls"
+                    rpm = f"{p.get('rateLimitPerMin', 60)} req / min"
+                    overage = f"₹{p.get('overageCost', 0.02)} / call"
+                    features = ", ".join(p.get("features", [])[:3]) if isinstance(p.get("features"), list) else "Standard Endpoints"
+                    rows.append(f"| **{name} Tier** | **{price} / mo** | **{quota}** | {rpm} | {overage} | {features} |")
+                
+                table_header = "| Subscription Plan | Monthly Price | Monthly Included Quota | Rate Limit (RPM) | Overage Cost / Call | Key Features |\n| :--- | :--- | :--- | :--- | :--- | :--- |\n"
+                return table_header + "\n".join(rows)
+    except Exception:
+        pass
+
+    # Fallback to current database standard if frontend service is not yet ready during cold boot
+    return (
+        "| Subscription Plan | Monthly Price | Monthly Included Quota | Rate Limit (RPM) | Overage Cost / Call | Key Features |\n"
+        "| :--- | :--- | :--- | :--- | :--- | :--- |\n"
+        "| **Starter Tier** | **₹4,999 / mo** | **35,000 calls** | 60 req / min | ₹0.02 / call | All 117 Endpoints, Full Kundli & Panchang, Community Support |\n"
+        "| **Pro Tier** | **₹14,999 / mo** | **300,000 calls** | 300 req / min | ₹0.015 / call | Full D1–D60 Divisional Charts, High Throughput, 99.9% SLA & Priority Support |\n"
+        "| **Enterprise Tier** | **₹39,999 / mo** | **1,500,000 calls** | 1,200 req / min | ₹0.01 / call | White-label PDF Engine, Dedicated Cache, Custom Branding & 24/7 SLA |"
+    )
+
+def build_api_description(plans_table_markdown: str) -> str:
+    return f"""# AstroEngine Enterprise B2B API Suite
 High-performance, multi-language (i18n) Vedic and Western Astrology API Engine, White-label PDF Generator, and Calculations Gateway.
 
 ---
@@ -93,14 +127,14 @@ High-performance, multi-language (i18n) Vedic and Western Astrology API Engine, 
 curl -X POST "http://localhost:8000/api/v1/core/planets/positions" \\
      -H "x-api-key: ak_live_your_api_token" \\
      -H "Content-Type: application/json" \\
-     -d '{
+     -d '{{
        "dob": "1995-10-05",
        "tob": "14:30",
        "lat": 24.5854,
        "lon": 73.7125,
        "tz": 5.5,
        "lang": "en"
-     }'
+     }}'
 ```
 
 ### Python (`requests`)
@@ -108,18 +142,18 @@ curl -X POST "http://localhost:8000/api/v1/core/planets/positions" \\
 import requests
 
 url = "http://localhost:8000/api/v1/core/planets/positions"
-headers = {
+headers = {{
     "x-api-key": "ak_live_your_api_token",
     "Content-Type": "application/json"
-}
-payload = {
+}}
+payload = {{
     "dob": "1995-10-05",
     "tob": "14:30",
     "lat": 24.5854,
     "lon": 73.7125,
     "tz": 5.5,
     "lang": "hi" # Hindi output
-}
+}}
 
 response = requests.post(url, json=payload, headers=headers)
 data = response.json()
@@ -130,25 +164,25 @@ print("Sun Position:", data["data"]["planets"][0]["name"], data["data"]["planets
 ```typescript
 import axios from "axios";
 
-const client = axios.create({
+const client = axios.create({{
   baseURL: "http://localhost:8000/api/v1",
-  headers: {
+  headers: {{
     "x-api-key": "ak_live_your_api_token",
     "Content-Type": "application/json"
-  }
-});
+  }}
+}});
 
-async function getKundli() {
-  const res = await client.post("/parashari/chart/d1", {
+async function getKundli() {{
+  const res = await client.post("/parashari/chart/d1", {{
     dob: "1995-10-05",
     tob: "14:30",
     lat: 24.5854,
     lon: 73.7125,
     tz: 5.5,
     lang: "en"
-  });
+  }});
   console.log("Ascendant:", res.data.data.ascendant);
-}
+}}
 ```
 
 ### PHP (`cURL`)
@@ -191,15 +225,20 @@ All API endpoints strictly enforce authentication via HTTP request headers.
 
 ## 3. Rate Limits & Quota Policy
 
-AstroEngine utilizes an in-memory & Upstash Redis sliding-window rate limiter per API key:
-| Subscription Plan | Rate Limit | Monthly Quota | Burst Allowance |
-| :--- | :--- | :--- | :--- |
-| **Free Sandbox** | 20 requests / min | 1,000 calls | 5 concurrent |
-| **Starter Tier** | 60 requests / min | 35,000 calls | 15 concurrent |
-| **Pro Tier** | 300 requests / min | 100,000 calls | 50 concurrent |
-| **Enterprise Tier** | Custom SLA | Unlimited calls | Dedicated cluster |
+AstroEngine enforces sliding-window rate limiting per API key and a dual-tier consumption model (Monthly Plan Quota first, followed by prepaid Wallet Credits overage):
 
-When limit is exceeded, HTTP `429 Too Many Requests` is returned with a `Retry-After: <seconds>` header.
+### Subscription Plans & Throughput
+
+{plans_table_markdown}
+
+---
+
+### Metering & Overage Lifecycle
+
+1. **Active Plan Quota First:** Each incoming authenticated API request decrements from your subscription plan's `monthlyQuota` (e.g. 35,000 calls on Starter, 300,000 on Pro).
+2. **Seamless Wallet Credit Fallback:** Once your monthly included quota reaches `0`, calls transition automatically into **Overage Mode**. Calls are charged against your prepaid wallet balance at the plan's overage rate (e.g. ₹0.02/call for Starter, ₹0.015/call for Pro, ₹0.01/call for Enterprise) without interrupting your live production traffic.
+3. **Double Exhaustion & Grace Handling:** When both the monthly quota **and** wallet balance are depleted, the gateway rejects subsequent calls with **`HTTP 403 Forbidden` (`QUOTA_AND_CREDITS_EXHAUSTED`)** and provides a direct recharge URL (`/billing`) with real-time balance metrics.
+4. **Rate Limit Throttling (`429 Too Many Requests`):** If bursts exceed the plan's RPM threshold (e.g., 60 RPM on Starter, 300 RPM on Pro, 1,200 RPM on Enterprise), the engine returns HTTP 429 with a `Retry-After: <seconds>` header.
 
 ---
 
@@ -214,7 +253,7 @@ AstroEngine uses a **Dual-Key Response Architecture**:
 | **`en`** (Default) | English | Latin | `Sun` | `Aries` |
 | **`hi`** | Hindi | Devanagari | `सूर्य` | `मेष` |
 | **`gu`** | Gujarati | Gujarati Unicode | `સૂર્ય` | `મેષ` |
-| **`mr`** | Marathi | Devanagari | `सूर्य` | `मेष` |
+| **`mr`** | Marathi | Devanagari | `सूर्य` | `મેષ` |
 | **`ta`** | Tamil | Dravidian Tamil | `சூரியன்` | `மேஷம்` |
 | **`te`** | Telugu | Telugu Unicode | `సూర్యుడు` | `మేషం` |
 
@@ -242,7 +281,7 @@ AstroEngine uses a **Dual-Key Response Architecture**:
 PDF generation is an asynchronous non-blocking background pipeline:
 1. **Initiate Generation:** Client sends `POST /api/v1/pdf/kundli/basic` or `POST /api/v1/pdf/kundli/brihat`.
 2. **Instant Acknowledgement:** Returns `HTTP 202 Accepted` with a unique `job_id` and `poll_url`.
-3. **Status Polling:** Query `GET /api/v1/pdf/status/{job_id}` until status reaches `COMPLETED`.
+3. **Status Polling:** Query `GET /api/v1/pdf/status/{{job_id}}` until status reaches `COMPLETED`.
 4. **Automated Webhooks:** Pass an optional HTTPS `webhook_url` in request payload to receive an instant webhook callback when PDF is compiled.
 5. **Auto-Expiring Storage:** Pre-signed URLs reside on Cloudflare R2 and auto-expire after 24 hours to ensure privacy.
 
@@ -254,12 +293,18 @@ PDF generation is an asynchronous non-blocking background pipeline:
 | :--- | :--- | :--- | :--- |
 | `AUTH_HEADER_MISSING` | `401` | Missing `x-api-key` header | Provide valid header |
 | `INVALID_API_KEY` | `401` | Key does not match active records | Regenerate key in dashboard |
-| `QUOTA_EXCEEDED` | `403` | Monthly call quota or wallet depleted | Upgrade plan or recharge wallet |
+| `QUOTA_AND_CREDITS_EXHAUSTED` | `403` | Both monthly plan quota and prepaid wallet balance are depleted | Recharge wallet or upgrade plan via `/billing` |
+| `ACCOUNT_SUSPENDED` | `403` | Account has been blocked or suspended by administrator | Contact support or check billing status |
+| `MAINTENANCE_MODE` | `503` | Platform maintenance in progress | Retry after scheduled window |
 | `VALIDATION_ERROR` | `422` | Request body field format error | Verify date/time ISO format |
 | `INVALID_COORDINATES` | `400` | Lat not in -90 to +90, lon not in -180 to +180 | Fix geographic coordinates |
 | `RATE_LIMIT_EXCEEDED` | `429` | Sliding window rate limit exceeded | Wait for `retry_after_seconds` |
 | `EPHEMERIS_CALCULATION_ERROR` | `500` | Date out of 1800-2100 CE Swiss Ephemeris range | Check historical date range |
-    """,
+"""
+
+app = FastAPI(
+    title="AstroEngine B2B API Suite",
+    description=build_api_description(get_dynamic_plans_markdown()),
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
@@ -268,12 +313,14 @@ PDF generation is an asynchronous non-blocking background pipeline:
     responses=GLOBAL_RESPONSES
 )
 
-# Strict CORS: only allow production and local developer domains (avoid open *)
-origins = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "https://app.astroengine.io"
-]
+# Dynamic CORS loaded from environment variables
+origins = []
+if settings.CORS_ORIGINS:
+    origins = [origin.strip() for origin in settings.CORS_ORIGINS.split(",") if origin.strip()]
+elif settings.NEXT_APP_URL:
+    origins = [settings.NEXT_APP_URL.rstrip("/")]
+else:
+    origins = []
 
 app.add_middleware(
     CORSMiddleware,
@@ -282,6 +329,77 @@ app.add_middleware(
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
 )
+
+@app.middleware("http")
+async def attach_quota_to_response(request: Request, call_next):
+    """
+    Middleware that automatically injects subscription quota & balance details
+    into both HTTP response headers and the JSON response body (`quota` field).
+    """
+    response = await call_next(request)
+
+    # Attach quota headers if authenticated
+    quota = getattr(request.state, "quota", None)
+    if quota:
+        if "plan" in quota:
+            response.headers["x-plan-tier"] = str(quota["plan"])
+        if "monthlyQuota" in quota:
+            response.headers["x-quota-monthly"] = str(quota["monthlyQuota"])
+        if "remainingQuota" in quota:
+            response.headers["x-quota-remaining"] = str(quota["remainingQuota"])
+        if "deductionType" in quota:
+            response.headers["x-quota-deduction-type"] = str(quota["deductionType"])
+        if "walletBalance" in quota and quota["walletBalance"] is not None:
+            response.headers["x-wallet-balance"] = str(quota["walletBalance"])
+
+    # If response is application/json from our /api endpoints, inject into JSON body
+    if (
+        request.url.path.startswith("/api/v1") 
+        and response.status_code == 200 
+        and quota 
+        and response.headers.get("content-type", "").startswith("application/json")
+    ):
+        import json
+        from starlette.responses import Response as StarletteResponse
+        
+        # Consume response body
+        body = [section async for section in response.body_iterator]
+        body_bytes = b"".join(body)
+        
+        try:
+            payload = json.loads(body_bytes.decode("utf-8"))
+            if isinstance(payload, dict) and "status" in payload and payload["status"] == "success":
+                # Inject real-time plan quota breakdown directly from DB record
+                payload["quota"] = {
+                    "plan": quota.get("plan"),
+                    "plan_name": quota.get("planName", quota.get("plan")),
+                    "plan_price_monthly": quota.get("priceMonthly"),
+                    "monthly_quota": quota.get("monthlyQuota"),
+                    "monthly_usage": quota.get("monthlyUsage"),
+                    "remaining_quota": quota.get("remainingQuota"),
+                    "deduction_type": quota.get("deductionType"),
+                    "wallet_balance": quota.get("walletBalance")
+                }
+                modified_bytes = json.dumps(payload).encode("utf-8")
+                
+                new_response = StarletteResponse(
+                    content=modified_bytes,
+                    status_code=response.status_code,
+                    headers=dict(response.headers),
+                    media_type="application/json"
+                )
+                new_response.headers["content-length"] = str(len(modified_bytes))
+                return new_response
+        except Exception:
+            # Fallback if body cannot be parsed
+            return StarletteResponse(
+                content=body_bytes,
+                status_code=response.status_code,
+                headers=dict(response.headers),
+                media_type="application/json"
+            )
+
+    return response
 
 # Health & Readiness Probes (§12.4 in Technical Specification)
 @app.get("/health", tags=["System"])
@@ -329,13 +447,12 @@ async def global_exception_handler(request: Request, exc: Exception):
     )
 
 def custom_openapi():
-    if app.openapi_schema:
-        return app.openapi_schema
+    # Dynamically generate fresh documentation with live DB plans table
     from fastapi.openapi.utils import get_openapi
     openapi_schema = get_openapi(
         title=app.title,
         version=app.version,
-        description=app.description,
+        description=build_api_description(get_dynamic_plans_markdown()),
         routes=app.routes,
         tags=TAGS_METADATA,
     )
@@ -344,6 +461,14 @@ def custom_openapi():
     standard_success_example = {
         "status": "success",
         "language": "en",
+        "quota": {
+            "plan": "STARTER",
+            "monthly_quota": 35000,
+            "monthly_usage": 142,
+            "remaining_quota": 34858,
+            "deduction_type": "QUOTA",
+            "wallet_balance": 150.00
+        },
         "data": {
             "ayanamsa": {"name": "LAHIRI", "value_degrees": 23.8214},
             "planets": {

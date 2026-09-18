@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 
 export default function ApiKeysPage() {
-  const [apiKeyPrefix, setApiKeyPrefix] = useState("ak_live_9281a4b2");
+  const [apiKeyPrefix, setApiKeyPrefix] = useState("");
   const [newRawKey, setNewRawKey] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);

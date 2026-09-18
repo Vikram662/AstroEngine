@@ -7,6 +7,8 @@ from app.modules.dasha.calculator import (
     calculate_vimshottari_mahadasha,
     calculate_antardashas,
     calculate_pratyantar_dashas,
+    calculate_sookshma_dashas,
+    calculate_prana_dashas,
     get_running_dasha_tree
 )
 
@@ -81,20 +83,24 @@ async def get_pratyantardashas(
     req: BirthDataRequest,
     mahadasha: str = "JUPITER",
     antardasha: str = "SATURN",
+    start_date: str = "2024-01-01 00:00:00",
     key_hash: str = Depends(verify_api_key)
 ):
-    """Module 4 — Endpoint 33: Level 3 Pratyantar Dasha breakdown."""
+    """Module 4 — Endpoint 33: Level 3 Pratyantar Dasha breakdown with exact timestamps."""
+    selected_lang = (req.lang or "en").lower().strip()
+    pd_list = calculate_pratyantar_dashas(
+        mahadasha_planet=mahadasha.upper(),
+        antardasha_planet=antardasha.upper(),
+        ad_start_str=start_date,
+        lang=selected_lang
+    )
     return StandardResponse(
         status="success",
-        language=req.lang or "en",
+        language=selected_lang,
         data={
             "mahadasha": mahadasha.upper(),
             "antardasha": antardasha.upper(),
-            "pratyantardashas": [
-                {"lord": "SATURN", "start": "2024-01-01", "end": "2024-05-27"},
-                {"lord": "MERCURY", "start": "2024-05-27", "end": "2024-10-06"},
-                {"lord": "KETU", "start": "2024-10-06", "end": "2024-11-29"}
-            ]
+            "pratyantardashas": pd_list
         }
     )
 
@@ -104,25 +110,56 @@ async def get_sookshmadashas(
     mahadasha: str = "JUPITER",
     antardasha: str = "SATURN",
     pratyantar: str = "MERCURY",
+    start_date: str = "2024-05-27 00:00:00",
     key_hash: str = Depends(verify_api_key)
 ):
-    """Module 4 — Endpoint 34: Level 4 Sookshma Dasha sub-periods."""
+    """Module 4 — Endpoint 34: Level 4 Sookshma Dasha sub-periods with exact start/end time."""
+    selected_lang = (req.lang or "en").lower().strip()
+    sd_list = calculate_sookshma_dashas(
+        mahadasha_planet=mahadasha.upper(),
+        antardasha_planet=antardasha.upper(),
+        pratyantar_planet=pratyantar.upper(),
+        pd_start_str=start_date,
+        lang=selected_lang
+    )
     return StandardResponse(
         status="success",
-        language=req.lang or "en",
-        data={"level": "Level 4 Sookshma", "parent": f"{mahadasha}-{antardasha}-{pratyantar}", "periods": []}
+        language=selected_lang,
+        data={
+            "level": "Level 4 Sookshma Dasha",
+            "parent_chain": f"{mahadasha.upper()} > {antardasha.upper()} > {pratyantar.upper()}",
+            "sookshmadashas": sd_list
+        }
     )
 
 @router.post("/vimshottari/prana", response_model=StandardResponse)
 async def get_pranadashas(
     req: BirthDataRequest,
+    mahadasha: str = "JUPITER",
+    antardasha: str = "SATURN",
+    pratyantar: str = "MERCURY",
+    sookshma: str = "VENUS",
+    start_date: str = "2024-06-15 00:00:00",
     key_hash: str = Depends(verify_api_key)
 ):
-    """Module 4 — Endpoint 35: Level 5 Prana Dasha fine-grain event timing."""
+    """Module 4 — Endpoint 35: Level 5 Prana Dasha fine-grain event timing down to exact hour & minute."""
+    selected_lang = (req.lang or "en").lower().strip()
+    pr_list = calculate_prana_dashas(
+        mahadasha_planet=mahadasha.upper(),
+        antardasha_planet=antardasha.upper(),
+        pratyantar_planet=pratyantar.upper(),
+        sookshma_planet=sookshma.upper(),
+        sd_start_str=start_date,
+        lang=selected_lang
+    )
     return StandardResponse(
         status="success",
-        language=req.lang or "en",
-        data={"level": "Level 5 Prana Dasha", "resolution": "Hourly / Daily micro-timing active"}
+        language=selected_lang,
+        data={
+            "level": "Level 5 Prana Dasha",
+            "parent_chain": f"{mahadasha.upper()} > {antardasha.upper()} > {pratyantar.upper()} > {sookshma.upper()}",
+            "pranadashas": pr_list
+        }
     )
 
 @router.post("/yogini/complete", response_model=StandardResponse)

@@ -63,7 +63,13 @@ export async function POST(req: NextRequest) {
       const dbKeySetting = await prisma.systemSetting.findUnique({
         where: { key: "RAZORPAY_KEY_ID" }
       });
-      const razorpayKey = dbKeySetting?.value || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY_ID || "rzp_test_mock_enterprise_key";
+      const razorpayKey = dbKeySetting?.value || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY_ID;
+      if (!razorpayKey) {
+        return NextResponse.json({
+          status: "error",
+          message: "Razorpay Key ID is not configured in Database SystemSettings or environment variables."
+        }, { status: 500 });
+      }
 
       return NextResponse.json({
         status: "success",
