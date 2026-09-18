@@ -29,7 +29,7 @@ export const Navbar = () => {
             Pricing
           </Link>
           <a
-            href={`${process.env.NEXT_PUBLIC_ASTRO_ENGINE_URL || "http://localhost:8000"}/redoc`}
+            href={`${process.env.NEXT_PUBLIC_ASTRO_ENGINE_URL || "http://localhost:8000"}/documentation`}
             target="_blank"
             rel="noreferrer"
             className="hover:text-zinc-900 transition"

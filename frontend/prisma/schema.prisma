@@ -79,6 +79,9 @@ model User {
   rateLimitPerMin       Int       @default(60)
   isBlocked             Boolean   @default(false)
   brandingConfig        Json?     // { logoUrl, brandName, website, primaryColor, contactPhone }
+  activeAddons          Json?     // List of activated modular engine add-ons e.g. ["pdf", "kp", "lalkitab"]
+  addonUsage            Json?     // Per-addon monthly usage tracker e.g. {"pdf": 12, "kp": 340}
+  taxProfile            Json?     // GST & Invoicing details { gstin, businessName, address, state, pan }
   piiRetentionDays      Int       @default(365)
 
   // Auto-recharge (§8.2.6)
@@ -238,6 +241,22 @@ model SubscriptionPlan {
   overageCost     Float
   features        Json     // List of features [ "All 117 Endpoints", ... ]
   isPopular       Boolean  @default(false)
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model AddonPackage {
+  id              String   @id // e.g. "pdf", "numerology", "western", "lalkitab", "kp", "dosha_matching", "dasha"
+  name            String
+  category        String   @default("CALCULATIONS") // "REPORTS", "CALCULATIONS"
+  priceMonthly    Float
+  monthlyQuota    Int      @default(1000) // Included calls / reports per month (e.g. 500 for PDF, 50000 for Calcs)
+  rateLimitPerMin Int      @default(60)   // Dedicated rate limit for this engine
+  overageCost     Float    @default(0.05) // Overage fee per call / report after monthlyQuota exhaustion
+  description     String   @db.Text
+  features        Json     // List of features [ "Vector SVG Charts", ... ]
+  icon            String   @default("FileText")
   isActive        Boolean  @default(true)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt

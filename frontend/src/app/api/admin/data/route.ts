@@ -77,7 +77,7 @@ export async function GET(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   try {
     const body = await req.json();
-    const { userId, isBlocked, addCredit, planTier } = body;
+    const { userId, isBlocked, addCredit, planTier, activeAddons } = body;
 
     if (!userId) {
       return NextResponse.json({ status: "error", message: "userId required" }, { status: 400 });
@@ -85,6 +85,7 @@ export async function PATCH(req: NextRequest) {
 
     const updateData: Record<string, unknown> = {};
     if (isBlocked !== undefined) updateData.isBlocked = isBlocked;
+    if (activeAddons !== undefined) updateData.activeAddons = activeAddons;
     if (addCredit !== undefined && !isNaN(Number(addCredit))) {
       updateData.walletBalance = { increment: Number(addCredit) };
     }
@@ -113,7 +114,7 @@ export async function PATCH(req: NextRequest) {
         action: planTier ? "PLAN_TIER_CHANGED" : addCredit ? "WALLET_CREDIT_ADDED" : "USER_STATUS_TOGGLED",
         targetType: "User",
         targetId: userId,
-        metadata: { updateData }
+        metadata: JSON.parse(JSON.stringify({ updateData }))
       }
     });
 

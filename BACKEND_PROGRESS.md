@@ -3,7 +3,7 @@
 > **Current Status:** 100% of Master Specification Astrological Modules & PDF Engine Completed  
 > **Total Registered Endpoints:** **117 Production Endpoints** (All 12 Modules §4 in `TECHNICAL_SPECIFICATION.md` fully covered)  
 > **Unit & Live API Tests:** **38 / 38 Test Suites Passed (100% Live Execution across all 117 APIs)**  
-> **API Docs & Schemas:** ReDoc (`/redoc`) & Swagger (`/docs`) with custom typed response models for 200/202, 400, 401, 403, 422, 429, 500 across ALL endpoints.
+> **API Docs & Schemas:** Documentation (`/documentation`) & Swagger (`/docs`) with custom typed response models for 200/202, 400, 401, 403, 422, 429, 500 across ALL endpoints.
 
 ## 1. System Architecture & Foundation Setup
 

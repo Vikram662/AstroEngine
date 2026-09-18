@@ -81,7 +81,7 @@ export async function POST() {
       });
     }
 
-    // 3. Insert Subscription Plans
+    // 3. Insert Subscription Plans (Option A Tier Permissions)
     const plans = [
       {
         tier: "STARTER" as const,
@@ -90,7 +90,14 @@ export async function POST() {
         includedQuota: 35000,
         rateLimitPerMin: 60,
         overageCost: 0.02,
-        features: ["All 117 Endpoints Active", "Kundli & Panchang Calculations", "Community Support"],
+        features: [
+          "35,000 Requests / Month",
+          "60 RPM Rate Limit",
+          "Core Astronomy (Planets, Cusps, Retrograde)",
+          "Panchang & Muhurat (5 Limbs & Choghadiya)",
+          "Basic Kundli (D1 Lagna & D9 Navamsha)",
+          "Vedic Astrological Remedies"
+        ],
         isPopular: false
       },
       {
@@ -100,7 +107,17 @@ export async function POST() {
         includedQuota: 300000,
         rateLimitPerMin: 300,
         overageCost: 0.015,
-        features: ["300,000 Requests / Mo", "300 RPM Burst Limit", "Full D1-D60 Divisional Charts", "99.9% SLA & Priority Support"],
+        features: [
+          "300,000 Requests / Month",
+          "300 RPM Rate Limit",
+          "Full D1–D60 Divisional Vargas (Harmonics)",
+          "120-Yr Vimshottari Dasha Hierarchy (MD/AD/PD)",
+          "KP Stellar Astrology & Sub-Lords 1–249",
+          "36-Guna Kundli Matchmaking & Dosha Engine",
+          "Lal Kitab Debts (Rin) & Varshphal Returns",
+          "Numerology Engine & Western Tropical Synastry",
+          "99.9% Production SLA & Priority Support"
+        ],
         isPopular: true
       },
       {
@@ -110,7 +127,15 @@ export async function POST() {
         includedQuota: 1500000,
         rateLimitPerMin: 1200,
         overageCost: 0.01,
-        features: ["1,500,000 Requests / Mo", "1,200 RPM High Throughput", "Whitelabel PDF Engine with Custom Logo", "Dedicated Slack Channel & 24/7 SLA"],
+        features: [
+          "1,500,000 Requests / Month",
+          "1,200 RPM High-Volume Burst Capacity",
+          "ALL 117 Production Calculation APIs Unlocked",
+          "Full Automated 20+ Page PDF Report Engine",
+          "Whitelabel Branding, Custom Logo & Watermark",
+          "Multi-User Team Sub-Accounts & API Keys",
+          "Custom Ephemeris & Dedicated Slack 24/7 SLA"
+        ],
         isPopular: false
       }
     ];
@@ -118,14 +143,176 @@ export async function POST() {
     for (const p of plans) {
       await prisma.subscriptionPlan.upsert({
         where: { tier: p.tier },
-        update: {},
+        update: {
+          features: p.features,
+          name: p.name,
+          priceMonthly: p.priceMonthly,
+          includedQuota: p.includedQuota,
+          rateLimitPerMin: p.rateLimitPerMin,
+          overageCost: p.overageCost
+        },
         create: p
       });
     }
 
+    // Seed default PLAN_MODULES settings into MySQL SystemSetting table
+    const defaultTierModules = [
+      { key: "PLAN_MODULES_STARTER", value: "core,panchang,parashari,general" },
+      { key: "PLAN_MODULES_PRO", value: "core,panchang,parashari,dasha,kp,dosha,matching,dosha_matching,remedies,numerology,western,lalkitab,advanced,general" },
+      { key: "PLAN_MODULES_ENTERPRISE", value: "*" }
+    ];
+
+    for (const tm of defaultTierModules) {
+      const exists = await prisma.systemSetting.findUnique({ where: { key: tm.key } });
+      if (!exists) {
+        await prisma.systemSetting.create({
+          data: {
+            key: tm.key,
+            value: tm.value,
+            category: "PERMISSIONS",
+            description: `Allowed API modules for ${tm.key.replace("PLAN_MODULES_", "")} tier`
+          }
+        });
+      }
+    }
+
+    // 4. Insert Default Addon Packages with Quota and Rate Limits
+    const addonPackages = [
+      {
+        id: "pdf",
+        name: "Automated PDF Report Engine",
+        category: "REPORTS",
+        priceMonthly: 999,
+        monthlyQuota: 500, // 500 PDF generations included per month
+        rateLimitPerMin: 30, // Rate limit: 30 PDF generation requests / min
+        overageCost: 5.00, // ₹5.00 per additional PDF generated beyond 500
+        description: "Generate 20+ page print-ready Brihat Kundli, Matchmaking, and Dosha PDF reports with vector charts.",
+        features: ["500 PDF Generations / mo", "Vector SVG Charts", "Print-Ready 300 DPI", "Cloudflare R2 Direct URLs"],
+        icon: "FileText",
+        isActive: true
+      },
+      {
+        id: "numerology",
+        name: "Numerology Engine",
+        category: "CALCULATIONS",
+        priceMonthly: 499,
+        monthlyQuota: 50000,
+        rateLimitPerMin: 120,
+        overageCost: 0.03,
+        description: "Full Pythagorean & Chaldean numerology: Life Path, Destiny, Soul Urge, and Personal Year forecasts.",
+        features: ["50,000 Calculations / mo", "Chaldean & Pythagorean", "Name Correction Matrix", "10-Year Progressions"],
+        icon: "Hash",
+        isActive: true
+      },
+      {
+        id: "western",
+        name: "Western Tropical Astrology",
+        category: "CALCULATIONS",
+        priceMonthly: 499,
+        monthlyQuota: 50000,
+        rateLimitPerMin: 120,
+        overageCost: 0.03,
+        description: "Tropical zodiac calculations, Placidus/Koch wheels, full 12-planet aspects matrix, and synastry.",
+        features: ["50,000 Calculations / mo", "Tropical Planetary Longitudes", "Aspects Matrix (Trine, Square)", "Interactive Wheel SVGs"],
+        icon: "Compass",
+        isActive: true
+      },
+      {
+        id: "lalkitab",
+        name: "Lal Kitab System & Varshphal",
+        category: "CALCULATIONS",
+        priceMonthly: 499,
+        monthlyQuota: 50000,
+        rateLimitPerMin: 120,
+        overageCost: 0.03,
+        description: "Kalpurush conversions, 6 ancestral debts (Rin), sleeping planets, and annual solar Varshphal returns.",
+        features: ["50,000 Calculations / mo", "6 Ancestral Debts (Rin)", "Sleeping Houses & Planets", "Annual Varshphal Progressions"],
+        icon: "BookOpen",
+        isActive: true
+      },
+      {
+        id: "kp",
+        name: "KP Astrology (Krishnamurti Paddhati)",
+        category: "CALCULATIONS",
+        priceMonthly: 599,
+        monthlyQuota: 50000,
+        rateLimitPerMin: 120,
+        overageCost: 0.03,
+        description: "Stellar astrology with Sign, Star, and Sub-Lords, Placidus cusps, and instant Horary 1–249 seed calculations.",
+        features: ["50,000 Calculations / mo", "Sign / Star / Sub-Lords", "Horary 1–249 Seeds", "Significator Rulers (A/B/C/D)"],
+        icon: "Star",
+        isActive: true
+      },
+      {
+        id: "dosha_matching",
+        name: "Matchmaking & Dosha Engine",
+        category: "CALCULATIONS",
+        priceMonthly: 499,
+        monthlyQuota: 50000,
+        rateLimitPerMin: 120,
+        overageCost: 0.03,
+        description: "Comprehensive 36-Guna Ashtakoota Milan, detailed Manglik Dosha with 20+ cancellations, and Kaal Sarp analysis.",
+        features: ["50,000 Calculations / mo", "36-Guna Ashtakoota Milan", "Manglik Dosha & Cancellations", "12 Kaal Sarp Yoga Types"],
+        icon: "Heart",
+        isActive: true
+      },
+      {
+        id: "doshas",
+        name: "Comprehensive All-Dosha Suite",
+        category: "CALCULATIONS",
+        priceMonthly: 599,
+        monthlyQuota: 50000,
+        rateLimitPerMin: 120,
+        overageCost: 0.03,
+        description: "Full Vedic Dosha analysis: Manglik with 20+ cancellations, 12 Kaal Sarp yogas, Saturn Sade Sati & Dhaiya, Pitra Dosha, and Guru Chandal.",
+        features: ["50,000 Calculations / mo", "Manglik & 20+ Cancellations", "12 Kaal Sarp Yoga Types", "Saturn Sade Sati & Dhaiya", "Pitra & Guru Chandal Doshas"],
+        icon: "ShieldAlert",
+        isActive: true
+      },
+      {
+        id: "remedies",
+        name: "Astrological Remedies Engine",
+        category: "REMEDIES",
+        priceMonthly: 399,
+        monthlyQuota: 50000,
+        rateLimitPerMin: 120,
+        overageCost: 0.02,
+        description: "Life/Lucky/Benefic gemstone recommendations with Maraka cautions, 1-14 Mukhi Rudraksha prescription, and Beej Mantras.",
+        features: ["50,000 Calculations / mo", "Life, Lucky & Benefic Gems", "1-14 Mukhi Rudraksha Matrix", "Vedic & Tantrik Beej Mantras"],
+        icon: "Sparkles",
+        isActive: true
+      }
+    ];
+
+    for (const addon of addonPackages) {
+      await (prisma as any).addonPackage.upsert({
+        where: { id: addon.id },
+        update: {
+          name: addon.name,
+          category: addon.category,
+          priceMonthly: addon.priceMonthly,
+          monthlyQuota: addon.monthlyQuota,
+          rateLimitPerMin: addon.rateLimitPerMin,
+          overageCost: addon.overageCost,
+          description: addon.description,
+          features: addon.features,
+          icon: addon.icon,
+          isActive: addon.isActive
+        },
+        create: addon
+      });
+    }
+
+    // Remove obsolete or discontinued addon ids (e.g. dasha, dosha_matching)
+    await (prisma as any).addonPackage.deleteMany({
+      where: {
+        id: { in: ["dasha", "dosha_matching"] }
+      }
+    });
+
     return NextResponse.json({
       status: "success",
-      message: "Admin account, Subscription Plans, and SystemSettings successfully synced into MySQL!",
+      message: "Admin account, Subscription Plans, Addon Packages, and SystemSettings successfully synced into MySQL!",
       masterApiKey: masterKey,
       admin: {
         email: admin.email,

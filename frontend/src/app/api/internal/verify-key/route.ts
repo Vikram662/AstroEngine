@@ -86,71 +86,219 @@ export async function POST(req: NextRequest) {
       }, { status: 503 });
     }
 
-    // Fetch user's dynamic subscription plan record directly from MySQL SubscriptionPlan table
-    const planRecord = await prisma.subscriptionPlan.findUnique({
-      where: { tier: user.planTier }
-    });
+    // =========================================================================
+    // 100% DYNAMIC DB-DRIVEN MODULE & ADDON PERMISSION SYSTEM
+    // =========================================================================
+    const normalizedModule = (module || "GENERAL").toLowerCase();
+    const isSuperOrAdmin = user.role === "ADMIN" || user.role === "SUPER_ADMIN";
 
-    // Read overage cost from plan or systemSetting fallback
-    let costPerCall = planRecord?.overageCost;
-    if (costPerCall === undefined || costPerCall === null) {
-      const overageSetting = await prisma.systemSetting.findUnique({
-        where: { key: "OVERAGE_COST_PER_CALL" }
-      });
-      costPerCall = overageSetting ? parseFloat(overageSetting.value) || 0.02 : 0.02;
+    // 1. Fetch live plans, user's plan record, and all active addons directly from MySQL
+    const [allDbAddons, planRecord, planModulesSetting] = await Promise.all([
+      (prisma as any).addonPackage.findMany({ where: { isActive: true } }),
+      prisma.subscriptionPlan.findUnique({ where: { tier: user.planTier } }),
+      prisma.systemSetting.findUnique({ where: { key: `PLAN_MODULES_${user.planTier}` } })
+    ]);
+
+    // 2. Determine allowed modules strictly from MySQL:
+    // If Admin configured PLAN_MODULES_{tier} in SystemSetting, use that.
+    // Otherwise, dynamically derive allowed modules from the plan's own DB record!
+    let allowedModulesList: string[] = [];
+    if (planModulesSetting?.value) {
+      allowedModulesList = planModulesSetting.value.split(",").map((m: string) => m.trim().toLowerCase());
+    } else if (isSuperOrAdmin) {
+      allowedModulesList = ["*"];
+    } else if (planRecord?.features && Array.isArray(planRecord.features)) {
+      // Dynamically extract allowed modules from plan features string in DB
+      allowedModulesList = ["core", "panchang", "parashari", "general"];
+      for (const feat of planRecord.features as string[]) {
+        const lowerFeat = feat.toLowerCase();
+        for (const dbAddon of allDbAddons) {
+          if (lowerFeat.includes(dbAddon.id.toLowerCase()) || lowerFeat.includes(dbAddon.name.toLowerCase())) {
+            allowedModulesList.push(dbAddon.id.toLowerCase());
+          }
+        }
+      }
+    } else {
+      allowedModulesList = ["core", "panchang", "parashari", "general"];
     }
 
-    const monthlyQuota = planRecord?.includedQuota || user.monthlyQuota || 35000;
-    const monthlyUsage = user.monthlyUsage || 0;
-    const walletBalance = user.walletBalance || 0;
+    const isWildcardAllowed = allowedModulesList.includes("*") || isSuperOrAdmin;
+    const userActiveAddons: string[] = Array.isArray(user.activeAddons) ? (user.activeAddons as string[]) : [];
 
+    // 3. Find if this incoming request corresponds to an active Addon in MySQL
+    // Dynamically match against addon.id, addon.name, or any words in addon.features
+    let matchedAddonRecord = allDbAddons.find((addon: any) => {
+      const aId = (addon.id || "").toLowerCase();
+      const aName = (addon.name || "").toLowerCase();
+      if (aId === normalizedModule) return true;
+      if (aName.includes(normalizedModule) || normalizedModule.includes(aId)) return true;
+
+      // Also check features array in DB
+      if (Array.isArray(addon.features)) {
+        for (const f of addon.features) {
+          const lowerF = String(f).toLowerCase();
+          if (lowerF.includes(normalizedModule) || normalizedModule.includes(lowerF)) return true;
+        }
+      }
+      return false;
+    });
+
+    const isAddonActive = matchedAddonRecord ? userActiveAddons.includes(matchedAddonRecord.id) : false;
+
+    // 4. Pay-per-use fallback for PDF reports (₹10/PDF if wallet balance is positive)
+    let isPayPerUsePdf = false;
+    if (normalizedModule.includes("pdf") && !isWildcardAllowed && !isAddonActive) {
+      if (user.walletBalance >= 10.0) {
+        isPayPerUsePdf = true;
+      }
+    }
+
+    const isModuleAllowed = isWildcardAllowed || 
+                            allowedModulesList.includes(normalizedModule) || 
+                            isAddonActive || 
+                            isPayPerUsePdf;
+
+    if (!isModuleAllowed) {
+      const requiredTier = matchedAddonRecord?.category === "REPORTS" ? "ENTERPRISE" : "PRO";
+      const billingUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/billing`;
+
+      return NextResponse.json({
+        valid: false,
+        error_code: "PLAN_UPGRADE_OR_ADDON_REQUIRED",
+        message: `The '${module.toUpperCase()}' engine is not included in your '${user.planTier}' plan. Activate it as a Modular Add-on or upgrade your plan.`,
+        details: {
+          currentPlan: user.planTier,
+          requiredPlan: requiredTier,
+          module: module,
+          addonAvailable: Boolean(matchedAddonRecord),
+          addonId: matchedAddonRecord?.id,
+          addonPortalUrl: `${billingUrl}#addons`,
+          upgradeUrl: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/pricing`,
+          action: `Activate the ${matchedAddonRecord?.name || module.toUpperCase()} Add-on in your Billing dashboard or recharge your wallet.`
+        }
+      }, { status: 403 });
+    }
+
+    // Only deduct from Add-on if not included in the base plan
+    if (isWildcardAllowed || allowedModulesList.includes(normalizedModule)) {
+      matchedAddonRecord = null;
+    }
+
+    const walletBalance = user.walletBalance || 0;
     let deductionType = "QUOTA";
     let creditsDeducted = 0;
 
-    // STEP 1: If user has monthly quota remaining from their subscription plan
-    if (monthlyUsage < monthlyQuota) {
-      // Consume from plan quota
-      await prisma.user.update({
-        where: { id: user.id },
-        data: {
-          monthlyUsage: { increment: 1 },
-          apiKeyLastUsedAt: new Date()
-        }
-      });
-      deductionType = "QUOTA";
-      creditsDeducted = 0;
+    // CASE A: Access is through an ADD-ON (Module is covered by AddonPackage)
+    if (matchedAddonRecord) {
+      const addonQuota = matchedAddonRecord.monthlyQuota !== undefined ? matchedAddonRecord.monthlyQuota : 1000;
+      const addonOverage = matchedAddonRecord.overageCost !== undefined ? matchedAddonRecord.overageCost : 0.05;
+      
+      const currentAddonUsageMap = (user.addonUsage && typeof user.addonUsage === "object" ? user.addonUsage : {}) as Record<string, number>;
+      const currentAddonUsage = Number(currentAddonUsageMap[matchedAddonRecord.id] || 0);
+
+      // 1. Within Add-on quota
+      if (currentAddonUsage < addonQuota) {
+        currentAddonUsageMap[matchedAddonRecord.id] = currentAddonUsage + 1;
+        await prisma.user.update({
+          where: { id: user.id },
+          data: {
+            addonUsage: currentAddonUsageMap,
+            monthlyUsage: { increment: 1 },
+            apiKeyLastUsedAt: new Date()
+          }
+        });
+        deductionType = "ADDON_QUOTA";
+        creditsDeducted = 0;
+      }
+      // 2. Add-on quota exhausted -> Wallet Overage fallback
+      else if (walletBalance >= addonOverage) {
+        currentAddonUsageMap[matchedAddonRecord.id] = currentAddonUsage + 1;
+        await prisma.user.update({
+          where: { id: user.id },
+          data: {
+            addonUsage: currentAddonUsageMap,
+            walletBalance: { decrement: addonOverage },
+            monthlyUsage: { increment: 1 },
+            apiKeyLastUsedAt: new Date()
+          }
+        });
+        deductionType = "ADDON_OVERAGE";
+        creditsDeducted = addonOverage;
+      }
+      // 3. Both Add-on Quota & Wallet exhausted
+      else {
+        return NextResponse.json({
+          valid: false,
+          error_code: "ADDON_QUOTA_EXHAUSTED",
+          message: `Your monthly quota for the ${matchedAddonRecord.name} add-on (${addonQuota.toLocaleString()} units) is exhausted, and your wallet balance (₹${walletBalance.toFixed(2)}) is insufficient for overage (₹${addonOverage.toFixed(2)}/unit).`,
+          details: {
+            addonId: matchedAddonRecord.id,
+            addonName: matchedAddonRecord.name,
+            includedQuota: addonQuota,
+            usedQuota: currentAddonUsage,
+            overageCost: addonOverage,
+            walletBalance: Number(walletBalance.toFixed(2)),
+            action: "Please recharge your wallet or contact support."
+          }
+        }, { status: 403 });
+      }
     } 
-    // STEP 2: Quota is exhausted (overage) -> Fallback to prepaid wallet credits
-    else if (walletBalance >= costPerCall) {
-      // Deduct from wallet balance
-      await prisma.user.update({
-        where: { id: user.id },
-        data: {
-          walletBalance: { decrement: costPerCall },
-          monthlyUsage: { increment: 1 },
-          apiKeyLastUsedAt: new Date()
-        }
-      });
-      deductionType = "WALLET_CREDIT";
-      creditsDeducted = costPerCall;
-    } 
-    // STEP 3: Both Monthly Plan Quota AND Wallet Credits are exhausted!
+    // CASE B: Standard Plan Quota deduction
     else {
-      const rechargeUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/billing`;
-      return NextResponse.json({
-        valid: false,
-        error_code: "QUOTA_AND_CREDITS_EXHAUSTED",
-        message: `Your monthly subscription plan quota (${monthlyQuota.toLocaleString()} calls) is completely exhausted, and your prepaid wallet balance (₹${walletBalance.toFixed(2)}) is insufficient to cover overage (₹${costPerCall.toFixed(2)}/call).`,
-        details: {
-          monthlyQuota,
-          monthlyUsage,
-          quotaRemaining: 0,
-          walletBalance: Number(walletBalance.toFixed(2)),
-          requiredPerCall: costPerCall,
-          rechargeUrl: rechargeUrl,
-          action: "Please recharge your wallet or upgrade to a higher subscription plan to continue making API calls."
-        }
-      }, { status: 403 });
+      let costPerCall = planRecord?.overageCost;
+      if (costPerCall === undefined || costPerCall === null) {
+        const overageSetting = await prisma.systemSetting.findUnique({
+          where: { key: "OVERAGE_COST_PER_CALL" }
+        });
+        costPerCall = overageSetting ? parseFloat(overageSetting.value) || 0.02 : 0.02;
+      }
+
+      const monthlyQuota = planRecord?.includedQuota || user.monthlyQuota || 35000;
+      const monthlyUsage = user.monthlyUsage || 0;
+
+      // STEP 1: Plan quota remaining
+      if (monthlyUsage < monthlyQuota) {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: {
+            monthlyUsage: { increment: 1 },
+            apiKeyLastUsedAt: new Date()
+          }
+        });
+        deductionType = "QUOTA";
+        creditsDeducted = 0;
+      } 
+      // STEP 2: Quota exhausted -> Fallback to prepaid wallet
+      else if (walletBalance >= costPerCall) {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: {
+            walletBalance: { decrement: costPerCall },
+            monthlyUsage: { increment: 1 },
+            apiKeyLastUsedAt: new Date()
+          }
+        });
+        deductionType = "WALLET_CREDIT";
+        creditsDeducted = costPerCall;
+      } 
+      // STEP 3: Both Monthly Plan Quota AND Wallet Credits are exhausted!
+      else {
+        const rechargeUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/billing`;
+        return NextResponse.json({
+          valid: false,
+          error_code: "QUOTA_AND_CREDITS_EXHAUSTED",
+          message: `Your monthly subscription plan quota (${monthlyQuota.toLocaleString()} calls) is completely exhausted, and your prepaid wallet balance (₹${walletBalance.toFixed(2)}) is insufficient to cover overage (₹${costPerCall.toFixed(2)}/call).`,
+          details: {
+            monthlyQuota,
+            monthlyUsage,
+            quotaRemaining: 0,
+            walletBalance: Number(walletBalance.toFixed(2)),
+            requiredPerCall: costPerCall,
+            rechargeUrl: rechargeUrl,
+            action: "Please recharge your wallet or upgrade to a higher subscription plan to continue making API calls."
+          }
+        }, { status: 403 });
+      }
     }
 
     // Log the API call in ApiRequestLog for real-time traffic monitoring & usage analytics
@@ -180,11 +328,10 @@ export async function POST(req: NextRequest) {
         plan: user.planTier,
         planName: planRecord?.name || user.planTier,
         priceMonthly: planRecord?.priceMonthly !== undefined ? planRecord.priceMonthly : 4999,
-        monthlyQuota: monthlyQuota,
-        monthlyUsage: monthlyUsage + 1,
-        remainingQuota: Math.max(0, monthlyQuota - (monthlyUsage + 1)),
+        monthlyQuota: planRecord?.includedQuota || user.monthlyQuota || 35000,
+        monthlyUsage: (user.monthlyUsage || 0) + 1,
         deductionType: deductionType,
-        walletBalance: deductionType === "WALLET_CREDIT" ? Math.max(0, walletBalance - costPerCall) : walletBalance
+        walletBalance: deductionType.includes("OVERAGE") || deductionType === "WALLET_CREDIT" ? Math.max(0, walletBalance - creditsDeducted) : walletBalance
       }
     });
 

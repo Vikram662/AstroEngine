@@ -31,12 +31,25 @@ export async function GET(
       return new NextResponse("Forbidden", { status: 403 });
     }
 
-    // Calculations for 18% GST (9% CGST + 9% SGST)
+    // Fetch tax profile if available
+    const taxProfile = (tx.user as any).taxProfile || {};
+    const customerGstin = taxProfile.gstin || "";
+    const customerBusinessName = taxProfile.businessName || tx.user.name || "Enterprise Developer";
+    const customerAddress = taxProfile.address || "";
+    const customerState = taxProfile.state || "";
+    const customerPan = taxProfile.pan || (customerGstin.length >= 12 ? customerGstin.substring(2, 12) : "");
+
+    // Calculations for 18% GST:
+    // AstroEngine is in Maharashtra (State Code: 27). If customer is also MH, CGST 9% + SGST 9%. Otherwise IGST 18%.
+    const isIntraState = !customerState || customerState.toLowerCase().includes("maharashtra") || customerGstin.startsWith("27");
+    
     const grossAmount = Number(tx.amount);
     const taxableValue = grossAmount / 1.18;
     const totalGst = grossAmount - taxableValue;
-    const cgst = totalGst / 2;
-    const sgst = totalGst / 2;
+    const cgst = isIntraState ? totalGst / 2 : 0;
+    const sgst = isIntraState ? totalGst / 2 : 0;
+    const igst = isIntraState ? 0 : totalGst;
+    
     const invoiceNumber = `INV-${new Date(tx.createdAt).getFullYear()}-${tx.id.substring(0, 8).toUpperCase()}`;
     const invoiceDate = new Date(tx.createdAt).toLocaleDateString("en-IN", {
       year: "numeric",
@@ -231,8 +244,12 @@ export async function GET(
 
       <div class="party-box">
         <h4>Billed To (Customer / Tenant)</h4>
-        <div class="party-name">${tx.user.name || "Enterprise Developer"}</div>
+        <div class="party-name">${customerBusinessName}</div>
         <div class="party-details">
+          ${customerGstin ? `<strong>GSTIN:</strong> <code>${customerGstin}</code><br>` : ""}
+          ${customerPan ? `<strong>PAN:</strong> <code>${customerPan}</code><br>` : ""}
+          ${customerAddress ? `<strong>Address:</strong> ${customerAddress}<br>` : ""}
+          ${customerState ? `<strong>State / UT:</strong> ${customerState}<br>` : ""}
           Account Email: <strong>${tx.user.email}</strong><br>
           User ID: ${tx.userId.substring(0, 14)}...<br>
           Payment Gateway: Razorpay Checkout<br>
@@ -274,6 +291,7 @@ export async function GET(
           <td>Taxable Subtotal</td>
           <td class="num-col">₹${taxableValue.toFixed(2)}</td>
         </tr>
+        ${isIntraState ? `
         <tr>
           <td>Central GST (CGST @ 9%)</td>
           <td class="num-col">₹${cgst.toFixed(2)}</td>
@@ -282,6 +300,12 @@ export async function GET(
           <td>State GST (SGST @ 9%)</td>
           <td class="num-col">₹${sgst.toFixed(2)}</td>
         </tr>
+        ` : `
+        <tr>
+          <td>Integrated GST (IGST @ 18%)</td>
+          <td class="num-col">₹${igst.toFixed(2)}</td>
+        </tr>
+        `}
         <tr class="total-row">
           <td>Total Gross Invoice (INR)</td>
           <td class="num-col">₹${grossAmount.toFixed(2)}</td>

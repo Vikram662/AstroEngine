@@ -73,7 +73,8 @@ export async function PATCH(req: Request) {
       newPassword,
       accountWebhookUrl,
       accountWebhookSecret,
-      notificationPrefs
+      notificationPrefs,
+      taxProfile
     } = body;
 
     const user = await prisma.user.findUnique({
@@ -89,6 +90,7 @@ export async function PATCH(req: Request) {
     if (accountWebhookUrl !== undefined) updateData.accountWebhookUrl = accountWebhookUrl;
     if (accountWebhookSecret !== undefined) updateData.accountWebhookSecret = accountWebhookSecret;
     if (notificationPrefs !== undefined) updateData.notificationPrefs = notificationPrefs;
+    if (taxProfile !== undefined) updateData.taxProfile = taxProfile;
 
     if (newPassword) {
       const crypto = await import("crypto");

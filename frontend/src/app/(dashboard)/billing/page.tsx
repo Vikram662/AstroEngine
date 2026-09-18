@@ -14,6 +14,7 @@ import {
   AlertCircle,
   ArrowUpRight,
   FileText,
+  Check,
   X
 } from "lucide-react";
 
@@ -49,10 +50,27 @@ export default function BillingPage() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [transactions, setTransactions] = useState<any[]>([]);
+  const [addons, setAddons] = useState<any[]>([]);
+  const [activeAddons, setActiveAddons] = useState<string[]>([]);
+  const [togglingAddon, setTogglingAddon] = useState<string | null>(null);
+  const [selectedAddonForPurchase, setSelectedAddonForPurchase] = useState<any | null>(null);
+  const [purchasingAddonMethod, setPurchasingAddonMethod] = useState<string | null>(null);
 
   const [userSubscription, setUserSubscription] = useState<{ currentPeriodEnd?: string } | null>(null);
 
+  const fetchAddons = () => {
+    axios.get("/api/user/addons")
+      .then(res => {
+        if (res.data?.catalog) {
+          setAddons(res.data.catalog);
+          setActiveAddons(res.data.activeAddons || []);
+        }
+      })
+      .catch(() => {});
+  };
+
   const fetchUserData = () => {
+    fetchAddons();
     // Fetch live user balance, current plan, and active subscription cycle
     axios.get("/api/user/me")
       .then(res => {
@@ -298,8 +316,127 @@ export default function BillingPage() {
     }
   };
 
+  const handleCancelAddon = async (addon: any) => {
+    setTogglingAddon(addon.id);
+    setErrorMessage(null);
+    setSuccessMessage(null);
+
+    try {
+      const res = await axios.post("/api/user/addons", {
+        addonId: addon.id,
+        action: "deactivate"
+      });
+
+      if (res.data?.status === "success") {
+        setSuccessMessage(res.data.message);
+        fetchUserData();
+      } else {
+        setErrorMessage(res.data?.message || "Failed to cancel addon.");
+      }
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { message?: string } }; message?: string };
+      setErrorMessage(error.response?.data?.message || error.message || "Failed to cancel addon.");
+    } finally {
+      setTogglingAddon(null);
+    }
+  };
+
+  const executeAddonPurchase = async (addon: any, method: "WALLET" | "GATEWAY") => {
+    setPurchasingAddonMethod(method);
+    setErrorMessage(null);
+    setSuccessMessage(null);
+
+    try {
+      if (method === "GATEWAY") {
+        const orderRes = await axios.post("/api/billing/recharge", {
+          action: "create_order",
+          amount: addon.priceMonthly
+        });
+
+        const { orderId, key, amount, currency } = orderRes.data;
+
+        if (typeof window !== "undefined" && (window as any).Razorpay) {
+          const options = {
+            key: key || "rzp_test_mock_enterprise_key",
+            amount: Math.round(amount * 100),
+            currency: currency || "INR",
+            name: "AstroEngine Cloud",
+            description: `Activate ${addon.name} Add-on`,
+            order_id: orderId,
+            handler: async function (response: any) {
+              try {
+                const res = await axios.post("/api/user/addons", {
+                  addonId: addon.id,
+                  action: "activate",
+                  paymentMethod: "GATEWAY",
+                  gatewayOrderId: response.razorpay_order_id || orderId,
+                  gatewayPaymentId: response.razorpay_payment_id
+                });
+
+                if (res.data?.status === "success") {
+                  setSuccessMessage(res.data.message);
+                  setSelectedAddonForPurchase(null);
+                  fetchUserData();
+                } else {
+                  setErrorMessage(res.data?.message || "Payment verified but addon activation failed.");
+                }
+              } catch (subErr: any) {
+                setErrorMessage(subErr.response?.data?.message || "Failed to confirm addon activation.");
+              } finally {
+                setPurchasingAddonMethod(null);
+              }
+            },
+            prefill: {
+              name: "Developer",
+              email: "dev@client.com"
+            },
+            theme: {
+              color: "#0f172a"
+            },
+            modal: {
+              ondismiss: function () {
+                setPurchasingAddonMethod(null);
+                setErrorMessage("Payment checkout cancelled by user.");
+              }
+            }
+          };
+
+          const rzp = new (window as any).Razorpay(options);
+          rzp.open();
+          return;
+        } else {
+          setErrorMessage("Razorpay Checkout SDK is still loading. Please try again in a few moments.");
+          setPurchasingAddonMethod(null);
+          return;
+        }
+      } else {
+        // Pay from Wallet balance
+        const res = await axios.post("/api/user/addons", {
+          addonId: addon.id,
+          action: "activate",
+          paymentMethod: "WALLET"
+        });
+
+        if (res.data?.status === "success") {
+          setSuccessMessage(res.data.message);
+          setSelectedAddonForPurchase(null);
+          fetchUserData();
+        } else {
+          setErrorMessage(res.data?.message || "Failed to activate addon.");
+        }
+      }
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { message?: string } }; message?: string };
+      setErrorMessage(error.response?.data?.message || error.message || "Failed to activate addon.");
+    } finally {
+      if (method === "WALLET") {
+        setPurchasingAddonMethod(null);
+      }
+    }
+  };
+
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-6 max-w-6xl">
       {/* Header Banner */}
       <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
         <h1 className="text-2xl font-bold tracking-tight text-slate-900">Wallet & Dynamic Billing</h1>
@@ -389,11 +526,30 @@ export default function BillingPage() {
                     <span className="text-2xl font-black font-mono text-slate-900">₹{p.priceMonthly.toLocaleString()}</span>
                     <span className="text-[11px] text-slate-500">/month</span>
                   </div>
-                  <div className="text-xs text-slate-600 font-medium mt-1">
-                    {p.includedQuota.toLocaleString()} calls / mo
+
+                  {/* Quota & Limits Box */}
+                  <div className="mt-2.5 py-2 px-2.5 rounded-lg bg-slate-50 border border-slate-100 text-[11px] font-mono text-slate-700 space-y-0.5">
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Monthly Quota:</span>
+                      <strong className="text-slate-900">{p.includedQuota.toLocaleString()} calls</strong>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Rate Limit:</span>
+                      <strong className="text-slate-900">{p.rateLimitPerMin} RPM</strong>
+                    </div>
                   </div>
-                  <div className="text-[11px] text-slate-400 mt-0.5 font-mono">
-                    Rate limit: {p.rateLimitPerMin} RPM
+
+                  {/* Features List */}
+                  <div className="mt-3.5 space-y-1.5 text-xs text-slate-700">
+                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                      Included in this Plan:
+                    </div>
+                    {(Array.isArray(p.features) ? p.features : []).map((feat, fIdx) => (
+                      <div key={fIdx} className="flex items-start gap-1.5 text-[11px] leading-tight text-slate-700">
+                        <Check className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0 mt-0.5" />
+                        <span>{feat}</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
 
@@ -473,61 +629,140 @@ export default function BillingPage() {
         </button>
       </div>
 
-      {/* Live Invoices & History */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-200 bg-slate-50/50">
-          <h3 className="text-sm font-bold text-slate-900">Settled Transactions & GST Invoices</h3>
+      {/* Modular Engine Add-ons Section (Model 3) */}
+      <div id="addons" className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="text-base font-bold text-slate-900">Modular Engine Add-ons</h3>
+              <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-purple-100 text-purple-800 border border-purple-200">
+                Power-Ups
+              </span>
+            </div>
+            <p className="text-slate-500 text-xs mt-0.5">
+              Unlock specialized engines individually on Starter or Pro plans without paying for full Enterprise.
+            </p>
+          </div>
+          <div className="text-right">
+            <span className="text-[11px] text-slate-400 font-mono">
+              Wallet Balance: <strong className="text-slate-900 font-mono">₹{walletBalance.toFixed(2)}</strong>
+            </span>
+          </div>
         </div>
-        <div className="divide-y divide-slate-100 text-xs text-slate-700">
-          {transactions.length > 0 ? (
-            transactions.map((tx) => (
-              <div key={tx.id} className="px-6 py-4 flex items-center justify-between hover:bg-slate-50/60 transition">
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {addons.map((addon) => {
+            const isEnterprise = currentPlanTier === "ENTERPRISE";
+            const isActive = isEnterprise || activeAddons.includes(addon.id);
+
+            return (
+              <div
+                key={addon.id}
+                className={`p-4 rounded-xl border flex flex-col justify-between transition ${
+                  isActive
+                    ? "bg-slate-50/70 border-slate-300 ring-1 ring-slate-900/5 shadow-xs"
+                    : "bg-white border-slate-200 hover:border-slate-300 hover:shadow-xs"
+                }`}
+              >
                 <div>
-                  <div className="font-bold text-slate-900">Tax Invoice #{tx.id.substring(0, 8).toUpperCase()}</div>
-                  <div className="text-slate-500 text-[11px] mt-0.5 font-mono">{tx.orderId} • {tx.date}</div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <div className="text-right">
-                    <div className="font-mono text-slate-900 font-bold">₹{tx.amount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</div>
-                    <div className="text-[10px] text-emerald-700 font-semibold">
-                      {tx.creditsAdded > 0 ? `+${tx.creditsAdded.toLocaleString()} credits` : "Subscription Activated"}
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-bold text-slate-900 text-xs">{addon.name}</span>
+                      </div>
+                      <span className="inline-block mt-1 px-1.5 py-0.5 rounded text-[9px] font-mono font-bold uppercase tracking-wider bg-slate-100 text-slate-600 border border-slate-200">
+                        {addon.category}
+                      </span>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-mono text-slate-900 font-bold text-xs">
+                        ₹{addon.priceMonthly}
+                      </div>
+                      <div className="text-[10px] text-slate-400">/ month</div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <a 
-                      href={`/api/billing/invoice/${tx.id}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs shadow-xs transition"
-                      title="View & Download Official GST Tax Invoice (PDF)"
-                    >
-                      <FileText className="w-3.5 h-3.5 text-blue-600" />
-                      <span>GST Invoice (PDF)</span>
-                    </a>
-                    <button 
-                      onClick={() => {
-                        const csvContent = `data:text/csv;charset=utf-8,InvoiceId,Date,Amount,Status\n${tx.id},${tx.date},${tx.amount},${tx.status}\n`;
-                        const link = document.createElement("a");
-                        link.href = encodeURI(csvContent);
-                        link.download = `Invoice_${tx.id.substring(0, 8)}.csv`;
-                        link.click();
-                      }}
-                      className="text-slate-500 hover:text-slate-800 p-1.5 rounded hover:bg-slate-100 transition" 
-                      title="Download Raw CSV"
-                    >
-                      <Download className="w-4 h-4" />
-                    </button>
+
+                  <p className="text-[11px] text-slate-600 mt-2 leading-relaxed">
+                    {addon.description}
+                  </p>
+
+                  {/* Quota specification pill */}
+                  <div className="mt-2.5 py-1.5 px-2.5 rounded-lg bg-slate-100/80 border border-slate-200/60 flex items-center justify-between text-[10px] font-mono text-slate-700">
+                    <span>
+                      Quota: <strong className="text-slate-900 font-bold">{(addon.monthlyQuota || 1000).toLocaleString()} {addon.category === "REPORTS" ? "PDFs" : "calls"}</strong>
+                    </span>
+                    <span>
+                      Limit: <strong className="text-slate-900 font-bold">{addon.rateLimitPerMin || 60} RPM</strong>
+                    </span>
+                  </div>
+
+                  <div className="mt-3 grid grid-cols-2 gap-1.5 text-[10px] text-slate-700">
+                    {(addon.features || []).map((feat: string, fIdx: number) => (
+                      <div key={fIdx} className="flex items-center gap-1">
+                        <Check className="w-3 h-3 text-emerald-600 flex-shrink-0" />
+                        <span className="truncate">{feat}</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
+
+                <div className="mt-4 pt-3 border-t border-slate-200/80">
+                  {isEnterprise ? (
+                    <div className="w-full py-1.5 px-2 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold text-[11px] flex items-center justify-center gap-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Included in Enterprise Plan</span>
+                    </div>
+                  ) : isActive ? (
+                    <div className="flex items-center justify-between">
+                      <span className="text-emerald-700 font-bold text-xs flex items-center gap-1">
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        <span>Active on Account</span>
+                      </span>
+                      <button
+                        onClick={() => handleCancelAddon(addon)}
+                        disabled={togglingAddon === addon.id}
+                        className="text-[11px] text-rose-600 hover:text-rose-800 font-semibold underline disabled:opacity-50"
+                      >
+                        {togglingAddon === addon.id ? "Cancelling..." : "Cancel Add-on"}
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setSelectedAddonForPurchase(addon)}
+                      className="w-full py-2 px-3 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs shadow flex items-center justify-center gap-1.5 transition"
+                    >
+                      <Zap className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Activate for ₹{addon.priceMonthly}/mo</span>
+                    </button>
+                  )}
+                </div>
               </div>
-            ))
-          ) : (
-            <div className="px-6 py-8 text-center text-slate-400">
-              <CreditCard className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-              <span>No transactions or invoices generated yet. Recharge wallet or upgrade plan to generate compliant GST invoices.</span>
-            </div>
-          )}
+            );
+          })}
         </div>
+      </div>
+
+      {/* Compact Banner: Invoices & Tax Profile */}
+      <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-start gap-3">
+          <div className="p-2.5 rounded-lg bg-slate-100 text-slate-700 mt-0.5">
+            <FileText className="w-5 h-5 text-slate-700" />
+          </div>
+          <div>
+            <h3 className="text-sm font-bold text-slate-900">GST Tax Invoices & Business Tax Profile</h3>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Configure your Company GSTIN, Registered Address, and view or download all past settled tax invoices.
+            </p>
+          </div>
+        </div>
+
+        <Link
+          href="/invoices"
+          className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs transition shadow-xs self-start sm:self-auto shrink-0"
+        >
+          <span>View Invoices & GST Profile</span>
+          <ArrowUpRight className="w-4 h-4" />
+        </Link>
       </div>
       {/* Upgrade Plan Modal: Choose Payment Method (Wallet vs Gateway) */}
       {selectedPlanForUpgrade && (
@@ -672,6 +907,126 @@ export default function BillingPage() {
 
             <div className="text-[11px] text-center text-slate-400">
               Transactions generate compliant GST Tax Invoices immediately upon settlement.
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add-on Payment Selection Modal (Wallet vs Razorpay) */}
+      {selectedAddonForPurchase && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 max-w-md w-full shadow-2xl space-y-4 animate-in fade-in">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div>
+                <span className="text-[10px] font-mono uppercase tracking-wider text-purple-600 font-bold bg-purple-50 px-2 py-0.5 rounded-full border border-purple-200">
+                  Add-on Activation
+                </span>
+                <h3 className="text-base font-bold text-slate-900 mt-1">
+                  Activate {selectedAddonForPurchase.name}
+                </h3>
+              </div>
+              <button
+                onClick={() => setSelectedAddonForPurchase(null)}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-600">
+              {selectedAddonForPurchase.description}
+            </p>
+
+            {/* Price & Quota Box */}
+            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+              <div>
+                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Included Monthly Quota</span>
+                <span className="text-xs font-mono font-bold text-slate-800">
+                  {(selectedAddonForPurchase.monthlyQuota || 1000).toLocaleString()} {selectedAddonForPurchase.category === "REPORTS" ? "PDFs" : "calls"} / mo
+                </span>
+              </div>
+              <div className="text-right">
+                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Price</span>
+                <span className="text-xl font-black font-mono text-slate-900">
+                  ₹{selectedAddonForPurchase.priceMonthly}
+                </span>
+                <span className="text-[10px] text-slate-400">/mo</span>
+              </div>
+            </div>
+
+            <div className="space-y-3 pt-1">
+              <div className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                Select Payment Method:
+              </div>
+
+              {/* Option 1: Pay from Live Wallet */}
+              <div className="p-4 rounded-xl border border-slate-200 hover:border-slate-300 transition space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 rounded-lg bg-slate-100 text-slate-800">
+                      <Wallet className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-slate-900">Option 1: Pay from Wallet</div>
+                      <div className="text-[11px] text-slate-500">
+                        Available Balance: <strong className="font-mono text-slate-900">₹{walletBalance.toFixed(2)}</strong>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {walletBalance >= selectedAddonForPurchase.priceMonthly ? (
+                  <button
+                    onClick={() => executeAddonPurchase(selectedAddonForPurchase, "WALLET")}
+                    disabled={purchasingAddonMethod === "WALLET"}
+                    className="w-full py-2.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center justify-center gap-2 transition disabled:opacity-50"
+                  >
+                    {purchasingAddonMethod === "WALLET" ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>Deducting Wallet Balance...</span>
+                      </>
+                    ) : (
+                      <span>Pay ₹{selectedAddonForPurchase.priceMonthly} from Wallet</span>
+                    )}
+                  </button>
+                ) : (
+                  <div className="text-[11px] text-amber-800 bg-amber-50 p-2 rounded-lg border border-amber-200">
+                    Insufficient wallet balance (Short by ₹{(selectedAddonForPurchase.priceMonthly - walletBalance).toFixed(2)}). Pay with Razorpay below.
+                  </div>
+                )}
+              </div>
+
+              {/* Option 2: Pay directly with Razorpay */}
+              <div className="p-4 rounded-xl border border-slate-200 hover:border-slate-300 transition space-y-3">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-lg bg-emerald-50 text-emerald-700">
+                    <CreditCard className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold text-slate-900">Option 2: Pay via Razorpay Gateway</div>
+                    <div className="text-[11px] text-slate-500">UPI, QR, Credit/Debit Cards, NetBanking</div>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => executeAddonPurchase(selectedAddonForPurchase, "GATEWAY")}
+                  disabled={purchasingAddonMethod === "GATEWAY"}
+                  className="w-full py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-2 transition disabled:opacity-50 shadow-xs"
+                >
+                  {purchasingAddonMethod === "GATEWAY" ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Opening Razorpay Checkout...</span>
+                    </>
+                  ) : (
+                    <>
+                      <CreditCard className="w-3.5 h-3.5" />
+                      <span>Pay ₹{selectedAddonForPurchase.priceMonthly} with Razorpay</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -89,6 +89,53 @@ const API_DOCS: ApiEndpointDoc[] = [
       girl: { dob: "1996-03-24", tob: "18:45", lat: 19.0760, lon: 72.8777, tz: 5.5 },
       lang: "en"
     }
+  },
+  {
+    module: "PDF Reports",
+    name: "Async Kundli PDF Generator",
+    method: "POST",
+    path: "/api/v1/pdf/kundli/basic",
+    description: "Generates 15–20 page print-ready branded Kundli PDF report (Async Queue).",
+    samplePayload: {
+      dob: "1995-10-05",
+      tob: "14:30",
+      lat: 24.5854,
+      lon: 73.7125,
+      tz: 5.5,
+      lang: "en",
+      branding: {
+        company_name: "Astrology Studio",
+        logo_url: "https://example.com/logo.png",
+        primary_color: "#4f46e5"
+      }
+    }
+  },
+  {
+    module: "PDF Reports",
+    name: "Grand Brihat Kundli PDF (80+ Pages)",
+    method: "POST",
+    path: "/api/v1/pdf/kundli/brihat",
+    description: "Generates 60–100 page grand encyclopedic Kundli PDF with all harmonic charts and dasha trees.",
+    samplePayload: {
+      dob: "1995-10-05",
+      tob: "14:30",
+      lat: 24.5854,
+      lon: 73.7125,
+      tz: 5.5,
+      lang: "hi",
+      branding: {
+        company_name: "Astrology Studio",
+        logo_url: "https://example.com/logo.png"
+      }
+    }
+  },
+  {
+    module: "PDF Reports",
+    name: "Poll Report Job Status & Download URL",
+    method: "GET",
+    path: "/api/v1/pdf/status/pdf_job_sample123",
+    description: "Poll status (PENDING / PROCESSING / COMPLETED) and fetch Cloudflare R2 download URL.",
+    samplePayload: {}
   }
 ];
 
@@ -177,7 +224,7 @@ echo $response;`;
               <ExternalLink className="w-3 h-3 text-zinc-400" />
             </a>
             <a
-              href={`${process.env.NEXT_PUBLIC_ASTRO_ENGINE_URL || "http://localhost:8000"}/redoc`}
+              href={`${process.env.NEXT_PUBLIC_ASTRO_ENGINE_URL || "http://localhost:8000"}/documentation`}
               target="_blank"
               rel="noreferrer"
               className="px-3 py-1.5 rounded-md bg-white hover:bg-zinc-100 border border-zinc-200 text-zinc-700 text-xs font-medium flex items-center gap-1.5 transition"

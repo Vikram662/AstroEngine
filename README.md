@@ -74,7 +74,7 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
 ```
 - Interactive Swagger UI: `http://localhost:8000/docs`
-- Interactive ReDoc: `http://localhost:8000/redoc`
+- Interactive Documentation: `http://localhost:8000/documentation`
 
 ### 2. Run Frontend Portal (Next.js)
 ```powershell

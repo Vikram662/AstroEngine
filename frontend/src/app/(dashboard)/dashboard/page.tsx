@@ -143,7 +143,7 @@ export default function DashboardOverviewPage() {
             <span>{usagePercentage}% consumed</span>
             <span>
               {userData?.subscription?.currentPeriodEnd
-                ? `Renews: ${new Date(userData.subscription.currentPeriodEnd).toLocaleDateString("en-IN", { month: "short", day: "numeric" })}`
+                ? `Renews: ${new Date(userData.subscription.currentPeriodEnd).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}`
                 : "Reset: 1st of Month"}
             </span>
           </div>

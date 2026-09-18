@@ -181,7 +181,7 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 Ab browser mein open karein:
 - **Swagger Interactive API Docs**: `http://localhost:8000/docs`
-- **ReDoc Interactive Docs**: `http://localhost:8000/redoc`
+- **Interactive Documentation**: `http://localhost:8000/documentation`
 - **Health Check Probe**: `http://localhost:8000/health`
 
 ### Linux Production Systemd Service (VPS ke liye):

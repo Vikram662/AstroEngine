@@ -66,8 +66,19 @@ async def verify_api_key(
         async with httpx.AsyncClient(timeout=4.0) as client:
             resp = await client.post(next_service_url, json=payload, headers=headers)
             data = resp.json()
-
             if resp.status_code != 200 or not data.get("valid"):
+                # Handle plan tier module access restriction (Option A)
+                if data.get("error_code") == "PLAN_UPGRADE_REQUIRED":
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail={
+                            "status": "error",
+                            "error_code": "PLAN_UPGRADE_REQUIRED",
+                            "message": data.get("message"),
+                            "details": data.get("details")
+                        }
+                    )
+
                 # Handle quota and credits exhausted scenario
                 if data.get("error_code") == "QUOTA_AND_CREDITS_EXHAUSTED":
                     raise HTTPException(

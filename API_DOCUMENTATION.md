@@ -2,7 +2,7 @@
 
 **Gateway URL (Local):** `http://localhost:8000`  
 **Interactive Swagger UI:** `http://localhost:8000/docs`  
-**Enterprise ReDoc UI:** `http://localhost:8000/redoc`  
+**Enterprise Documentation:** `http://localhost:8000/documentation`  
 **OpenAPI JSON Schema:** `http://localhost:8000/openapi.json`  
 
 ---

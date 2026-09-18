@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, HTMLResponse
 from app.core.config import settings
 from app.modules.core_astronomy.router import router as core_astronomy_router
 from app.modules.panchang.router import router as panchang_router
@@ -353,7 +353,7 @@ app = FastAPI(
     description=build_api_description(get_dynamic_plans_markdown()),
     version="1.0.0",
     docs_url="/docs",
-    redoc_url="/redoc",
+    redoc_url=None,  # Powered by custom Next.js-styled ReDoc UI below
     openapi_url="/openapi.json",
     openapi_tags=TAGS_METADATA,
     responses=GLOBAL_RESPONSES
@@ -481,16 +481,496 @@ app.include_router(lalkitab_router, responses=ENDPOINT_RESPONSES)
 app.include_router(advanced_router, responses=ENDPOINT_RESPONSES)
 app.include_router(pdf_router, responses=ENDPOINT_RESPONSES)
 
-@app.exception_handler(Exception)
-async def global_exception_handler(request: Request, exc: Exception):
-    return JSONResponse(
-        status_code=500,
-        content={
-            "status": "error",
-            "message": "Internal astronomical calculation error",
-            "detail": str(exc) if settings.ENVIRONMENT == "development" else "Server error"
-        }
-    )
+@app.get("/documentation", response_class=HTMLResponse, include_in_schema=False)
+@app.get("/redoc", response_class=HTMLResponse, include_in_schema=False)
+async def custom_redoc_html():
+    """Custom ReDoc UI crafted to match the Next.js clean light-mode developer portal aesthetic."""
+    next_url = (settings.NEXT_APP_URL or "http://localhost:3000").rstrip("/")
+    html_content = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AstroEngine B2B API Suite — Documentation</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%236366f1'><path d='M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z'/></svg>" />
+  
+  <!-- Next.js Typography: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+
+  <style>
+    :root {{
+      --bg-page: #fafafa;
+      --bg-card: #ffffff;
+      --border-color: #e4e4e7;
+      --border-muted: #f4f4f5;
+      --primary: #6366f1;
+      --primary-hover: #4f46e5;
+      --text-main: #09090b;
+      --text-muted: #71717a;
+      --code-panel-bg: #18181b;
+      --code-panel-text: #f4f4f5;
+    }}
+
+    * {{
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }}
+
+    body {{
+      margin: 0;
+      padding: 0;
+      background-color: var(--bg-page);
+      color: var(--text-main);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      overflow-x: hidden;
+    }}
+
+    /* Sleek Next.js White Header */
+    .next-nav {{
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 60px;
+      background: rgba(255, 255, 255, 0.88);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      z-index: 10000;
+    }}
+
+    .nav-left {{
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }}
+
+    .brand-icon {{
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      font-weight: 800;
+      font-size: 15px;
+      box-shadow: 0 2px 8px rgba(99, 102, 241, 0.25);
+    }}
+
+    .brand-title {{
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: #09090b;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }}
+
+    .brand-badge {{
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 9999px;
+      background: #f4f4f5;
+      border: 1px solid var(--border-color);
+      color: #52525b;
+      letter-spacing: 0.04em;
+    }}
+
+    .live-indicator {{
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: #15803d;
+      font-weight: 500;
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      padding: 3px 10px;
+      border-radius: 9999px;
+    }}
+
+    .pulse-dot {{
+      width: 7px;
+      height: 7px;
+      background-color: #22c55e;
+      border-radius: 50%;
+      animation: pulse 2s infinite ease-in-out;
+    }}
+
+    @keyframes pulse {{
+      0%, 100% {{ opacity: 1; transform: scale(1); }}
+      50% {{ opacity: 0.4; transform: scale(0.85); }}
+    }}
+
+    .nav-actions {{
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }}
+
+    .nav-btn {{
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      color: #3f3f46;
+      text-decoration: none;
+      padding: 6px 13px;
+      border-radius: 7px;
+      background: #ffffff;
+      border: 1px solid var(--border-color);
+      transition: all 0.15s ease;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+    }}
+
+    .nav-btn:hover {{
+      color: #09090b;
+      background: #f4f4f5;
+      border-color: #d4d4d8;
+    }}
+
+    .nav-btn-primary {{
+      background: #09090b;
+      color: #ffffff;
+      border: 1px solid #09090b;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }}
+
+    .nav-btn-primary:hover {{
+      background: #27272a;
+      color: #ffffff;
+    }}
+
+    /* Container & Perfectly Centered Screen Loader */
+    #redoc-container {{
+      margin-top: 60px;
+      min-height: calc(100vh - 60px);
+      background-color: var(--bg-page);
+      display: flex;
+      flex-direction: column;
+    }}
+
+    @keyframes spin {{
+      to {{ transform: rotate(360deg); }}
+    }}
+
+    /* Center ReDoc's internal loading screen */
+    #redoc-container > div:not(.redoc-wrap) {{
+      min-height: calc(100vh - 120px) !important;
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: center !important;
+      justify-content: center !important;
+      margin: auto !important;
+      text-align: center !important;
+      font-family: 'Inter', sans-serif !important;
+      font-size: 14px !important;
+      font-weight: 600 !important;
+      color: #4f46e5 !important;
+    }}
+
+    /* ReDoc Overrides matching Next.js Light Theme */
+    .redoc-wrap {{
+      background-color: var(--bg-page) !important;
+    }}
+
+    /* Left Sidebar */
+    .menu-content {{
+      background-color: #ffffff !important;
+      border-right: 1px solid var(--border-color) !important;
+    }}
+
+    .menu-item-title {{
+      font-family: 'Inter', sans-serif !important;
+      font-size: 13px !important;
+      font-weight: 500 !important;
+      color: #52525b !important;
+    }}
+
+    .menu-item-title:hover {{
+      color: #09090b !important;
+    }}
+
+    .active .menu-item-title {{
+      color: #4f46e5 !important;
+      font-weight: 600 !important;
+    }}
+
+    /* Modern Sleek HTTP Method Badges */
+    .operation-type {{
+      font-family: 'JetBrains Mono', monospace !important;
+      font-size: 10px !important;
+      font-weight: 700 !important;
+      line-height: 16px !important;
+      height: 18px !important;
+      min-width: 40px !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      border-radius: 4px !important;
+      padding: 0 5px !important;
+      letter-spacing: 0.06em !important;
+      text-transform: uppercase !important;
+      margin-right: 8px !important;
+      box-shadow: none !important;
+    }}
+
+    .operation-type.post {{
+      background-color: #ecfdf5 !important;
+      color: #047857 !important;
+      border: 1px solid #a7f3d0 !important;
+    }}
+
+    .operation-type.get {{
+      background-color: #eff6ff !important;
+      color: #1d4ed8 !important;
+      border: 1px solid #bfdbfe !important;
+    }}
+
+    .operation-type.put {{
+      background-color: #fffbeb !important;
+      color: #b45309 !important;
+      border: 1px solid #fde68a !important;
+    }}
+
+    .operation-type.delete {{
+      background-color: #fef2f2 !important;
+      color: #b91c1c !important;
+      border: 1px solid #fecaca !important;
+    }}
+
+    /* Clean Light Scrollbars */
+    ::-webkit-scrollbar {{
+      width: 6px;
+      height: 6px;
+    }}
+    ::-webkit-scrollbar-track {{
+      background: #f4f4f5;
+    }}
+    ::-webkit-scrollbar-thumb {{
+      background: #d4d4d8;
+      border-radius: 3px;
+    }}
+    ::-webkit-scrollbar-thumb:hover {{
+      background: #a1a1aa;
+    }}
+
+    /* Markdown Tables in Light Mode */
+    table {{
+      border-collapse: collapse !important;
+      width: 100% !important;
+      margin: 18px 0 !important;
+      border: 1px solid var(--border-color) !important;
+      border-radius: 8px !important;
+      background: #ffffff !important;
+    }}
+
+    th {{
+      background-color: #f8fafc !important;
+      color: #0f172a !important;
+      font-weight: 600 !important;
+      font-size: 13px !important;
+      padding: 12px 16px !important;
+      border-bottom: 1px solid var(--border-color) !important;
+    }}
+
+    td {{
+      padding: 11px 16px !important;
+      border-bottom: 1px solid var(--border-color) !important;
+      font-size: 13px !important;
+      color: #334155 !important;
+    }}
+
+    tr:nth-child(even) {{
+      background-color: #fafafa !important;
+    }}
+  </style>
+</head>
+<body>
+  <!-- Next.js Clean Light Header -->
+  <header class="next-nav">
+    <div class="nav-left">
+      <div class="brand-icon">✦</div>
+      <div class="brand-title">
+        AstroEngine
+        <span class="brand-badge">B2B API Suite</span>
+      </div>
+      <div class="live-indicator">
+        <span class="pulse-dot"></span>
+        v1.0.0 Live
+      </div>
+    </div>
+
+    <div class="nav-actions">
+      <a href="{next_url}/dashboard" class="nav-btn" target="_blank">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+        Dashboard
+      </a>
+      <a href="{next_url}/api-keys" class="nav-btn" target="_blank">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/></svg>
+        API Keys
+      </a>
+      <a href="/openapi.json" class="nav-btn" target="_blank">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        OpenAPI Spec
+      </a>
+      <a href="{next_url}/pricing" class="nav-btn nav-btn-primary" target="_blank">
+        Get Started
+      </a>
+    </div>
+  </header>
+
+  <!-- ReDoc Container with Centered Next.js Loader -->
+  <div id="redoc-container">
+    <div id="init-loader" style="min-height: calc(100vh - 120px); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; margin: auto;">
+      <div style="width: 32px; height: 32px; border: 3px solid #e4e4e7; border-top-color: #4f46e5; border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
+      <div style="font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 500; color: #71717a;">Loading Documentation...</div>
+    </div>
+  </div>
+
+  <!-- ReDoc Standalone Script -->
+  <script src="https://cdn.redoc.ly/redoc/latest/bundles/redoc.standalone.js"></script>
+  <script>
+    Redoc.init('/openapi.json', {{
+      theme: {{
+        spacing: {{
+          unit: 5,
+          sectionHorizontal: 40,
+          sectionVertical: 36
+        }},
+        breakpoints: {{
+          small: '50rem',
+          medium: '85rem',
+          large: '105rem'
+        }},
+        colors: {{
+          tonalOffset: 0.2,
+          primary: {{
+            main: '#4f46e5',
+            light: '#6366f1',
+            dark: '#4338ca'
+          }},
+          success: {{
+            main: '#16a34a',
+            light: '#22c55e',
+            dark: '#15803d'
+          }},
+          warning: {{
+            main: '#d97706',
+            light: '#f59e0b',
+            dark: '#b45309'
+          }},
+          error: {{
+            main: '#dc2626',
+            light: '#ef4444',
+            dark: '#b91c1c'
+          }},
+          text: {{
+            primary: '#09090b',
+            secondary: '#71717a'
+          }},
+          border: {{
+            dark: '#e4e4e7',
+            light: '#f4f4f5'
+          }},
+          http: {{
+            get: '#2563eb',
+            post: '#16a34a',
+            put: '#d97706',
+            options: '#71717a',
+            patch: '#0891b2',
+            delete: '#dc2626',
+            basic: '#52525b',
+            link: '#4f46e5',
+            head: '#9333ea'
+          }},
+          responses: {{
+            success: {{
+              color: '#16a34a',
+              backgroundColor: '#f0fdf4'
+            }},
+            error: {{
+              color: '#dc2626',
+              backgroundColor: '#fef2f2'
+            }},
+            info: {{
+              color: '#2563eb',
+              backgroundColor: '#eff6ff'
+            }}
+          }}
+        }},
+        typography: {{
+          fontSize: '14px',
+          lineHeight: '1.65em',
+          fontWeightRegular: '400',
+          fontWeightBold: '600',
+          fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+          headings: {{
+            fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+            fontWeight: '700',
+            lineHeight: '1.4em'
+          }},
+          code: {{
+            fontSize: '13px',
+            fontFamily: "'JetBrains Mono', 'Fira Code', Menlo, Monaco, Consolas, monospace",
+            lineHeight: '1.6em',
+            backgroundColor: '#f4f4f5',
+            color: '#09090b'
+          }}
+        }},
+        sidebar: {{
+          width: '280px',
+          backgroundColor: '#ffffff',
+          textColor: '#52525b',
+          activeTextColor: '#09090b',
+          groupItems: {{
+            activeBackgroundColor: '#f4f4f5',
+            activeTextColor: '#09090b'
+          }},
+          level1Items: {{
+            activeBackgroundColor: '#eef2ff',
+            activeTextColor: '#4f46e5'
+          }}
+        }},
+        rightPanel: {{
+          backgroundColor: '#18181b',
+          width: '42%',
+          textColor: '#f4f4f5'
+        }},
+        schema: {{
+          nestedBackground: '#f8fafc',
+          linesColor: '#e4e4e7',
+          defaultDetailsWidth: '75%'
+        }}
+      }},
+      scrollYOffset: 60,
+      hideDownloadButton: false,
+      expandResponses: '200,201',
+      requiredPropsFirst: true,
+      sortPropsAlphabetically: false,
+      showExtensions: true,
+      pathInMiddlePanel: false,
+      nativeScrollbars: true
+    }}, document.getElementById('redoc-container'));
+  </script>
+</body>
+</html>
+"""
+    return HTMLResponse(content=html_content)
 
 def custom_openapi():
     # Dynamically generate fresh documentation with live DB plans table

@@ -29,14 +29,21 @@ interface PlanItem {
 
 export default function HomePage() {
   const [plans, setPlans] = useState<PlanItem[]>([]);
+  const [addons, setAddons] = useState<any[]>([]);
   const [loadingPlans, setLoadingPlans] = useState(true);
 
   useEffect(() => {
-    // Dynamic query from MySQL via /api/plans
-    axios.get("/api/plans")
-      .then(res => {
-        if (res.data?.data) {
-          setPlans(res.data.data);
+    // Dynamic query from MySQL via /api/plans and /api/user/addons
+    Promise.all([
+      axios.get("/api/plans"),
+      axios.get("/api/user/addons")
+    ])
+      .then(([plansRes, addonsRes]) => {
+        if (plansRes.data?.data) {
+          setPlans(plansRes.data.data);
+        }
+        if (addonsRes.data?.catalog) {
+          setAddons(addonsRes.data.catalog);
         }
       })
       .catch(() => {})
@@ -223,6 +230,74 @@ export default function HomePage() {
               </div>
             ))}
           </div>
+
+          {/* Modular Add-ons Showcase */}
+          {addons.length > 0 && (
+            <div className="mt-16 pt-14 border-t border-zinc-200">
+              <div className="text-center max-w-lg mx-auto mb-10">
+                <span className="text-xs font-mono uppercase text-purple-700 font-bold tracking-wider px-2.5 py-0.5 rounded-full bg-purple-50 border border-purple-200">
+                  Modular Power-Ups
+                </span>
+                <h3 className="text-xl font-bold text-zinc-900 mt-2">
+                  Standalone Engine Add-ons
+                </h3>
+                <p className="text-zinc-600 text-xs mt-1">
+                  Attach specific engines directly to your Starter or Pro plan without purchasing full Enterprise.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                {addons.map((addon) => (
+                  <div
+                    key={addon.id}
+                    className="p-5 rounded-xl border border-zinc-200 bg-white shadow-xs flex flex-col justify-between hover:border-zinc-300 transition"
+                  >
+                    <div>
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <h4 className="font-bold text-sm text-zinc-900">{addon.name}</h4>
+                          <span className="inline-block mt-0.5 px-1.5 py-0.5 rounded text-[9px] font-mono font-bold uppercase bg-zinc-100 text-zinc-600 border border-zinc-200">
+                            {addon.category}
+                          </span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-lg font-black font-mono text-zinc-900">₹{addon.priceMonthly}</span>
+                          <span className="text-[10px] text-zinc-400 block">/ mo</span>
+                        </div>
+                      </div>
+
+                      <p className="mt-2 text-xs text-zinc-600 leading-relaxed line-clamp-2">
+                        {addon.description}
+                      </p>
+
+                      <div className="mt-2.5 py-1 px-2 rounded bg-zinc-50 border border-zinc-100 text-[10px] font-mono text-zinc-600 flex justify-between">
+                        <span>Limit: <strong className="text-zinc-900">{(addon.monthlyQuota || 1000).toLocaleString()} {addon.category === "REPORTS" ? "PDFs" : "calls"}</strong></span>
+                        <span>Rate: <strong className="text-zinc-900">{addon.rateLimitPerMin || 60} RPM</strong></span>
+                      </div>
+
+                      <div className="mt-3 space-y-1">
+                        {(Array.isArray(addon.features) ? addon.features : []).slice(0, 3).map((feat: string, fIdx: number) => (
+                          <div key={fIdx} className="flex items-center gap-1.5 text-[11px] text-zinc-700">
+                            <Check className="w-3 h-3 text-emerald-600 flex-shrink-0" />
+                            <span className="truncate">{feat}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="mt-4 pt-3 border-t border-zinc-100">
+                      <Link
+                        href="/billing#addons"
+                        className="w-full py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition shadow-xs"
+                      >
+                        <span>Activate in Dashboard</span>
+                      </Link>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </section>
 
