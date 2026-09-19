@@ -4,12 +4,12 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import axios from "axios";
-import { 
-  LayoutDashboard, 
-  KeyRound, 
-  Activity, 
-  FileCheck, 
-  Palette, 
+import {
+  LayoutDashboard,
+  KeyRound,
+  Activity,
+  FileCheck,
+  Palette,
   CreditCard,
   Receipt,
   LogOut,
@@ -51,7 +51,7 @@ export const DashboardSidebar = () => {
           }
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   return (
@@ -59,10 +59,10 @@ export const DashboardSidebar = () => {
       {/* Brand Header */}
       <div className="h-16 flex items-center gap-3 px-6 border-b border-slate-200 bg-slate-50/50">
         {logoUrl ? (
-          <img 
-            src={logoUrl} 
-            alt={companyName} 
-            className="h-8 max-w-[40px] object-contain rounded" 
+          <img
+            src={logoUrl}
+            alt={companyName}
+            className="h-8 max-w-[40px] object-contain rounded"
           />
         ) : (
           <div className="w-8 h-8 rounded-lg bg-slate-900 text-white flex items-center justify-center font-mono font-bold text-xs shadow-sm">
@@ -84,11 +84,10 @@ export const DashboardSidebar = () => {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-xs font-medium transition ${
-                isActive
-                  ? "bg-slate-900 text-white shadow-sm font-semibold"
-                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
-              }`}
+              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-xs font-medium transition ${isActive
+                ? "bg-slate-900 text-white shadow-sm font-semibold"
+                : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                }`}
             >
               <Icon className={`w-4 h-4 ${isActive ? "text-white" : "text-slate-400"}`} />
               <span>{item.name}</span>
@@ -102,7 +101,8 @@ export const DashboardSidebar = () => {
           </span>
           <div className="mt-2 space-y-1">
             <Link
-              href="/docs"
+              href={`${process.env.NEXT_PUBLIC_ASTRO_ENGINE_URL}/documentation`}
+              target="_blank"
               className="flex items-center justify-between px-3.5 py-2 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition"
             >
               <span>Documentation</span>
@@ -131,12 +131,12 @@ export const DashboardSidebar = () => {
               <div className="text-[11px] text-slate-500 mt-1 leading-none font-mono truncate max-w-[120px]">client@example.com</div>
             </div>
           </div>
-          <button 
+          <button
             onClick={async () => {
               await fetch("/api/auth/session", { method: "DELETE" });
               window.location.href = "/login";
             }}
-            className="text-slate-400 hover:text-rose-600 p-1.5 rounded hover:bg-slate-200 transition" 
+            className="text-slate-400 hover:text-rose-600 p-1.5 rounded hover:bg-slate-200 transition"
             title="Sign Out"
           >
             <LogOut className="w-4 h-4" />

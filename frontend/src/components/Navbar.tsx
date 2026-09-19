@@ -48,8 +48,9 @@ export const Navbar = () => {
         </Link>
 
         <nav className="hidden md:flex items-center gap-6 text-xs font-medium text-zinc-600">
-          <Link href="/#playground" className="hover:text-zinc-900 transition">
-            Playground
+          <Link href="/demo" className="text-indigo-600 font-semibold hover:text-indigo-700 transition flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-indigo-600 animate-pulse"></span>
+            Live App Demo
           </Link>
           <Link href="/docs" className="hover:text-zinc-900 transition">
             Documentation

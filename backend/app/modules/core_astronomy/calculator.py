@@ -119,6 +119,12 @@ def calculate_planetary_positions(
     asc_sign = get_zodiac_sign_info(asc_deg)
     asc_nak = get_nakshatra_info(asc_deg)
 
+    # Attach Vedic house placement relative to Ascendant sign (Whole Sign / Rashi Bhava)
+    asc_sign_idx = asc_sign["index"] - 1
+    for p in planets_result:
+        p_sign_idx = p["sign"]["number"] - 1
+        p["house"] = ((p_sign_idx - asc_sign_idx) % 12) + 1
+
     return {
         "julian_day": round(jd_ut, 6),
         "ayanamsa_name": ayanamsa.upper(),
@@ -140,3 +146,4 @@ def calculate_planetary_positions(
         },
         "planets": planets_result
     }
+

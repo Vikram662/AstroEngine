@@ -51,7 +51,32 @@ async def get_kp_cusps(
     )
     return StandardResponse(status="success", language=selected_lang, data={"cusps": cusps_data})
 
+from fastapi import Response
+
+@router.post("/chart/svg")
+async def get_kp_chart_svg(
+    req: BirthDataRequest,
+    key_hash: str = Depends(verify_api_key)
+):
+    """
+    Module 5 — KP System: Vector SVG Kundli Chart Generator.
+    Renders North Indian style diamond chart with Placidus houses and KP planet placements.
+    """
+    selected_lang = (req.lang or "en").lower().strip()
+    from app.modules.parashari.calculator import compute_kp_chart_data, generate_chart_svg
+    chart = compute_kp_chart_data(
+        dob=req.dob,
+        tob=req.tob,
+        lat=req.lat,
+        lon=req.lon,
+        tz=req.tz,
+        lang=selected_lang
+    )
+    svg_content = generate_chart_svg(chart)
+    return Response(content=svg_content, media_type="image/svg+xml")
+
 @router.post("/horary/1-249", response_model=StandardResponse)
+
 async def get_kp_horary(
     req: BirthDataRequest,
     seed: int = Query(1, description="Horary seed number between 1 and 249", ge=1, le=249),

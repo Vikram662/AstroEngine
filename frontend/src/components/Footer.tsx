@@ -88,6 +88,12 @@ export const Footer = () => {
             </div>
             <ul className="space-y-2 text-xs">
               <li>
+                <Link href="/demo" className="text-indigo-600 font-semibold hover:text-indigo-700 transition flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-600"></span>
+                  Live App Demo
+                </Link>
+              </li>
+              <li>
                 <Link href="/docs" className="hover:text-slate-900 transition">
                   All 117 Endpoints
                 </Link>

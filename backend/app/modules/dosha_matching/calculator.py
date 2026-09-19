@@ -56,25 +56,41 @@ def calculate_manglik_dosha(
 
     raw_is_manglik = manglik_from_lagna or manglik_from_moon or manglik_from_venus
 
-    # Classical Cancellations
+    # Classical Cancellations (BPHS, Phaladeepika, Muhurta Chintamani)
     cancellations = []
     # 1. Mars in Aries, Scorpio (own sign) or Capricorn (exalted)
     if mars_sign in [0, 7]: # Aries, Scorpio
-        cancellations.append("Mars is in its own sign (Aries/Scorpio).")
-    elif mars_sign == 9: # Capricorn
-        cancellations.append("Mars is exalted in Capricorn (Uchha).")
+        cancellations.append("Mars is in its own sign (Aries/Scorpio) - BPHS cancellation.")
+    elif mars_sign == 9: # Capricorn (Uchha)
+        cancellations.append("Mars is exalted in Capricorn (Uchha) - Dosha cancelled.")
+    elif mars_sign == 3: # Cancer (Neecha / debilitated)
+        cancellations.append("Mars is in Cancer (Debilitated/Neecha Rashi) - Dosha cancelled according to classical treatises.")
 
     # 2. Jupiter conjunction, 7th aspect, or 5th/9th trine aspect on Mars
     # Jupiter casts 5th (sign diff 4), 7th (sign diff 6), and 9th (sign diff 8) aspects forward
     mars_from_jup = (mars_sign - jup_sign) % 12
     if mars_from_jup in [0, 4, 6, 8]: # Conjunct, 5th aspect, 7th aspect, or 9th aspect
-        cancellations.append("Jupiter aspects or conjoins Mars (Guru Drishti cancellation).")
+        cancellations.append("Jupiter aspects or conjoins Mars (Guru Drishti / Yoga cancellation).")
 
     # 3. Mars in 2nd house in Gemini/Virgo, or 4th house in Aries/Scorpio
     if h_from_lagna == 2 and mars_sign in [2, 5]:
-        cancellations.append("Mars in 2nd house in Mercury sign cancels dosha.")
+        cancellations.append("Mars in 2nd house in Mercury sign (Gemini/Virgo) cancels dosha.")
     if h_from_lagna == 4 and mars_sign in [0, 7]:
         cancellations.append("Mars in 4th house in its own sign.")
+    if h_from_lagna == 7 and mars_sign in [2, 5, 8, 11]: # Gemini, Virgo, Sagittarius, Pisces
+        cancellations.append("Mars in 7th in Mercury or Jupiter rashi cancels dosha.")
+    if h_from_lagna == 8 and mars_sign in [8, 11, 1, 6]: # Sagittarius, Pisces, Taurus, Libra
+        cancellations.append("Mars in 8th in Jupiter or Venus rashi cancels dosha.")
+    if h_from_lagna == 12 and mars_sign in [2, 5, 1, 6, 3]: # Gemini, Virgo, Taurus, Libra, Cancer
+        cancellations.append("Mars in 12th in friendly/neutral/Cancer rashi cancels dosha.")
+    # Mars in 11th or friendly house from Chandra
+    if h_from_moon == 11:
+        cancellations.append("Mars is in 11th house (Labha Bhava) from Moon - Highly auspicious placement.")
+    # Mars in Leo Lagna (Simha Lagna Yogakaraka / Mitra)
+    if asc_sign == 4: # Leo Lagna
+        cancellations.append("For Leo Lagna (सिंह लग्न), Mars is auspicious Yogakaraka/Dharmakarmadhipati.")
+    if asc_sign == 3: # Cancer Lagna
+        cancellations.append("For Cancer Lagna (कर्क लग्न), Mars is auspicious Yogakaraka.")
 
     is_cancelled = len(cancellations) > 0
     final_status = "NO_DOSHA"

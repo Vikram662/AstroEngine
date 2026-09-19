@@ -14,7 +14,8 @@ import {
   Cpu, 
   FileText, 
   Code2,
-  Loader2
+  Loader2,
+  Sparkles
 } from "lucide-react";
 
 interface PlanItem {
@@ -79,11 +80,19 @@ export default function HomePage() {
 
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <Link
+              href="/demo"
+              className="px-5 py-2.5 rounded-md bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs transition flex items-center gap-2 shadow-md shadow-indigo-500/20"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-indigo-200" />
+              <span>Launch Live Astro App Demo</span>
+            </Link>
+
+            <Link
               href="/#playground"
               className="px-4 py-2.5 rounded-md bg-zinc-900 hover:bg-zinc-800 text-white font-medium text-xs transition flex items-center gap-2 shadow-sm"
             >
               <Terminal className="w-3.5 h-3.5" />
-              <span>Try Live Playground</span>
+              <span>API Playground</span>
             </Link>
             
             <a
@@ -93,7 +102,7 @@ export default function HomePage() {
               className="px-4 py-2.5 rounded-md bg-white hover:bg-zinc-50 border border-zinc-300 text-zinc-800 font-medium text-xs transition flex items-center gap-2 shadow-xs"
             >
               <Download className="w-3.5 h-3.5 text-zinc-500" />
-              <span>Download Sample 80-Page Kundli (PDF)</span>
+              <span>Sample PDF</span>
             </a>
 
             <Link

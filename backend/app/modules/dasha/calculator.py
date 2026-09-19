@@ -24,10 +24,40 @@ NAKSHATRA_LORD_SEQUENCE = [
     "KETU", "VENUS", "SUN", "MOON", "MARS", "RAHU", "JUPITER", "SATURN", "MERCURY", # Mula to Revati
 ]
 
+# Mapping for Hindi/alternative names to standard English uppercase planet IDs
+PLANET_ALIASES = {
+    "सूर्य": "SUN", "सूरज": "SUN", "SUN": "SUN", "SU": "SUN",
+    "चंद्रमा": "MOON", "चन्द्र": "MOON", "चन्द्रमा": "MOON", "MOON": "MOON", "MO": "MOON",
+    "मंगल": "MARS", "भौम": "MARS", "MARS": "MARS", "MA": "MARS",
+    "बुध": "MERCURY", "MERCURY": "MERCURY", "ME": "MERCURY",
+    "बृहस्पति": "JUPITER", "गुरु": "JUPITER", "JUPITER": "JUPITER", "JU": "JUPITER",
+    "शुक्र": "VENUS", "VENUS": "VENUS", "VE": "VENUS",
+    "शनि": "SATURN", "SATURN": "SATURN", "SA": "SATURN",
+    "राहु": "RAHU", "RAHU": "RAHU", "RA": "RAHU",
+    "केतु": "KETU", "KETU": "KETU", "KE": "KETU"
+}
+
+def normalize_planet_id(p: str) -> str:
+    """Normalize any planet name (English/Hindi/abbr) to standard VIMSHOTTARI planet ID."""
+    if not p:
+        return "JUPITER"
+    p_clean = p.strip()
+    p_upper = p_clean.upper()
+    if p_upper in PLANET_ALIASES:
+        return PLANET_ALIASES[p_upper]
+    if p_clean in PLANET_ALIASES:
+        return PLANET_ALIASES[p_clean]
+    # Check partial match
+    for k, v in PLANET_ALIASES.items():
+        if k in p_clean or p_clean in k:
+            return v
+    return "JUPITER"
+
 def add_years_to_datetime(dt: datetime, years_float: float) -> datetime:
     """Add decimal years accurately (accounting for leap years ~365.2422 days/year)."""
     days = years_float * 365.2422
     return dt + timedelta(days=days)
+
 
 def calculate_vimshottari_mahadasha(
     dob: str,
@@ -110,10 +140,11 @@ def calculate_antardashas(
     Antardasha duration = (MD_years * AD_years) / 120
     """
     md_start = parse_dasha_datetime(start_date_str)
+    norm_md = normalize_planet_id(mahadasha_planet)
     
     # Find start planet in cycle
-    start_idx = next(i for i, item in enumerate(VIMSHOTTARI_CYCLE) if item["planet"] == mahadasha_planet)
-    md_years = next(item["years"] for item in VIMSHOTTARI_CYCLE if item["planet"] == mahadasha_planet)
+    start_idx = next(i for i, item in enumerate(VIMSHOTTARI_CYCLE) if item["planet"] == norm_md)
+    md_years = next(item["years"] for item in VIMSHOTTARI_CYCLE if item["planet"] == norm_md)
     
     antardashas = []
     curr_start = md_start
@@ -129,10 +160,11 @@ def calculate_antardashas(
         
         antardashas.append({
             "order": i + 1,
-            "mahadasha": mahadasha_planet,
+            "mahadasha": norm_md,
             "antardasha": ad_planet,
             "antardasha_name": translate_entity("planets", ad_planet, lang, ad_planet.capitalize()),
             "duration_years": round(ad_duration, 4),
+
             "start_date": curr_start.strftime("%Y-%m-%d"),
             "start_time": curr_start.strftime("%H:%M:%S"),
             "start_datetime": curr_start.strftime("%Y-%m-%d %H:%M:%S"),
@@ -155,10 +187,13 @@ def calculate_pratyantar_dashas(
     Pratyantar duration = (MD_years * AD_years * PD_years) / (120 * 120)
     """
     ad_start = parse_dasha_datetime(ad_start_str)
-    md_years = next(item["years"] for item in VIMSHOTTARI_CYCLE if item["planet"] == mahadasha_planet)
-    ad_years = next(item["years"] for item in VIMSHOTTARI_CYCLE if item["planet"] == antardasha_planet)
+    norm_md = normalize_planet_id(mahadasha_planet)
+    norm_ad = normalize_planet_id(antardasha_planet)
+
+    md_years = next(item["years"] for item in VIMSHOTTARI_CYCLE if item["planet"] == norm_md)
+    ad_years = next(item["years"] for item in VIMSHOTTARI_CYCLE if item["planet"] == norm_ad)
     
-    start_idx = next(i for i, item in enumerate(VIMSHOTTARI_CYCLE) if item["planet"] == antardasha_planet)
+    start_idx = next(i for i, item in enumerate(VIMSHOTTARI_CYCLE) if item["planet"] == norm_ad)
     
     pratyantars = []
     curr_start = ad_start
@@ -171,11 +206,16 @@ def calculate_pratyantar_dashas(
         duration = (md_years * ad_years * pd_years) / (TOTAL_VIMSHOTTARI_YEARS * TOTAL_VIMSHOTTARI_YEARS)
         curr_end = add_years_to_datetime(curr_start, duration)
         
+        pd_name = translate_entity("planets", pd_planet, lang, pd_planet.capitalize())
+        md_name = translate_entity("planets", norm_md, lang, norm_md.capitalize())
+        ad_name = translate_entity("planets", norm_ad, lang, norm_ad.capitalize())
+        
         pratyantars.append({
             "order": i + 1,
-            "chain": f"{mahadasha_planet}-{antardasha_planet}-{pd_planet}",
+            "chain": f"{md_name} - {ad_name} - {pd_name}",
+            "chain_en": f"{norm_md}-{norm_ad}-{pd_planet}",
             "pratyantar_planet": pd_planet,
-            "pratyantar_name": translate_entity("planets", pd_planet, lang, pd_planet.capitalize()),
+            "pratyantar_name": pd_name,
             "start_date": curr_start.strftime("%Y-%m-%d"),
             "start_time": curr_start.strftime("%H:%M:%S"),
             "start_datetime": curr_start.strftime("%Y-%m-%d %H:%M:%S"),
@@ -199,15 +239,23 @@ def calculate_sookshma_dashas(
     Duration = (MD_years * AD_years * PD_years * SD_years) / (120^3)
     """
     pd_start = parse_dasha_datetime(pd_start_str)
-    md_years = next(item["years"] for item in VIMSHOTTARI_CYCLE if item["planet"] == mahadasha_planet)
-    ad_years = next(item["years"] for item in VIMSHOTTARI_CYCLE if item["planet"] == antardasha_planet)
-    pd_years = next(item["years"] for item in VIMSHOTTARI_CYCLE if item["planet"] == pratyantar_planet)
+    norm_md = normalize_planet_id(mahadasha_planet)
+    norm_ad = normalize_planet_id(antardasha_planet)
+    norm_pd = normalize_planet_id(pratyantar_planet)
+
+    md_years = next(item["years"] for item in VIMSHOTTARI_CYCLE if item["planet"] == norm_md)
+    ad_years = next(item["years"] for item in VIMSHOTTARI_CYCLE if item["planet"] == norm_ad)
+    pd_years = next(item["years"] for item in VIMSHOTTARI_CYCLE if item["planet"] == norm_pd)
     
-    start_idx = next(i for i, item in enumerate(VIMSHOTTARI_CYCLE) if item["planet"] == pratyantar_planet)
+    start_idx = next(i for i, item in enumerate(VIMSHOTTARI_CYCLE) if item["planet"] == norm_pd)
     
     sookshmas = []
     curr_start = pd_start
     divisor = TOTAL_VIMSHOTTARI_YEARS ** 3
+    
+    md_name = translate_entity("planets", norm_md, lang, norm_md.capitalize())
+    ad_name = translate_entity("planets", norm_ad, lang, norm_ad.capitalize())
+    pd_name = translate_entity("planets", norm_pd, lang, norm_pd.capitalize())
     
     for i in range(9):
         sd_item = VIMSHOTTARI_CYCLE[(start_idx + i) % 9]
@@ -219,12 +267,14 @@ def calculate_sookshma_dashas(
         
         duration_days = duration * 365.2422
         duration_hours = duration_days * 24.0
+        sd_name = translate_entity("planets", sd_planet, lang, sd_planet.capitalize())
         
         sookshmas.append({
             "order": i + 1,
-            "chain": f"{mahadasha_planet}-{antardasha_planet}-{pratyantar_planet}-{sd_planet}",
+            "chain": f"{md_name} - {ad_name} - {pd_name} - {sd_name}",
+            "chain_en": f"{norm_md}-{norm_ad}-{norm_pd}-{sd_planet}",
             "sookshma_planet": sd_planet,
-            "sookshma_name": translate_entity("planets", sd_planet, lang, sd_planet.capitalize()),
+            "sookshma_name": sd_name,
             "duration_days": round(duration_days, 2),
             "duration_hours": round(duration_hours, 1),
             "start_date": curr_start.strftime("%Y-%m-%d"),
@@ -252,16 +302,26 @@ def calculate_prana_dashas(
     Duration = (MD_years * AD_years * PD_years * SD_years * PR_years) / (120^4)
     """
     sd_start = parse_dasha_datetime(sd_start_str)
-    md_years = next(item["years"] for item in VIMSHOTTARI_CYCLE if item["planet"] == mahadasha_planet)
-    ad_years = next(item["years"] for item in VIMSHOTTARI_CYCLE if item["planet"] == antardasha_planet)
-    pd_years = next(item["years"] for item in VIMSHOTTARI_CYCLE if item["planet"] == pratyantar_planet)
-    sd_years = next(item["years"] for item in VIMSHOTTARI_CYCLE if item["planet"] == sookshma_planet)
+    norm_md = normalize_planet_id(mahadasha_planet)
+    norm_ad = normalize_planet_id(antardasha_planet)
+    norm_pd = normalize_planet_id(pratyantar_planet)
+    norm_sd = normalize_planet_id(sookshma_planet)
+
+    md_years = next(item["years"] for item in VIMSHOTTARI_CYCLE if item["planet"] == norm_md)
+    ad_years = next(item["years"] for item in VIMSHOTTARI_CYCLE if item["planet"] == norm_ad)
+    pd_years = next(item["years"] for item in VIMSHOTTARI_CYCLE if item["planet"] == norm_pd)
+    sd_years = next(item["years"] for item in VIMSHOTTARI_CYCLE if item["planet"] == norm_sd)
     
-    start_idx = next(i for i, item in enumerate(VIMSHOTTARI_CYCLE) if item["planet"] == sookshma_planet)
+    start_idx = next(i for i, item in enumerate(VIMSHOTTARI_CYCLE) if item["planet"] == norm_sd)
     
     pranas = []
     curr_start = sd_start
     divisor = TOTAL_VIMSHOTTARI_YEARS ** 4
+    
+    md_name = translate_entity("planets", norm_md, lang, norm_md.capitalize())
+    ad_name = translate_entity("planets", norm_ad, lang, norm_ad.capitalize())
+    pd_name = translate_entity("planets", norm_pd, lang, norm_pd.capitalize())
+    sd_name = translate_entity("planets", norm_sd, lang, norm_sd.capitalize())
     
     for i in range(9):
         pr_item = VIMSHOTTARI_CYCLE[(start_idx + i) % 9]
@@ -273,13 +333,16 @@ def calculate_prana_dashas(
         
         duration_days = duration * 365.2422
         duration_hours = duration_days * 24.0
+        pr_name = translate_entity("planets", pr_planet, lang, pr_planet.capitalize())
         
         pranas.append({
             "order": i + 1,
-            "chain": f"{mahadasha_planet}-{antardasha_planet}-{pratyantar_planet}-{sookshma_planet}-{pr_planet}",
+            "chain": f"{md_name} - {ad_name} - {pd_name} - {sd_name} - {pr_name}",
+            "chain_en": f"{norm_md}-{norm_ad}-{norm_pd}-{norm_sd}-{pr_planet}",
             "prana_planet": pr_planet,
-            "prana_name": translate_entity("planets", pr_planet, lang, pr_planet.capitalize()),
+            "prana_name": pr_name,
             "duration_hours": round(duration_hours, 2),
+
             "start_date": curr_start.strftime("%Y-%m-%d"),
             "start_time": curr_start.strftime("%H:%M:%S"),
             "start_datetime": curr_start.strftime("%Y-%m-%d %H:%M:%S"),

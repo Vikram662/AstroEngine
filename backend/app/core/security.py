@@ -117,18 +117,22 @@ async def verify_api_key(
             quota_obj = data.get("quota") or {}
             plan_tier = data.get("planTier") or quota_obj.get("plan") or "STARTER"
             db_rpm = quota_obj.get("rateLimitPerMin") or data.get("rateLimitPerMin") or 60
-            allowed, retry_after = check_sliding_window_rate_limit(cleaned_api_key[:16], dynamic_rpm=db_rpm)
-            if not allowed:
-                raise HTTPException(
-                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                    headers={"Retry-After": str(retry_after)},
-                    detail={
-                        "status": "error",
-                        "error_code": "RATE_LIMIT_EXCEEDED",
-                        "message": f"Rate limit exceeded for {plan_tier} tier ({db_rpm or 60} RPM). Please retry after {retry_after} seconds.",
-                        "retry_after_seconds": retry_after
-                    }
-                )
+            
+            # Internal master key / development keys are exempt from sliding-window throttles
+            is_internal_master = "master_key" in cleaned_api_key or "internal" in cleaned_api_key or data.get("role") in ["ADMIN", "SUPER_ADMIN"]
+            if not is_internal_master:
+                allowed, retry_after = check_sliding_window_rate_limit(cleaned_api_key[:16], dynamic_rpm=db_rpm)
+                if not allowed:
+                    raise HTTPException(
+                        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                        headers={"Retry-After": str(retry_after)},
+                        detail={
+                            "status": "error",
+                            "error_code": "RATE_LIMIT_EXCEEDED",
+                            "message": f"Rate limit exceeded for {plan_tier} tier ({db_rpm or 60} RPM). Please retry after {retry_after} seconds.",
+                            "retry_after_seconds": retry_after
+                        }
+                    )
 
             # Attach dynamic quota details returned directly from MySQL SubscriptionPlan
             request.state.auth_data = data

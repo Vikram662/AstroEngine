@@ -25,7 +25,32 @@ async def get_lalkitab_kundli(
     )
     return StandardResponse(status="success", language=selected_lang, data=data)
 
+from fastapi import Response
+
+@router.post("/chart/svg")
+async def get_lalkitab_chart_svg(
+    req: BirthDataRequest,
+    key_hash: str = Depends(verify_api_key)
+):
+    """
+    Module 6 — Lal Kitab: Vector SVG Kalpurush Kundli Chart Generator.
+    Renders North Indian style diamond chart with fixed Aries Ascendant and Lal Kitab planetary bhavas.
+    """
+    selected_lang = (req.lang or "en").lower().strip()
+    from app.modules.parashari.calculator import compute_lalkitab_chart_data, generate_chart_svg
+    chart = compute_lalkitab_chart_data(
+        dob=req.dob,
+        tob=req.tob,
+        lat=req.lat,
+        lon=req.lon,
+        tz=req.tz,
+        lang=selected_lang
+    )
+    svg_content = generate_chart_svg(chart)
+    return Response(content=svg_content, media_type="image/svg+xml")
+
 @router.post("/varshphal/chart", response_model=StandardResponse)
+
 async def get_lalkitab_varshphal_chart(
     req: BirthDataRequest,
     age: int = Query(30, description="Age for annual progression (1-120)", ge=1, le=120),

@@ -206,6 +206,9 @@ def compute_varga_chart(
     # Prepare houses container: 12 houses
     houses_dict = {h: [] for h in range(1, 13)}
 
+    # First pass: collect raw positions and speeds
+    raw_planets = []
+    sun_lon = 0.0
     for p in VEDIC_PLANETS:
         p_id = p["id"]
         if p_id == "KETU":
@@ -220,7 +223,26 @@ def compute_varga_chart(
             is_ret = speed < 0.0
             if p_id == "RAHU":
                 rahu_deg = p_lon
+            elif p_id == "SUN":
+                sun_lon = p_lon
+        raw_planets.append((p, p_id, p_lon, speed, is_ret))
 
+    # Classical Dignities (Exaltation / Debilitation / Own Sign indices 0-11)
+    # Signs: 0=Aries, 1=Taurus, 2=Gemini, 3=Cancer, 4=Leo, 5=Virgo, 6=Libra, 7=Scorpio, 8=Sagittarius, 9=Capricorn, 10=Aquarius, 11=Pisces
+    EXALTATION_SIGNS = {
+        "SUN": 0, "MOON": 1, "MARS": 9, "MERCURY": 5, "JUPITER": 3, "VENUS": 11, "SATURN": 6, "RAHU": 1, "KETU": 7
+    }
+    DEBILITATION_SIGNS = {
+        "SUN": 6, "MOON": 7, "MARS": 3, "MERCURY": 11, "JUPITER": 9, "VENUS": 5, "SATURN": 0, "RAHU": 7, "KETU": 1
+    }
+    OWN_SIGNS = {
+        "SUN": [4], "MOON": [3], "MARS": [0, 7], "MERCURY": [2, 5], "JUPITER": [8, 11], "VENUS": [1, 6], "SATURN": [9, 10]
+    }
+    COMBUST_ORBS = {
+        "MOON": 12.0, "MARS": 17.0, "MERCURY": 14.0, "JUPITER": 11.0, "VENUS": 10.0, "SATURN": 15.0
+    }
+
+    for p, p_id, p_lon, speed, is_ret in raw_planets:
         # Target Varga sign index for planet using classical rules
         p_sign_idx = compute_varga_sign(p_lon, clean_varga)
 
@@ -228,21 +250,51 @@ def compute_varga_chart(
         house_num = ((p_sign_idx - asc_sign_idx) % 12) + 1
         p_sign_meta = ZODIAC_SIGNS[p_sign_idx]
 
+        # Normalized degrees within sign (0° to 30°)
+        norm_deg_in_sign = round(p_lon % 30.0, 2)
+        deg_int = int(norm_deg_in_sign)
+        min_int = int(round((norm_deg_in_sign - deg_int) * 60))
+        if min_int >= 60:
+            deg_int += 1
+            min_int = 0
+        deg_str = f"{deg_int:02d}°{min_int:02d}'"
+
+        # Dignity status (उ / नी / स्व)
+        dignity = "NEUTRAL"
+        if p_id in EXALTATION_SIGNS and p_sign_idx == EXALTATION_SIGNS[p_id]:
+            dignity = "EXALTED"
+        elif p_id in DEBILITATION_SIGNS and p_sign_idx == DEBILITATION_SIGNS[p_id]:
+            dignity = "DEBILITATED"
+        elif p_id in OWN_SIGNS and p_sign_idx in OWN_SIGNS[p_id]:
+            dignity = "OWN_SIGN"
+
+        # Combustion check
+        is_combust = False
+        if clean_varga == "D1" and p_id in COMBUST_ORBS:
+            orb_dist = abs((p_lon - sun_lon + 180.0) % 360.0 - 180.0)
+            if orb_dist <= COMBUST_ORBS[p_id]:
+                is_combust = True
+
         planet_entry = {
             "id": p_id,
             "name": translate_entity("planets", p_id, lang, p["name_en"]),
             "longitude": round(p_lon, 4),
             "full_degree": round(p_lon, 4),
+            "norm_degree": norm_deg_in_sign,
+            "deg_formatted": deg_str,
             "house": house_num,
             "sign": {
                 "id": p_sign_meta["id"],
                 "name": translate_entity("signs", p_sign_meta["id"], lang, p_sign_meta["name_en"]),
                 "number": p_sign_idx + 1
             },
-            "is_retrograde": is_ret
+            "is_retrograde": is_ret,
+            "dignity": dignity,
+            "is_combust": is_combust
         }
         planets_data.append(planet_entry)
         houses_dict[house_num].append(p_id)
+
 
     # Format 12 Bhavas overview
     houses_overview = []
@@ -262,6 +314,7 @@ def compute_varga_chart(
 
     return {
         "varga": clean_varga,
+        "language": lang,
         "ascendant": {
             "full_degree": round(asc_deg, 4),
             "sign": {
@@ -276,85 +329,299 @@ def compute_varga_chart(
 
 calculate_varga_chart = compute_varga_chart
 
+def compute_kp_chart_data(dob: str, tob: str, lat: float, lon: float, tz: float, lang: str = "en") -> Dict[str, Any]:
+    """Compute KP Kundli chart data with Placidus cusps and Krishnamurti ayanamsa for SVG rendering."""
+    from app.modules.kp.calculator import calculate_kp_planets, calculate_kp_cusps
+    planets = calculate_kp_planets(dob, tob, tz, lang)
+    cusps = calculate_kp_cusps(dob, tob, lat, lon, tz, lang)
+    
+    asc_sign_num = cusps[0]["sign"]["number"]
+    asc_sign_id = cusps[0]["sign"]["id"]
+    asc_sign_name = cusps[0]["sign"]["name"]
+
+    # Place planets into 12 Placidus houses based on cusps
+    planets_data = []
+    for p in planets:
+        p_lon = p["full_degree"]
+        house_num = 1
+        for h in range(1, 13):
+            c_start = cusps[h-1]["full_degree"]
+            c_end = cusps[h % 12]["full_degree"]
+            if c_start < c_end:
+                if c_start <= p_lon < c_end:
+                    house_num = h
+                    break
+            else:
+                if p_lon >= c_start or p_lon < c_end:
+                    house_num = h
+                    break
+
+        planets_data.append({
+            "id": p["planet_id"],
+            "name": p["planet_name"],
+            "house": house_num,
+            "norm_degree": p["degree_in_sign"],
+            "deg_formatted": f"{int(p['degree_in_sign']):02d}°{int(round((p['degree_in_sign'] % 1) * 60)):02d}'",
+            "is_retrograde": p["is_retrograde"],
+            "dignity": None,
+            "is_combust": False
+        })
+
+    return {
+        "varga": "KP Kundli (Placidus)",
+        "language": lang,
+        "ascendant": {
+            "sign": {
+                "id": asc_sign_id,
+                "name": asc_sign_name,
+                "number": asc_sign_num
+            }
+        },
+        "planets": planets_data
+    }
+
+def compute_lalkitab_chart_data(dob: str, tob: str, lat: float, lon: float, tz: float, lang: str = "en") -> Dict[str, Any]:
+    """Compute Lal Kitab Kalpurush Kundli chart data (House 1 is Aries = 1) for SVG rendering."""
+    from app.modules.lalkitab.calculator import calculate_lalkitab_chart
+    lk = calculate_lalkitab_chart(dob, tob, lat, lon, tz, lang)
+    
+    planets_data = []
+    for p in lk.get("planets", []):
+        planets_data.append({
+            "id": p["id"],
+            "name": p["name"],
+            "house": p["kalpurush_house"],
+            "deg_formatted": f"H{p['kalpurush_house']}",
+            "is_retrograde": p.get("is_retrograde", False),
+            "dignity": None,
+            "is_combust": False
+        })
+
+    return {
+        "varga": "Lal Kitab (मेष लग्न 1)",
+        "language": lang,
+        "ascendant": {
+            "sign": {
+                "id": "ARIES",
+                "name": "मेष" if lang == "hi" else "Aries",
+                "number": 1
+            }
+        },
+        "planets": planets_data
+    }
+
+
+# Classical abbreviations for Hindi / Vedic astrology
+HINDI_PLANET_ABBR = {
+    "SUN": "सू",
+    "MOON": "चं",
+    "MARS": "मं",
+    "MERCURY": "बु",
+    "JUPITER": "गु",
+    "VENUS": "शु",
+    "SATURN": "श",
+    "RAHU": "रा",
+    "KETU": "के",
+    "URANUS": "अरु",
+    "NEPTUNE": "वरु",
+    "PLUTO": "यम"
+}
+
+ENGLISH_PLANET_ABBR = {
+    "SUN": "Su",
+    "MOON": "Mo",
+    "MARS": "Ma",
+    "MERCURY": "Me",
+    "JUPITER": "Ju",
+    "VENUS": "Ve",
+    "SATURN": "Sa",
+    "RAHU": "Ra",
+    "KETU": "Ke",
+    "URANUS": "Ur",
+    "NEPTUNE": "Ne",
+    "PLUTO": "Pl"
+}
+
 def generate_chart_svg(
     chart_data: Dict[str, Any],
     chart_style: str = "NORTH_INDIAN"
 ) -> str:
     """
-    Generate crisp, responsive inline SVG Kundli diagram (North Indian diamond format).
-    Embeddable directly into HTML, React, Next.js, and PDF reports.
+    Generate crisp, rich, AstroSage-standard inline SVG Kundli diagram (North Indian diamond format).
+    Displays:
+    - House sign numbers (Lagna and Bhavas)
+    - Planet abbreviation (in Hindi or English)
+    - Planet degrees within sign (e.g., 14°28')
+    - Motion status: (व) or (R) for retrograde
+    - Dignity: [उ] for Exalted, [नी] for Debilitated, [स्व] for Own Sign
+    - Combustion: [अ] or [C] for Sun-combust planets
     """
     asc_sign_num = chart_data["ascendant"]["sign"]["number"]
+    lang = (chart_data.get("language") or "en").lower().strip()
     
-    # Map planets in each house
+    # Map rich planet strings into each house
     house_planets = {h: [] for h in range(1, 13)}
-    for p in chart_data["planets"]:
-        # Use first 2 letters abbreviation e.g. Su, Mo, Ma, Me, Ju, Ve, Sa, Ra, Ke
-        abbr = p["id"][:2].capitalize()
-        if p["is_retrograde"]:
-            abbr += "(R)"
-        house_planets[p["house"]].append(abbr)
+    for p in chart_data.get("planets", []):
+        p_id = p.get("id", "")
+        h_num = p.get("house", 1)
+        
+        # Abbreviation
+        if lang == "hi":
+            p_label = HINDI_PLANET_ABBR.get(p_id, p_id[:2])
+        else:
+            p_label = ENGLISH_PLANET_ABBR.get(p_id, p_id[:2].capitalize())
 
-    # SVG layout coordinates for North Indian Diamond Chart (400x400)
-    svg = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="100%" height="100%" style="font-family:sans-serif; background:#fffdfa; border:2px solid #b45309; border-radius:8px;">
+        # Pure intuitive icons:
+        # Exalted (उच्च): ↑ (Green)
+        # Debilitated (नीच): ↓ (Red)
+        # Retrograde (वक्री): (व) or (R) (Amber)
+        # Combust (अस्त): ☼ (Sun icon)
+        tags = []
+        if p.get("is_retrograde"):
+            tags.append("(व)" if lang == "hi" else "(R)")
+        
+        dignity = p.get("dignity")
+        if dignity == "EXALTED":
+            tags.append("↑")
+        elif dignity == "DEBILITATED":
+            tags.append("↓")
+
+        if p.get("is_combust"):
+            tags.append("☼")
+
+        tag_str = "".join(tags)
+        
+        # Degrees
+        deg_str = p.get("deg_formatted", "")
+        if not deg_str and "norm_degree" in p:
+            nd = float(p["norm_degree"])
+            deg_str = f"{int(nd):02d}°{int(round((nd % 1) * 60)):02d}'"
+        elif not deg_str and "longitude" in p:
+            nd = float(p["longitude"]) % 30.0
+            deg_str = f"{int(nd):02d}°{int(round((nd % 1) * 60)):02d}'"
+
+        # Format full item (e.g. 'सू↑ 14°28'' or 'गु(व)↑ 08°15'' or 'बु☼ 22°14'')
+        if tag_str:
+            item_text = f"{p_label}{tag_str} {deg_str}".strip()
+        else:
+            item_text = f"{p_label} {deg_str}".strip()
+
+        color = "#1e3a8a" # default navy blue
+        if dignity == "EXALTED":
+            color = "#047857" # emerald green for exalted (उच्च)
+        elif dignity == "DEBILITATED":
+            color = "#dc2626" # crimson red for debilitated (नीच)
+        elif p.get("is_combust"):
+            color = "#ea580c" # solar orange for combust (अस्त)
+        elif p.get("is_retrograde"):
+            color = "#b45309" # amber for retrograde (वक्री)
+        
+        house_planets[h_num].append((item_text, color))
+
+    # House layout config: each house has (center_x, center_y, max_height, max_width)
+    # These define the safe drawing zone per house in the 400x400 North Indian grid
+    # center_y must match the visual center of each house zone
+    HOUSE_ZONES = {
+        1:  (200, 110, 80,  120),   # Top diamond (Lagna)
+        2:  (100, 72,  55,  80),    # Top-left corner triangle
+        3:  (55,  130, 55,  80),    # Left-top side triangle
+        4:  (105, 225, 80,  90),    # Left center diamond
+        5:  (55,  318, 55,  80),    # Left-bottom side triangle (below label y=302, inside triangle)
+        6:  (100, 335, 55,  80),    # Bottom-left corner triangle
+        7:  (200, 295, 80,  120),   # Bottom center diamond
+        8:  (300, 335, 55,  80),    # Bottom-right corner triangle
+        9:  (345, 318, 55,  80),    # Right-bottom side triangle (below label y=302, inside triangle)
+        10: (295, 225, 80,  90),    # Right center diamond
+        11: (345, 130, 55,  80),    # Right-top side triangle
+        12: (300, 72,  55,  80),    # Top-right corner triangle
+    }
+
+    def render_house_items(h_idx: int, _cx: int = 0, _sy: int = 0, _lh: int = 12) -> str:
+        items = house_planets.get(h_idx, [])
+        if not items:
+            return ""
+
+        cx, cy, max_h, max_w = HOUSE_ZONES[h_idx]
+        n = len(items)
+        font_size = 10
+        line_h = 11
+
+        # Vertically center the block around zone center
+        total_h = n * line_h
+        curr_y = cy - total_h // 2 + line_h // 2
+
+        lines = []
+        for itm, col in items:
+            lines.append(
+                f'<text x="{cx}" y="{curr_y}" text-anchor="middle" '
+                f'font-size="{font_size}" fill="{col}" font-weight="700">{itm}</text>'
+            )
+            curr_y += line_h
+
+        return "\n    ".join(lines)
+
+    # Compute 12 house sign numbers
+    def h_sign(h: int) -> int:
+        return ((asc_sign_num + (h - 1) - 1) % 12) + 1
+
+    svg = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="100%" height="100%" style="font-family:'Segoe UI',Roboto,Helvetica,sans-serif; background:#fffdfa; border:2px solid #b45309; border-radius:8px;">
     <!-- Outer boundary & Main Diagonals -->
-    <rect x="10" y="10" width="380" height="380" fill="none" stroke="#b45309" stroke-width="2"/>
-    <line x1="10" y1="10" x2="390" y2="390" stroke="#b45309" stroke-width="2"/>
-    <line x1="10" y1="390" x2="390" y2="10" stroke="#b45309" stroke-width="2"/>
+    <rect x="8" y="8" width="384" height="384" fill="none" stroke="#b45309" stroke-width="2"/>
+    <line x1="8" y1="8" x2="392" y2="392" stroke="#b45309" stroke-width="1.8"/>
+    <line x1="8" y1="392" x2="392" y2="8" stroke="#b45309" stroke-width="1.8"/>
     <!-- Inner Diamond -->
-    <polygon points="200,10 390,200 200,390 10,200" fill="none" stroke="#b45309" stroke-width="2"/>
-    
-    <!-- House Numbers and Occupants -->
-    <!-- House 1 (Lagna - Top Center) -->
-    <text x="200" y="80" text-anchor="middle" font-size="12" fill="#78350f" font-weight="bold">{asc_sign_num}</text>
-    <text x="200" y="110" text-anchor="middle" font-size="11" fill="#1e3a8a">{", ".join(house_planets[1])}</text>
+    <polygon points="200,8 392,200 200,392 8,200" fill="none" stroke="#b45309" stroke-width="1.8"/>
 
-    <!-- House 2 (Top Left Corner) -->
-    <text x="100" y="45" text-anchor="middle" font-size="12" fill="#78350f" font-weight="bold">{(asc_sign_num % 12) + 1}</text>
-    <text x="100" y="70" text-anchor="middle" font-size="11" fill="#1e3a8a">{", ".join(house_planets[2])}</text>
+    <!-- Central Lagna / Varga Title -->
+    <text x="200" y="204" text-anchor="middle" font-size="12" fill="#92400e" font-weight="bold" letter-spacing="1">{chart_data.get('varga', 'D1')}</text>
+
+    <!-- House 1 (Top Center Diamond) -->
+    <text x="200" y="70" text-anchor="middle" font-size="11" fill="#78350f" font-weight="bold">{h_sign(1)}</text>
+    {render_house_items(1)}
+
+    <!-- House 2 (Top Left Corner Triangle) -->
+    <text x="100" y="42" text-anchor="middle" font-size="11" fill="#78350f" font-weight="bold">{h_sign(2)}</text>
+    {render_house_items(2)}
 
     <!-- House 3 (Left Top Triangle) -->
-    <text x="45" y="100" text-anchor="middle" font-size="12" fill="#78350f" font-weight="bold">{((asc_sign_num + 1) % 12) + 1}</text>
-    <text x="55" y="130" text-anchor="middle" font-size="11" fill="#1e3a8a">{", ".join(house_planets[3])}</text>
+    <text x="42" y="98" text-anchor="middle" font-size="11" fill="#78350f" font-weight="bold">{h_sign(3)}</text>
+    {render_house_items(3)}
 
     <!-- House 4 (Left Center Diamond) -->
-    <text x="110" y="200" text-anchor="middle" font-size="12" fill="#78350f" font-weight="bold">{((asc_sign_num + 2) % 12) + 1}</text>
-    <text x="110" y="225" text-anchor="middle" font-size="11" fill="#1e3a8a">{", ".join(house_planets[4])}</text>
+    <text x="105" y="195" text-anchor="middle" font-size="11" fill="#78350f" font-weight="bold">{h_sign(4)}</text>
+    {render_house_items(4)}
 
     <!-- House 5 (Left Bottom Triangle) -->
-    <text x="45" y="300" text-anchor="middle" font-size="12" fill="#78350f" font-weight="bold">{((asc_sign_num + 3) % 12) + 1}</text>
-    <text x="55" y="330" text-anchor="middle" font-size="11" fill="#1e3a8a">{", ".join(house_planets[5])}</text>
+    <text x="42" y="302" text-anchor="middle" font-size="11" fill="#78350f" font-weight="bold">{h_sign(5)}</text>
+    {render_house_items(5)}
 
-    <!-- House 6 (Bottom Left Corner) -->
-    <text x="100" y="360" text-anchor="middle" font-size="12" fill="#78350f" font-weight="bold">{((asc_sign_num + 4) % 12) + 1}</text>
-    <text x="100" y="340" text-anchor="middle" font-size="11" fill="#1e3a8a">{", ".join(house_planets[6])}</text>
+    <!-- House 6 (Bottom Left Corner Triangle) -->
+    <text x="100" y="365" text-anchor="middle" font-size="11" fill="#78350f" font-weight="bold">{h_sign(6)}</text>
+    {render_house_items(6)}
 
     <!-- House 7 (Bottom Center Diamond) -->
-    <text x="200" y="325" text-anchor="middle" font-size="12" fill="#78350f" font-weight="bold">{((asc_sign_num + 5) % 12) + 1}</text>
-    <text x="200" y="300" text-anchor="middle" font-size="11" fill="#1e3a8a">{", ".join(house_planets[7])}</text>
+    <text x="200" y="332" text-anchor="middle" font-size="11" fill="#78350f" font-weight="bold">{h_sign(7)}</text>
+    {render_house_items(7)}
 
-    <!-- House 8 (Bottom Right Corner) -->
-    <text x="300" y="360" text-anchor="middle" font-size="12" fill="#78350f" font-weight="bold">{((asc_sign_num + 6) % 12) + 1}</text>
-    <text x="300" y="340" text-anchor="middle" font-size="11" fill="#1e3a8a">{", ".join(house_planets[8])}</text>
+    <!-- House 8 (Bottom Right Corner Triangle) -->
+    <text x="300" y="365" text-anchor="middle" font-size="11" fill="#78350f" font-weight="bold">{h_sign(8)}</text>
+    {render_house_items(8)}
 
     <!-- House 9 (Right Bottom Triangle) -->
-    <text x="355" y="300" text-anchor="middle" font-size="12" fill="#78350f" font-weight="bold">{((asc_sign_num + 7) % 12) + 1}</text>
-    <text x="345" y="330" text-anchor="middle" font-size="11" fill="#1e3a8a">{", ".join(house_planets[9])}</text>
+    <text x="358" y="302" text-anchor="middle" font-size="11" fill="#78350f" font-weight="bold">{h_sign(9)}</text>
+    {render_house_items(9)}
 
     <!-- House 10 (Right Center Diamond) -->
-    <text x="290" y="200" text-anchor="middle" font-size="12" fill="#78350f" font-weight="bold">{((asc_sign_num + 8) % 12) + 1}</text>
-    <text x="290" y="225" text-anchor="middle" font-size="11" fill="#1e3a8a">{", ".join(house_planets[10])}</text>
+    <text x="295" y="195" text-anchor="middle" font-size="11" fill="#78350f" font-weight="bold">{h_sign(10)}</text>
+    {render_house_items(10)}
 
     <!-- House 11 (Right Top Triangle) -->
-    <text x="355" y="100" text-anchor="middle" font-size="12" fill="#78350f" font-weight="bold">{((asc_sign_num + 9) % 12) + 1}</text>
-    <text x="345" y="130" text-anchor="middle" font-size="11" fill="#1e3a8a">{", ".join(house_planets[11])}</text>
+    <text x="358" y="98" text-anchor="middle" font-size="11" fill="#78350f" font-weight="bold">{h_sign(11)}</text>
+    {render_house_items(11)}
 
-    <!-- House 12 (Top Right Corner) -->
-    <text x="300" y="45" text-anchor="middle" font-size="12" fill="#78350f" font-weight="bold">{((asc_sign_num + 10) % 12) + 1}</text>
-    <text x="300" y="70" text-anchor="middle" font-size="11" fill="#1e3a8a">{", ".join(house_planets[12])}</text>
-
-    <!-- Chart Title/Type -->
-    <text x="200" y="205" text-anchor="middle" font-size="13" fill="#b45309" font-weight="bold">{chart_data.get('varga', 'D1')}</text>
+    <!-- House 12 (Top Right Corner Triangle) -->
+    <text x="300" y="42" text-anchor="middle" font-size="11" fill="#78350f" font-weight="bold">{h_sign(12)}</text>
+    {render_house_items(12)}
 </svg>'''
     return svg
 
