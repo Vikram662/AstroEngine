@@ -57,12 +57,14 @@ export const Navbar = () => {
           <Link href="/pricing" className="hover:text-zinc-900 transition">
             Pricing
           </Link>
-          <Link
-            href="/docs"
+          <a
+            href={`${process.env.NEXT_PUBLIC_ASTRO_ENGINE_URL}/documentation`}
+            target="_blank"
+            rel="noreferrer"
             className="hover:text-zinc-900 transition"
           >
             API Reference
-          </Link>
+          </a>
         </nav>
 
         <div className="flex items-center gap-3">
