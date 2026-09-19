@@ -234,12 +234,15 @@ export default function BillingPage() {
         }
       }
     } catch (err: unknown) {
-      const error = err as { response?: { data?: { message?: string } }; message?: string };
-      setErrorMessage(error.response?.data?.message || error.message || "Failed to subscribe to plan.");
+      const error = err as { response?: { data?: { message?: string; detail?: string } }; message?: string };
+      const msg =
+        error.response?.data?.message ||
+        error.response?.data?.detail ||
+        error.message ||
+        "Failed to subscribe to plan.";
+      setErrorMessage(msg);
     } finally {
-      if (method === "WALLET") {
-        setSubscribingTier(null);
-      }
+      setSubscribingTier(null);
     }
   };
 
@@ -312,8 +315,13 @@ export default function BillingPage() {
         setIsProcessing(false);
       }
     } catch (err: unknown) {
-      const error = err as { message?: string };
-      setErrorMessage(error.message || "Failed to process recharge transaction.");
+      const error = err as { response?: { data?: { message?: string; detail?: string } }; message?: string };
+      const msg =
+        error.response?.data?.message ||
+        error.response?.data?.detail ||
+        error.message ||
+        "Razorpay payment gateway is not configured. Please contact support.";
+      setErrorMessage(msg);
       setIsProcessing(false);
     }
   };
@@ -439,6 +447,45 @@ export default function BillingPage() {
 
   return (
     <div className="space-y-6 max-w-6xl">
+      {/* Floating Toast Notification (Always visible anywhere on the page & inside modals) */}
+      {(errorMessage || successMessage) && (
+        <div className="fixed top-5 right-5 z-[9999] max-w-md w-full p-4 rounded-xl shadow-2xl border transition-all animate-in slide-in-from-top-4 flex items-start gap-3 bg-white">
+          {errorMessage ? (
+            <>
+              <div className="p-2 rounded-lg bg-rose-100 text-rose-600 shrink-0">
+                <AlertCircle className="w-5 h-5" />
+              </div>
+              <div className="flex-1 text-xs">
+                <div className="font-bold text-rose-900 text-sm">Action Failed</div>
+                <div className="text-rose-700 mt-0.5 leading-relaxed">{errorMessage}</div>
+              </div>
+              <button 
+                onClick={() => setErrorMessage(null)} 
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </>
+          ) : (
+            <>
+              <div className="p-2 rounded-lg bg-emerald-100 text-emerald-600 shrink-0">
+                <CheckCircle2 className="w-5 h-5" />
+              </div>
+              <div className="flex-1 text-xs">
+                <div className="font-bold text-emerald-900 text-sm">Success</div>
+                <div className="text-emerald-700 mt-0.5 leading-relaxed">{successMessage}</div>
+              </div>
+              <button 
+                onClick={() => setSuccessMessage(null)} 
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
       {/* Header Banner */}
       <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
         <h1 className="text-2xl font-bold tracking-tight text-slate-900">Wallet & Dynamic Billing</h1>
@@ -449,16 +496,26 @@ export default function BillingPage() {
 
       {/* Live Alerts */}
       {successMessage && (
-        <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-900 text-xs flex items-center gap-2 shadow-sm font-semibold">
-          <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-          <span>{successMessage}</span>
+        <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-900 text-xs flex items-center justify-between shadow-sm font-semibold">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+            <span>{successMessage}</span>
+          </div>
+          <button onClick={() => setSuccessMessage(null)} className="text-emerald-700 hover:text-emerald-900">
+            <X className="w-3.5 h-3.5" />
+          </button>
         </div>
       )}
 
       {errorMessage && (
-        <div className="p-4 rounded-xl bg-rose-50 border border-rose-300 text-rose-900 text-xs flex items-center gap-2 shadow-sm font-semibold">
-          <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0" />
-          <span>{errorMessage}</span>
+        <div className="p-4 rounded-xl bg-rose-50 border border-rose-300 text-rose-900 text-xs flex items-center justify-between shadow-sm font-semibold">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0" />
+            <span>{errorMessage}</span>
+          </div>
+          <button onClick={() => setErrorMessage(null)} className="text-rose-700 hover:text-rose-900">
+            <X className="w-3.5 h-3.5" />
+          </button>
         </div>
       )}
 
@@ -611,6 +668,18 @@ export default function BillingPage() {
             </div>
           ))}
         </div>
+
+        {errorMessage && (
+          <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-900 text-xs flex items-center justify-between font-medium">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+              <span>{errorMessage}</span>
+            </div>
+            <button onClick={() => setErrorMessage(null)} className="text-rose-500 hover:text-rose-700">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
 
         <button
           onClick={handleRecharge}
@@ -903,6 +972,13 @@ export default function BillingPage() {
                       )}
                     </button>
                   </div>
+
+                  {errorMessage && (
+                    <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-900 text-xs flex items-start gap-2">
+                      <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                      <div className="flex-1 leading-relaxed">{errorMessage}</div>
+                    </div>
+                  )}
                 </div>
               );
             })()}
@@ -1029,6 +1105,13 @@ export default function BillingPage() {
                   )}
                 </button>
               </div>
+
+              {errorMessage && (
+                <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-900 text-xs flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                  <div className="flex-1 leading-relaxed">{errorMessage}</div>
+                </div>
+              )}
             </div>
           </div>
         </div>

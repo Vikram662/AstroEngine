@@ -146,7 +146,7 @@ export default function DocsPage() {
 
   const getSnippet = () => {
     const payloadStr = JSON.stringify(activeDoc.samplePayload, null, 2);
-    const apiBaseUrl = (process.env.NEXT_PUBLIC_ASTRO_ENGINE_URL || "http://localhost:8000").replace(/\/$/, "");
+    const apiBaseUrl = (process.env.NEXT_PUBLIC_ASTRO_ENGINE_URL || "").replace(/\/$/, "");
 
     if (activeTab === "curl") {
       return `curl -X ${activeDoc.method} "${apiBaseUrl}${activeDoc.path}" \\

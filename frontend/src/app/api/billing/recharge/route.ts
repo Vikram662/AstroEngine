@@ -60,24 +60,28 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ status: "error", message: "Invalid order amount." }, { status: 400 });
       }
       
-      // 1. Fetch Razorpay Key and Secret with Database (SystemSetting table) taking first priority
+      // 1. Fetch Razorpay Key and Secret — DB takes priority, fallback to env
       const dbKeySetting = await prisma.systemSetting.findUnique({
         where: { key: "RAZORPAY_KEY_ID" }
       });
-      const razorpayKey = dbKeySetting?.value || process.env.RAZORPAY_KEY_ID || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "";
-      
       const dbSecretSetting = await prisma.systemSetting.findUnique({
         where: { key: "RAZORPAY_KEY_SECRET" }
       });
-      let razorpaySecret = dbSecretSetting?.value || process.env.RAZORPAY_KEY_SECRET || "";
-      if (razorpaySecret.includes("placeholder")) {
-        razorpaySecret = dbSecretSetting?.value || "";
-      }
+
+      // Reject placeholder/demo values — must be real keys
+      const isPlaceholder = (v?: string | null) =>
+        !v || v.includes("placeholder") || v.includes("mock") || v.includes("test_mock") || v.trim() === "";
+
+      const dbKey = !isPlaceholder(dbKeySetting?.value) ? dbKeySetting!.value! : null;
+      const dbSecret = !isPlaceholder(dbSecretSetting?.value) ? dbSecretSetting!.value! : null;
+
+      const razorpayKey = dbKey || process.env.RAZORPAY_KEY_ID || "";
+      const razorpaySecret = dbSecret || process.env.RAZORPAY_KEY_SECRET || "";
 
       if (!razorpayKey || !razorpaySecret) {
         return NextResponse.json({
           status: "error",
-          message: "Razorpay Key ID and Secret must be configured to generate payment orders."
+          message: "Payment gateway not configured. Please set Razorpay Key ID and Secret in Admin → Settings → Payments."
         }, { status: 500 });
       }
 
