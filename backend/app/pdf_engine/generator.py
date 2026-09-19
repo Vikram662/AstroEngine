@@ -1,15 +1,18 @@
 import os
 import uuid
-import asyncio
 from typing import Dict, Any, Optional
+import httpx
 from jinja2 import Environment, FileSystemLoader
 from app.modules.parashari.calculator import compute_varga_chart, generate_chart_svg
+from app.pdf_engine.jobs_db import jobs_store, PersistentJobStore
+from app.pdf_engine.renderer import render_real_pdf_bytes
+from app.pdf_engine.storage import store_report_pdf
 
 TEMPLATES_DIR = os.path.join(os.path.dirname(__file__), "templates")
 jinja_env = Environment(loader=FileSystemLoader(TEMPLATES_DIR), autoescape=True)
 
-# In-Memory Job Store (Backed by DB / Redis in production)
-PDF_JOBS: Dict[str, Dict[str, Any]] = {}
+# Backward-compatible alias for existing router references (now SQLite persistent)
+PDF_JOBS = jobs_store
 
 def render_kundli_html(
     birth_data: Dict[str, Any],
@@ -20,7 +23,7 @@ def render_kundli_html(
     """Render full HTML document with embedded SVG charts and custom branding."""
     template = jinja_env.get_template("kundli_report.html")
 
-    # Calculate D1 chart
+    # Calculate real D1 chart using Swiss Ephemeris
     chart = compute_varga_chart(
         dob=birth_data["dob"],
         tob=birth_data["tob"],
@@ -51,34 +54,69 @@ async def process_pdf_job_async(
     webhook_url: Optional[str] = None
 ):
     """
-    Background Task:
-    1. Compiles planetary chart math & interpretations.
-    2. Renders Jinja2 HTML with brand themes & SVG charts.
-    3. Simulates/generates PDF buffer.
-    4. Updates Job status to COMPLETED with download link.
+    Real Asynchronous PDF Pipeline:
+    1. Computes genuine planetary positions and D1 chart via Swiss Ephemeris.
+    2. Builds real binary PDF document with branding and vector chart.
+    3. Persists file to server disk and optionally uploads to Cloudflare R2 if configured.
+    4. Updates SQLite persistent job store to COMPLETED.
+    5. Dispatches webhook notification if requested.
     """
     try:
-        PDF_JOBS[job_id]["status"] = "PROCESSING"
+        jobs_store.update_status(job_id=job_id, status="PROCESSING")
         
-        # Non-blocking async calculation
-        html_doc = render_kundli_html(birth_data, branding, report_title=report_type.replace("_", " ").title(), lang=lang)
-        
-        # Simulate render & R2 upload time
-        await asyncio.sleep(0.5)
+        # 1. Real Astrological Calculation
+        chart = compute_varga_chart(
+            dob=birth_data["dob"],
+            tob=birth_data["tob"],
+            lat=birth_data["lat"],
+            lon=birth_data["lon"],
+            tz=birth_data["tz"],
+            varga="D1",
+            lang=lang
+        )
 
-        # Pre-signed R2 URL pattern
-        download_url = f"https://cdn.astroengine.io/reports/{job_id}.pdf"
+        title_readable = report_type.replace("_", " ").title()
 
-        PDF_JOBS[job_id]["status"] = "COMPLETED"
-        PDF_JOBS[job_id]["file_url"] = download_url
-        PDF_JOBS[job_id]["html_preview_bytes"] = len(html_doc.encode("utf-8"))
-        
-        # If client provided webhook_url, notify them
+        # 2. Real PDF Rendering (Binary PDF 1.4 stream)
+        pdf_bytes = render_real_pdf_bytes(
+            report_title=f"{title_readable} Horoscope",
+            birth_data=birth_data,
+            chart=chart,
+            branding=branding,
+            lang=lang
+        )
+
+        # 3. Persistent Storage: Local disk + Optional R2 Cloudflare Upload (organized subfolders)
+        file_path, download_url = await store_report_pdf(job_id=job_id, pdf_bytes=pdf_bytes, report_type=report_type)
+
+        # 4. Mark Job Completed in SQLite
+        jobs_store.update_status(
+            job_id=job_id,
+            status="COMPLETED",
+            file_url=download_url,
+            file_path=file_path
+        )
+
+        # 5. Webhook delivery if configured
         if webhook_url:
-            # SSRF sanitizer was executed on entry
-            pass
+            try:
+                payload = {
+                    "event": "pdf.completed",
+                    "job_id": job_id,
+                    "report_type": report_type,
+                    "download_url": download_url,
+                    "file_size_bytes": len(pdf_bytes)
+                }
+                async with httpx.AsyncClient(timeout=10.0) as client:
+                    await client.post(webhook_url, json=payload)
+            except Exception:
+                # Webhook failure should not fail the completed PDF job
+                pass
 
     except Exception as e:
-        PDF_JOBS[job_id]["status"] = "FAILED"
-        PDF_JOBS[job_id]["failure_reason"] = str(e)
-        PDF_JOBS[job_id]["refunded"] = True
+        jobs_store.update_status(
+            job_id=job_id,
+            status="FAILED",
+            failure_reason=str(e),
+            refunded=True
+        )

@@ -77,6 +77,8 @@ frontend/out/
 *.sqlite
 *.sqlite3
 backend/*.db
+backend/storage/
+storage/
 
 # IDE & Editor specific files
 .vscode/

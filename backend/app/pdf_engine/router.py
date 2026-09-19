@@ -1,6 +1,7 @@
 import uuid
 from fastapi import APIRouter, Depends, BackgroundTasks, HTTPException, status
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, FileResponse
+import os
 from app.schemas.common import StandardResponse
 from app.schemas.pdf import PdfReportRequest, PdfJobResponse
 from app.core.security import verify_api_key
@@ -137,6 +138,27 @@ async def get_pdf_job_status(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="PDF Job not found.")
     return StandardResponse(status="success", language=job.get("language", "en"), data=job)
 
+@router.get("/download/{job_id}")
+async def download_pdf_file(job_id: str):
+    """
+    Download rendered PDF document by job_id.
+    Streamed directly from local disk storage or redirected.
+    """
+    safe_job_id = os.path.basename(job_id)
+    job = PDF_JOBS.get(safe_job_id)
+    if not job:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Report job not found.")
+    
+    file_path = job.get("file_path")
+    if not file_path or not os.path.exists(file_path):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="PDF file not ready or expired.")
+
+    return FileResponse(
+        path=file_path,
+        media_type="application/pdf",
+        filename=f"{safe_job_id}.pdf"
+    )
+
 @router.post("/preview/html")
 async def preview_report_html(
     req: PdfReportRequest,
@@ -156,9 +178,35 @@ async def create_matching_pdf_job(
     key_hash: str = Depends(verify_api_key)
 ):
     """Module 12 — Endpoint 95: 20–25 Page Matchmaking & Compatibility PDF Report."""
+    if req.webhook_url:
+        validate_safe_webhook_url(req.webhook_url)
+
     job_id = f"pdf_job_{uuid.uuid4().hex[:12]}"
-    PDF_JOBS[job_id] = {"job_id": job_id, "report_type": "matching_report", "status": "PENDING", "file_url": None, "credits_cost": 6.0}
-    return PdfJobResponse(job_id=job_id, report_type="matching_report", poll_url=f"/api/v1/pdf/status/{job_id}", message="Matchmaking PDF queued.")
+    selected_lang = (req.lang or "en").lower().strip()
+    birth_data = {"dob": req.dob, "tob": req.tob, "lat": req.lat, "lon": req.lon, "tz": req.tz}
+    branding_dict = req.branding.dict() if req.branding else {}
+
+    PDF_JOBS[job_id] = {
+        "job_id": job_id,
+        "report_type": "matching_report",
+        "language": selected_lang,
+        "status": "PENDING",
+        "file_url": None,
+        "credits_cost": 6.0,
+        "refunded": False
+    }
+
+    background_tasks.add_task(
+        process_pdf_job_async,
+        job_id=job_id,
+        birth_data=birth_data,
+        branding=branding_dict,
+        report_type="matching_report",
+        lang=selected_lang,
+        webhook_url=req.webhook_url
+    )
+
+    return PdfJobResponse(job_id=job_id, report_type="matching_report", poll_url=f"/api/v1/pdf/status/{job_id}", message="Matchmaking PDF queued successfully.")
 
 @router.post("/varshphal/annual", response_model=PdfJobResponse, status_code=status.HTTP_202_ACCEPTED)
 async def create_varshphal_pdf_job(
@@ -167,9 +215,35 @@ async def create_varshphal_pdf_job(
     key_hash: str = Depends(verify_api_key)
 ):
     """Module 12 — Endpoint 96: 25–35 Page Varshphal (Annual Solar Return) PDF Report."""
+    if req.webhook_url:
+        validate_safe_webhook_url(req.webhook_url)
+
     job_id = f"pdf_job_{uuid.uuid4().hex[:12]}"
-    PDF_JOBS[job_id] = {"job_id": job_id, "report_type": "varshphal_annual", "status": "PENDING", "file_url": None, "credits_cost": 8.0}
-    return PdfJobResponse(job_id=job_id, report_type="varshphal_annual", poll_url=f"/api/v1/pdf/status/{job_id}", message="Varshphal PDF queued.")
+    selected_lang = (req.lang or "en").lower().strip()
+    birth_data = {"dob": req.dob, "tob": req.tob, "lat": req.lat, "lon": req.lon, "tz": req.tz}
+    branding_dict = req.branding.dict() if req.branding else {}
+
+    PDF_JOBS[job_id] = {
+        "job_id": job_id,
+        "report_type": "varshphal_annual",
+        "language": selected_lang,
+        "status": "PENDING",
+        "file_url": None,
+        "credits_cost": 8.0,
+        "refunded": False
+    }
+
+    background_tasks.add_task(
+        process_pdf_job_async,
+        job_id=job_id,
+        birth_data=birth_data,
+        branding=branding_dict,
+        report_type="varshphal_annual",
+        lang=selected_lang,
+        webhook_url=req.webhook_url
+    )
+
+    return PdfJobResponse(job_id=job_id, report_type="varshphal_annual", poll_url=f"/api/v1/pdf/status/{job_id}", message="Varshphal PDF queued successfully.")
 
 @router.post("/lalkitab/full", response_model=PdfJobResponse, status_code=status.HTTP_202_ACCEPTED)
 async def create_lalkitab_pdf_job(
@@ -178,9 +252,35 @@ async def create_lalkitab_pdf_job(
     key_hash: str = Depends(verify_api_key)
 ):
     """Module 12 — Endpoint 97: 35–45 Page Lal Kitab Remedial & Farman PDF Report."""
+    if req.webhook_url:
+        validate_safe_webhook_url(req.webhook_url)
+
     job_id = f"pdf_job_{uuid.uuid4().hex[:12]}"
-    PDF_JOBS[job_id] = {"job_id": job_id, "report_type": "lalkitab_full", "status": "PENDING", "file_url": None, "credits_cost": 9.0}
-    return PdfJobResponse(job_id=job_id, report_type="lalkitab_full", poll_url=f"/api/v1/pdf/status/{job_id}", message="Lal Kitab PDF queued.")
+    selected_lang = (req.lang or "en").lower().strip()
+    birth_data = {"dob": req.dob, "tob": req.tob, "lat": req.lat, "lon": req.lon, "tz": req.tz}
+    branding_dict = req.branding.dict() if req.branding else {}
+
+    PDF_JOBS[job_id] = {
+        "job_id": job_id,
+        "report_type": "lalkitab_full",
+        "language": selected_lang,
+        "status": "PENDING",
+        "file_url": None,
+        "credits_cost": 9.0,
+        "refunded": False
+    }
+
+    background_tasks.add_task(
+        process_pdf_job_async,
+        job_id=job_id,
+        birth_data=birth_data,
+        branding=branding_dict,
+        report_type="lalkitab_full",
+        lang=selected_lang,
+        webhook_url=req.webhook_url
+    )
+
+    return PdfJobResponse(job_id=job_id, report_type="lalkitab_full", poll_url=f"/api/v1/pdf/status/{job_id}", message="Lal Kitab PDF queued successfully.")
 
 @router.post("/dosha/sade-sati", response_model=PdfJobResponse, status_code=status.HTTP_202_ACCEPTED)
 async def create_sadesati_pdf_job(
@@ -189,9 +289,35 @@ async def create_sadesati_pdf_job(
     key_hash: str = Depends(verify_api_key)
 ):
     """Module 12 — Endpoint 98: 12–15 Page Shani Sade Sati Life Guide PDF Report."""
+    if req.webhook_url:
+        validate_safe_webhook_url(req.webhook_url)
+
     job_id = f"pdf_job_{uuid.uuid4().hex[:12]}"
-    PDF_JOBS[job_id] = {"job_id": job_id, "report_type": "sadesati_guide", "status": "PENDING", "file_url": None, "credits_cost": 4.0}
-    return PdfJobResponse(job_id=job_id, report_type="sadesati_guide", poll_url=f"/api/v1/pdf/status/{job_id}", message="Sade Sati PDF queued.")
+    selected_lang = (req.lang or "en").lower().strip()
+    birth_data = {"dob": req.dob, "tob": req.tob, "lat": req.lat, "lon": req.lon, "tz": req.tz}
+    branding_dict = req.branding.dict() if req.branding else {}
+
+    PDF_JOBS[job_id] = {
+        "job_id": job_id,
+        "report_type": "sadesati_guide",
+        "language": selected_lang,
+        "status": "PENDING",
+        "file_url": None,
+        "credits_cost": 4.0,
+        "refunded": False
+    }
+
+    background_tasks.add_task(
+        process_pdf_job_async,
+        job_id=job_id,
+        birth_data=birth_data,
+        branding=branding_dict,
+        report_type="sadesati_guide",
+        lang=selected_lang,
+        webhook_url=req.webhook_url
+    )
+
+    return PdfJobResponse(job_id=job_id, report_type="sadesati_guide", poll_url=f"/api/v1/pdf/status/{job_id}", message="Sade Sati PDF queued successfully.")
 
 @router.post("/numerology/report", response_model=PdfJobResponse, status_code=status.HTTP_202_ACCEPTED)
 async def create_numerology_pdf_job(
@@ -200,7 +326,33 @@ async def create_numerology_pdf_job(
     key_hash: str = Depends(verify_api_key)
 ):
     """Module 12 — Endpoint 99: 15–25 Page Complete Numerology Blueprint PDF Report."""
+    if req.webhook_url:
+        validate_safe_webhook_url(req.webhook_url)
+
     job_id = f"pdf_job_{uuid.uuid4().hex[:12]}"
-    PDF_JOBS[job_id] = {"job_id": job_id, "report_type": "numerology_report", "status": "PENDING", "file_url": None, "credits_cost": 5.0}
-    return PdfJobResponse(job_id=job_id, report_type="numerology_report", poll_url=f"/api/v1/pdf/status/{job_id}", message="Numerology PDF queued.")
+    selected_lang = (req.lang or "en").lower().strip()
+    birth_data = {"dob": req.dob, "tob": req.tob, "lat": req.lat, "lon": req.lon, "tz": req.tz}
+    branding_dict = req.branding.dict() if req.branding else {}
+
+    PDF_JOBS[job_id] = {
+        "job_id": job_id,
+        "report_type": "numerology_report",
+        "language": selected_lang,
+        "status": "PENDING",
+        "file_url": None,
+        "credits_cost": 5.0,
+        "refunded": False
+    }
+
+    background_tasks.add_task(
+        process_pdf_job_async,
+        job_id=job_id,
+        birth_data=birth_data,
+        branding=branding_dict,
+        report_type="numerology_report",
+        lang=selected_lang,
+        webhook_url=req.webhook_url
+    )
+
+    return PdfJobResponse(job_id=job_id, report_type="numerology_report", poll_url=f"/api/v1/pdf/status/{job_id}", message="Numerology PDF queued successfully.")
 
