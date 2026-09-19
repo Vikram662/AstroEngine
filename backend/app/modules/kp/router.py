@@ -4,7 +4,11 @@ from app.core.security import verify_api_key
 from app.modules.kp.calculator import (
     calculate_kp_planets,
     calculate_kp_cusps,
-    calculate_kp_horary_chart
+    calculate_kp_horary_chart,
+    calculate_kp_significators,
+    calculate_kp_ruling_planets,
+    calculate_kp_event_combination,
+    calculate_kp_horary_2193
 )
 
 router = APIRouter(prefix="/api/v1/kp", tags=["KP System"])
@@ -69,24 +73,17 @@ async def get_kp_horary(
     )
     return StandardResponse(status="success", language=selected_lang, data=horary_data)
 
+from fastapi import HTTPException
+
 @router.post("/significators/level-4", response_model=StandardResponse)
 async def get_level_4_significators(
     req: BirthDataRequest,
     key_hash: str = Depends(verify_api_key)
 ):
     """Module 5 — Endpoint 41: 4-Grade (A/B/C/D) KP Significator Table."""
-    return StandardResponse(
-        status="success",
-        language=req.lang or "en",
-        data={
-            "significators": {
-                "Grade_A": {"description": "Planets in star of occupant", "planets": ["Jupiter", "Venus"]},
-                "Grade_B": {"description": "Occupant planets", "planets": ["Sun", "Mercury"]},
-                "Grade_C": {"description": "Planets in star of house lord", "planets": ["Mars"]},
-                "Grade_D": {"description": "House lord", "planets": ["Saturn", "Moon"]}
-            }
-        }
-    )
+    selected_lang = (req.lang or "en").lower().strip()
+    data = calculate_kp_significators(req.dob, req.tob, req.lat, req.lon, req.tz)
+    return StandardResponse(status="success", language=selected_lang, data=data["planet_4_level_significators"])
 
 @router.post("/house-significators", response_model=StandardResponse)
 async def get_house_significators(
@@ -94,14 +91,9 @@ async def get_house_significators(
     key_hash: str = Depends(verify_api_key)
 ):
     """Module 5 — Endpoint 42: Per-house KP significator planets for houses 1 to 12."""
-    return StandardResponse(
-        status="success",
-        language=req.lang or "en",
-        data={
-            f"House_{h}": {"favorable_planets": ["Jupiter", "Mercury"], "unfavorable": ["Saturn"]}
-            for h in range(1, 13)
-        }
-    )
+    selected_lang = (req.lang or "en").lower().strip()
+    data = calculate_kp_significators(req.dob, req.tob, req.lat, req.lon, req.tz)
+    return StandardResponse(status="success", language=selected_lang, data=data["house_significators"])
 
 @router.post("/ruling-planets", response_model=StandardResponse)
 async def get_ruling_planets(
@@ -109,19 +101,9 @@ async def get_ruling_planets(
     key_hash: str = Depends(verify_api_key)
 ):
     """Module 5 — Endpoint 43: Real-time KP Ruling Planets (Lagna Lord, Lagna Star Lord, Moon Sign Lord, Moon Star Lord, Day Lord)."""
-    return StandardResponse(
-        status="success",
-        language=req.lang or "en",
-        data={
-            "ruling_planets": {
-                "lagna_sign_lord": "JUPITER",
-                "lagna_star_lord": "KETU",
-                "moon_sign_lord": "SATURN",
-                "moon_star_lord": "RAHU",
-                "day_lord": "MERCURY"
-            }
-        }
-    )
+    selected_lang = (req.lang or "en").lower().strip()
+    data = calculate_kp_ruling_planets(req.dob, req.tob, req.lat, req.lon, req.tz)
+    return StandardResponse(status="success", language=selected_lang, data=data)
 
 @router.post("/horary/1-2193", response_model=StandardResponse)
 async def get_sub_sub_horary(
@@ -130,11 +112,9 @@ async def get_sub_sub_horary(
     key_hash: str = Depends(verify_api_key)
 ):
     """Module 5 — Endpoint 45: Advanced KP Sub-Sub Lord Horary (1–2193)."""
-    return StandardResponse(
-        status="success",
-        language=req.lang or "en",
-        data={"horary_seed": seed, "system": "KP Sub-Sub Lord 1-2193", "ascendant_degree": round((seed / 2193.0) * 360.0, 4)}
-    )
+    selected_lang = (req.lang or "en").lower().strip()
+    data = calculate_kp_horary_2193(seed, req.dob, req.tob, req.tz)
+    return StandardResponse(status="success", language=selected_lang, data=data)
 
 @router.post("/event-analysis", response_model=StandardResponse)
 async def get_event_analysis(
@@ -143,11 +123,7 @@ async def get_event_analysis(
     key_hash: str = Depends(verify_api_key)
 ):
     """Module 5 — Endpoint 46: Career, Marriage, Childbirth, Litigation house-combination analysis."""
-    combinations = {
-        "CAREER": {"houses": [2, 6, 10, 11], "verdict": "Promising career advancement indicated by cuspal sub-lords 10 and 11."},
-        "MARRIAGE": {"houses": [2, 7, 11], "verdict": "Strong marriage fruition combinations active."},
-        "LITIGATION": {"houses": [6, 8, 12], "verdict": "Clear victory in legal dispute indicated."}
-    }
-    ev = combinations.get(event_type.upper(), {"houses": [1, 5, 9], "verdict": "General life event analysis favorable."})
-    return StandardResponse(status="success", language=req.lang or "en", data={"event": event_type.upper(), **ev})
+    selected_lang = (req.lang or "en").lower().strip()
+    data = calculate_kp_event_combination(req.dob, req.tob, req.lat, req.lon, req.tz, event_type)
+    return StandardResponse(status="success", language=selected_lang, data=data)
 

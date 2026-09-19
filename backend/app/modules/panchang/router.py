@@ -1,7 +1,12 @@
 from fastapi import APIRouter, Depends
 from app.schemas.common import BirthDataRequest, StandardResponse
 from app.core.security import verify_api_key
-from app.modules.panchang.calculator import calculate_daily_panchang, calculate_choghadiya
+from app.modules.panchang.calculator import (
+    calculate_daily_panchang,
+    calculate_choghadiya,
+    calculate_monthly_calendar,
+    calculate_muhurat_selection
+)
 from app.modules.core_astronomy.advanced_astronomy import calculate_sun_moon_timings
 
 router = APIRouter(prefix="/api/v1/panchang", tags=["Panchang & Muhurat"])
@@ -83,7 +88,11 @@ async def get_hora_schedule(
     """Module 2 — Endpoint 11: 24-hr planetary Hora schedule from local sunrise."""
     sun_timings = calculate_sun_moon_timings(dob=req.dob, lat=req.lat, lon=req.lon, tz=req.tz)
     from app.modules.panchang.calculator import calculate_hora_schedule
-    hora_data = calculate_hora_schedule(dob=req.dob, sunrise_time_str=sun_timings["sunrise"])
+    hora_data = calculate_hora_schedule(
+        dob=req.dob, 
+        sunrise_time_str=sun_timings["sunrise"],
+        sunset_time_str=sun_timings["sunset"]
+    )
     return StandardResponse(status="success", language=req.lang or "en", data=hora_data)
 
 @router.post("/bhadra", response_model=StandardResponse)
@@ -106,6 +115,8 @@ async def get_panchak_status(
     bp_data = calculate_bhadra_panchak(dob=req.dob, tob=req.tob, lat=req.lat, lon=req.lon, tz=req.tz)
     return StandardResponse(status="success", language=req.lang or "en", data={"panchak": bp_data["panchak"]})
 
+from fastapi import HTTPException
+
 @router.post("/monthly-calendar", response_model=StandardResponse)
 async def get_monthly_calendar(
     req: BirthDataRequest,
@@ -113,18 +124,11 @@ async def get_monthly_calendar(
 ):
     """Module 2 — Endpoint 14: Month-wide tithi transitions, ekadashi, pradosh, and sankranti."""
     selected_lang = (req.lang or "en").lower().strip()
-    return StandardResponse(
-        status="success",
-        language=selected_lang,
-        data={
-            "month": req.dob[:7],
-            "ekadashi_dates": [f"{req.dob[:7]}-11", f"{req.dob[:7]}-26"],
-            "pradosh_dates": [f"{req.dob[:7]}-13", f"{req.dob[:7]}-28"],
-            "amavasya": f"{req.dob[:7]}-15",
-            "purnima": f"{req.dob[:7]}-30",
-            "sankranti": {"name": "Kanya Sankranti", "date": f"{req.dob[:7]}-17", "time": "18:45:00"}
-        }
-    )
+    dt = req.dob.split("-")
+    year = int(dt[0])
+    month = int(dt[1])
+    data = calculate_monthly_calendar(year, month, req.lat, req.lon, req.tz, selected_lang)
+    return StandardResponse(status="success", language=selected_lang, data=data)
 
 @router.post("/muhurat/marriage", response_model=StandardResponse)
 async def get_marriage_muhurats(
@@ -133,19 +137,8 @@ async def get_marriage_muhurats(
 ):
     """Module 2 — Endpoint 15: Vivah muhurat, filtered by Guru/Shukra Asta and tribal doshas."""
     selected_lang = (req.lang or "en").lower().strip()
-    return StandardResponse(
-        status="success",
-        language=selected_lang,
-        data={
-            "period": f"{req.dob} to next 30 days",
-            "auspicious_muhurats": [
-                {"date": req.dob, "start_time": "19:30:00", "end_time": "23:45:00", "lagna": "Vrishabha", "nakshatra": "Rohini", "score": 92},
-                {"date": f"{req.dob[:8]}21", "start_time": "20:15:00", "end_time": "01:30:00", "lagna": "Mithuna", "nakshatra": "Mrigashira", "score": 88}
-            ],
-            "guru_asta": False,
-            "shukra_asta": False
-        }
-    )
+    data = calculate_muhurat_selection(req.dob, req.lat, req.lon, req.tz, "MARRIAGE", 15)
+    return StandardResponse(status="success", language=selected_lang, data=data)
 
 @router.post("/muhurat/griha-pravesh", response_model=StandardResponse)
 async def get_griha_pravesh_muhurats(
@@ -154,15 +147,8 @@ async def get_griha_pravesh_muhurats(
 ):
     """Module 2 — Endpoint 16: Home-entry (Griha Pravesh) auspicious timings."""
     selected_lang = (req.lang or "en").lower().strip()
-    return StandardResponse(
-        status="success",
-        language=selected_lang,
-        data={
-            "muhurats": [
-                {"date": req.dob, "time_slot": "06:45 to 09:15", "nakshatra": "Uttara Phalguni", "tithi": "Shukla Panchami", "recommendation": "Highly Auspicious"}
-            ]
-        }
-    )
+    data = calculate_muhurat_selection(req.dob, req.lat, req.lon, req.tz, "GRIHA_PRAVESH", 15)
+    return StandardResponse(status="success", language=selected_lang, data=data)
 
 @router.post("/muhurat/property-vehicle", response_model=StandardResponse)
 async def get_property_vehicle_muhurats(
@@ -171,16 +157,6 @@ async def get_property_vehicle_muhurats(
 ):
     """Module 2 — Endpoint 17: Property purchase and vehicle delivery muhurats."""
     selected_lang = (req.lang or "en").lower().strip()
-    return StandardResponse(
-        status="success",
-        language=selected_lang,
-        data={
-            "vehicle_purchase": [
-                {"date": req.dob, "day": "Wednesday", "choghadiya": "Amrit", "window": "10:30 to 12:00", "favorable_color": "White / Silver"}
-            ],
-            "property_registration": [
-                {"date": req.dob, "favorable_lagna": "Sthira (Fixed)", "window": "14:15 to 16:00"}
-            ]
-        }
-    )
+    data = calculate_muhurat_selection(req.dob, req.lat, req.lon, req.tz, "PROPERTY_VEHICLE", 15)
+    return StandardResponse(status="success", language=selected_lang, data=data)
 

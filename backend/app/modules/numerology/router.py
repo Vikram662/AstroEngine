@@ -55,14 +55,30 @@ async def get_name_analysis(
     key_hash: str = Depends(verify_api_key)
 ):
     """Module 10 — Endpoint 81: Dual Chaldean and Pythagorean compound name analysis."""
-    core = calculate_core_numbers(req.dob, name)
+    from app.modules.numerology.calculator import CHALDEAN_MAP, PYTHAGOREAN_MAP, reduce_to_single_digit
+    
+    clean_name = "".join(ch for ch in name.upper() if ch.isalpha())
+    chaldean_compound = sum(CHALDEAN_MAP.get(ch, 0) for ch in clean_name)
+    chaldean_single = reduce_to_single_digit(chaldean_compound)
+    
+    pythagorean_compound = sum(PYTHAGOREAN_MAP.get(ch, 0) for ch in clean_name)
+    pythagorean_single = reduce_to_single_digit(pythagorean_compound)
+
     return StandardResponse(
         status="success",
         language=req.lang or "en",
         data={
             "name": name,
-            "chaldean_number": core.get("namank", 5),
-            "pythagorean_number": 6,
+            "chaldean": {
+                "compound_number": chaldean_compound,
+                "single_digit": chaldean_single
+            },
+            "pythagorean": {
+                "compound_number": pythagorean_compound,
+                "single_digit": pythagorean_single
+            },
+            "chaldean_number": chaldean_single,
+            "pythagorean_number": pythagorean_single,
             "vibration": "Harmonious with psychic number"
         }
     )

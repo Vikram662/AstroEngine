@@ -8,7 +8,9 @@ from app.modules.dasha.calculator import (
     calculate_pratyantar_dashas,
     calculate_sookshma_dashas,
     calculate_prana_dashas,
-    get_running_dasha_tree
+    get_running_dasha_tree,
+    calculate_yogini_dasha,
+    calculate_jaimini_char_dasha
 )
 
 router = APIRouter(prefix="/api/v1/dasha", tags=["Dasha Systems"])
@@ -158,29 +160,18 @@ async def get_pranadashas(
         }
     )
 
+from fastapi import HTTPException
+
 @router.post("/yogini/complete", response_model=StandardResponse)
 async def get_yogini_dasha(
     req: BirthDataRequest,
     key_hash: str = Depends(verify_api_key)
 ):
     """Module 4 — Endpoint 37: 36-year Yogini Dasha complete cycle (Mangala, Pingala, Dhanya, Bhramari, Bhadrika, Ulka, Siddha, Sankata)."""
-    return StandardResponse(
-        status="success",
-        language=req.lang or "en",
-        data={
-            "cycle": "36 Years Yogini Dasha",
-            "sequence": [
-                {"name": "Mangala", "lord": "Moon", "years": 1},
-                {"name": "Pingala", "lord": "Sun", "years": 2},
-                {"name": "Dhanya", "lord": "Jupiter", "years": 3},
-                {"name": "Bhramari", "lord": "Mars", "years": 4},
-                {"name": "Bhadrika", "lord": "Mercury", "years": 5},
-                {"name": "Ulka", "lord": "Saturn", "years": 6},
-                {"name": "Siddha", "lord": "Venus", "years": 7},
-                {"name": "Sankata", "lord": "Rahu", "years": 8}
-            ]
-        }
-    )
+    selected_lang = (req.lang or "en").lower().strip()
+    moon_lon = get_moon_longitude(req.dob, req.tob, req.tz)
+    data = calculate_yogini_dasha(req.dob, req.tob, req.tz, moon_lon)
+    return StandardResponse(status="success", language=selected_lang, data=data)
 
 @router.post("/char/jaimini", response_model=StandardResponse)
 async def get_jaimini_char_dasha(
@@ -188,15 +179,7 @@ async def get_jaimini_char_dasha(
     key_hash: str = Depends(verify_api_key)
 ):
     """Module 4 — Endpoint 38: Jaimini Rashi-based Char Dasha timeline."""
-    return StandardResponse(
-        status="success",
-        language=req.lang or "en",
-        data={
-            "system": "Jaimini Char Dasha",
-            "rashi_periods": [
-                {"sign": "Aries", "years": 9, "start": req.dob, "end": f"{int(req.dob[:4])+9}{req.dob[4:]}"},
-                {"sign": "Taurus", "years": 8, "start": f"{int(req.dob[:4])+9}{req.dob[4:]}", "end": f"{int(req.dob[:4])+17}{req.dob[4:]}"}
-            ]
-        }
-    )
+    selected_lang = (req.lang or "en").lower().strip()
+    data = calculate_jaimini_char_dasha(req.dob, req.tob, req.lat, req.lon, req.tz)
+    return StandardResponse(status="success", language=selected_lang, data=data)
 

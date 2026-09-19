@@ -94,12 +94,13 @@ class BirthDataRequest(BaseModel):
             }
         }
     )
-    dob: str = Field(..., description="Date of birth in ISO format (YYYY-MM-DD)", example="1995-10-05")
-    tob: str = Field(..., description="Local time of birth (HH:MM or HH:MM:SS, 24-hour clock)", example="14:30")
+    dob: str = Field(..., pattern=r"^\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01])$", description="Date of birth in ISO format (YYYY-MM-DD)", example="1995-10-05")
+    tob: str = Field(..., pattern=r"^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$", description="Local time of birth (HH:MM or HH:MM:SS, 24-hour clock)", example="14:30")
     lat: float = Field(..., description="Geographic latitude in decimal degrees (-90.0 to +90.0)", ge=-90.0, le=90.0, example=24.5854)
     lon: float = Field(..., description="Geographic longitude in decimal degrees (-180.0 to +180.0)", ge=-180.0, le=180.0, example=73.7125)
-    tz: float = Field(5.5, description="Timezone offset in hours from UTC (e.g. 5.5 for IST, -5.0 for EST)", example=5.5)
-    ayanamsa: Optional[str] = Field(default="LAHIRI", description="Internal calculation mode (defaults to LAHIRI)")
+    tz: float = Field(5.5, description="Timezone offset in hours from UTC (e.g. 5.5 for IST, -5.0 for EST)", ge=-12.0, le=14.0, example=5.5)
+    ayanamsa: Optional[Literal["LAHIRI", "RAMAN", "KP", "KRISHNAMURTI", "FAGAN_BRADLEY", "TROPICAL"]] = Field(default="LAHIRI", description="Ayanamsa mode (LAHIRI, RAMAN, KP, KRISHNAMURTI, FAGAN_BRADLEY, TROPICAL)")
+    house_system: Optional[str] = Field(default="PLACIDUS", description="House calculation system: PLACIDUS, SRIPATI, EQUAL, WHOLE_SIGN, KOCH")
     lang: Optional[str] = Field("en", description="Localization output language: en, hi, gu, mr, ta, te", example="en")
 
 class QuotaInfo(BaseModel):

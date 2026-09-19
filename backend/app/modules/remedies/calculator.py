@@ -82,6 +82,7 @@ def calculate_gemstone_recommendations(
         stone_name = meta["stone_hi"] if lang == "hi" else meta["stone_en"]
         p_name = translate_entity("planets", planet, lang, planet.capitalize())
         return {
+            "planet_id": planet,
             "planet": p_name,
             "gemstone": stone_name,
             "wearing_finger": meta["finger"],
@@ -135,3 +136,147 @@ def get_rudraksha_recommendations(lagna_lord: str) -> List[Dict[str, Any]]:
 def get_planetary_mantras_list() -> Dict[str, Any]:
     """Provide Vedic & Tantrik Beej Mantras with chanting frequencies."""
     return PLANETARY_MANTRAS
+
+def calculate_gemstone_restrictions(
+    dob: str,
+    tob: str,
+    lat: float,
+    lon: float,
+    tz: float
+) -> Dict[str, Any]:
+    """
+    Module 9 — Endpoint 72:
+    Maraka, Badhaka, and 6th/8th/12th Dusthana Gemstone Conflict Restrictions.
+    Classical BPHS principle: Never wear gemstones of functional malefics or marakas.
+    """
+    jd_ut = calculate_julian_day(dob, tob, tz)
+    swe.set_sid_mode(swe.SIDM_LAHIRI, 0, 0)
+    flags = swe.FLG_SWIEPH | swe.FLG_SIDEREAL
+
+    cusps, ascmc = swe.houses_ex(jd_ut, lat, lon, b'W', flags)
+    asc_deg = ascmc[0]
+    asc_sign_idx = int((asc_deg % 360.0) // 30.0) # 0 to 11
+
+    # Maraka lords (2nd and 7th)
+    maraka_2 = ZODIAC_SIGNS[(asc_sign_idx + 1) % 12]["ruler"]
+    maraka_7 = ZODIAC_SIGNS[(asc_sign_idx + 6) % 12]["ruler"]
+
+    # Badhaka house: Movable (11th), Fixed (9th), Dual (7th)
+    mod3 = asc_sign_idx % 3
+    if mod3 == 0:    # Movable (Aries, Cancer, Libra, Cap) -> 11th house
+        badhaka_house = 11
+    elif mod3 == 1:  # Fixed (Taurus, Leo, Scorpio, Aqua) -> 9th house
+        badhaka_house = 9
+    else:            # Dual (Gemini, Virgo, Sag, Pisces) -> 7th house
+        badhaka_house = 7
+    badhaka_lord = ZODIAC_SIGNS[(asc_sign_idx + badhaka_house - 1) % 12]["ruler"]
+
+    # Dusthana lords (6th, 8th, 12th)
+    dusthana_6 = ZODIAC_SIGNS[(asc_sign_idx + 5) % 12]["ruler"]
+    dusthana_8 = ZODIAC_SIGNS[(asc_sign_idx + 7) % 12]["ruler"]
+    dusthana_12 = ZODIAC_SIGNS[(asc_sign_idx + 11) % 12]["ruler"]
+
+    restricted_planets = list(set([maraka_2, maraka_7, badhaka_lord, dusthana_6, dusthana_8, dusthana_12]))
+    
+    # Lagna lord should not be strictly prohibited unless dual rulership complicates it
+    lagna_lord = ZODIAC_SIGNS[asc_sign_idx]["ruler"]
+    if lagna_lord in restricted_planets and lagna_lord not in [maraka_2, maraka_7]:
+        restricted_planets.remove(lagna_lord)
+
+    prohibitions = []
+    for p in restricted_planets:
+        gem = GEMSTONE_CATALOG.get(p, {})
+        reasons = []
+        if p in [maraka_2, maraka_7]:
+            reasons.append("Maraka lord (harbinger of health crisis / loss of vitality)")
+        if p == badhaka_lord:
+            reasons.append(f"Badhakesh (Lord of obstruction from {badhaka_house}th house)")
+        if p in [dusthana_6, dusthana_8, dusthana_12]:
+            reasons.append("Trika / Dusthana ruler (6th/8th/12th trik houses of debts, chronic ailments, or losses)")
+
+        prohibitions.append({
+            "planet": p,
+            "gemstone": gem.get("stone_en", ""),
+            "severity": "STRICTLY_PROHIBITED" if p in [maraka_2, maraka_7] else "AVOID",
+            "conflict_reasons": reasons
+        })
+
+    return {
+        "ascendant_sign": ZODIAC_SIGNS[asc_sign_idx]["id"],
+        "badhaka_house": badhaka_house,
+        "badhaka_lord": badhaka_lord,
+        "maraka_lords": list(set([maraka_2, maraka_7])),
+        "restricted_gemstones_count": len(prohibitions),
+        "prohibitions": prohibitions
+    }
+
+YANTRAS_CATALOG = {
+    "SUN": {"name": "Surya Yantra", "purpose": "Charisma, health, vitality, paternal harmony", "metal": "Copper / Gold", "mantra": "Om Hram Hreem Hroum Sah Suryaya Namah"},
+    "MOON": {"name": "Chandra Yantra", "purpose": "Emotional stability, mental peace, mother well-being", "metal": "Silver", "mantra": "Om Shram Shreem Shroum Sah Chandramase Namah"},
+    "MARS": {"name": "Mangal Yantra", "purpose": "Courage, land acquisition, blood purification", "metal": "Copper", "mantra": "Om Kram Kreem Kroum Sah Bhaumaya Namah"},
+    "MERCURY": {"name": "Budha Yantra", "purpose": "Intellect, business acumen, communication prowess", "metal": "Bronze / Silver", "mantra": "Om Bram Breem Broum Sah Budhaya Namah"},
+    "JUPITER": {"name": "Brihaspati Yantra", "purpose": "Wisdom, wealth, progeny blessing, spiritual elevation", "metal": "Gold / Brass", "mantra": "Om Gram Greem Groum Sah Gurave Namah"},
+    "VENUS": {"name": "Shukra Yantra", "purpose": "Marital harmony, artistic beauty, wealth attraction", "metal": "Silver", "mantra": "Om Dram Dreem Droum Sah Shukraya Namah"},
+    "SATURN": {"name": "Shani Yantra", "purpose": "Removes hurdles, pacifies Sade Sati, disciplined success", "metal": "Iron / Lead", "mantra": "Om Pram Preem Proum Sah Shanaishcharaya Namah"},
+    "RAHU": {"name": "Rahu Yantra", "purpose": "Removes illusions, hidden enemies, foreign opportunities", "metal": "Ashtadhatu", "mantra": "Om Bhram Bhreem Bhroum Sah Rahave Namah"},
+    "KETU": {"name": "Ketu Yantra", "purpose": "Spiritual liberation, protection from accidents and phobias", "metal": "Panchdhatu", "mantra": "Om Sram Sreem Sroum Sah Ketave Namah"},
+    "MAHALAKSHMI": {"name": "Shri Yantra", "purpose": "Supreme prosperity, abundance, and cosmic equilibrium", "metal": "Gold / Silver Plate", "mantra": "Om Shreem Hreem Shreem Kamale Kamalalaye Praseed"}
+}
+
+DONATIONS_CATALOG = {
+    "SUN": {"items": ["Wheat", "Ruby/Copper", "Jaggery", "Red cloth", "Saffron"], "recipient": "Temple priest or venerable elders", "best_day": "Sunday morning", "time": "Sunrise"},
+    "MOON": {"items": ["Rice", "Milk", "Silver", "White flowers", "Conch shell"], "recipient": "Needy women or elderly motherly figures", "best_day": "Monday evening", "time": "Dusk / Sunset"},
+    "MARS": {"items": ["Red lentils (Masoor Dal)", "Copper vessels", "Jaggery", "Red vermillion"], "recipient": "Celibates, military veterans, or blood donation", "best_day": "Tuesday noon", "time": "Midday"},
+    "MERCURY": {"items": ["Green Moong Dal", "Green cloth", "Bronze", "Books/Educational supplies"], "recipient": "Needy students, young girls, or orphanages", "best_day": "Wednesday morning", "time": "Morning"},
+    "JUPITER": {"items": ["Chana Dal (Chickpeas)", "Turmeric", "Yellow cloth", "Gold/Brass", "Religious scriptures"], "recipient": "Scholars, teachers, Brahmins, spiritual mentors", "best_day": "Thursday morning", "time": "Sunrise"},
+    "VENUS": {"items": ["Kheer (Sweet Rice Pudding)", "White clothes", "Perfumes", "Camphor", "Silver"], "recipient": "Blind people, indigent girls, or artists", "best_day": "Friday morning", "time": "Morning"},
+    "SATURN": {"items": ["Mustard Oil", "Black Urad Dal", "Iron/Black footwear", "Black sesame seeds", "Blankets"], "recipient": "Manual laborers, handicapped persons, lepers", "best_day": "Saturday twilight", "time": "Sunset"},
+    "RAHU": {"items": ["Coconut", "Blue/Black cloth", "Radish", "Coins", "Mustard seeds"], "recipient": "Lepers, sweepers, or flow into running river", "best_day": "Saturday late evening", "time": "Night"},
+    "KETU": {"items": ["Multi-colored blanket", "Sesame seeds", "Banana", "Feed stray street dogs"], "recipient": "Monks, hermits, street dogs", "best_day": "Tuesday early morning", "time": "Brahma Muhurta"}
+}
+
+FASTING_CATALOG = {
+    "SUNDAY": {"deity": "Surya Bhagavan", "benefits": "Cures bone/eye disorders, enhances executive power and vitality.", "rules": "Avoid salt, consume wheat and jaggery porridge once a day."},
+    "MONDAY": {"deity": "Lord Shiva & Chandra", "benefits": "Calms mental anxiety, blesses with marital peace and gentle disposition.", "rules": "Consume fruits, milk, Sabudana, worship Shivling with water/milk."},
+    "TUESDAY": {"deity": "Lord Hanuman & Mangal", "benefits": "Neutralizes Manglik dosha, bestows courage and debt clearance.", "rules": "Observe fast without salt; consume halwa or roti with jaggery once."},
+    "WEDNESDAY": {"deity": "Lord Ganesha & Budha", "benefits": "Sharpens commercial intelligence, removes speech speech impediments and business stagnation.", "rules": "Consume green mung preparations, offer Durva grass to Ganesha."},
+    "THURSDAY": {"deity": "Lord Brihaspati & Vishnu", "benefits": "Removes delayed marriage hurdles, blesses with wealth, children, and wisdom.", "rules": "Avoid salt, wash hair/clothes strictly prohibited, consume yellow food once."},
+    "FRIDAY": {"deity": "Goddess Lakshmi & Shukra", "benefits": "Attracts material luxury, aesthetic happiness, and marital bliss.", "rules": "Avoid sour foods and curds, consume kheer or milk preparations in evening."},
+    "SATURDAY": {"deity": "Lord Shani & Hanuman", "benefits": "Shields against Sade Sati, accidents, chronic afflictions, and poverty.", "rules": "Fast until sunset, eat khichdi or sesame dishes after dusk under Peepal tree."}
+}
+
+def get_yantras_recommendations(lagna_lord: str) -> Dict[str, Any]:
+    """Prescribe primary and wealth Yantras based on Lagna Lord."""
+    primary_yantra = YANTRAS_CATALOG.get(lagna_lord, YANTRAS_CATALOG["SUN"])
+    wealth_yantra = YANTRAS_CATALOG["MAHALAKSHMI"]
+    return {
+        "primary_planetary_yantra": primary_yantra,
+        "cosmic_abundance_yantra": wealth_yantra,
+        "installation_guide": "Install on a clean wooden pedestal facing East or North on an auspicious sunrise after bathing the yantra in Panchamrit and Gangajal."
+    }
+
+def get_donations_recommendations(lagna_lord: str) -> Dict[str, Any]:
+    """Recommend Daan / Charity items based on Maraka / Malefic afflictions and universal benefic."""
+    return {
+        "lagna_enhancement": DONATIONS_CATALOG.get(lagna_lord, DONATIONS_CATALOG["JUPITER"]),
+        "karmic_purgation_saturday": DONATIONS_CATALOG["SATURN"],
+        "shadow_node_pacification": DONATIONS_CATALOG["RAHU"]
+    }
+
+def get_fasting_recommendations(dob: str, tob: str, tz: float) -> Dict[str, Any]:
+    """Prescribe Weekly Vrat schedule and Ekadashi guidelines."""
+    jd_ut = calculate_julian_day(dob, tob, tz)
+    w_idx = int((jd_ut + 1.5) % 7) # 0=Sunday, 1=Monday...
+    weekdays = ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"]
+    birth_day = weekdays[w_idx]
+
+    return {
+        "janma_vaar": birth_day,
+        "recommended_weekly_vrat": FASTING_CATALOG[birth_day],
+        "universal_vrat": {
+            "vrat_type": "Ekadashi Vrat (11th Tithi)",
+            "significance": "Cleanses karmic toxins, grants highest spiritual elevation and Lord Vishnu's grace.",
+            "rules": "Avoid all grains and cereals, consume fruits, milk and water."
+        }
+    }
+

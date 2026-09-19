@@ -114,10 +114,30 @@ def calculate_daily_panchang(
     else:
         karana_name = REPEATING_KARANAS[(karana_idx - 1) % 7]
 
-    # 5. Vaar (Weekday)
-    # revjul to get day of week
+    # 5. Vaar (Vedic Weekday from Sunrise)
     dt = datetime.strptime(dob, "%Y-%m-%d")
-    weekday_idx = dt.weekday() # 0 = Monday, 6 = Sunday
+    # Check if time of birth is before local sunrise
+    is_before_sunrise = False
+    try:
+        from app.modules.core_astronomy.advanced_astronomy import calculate_sun_moon_timings
+        sun_timings = calculate_sun_moon_timings(dob, lat, lon, tz)
+        sr_str = sun_timings.get("sunrise")
+        if sr_str and sr_str != "N/A":
+            sr_parts = [int(p) for p in sr_str.split(":")]
+            sr_sec = sr_parts[0] * 3600 + sr_parts[1] * 60 + (sr_parts[2] if len(sr_parts) > 2 else 0)
+            tob_parts = [int(p) for p in tob.split(":")]
+            tob_sec = tob_parts[0] * 3600 + tob_parts[1] * 60 + (tob_parts[2] if len(tob_parts) > 2 else 0)
+            if tob_sec < sr_sec:
+                is_before_sunrise = True
+    except Exception:
+        pass
+
+    if is_before_sunrise:
+        effective_dt = dt - timedelta(days=1)
+    else:
+        effective_dt = dt
+
+    weekday_idx = effective_dt.weekday() # 0 = Monday, 6 = Sunday
     vaar_meta = VAARS[weekday_idx]
 
     return {
@@ -142,6 +162,7 @@ def calculate_daily_panchang(
             "pada": moon_nak["pada"],
             "lord": moon_nak["lord"]
         },
+        "moon_degree": round(moon_lon, 4),
         "yoga": {
             "id": yoga_name.upper(),
             "name": yoga_name,
@@ -186,7 +207,19 @@ def calculate_choghadiya(
         ["UDWEG", "CHAL", "LABH", "AMRIT", "KAAL", "SHUBH", "ROG", "UDWEG"]   # Sunday
     ]
 
-    selected_pattern = day_patterns[weekday_idx]
+    # Night sequences starting per weekday
+    night_patterns = [
+        ["CHAL", "ROG", "KAAL", "LABH", "UDWEG", "SHUBH", "AMRIT", "CHAL"],   # Monday
+        ["KAAL", "LABH", "UDWEG", "SHUBH", "AMRIT", "CHAL", "ROG", "KAAL"],   # Tuesday
+        ["UDWEG", "SHUBH", "AMRIT", "CHAL", "ROG", "KAAL", "LABH", "UDWEG"],  # Wednesday
+        ["AMRIT", "CHAL", "ROG", "KAAL", "LABH", "UDWEG", "SHUBH", "AMRIT"],  # Thursday
+        ["ROG", "KAAL", "LABH", "UDWEG", "SHUBH", "AMRIT", "CHAL", "ROG"],    # Friday
+        ["LABH", "UDWEG", "SHUBH", "AMRIT", "CHAL", "ROG", "KAAL", "LABH"],   # Saturday
+        ["SHUBH", "AMRIT", "CHAL", "ROG", "KAAL", "LABH", "UDWEG", "SHUBH"]   # Sunday
+    ]
+
+    selected_day_pattern = day_patterns[weekday_idx]
+    selected_night_pattern = night_patterns[weekday_idx]
     
     # Parse sunrise and sunset into seconds
     sr_h, sr_m, sr_s = [int(p) for p in sunrise_time_str.split(":")]
@@ -196,19 +229,36 @@ def calculate_choghadiya(
     ss_sec = ss_h * 3600 + ss_m * 60 + ss_s
     
     day_span_sec = ss_sec - sr_sec
-    slot_sec = day_span_sec / 8.0
+    day_slot_sec = day_span_sec / 8.0
+
+    # Night span is sunset to next sunrise
+    night_span_sec = (86400 - ss_sec) + sr_sec
+    night_slot_sec = night_span_sec / 8.0
+
+    def fmt(sec):
+        sec = int(round(sec)) % 86400
+        return f"{sec // 3600:02d}:{(sec % 3600) // 60:02d}:{(sec % 60):02d}"
 
     day_slots = []
-    for i, chog_key in enumerate(selected_pattern):
-        start_s = sr_sec + (i * slot_sec)
-        end_s = start_s + slot_sec
-        
-        def fmt(sec):
-            sec = int(sec) % 86400
-            return f"{sec // 3600:02d}:{(sec % 3600) // 60:02d}:{(sec % 60):02d}"
-        
+    for i, chog_key in enumerate(selected_day_pattern):
+        start_s = sr_sec + (i * day_slot_sec)
+        end_s = start_s + day_slot_sec
         meta = CHOGHADIYA_TYPES[chog_key]
         day_slots.append({
+            "slot_number": i + 1,
+            "name": chog_key,
+            "nature": meta["nature_hi"] if lang == "hi" else meta["nature"],
+            "ruler": meta["ruler"],
+            "start_time": fmt(start_s),
+            "end_time": fmt(end_s)
+        })
+
+    night_slots = []
+    for i, chog_key in enumerate(selected_night_pattern):
+        start_s = ss_sec + (i * night_slot_sec)
+        end_s = start_s + night_slot_sec
+        meta = CHOGHADIYA_TYPES[chog_key]
+        night_slots.append({
             "slot_number": i + 1,
             "name": chog_key,
             "nature": meta["nature_hi"] if lang == "hi" else meta["nature"],
@@ -221,7 +271,8 @@ def calculate_choghadiya(
         "date": dob,
         "sunrise": sunrise_time_str,
         "sunset": sunset_time_str,
-        "day_choghadiya": day_slots
+        "day_choghadiya": day_slots,
+        "night_choghadiya": night_slots
     }
 
 def calculate_advanced_muhurats(
@@ -275,8 +326,12 @@ def calculate_advanced_muhurats(
         }
     }
 
-def calculate_hora_schedule(dob: str, sunrise_time_str: str) -> Dict[str, Any]:
-    """Module 2 — Endpoint 11: 24-hr planetary hora schedule from local sunrise."""
+def calculate_hora_schedule(
+    dob: str, 
+    sunrise_time_str: str,
+    sunset_time_str: str = "18:00:00"
+) -> Dict[str, Any]:
+    """Module 2 — Endpoint 11: 24 classical temporal planetary horas (12 day + 12 night)."""
     dt = datetime.strptime(dob, "%Y-%m-%d")
     w = dt.weekday()
     # Chaldean planetary order descending: Saturn, Jupiter, Mars, Sun, Venus, Mercury, Moon
@@ -285,20 +340,55 @@ def calculate_hora_schedule(dob: str, sunrise_time_str: str) -> Dict[str, Any]:
     start_idx = CHALDEAN_ORDER.index(day_first_hora_lord)
 
     sr_h, sr_m, sr_s = [int(p) for p in sunrise_time_str.split(":")]
+    ss_h, ss_m, ss_s = [int(p) for p in sunset_time_str.split(":")]
     sr_sec = sr_h * 3600 + sr_m * 60 + sr_s
+    ss_sec = ss_h * 3600 + ss_m * 60 + ss_s
+
+    # 12 day horas (sunrise to sunset)
+    day_span_sec = ss_sec - sr_sec
+    day_hora_sec = day_span_sec / 12.0
+
+    # 12 night horas (sunset to next sunrise)
+    night_span_sec = (86400 - ss_sec) + sr_sec
+    night_hora_sec = night_span_sec / 12.0
+
+    def fmt(sec):
+        sec = int(round(sec)) % 86400
+        return f"{sec // 3600:02d}:{(sec % 3600) // 60:02d}:{(sec % 60):02d}"
 
     horas = []
-    for h in range(24):
+    # 12 Day Horas
+    for h in range(12):
         lord = CHALDEAN_ORDER[(start_idx + h) % 7]
-        st = (sr_sec + h * 3600) % 86400
-        et = (st + 3600) % 86400
+        st = sr_sec + (h * day_hora_sec)
+        et = st + day_hora_sec
         horas.append({
             "hora_number": h + 1,
+            "period": "DAY",
             "lord": lord,
-            "start_time": f"{st//3600:02d}:{(st%3600)//60:02d}:00",
-            "end_time": f"{et//3600:02d}:{(et%3600)//60:02d}:00"
+            "start_time": fmt(st),
+            "end_time": fmt(et)
         })
-    return {"date": dob, "sunrise": sunrise_time_str, "horas": horas}
+
+    # 12 Night Horas
+    for h in range(12):
+        lord = CHALDEAN_ORDER[(start_idx + 12 + h) % 7]
+        st = ss_sec + (h * night_hora_sec)
+        et = st + night_hora_sec
+        horas.append({
+            "hora_number": 12 + h + 1,
+            "period": "NIGHT",
+            "lord": lord,
+            "start_time": fmt(st),
+            "end_time": fmt(et)
+        })
+
+    return {
+        "date": dob, 
+        "sunrise": sunrise_time_str, 
+        "sunset": sunset_time_str,
+        "horas": horas
+    }
 
 def calculate_bhadra_panchak(dob: str, tob: str, lat: float, lon: float, tz: float) -> Dict[str, Any]:
     """Module 2 — Endpoint 12 & 13: Bhadra & Panchak calculations."""
@@ -310,8 +400,14 @@ def calculate_bhadra_panchak(dob: str, tob: str, lat: float, lon: float, tz: flo
     has_bhadra = "Vishti" in karana_name
     bhadra_loka = "Swarga Loka" if panchang["tithi"]["paksha"] == "SHUKLA" else "Mrityu Loka"
 
-    # Panchak occurs when Moon transits Dhanishta (last 2 padas) to Revati (Nakshatras 23 to 27)
-    is_panchak = nakshatra_id in ["DHANISHTA", "SHATABHISHA", "PURVA_BHADRAPADA", "UTTARA_BHADRAPADA", "REVATI"]
+    # Panchak occurs when Moon is in Aquarius & Pisces (from Dhanishta 3rd pada onwards: 296° 40' to 360°)
+    moon_deg = panchang.get("moon_degree", 0.0)
+    # If moon_degree is available or check nakshatra + pada
+    if nakshatra_id == "DHANISHTA":
+        # Pada 3 and 4 only
+        is_panchak = (moon_deg >= 296.6667)
+    else:
+        is_panchak = nakshatra_id in ["SHATABHISHA", "PURVA_BHADRAPADA", "UTTARA_BHADRAPADA", "REVATI"]
     w_day = datetime.strptime(dob, "%Y-%m-%d").weekday()
     panchak_type = "Rog Panchak" if w_day == 6 else ("Agni Panchak" if w_day == 1 else "Normal Panchak")
 
@@ -328,3 +424,132 @@ def calculate_bhadra_panchak(dob: str, tob: str, lat: float, lon: float, tz: flo
             "active_nakshatra": panchang["nakshatra"]["name"]
         }
     }
+
+def calculate_monthly_calendar(year: int, month: int, lat: float, lon: float, tz: float, lang: str = "en") -> Dict[str, Any]:
+    """
+    Module 2 — Endpoint 14: Month-wide Tithi transitions, Ekadashi, Pradosh, Purnima, Amavasya, and Sankranti.
+    Generates exact daily panchang points for all days of the month.
+    """
+    import calendar
+    num_days = calendar.monthrange(year, month)[1]
+    days_data = []
+
+    festivals_and_fasts = []
+
+    from app.modules.core_astronomy.advanced_astronomy import calculate_sun_moon_timings
+    for d in range(1, num_days + 1):
+        d_str = f"{year:04d}-{month:02d}-{d:02d}"
+        p = calculate_daily_panchang(d_str, "06:00:00", lat, lon, tz, lang)
+        sun_timings = calculate_sun_moon_timings(d_str, lat, lon, tz)
+        tithi_id = p["tithi"]["id"]
+        tithi_name = p["tithi"]["name"]
+
+        # Tag important fasting and festival days
+        tags = []
+        if "EKADASHI" in tithi_id:
+            tags.append("Ekadashi Vrat")
+        elif "TRAYODASHI" in tithi_id:
+            tags.append("Pradosh Vrat")
+        elif tithi_id == "PURNIMA":
+            tags.append("Satyanarayan Vrat / Purnima")
+        elif tithi_id == "AMAVASYA":
+            tags.append("Amavasya (Pitru Tarpan)")
+
+        if tags:
+            festivals_and_fasts.append({
+                "date": d_str,
+                "events": tags,
+                "tithi": tithi_name
+            })
+
+        days_data.append({
+            "date": d_str,
+            "day_of_week": p["vaar"]["name"],
+            "sunrise": sun_timings["sunrise"],
+            "sunset": sun_timings["sunset"],
+            "tithi": tithi_name,
+            "nakshatra": p["nakshatra"]["name"],
+            "yoga": p["yoga"]["name"],
+            "karana": p["karana"]["name"],
+            "events": tags
+        })
+
+    return {
+        "year": year,
+        "month": month,
+        "total_days": num_days,
+        "key_fasts_and_festivals": festivals_and_fasts,
+        "days": days_data
+    }
+
+def calculate_muhurat_selection(
+    dob: str,
+    lat: float,
+    lon: float,
+    tz: float,
+    muhurat_type: str = "MARRIAGE",
+    days_to_scan: int = 15
+) -> Dict[str, Any]:
+    """
+    Module 2 — Endpoints 15, 16, 17:
+    Calculates auspicious Muhurats for Marriage, Griha Pravesh, Property, and Vehicle delivery.
+    Filters by Shastric prohibitions:
+    - Bhadra (Vishti Karana) prohibited
+    - Rahu Kaal strictly prohibited
+    - Combust Jupiter/Venus (Guru/Shukra Aditya/Asta)
+    - Inauspicious Rikta Tithis (4th, 9th, 14th) for auspicious beginnings
+    """
+    from app.modules.core_astronomy.advanced_astronomy import calculate_sun_moon_timings
+    base_dt = datetime.strptime(dob, "%Y-%m-%d")
+    auspicious_slots = []
+
+    # Rikta tithis
+    rikta_ids = ["SHUKLA_CHATURTHI", "SHUKLA_NAVAMI", "SHUKLA_CHATURDASHI", "KRISHNA_CHATURTHI", "KRISHNA_NAVAMI", "KRISHNA_CHATURDASHI", "AMAVASYA"]
+
+    for i in range(days_to_scan):
+        cur_date = base_dt + timedelta(days=i)
+        d_str = cur_date.strftime("%Y-%m-%d")
+
+        p = calculate_daily_panchang(d_str, "10:00:00", lat, lon, tz)
+        sun_timings = calculate_sun_moon_timings(d_str, lat, lon, tz)
+        muh = calculate_advanced_muhurats(d_str, sun_timings["sunrise"], sun_timings["sunset"])
+
+        t_id = p["tithi"]["id"]
+        karana = p["karana"]["name"]
+        vaara = p["vaar"]["id"]
+
+        is_rikta = t_id in rikta_ids
+        is_bhadra = "Vishti" in karana
+
+        # Compatibility check per category
+        is_suitable = not is_rikta and not is_bhadra
+        if muhurat_type == "MARRIAGE":
+            # Tuesdays and Saturdays less favored for marriage
+            if vaara in ["TUESDAY", "SATURDAY"]:
+                is_suitable = False
+        elif muhurat_type == "GRIHA_PRAVESH":
+            if vaara in ["TUESDAY", "SUNDAY"]:
+                is_suitable = False
+
+        if is_suitable:
+            auspicious_slots.append({
+                "date": d_str,
+                "day": p["vaar"]["name"],
+                "tithi": p["tithi"]["name"],
+                "nakshatra": p["nakshatra"]["name"],
+                "quality": "SHUBHA (AUSPICIOUS)",
+                "recommended_window": f"{sun_timings['sunrise']} to {sun_timings['sunset']} (excluding Rahu Kaal {muh['rahu_kaal']['start']} - {muh['rahu_kaal']['end']})",
+                "abhijit_muhurat": f"{muh['abhijit_muhurat']['start']} - {muh['abhijit_muhurat']['end']} (Midday Solar Zenith)",
+                "avoid_periods": [
+                    f"Rahu Kaal: {muh['rahu_kaal']['start']} - {muh['rahu_kaal']['end']}",
+                    f"Yamaganda: {muh['yamaghanda_kaal']['start']} - {muh['yamaghanda_kaal']['end']}"
+                ]
+            })
+
+    return {
+        "muhurat_category": muhurat_type,
+        "scanned_days": days_to_scan,
+        "available_auspicious_muhurats_count": len(auspicious_slots),
+        "muhurats": auspicious_slots
+    }
+

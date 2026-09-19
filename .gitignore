@@ -1,4 +1,4 @@
-﻿# ==========================================
+# ==========================================
 # AstroEngine Enterprise — .gitignore
 # ==========================================
 
@@ -21,13 +21,14 @@ __pycache__/
 *$py.class
 *.so
 .Python
+# Python build artifacts
 build/
 develop-eggs/
 dist/
 downloads/
 eggs/
 .eggs/
-lib/
+backend/lib/
 lib64/
 parts/
 sdist/
@@ -38,6 +39,10 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
+
+# Ensure frontend/src/lib is tracked in git
+!frontend/src/lib/
+!frontend/src/lib/**
 
 # Swiss Ephemeris data files (large binary assets, download on host/server)
 backend/ephe/*.se1

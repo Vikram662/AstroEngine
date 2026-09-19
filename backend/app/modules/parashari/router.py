@@ -1,8 +1,17 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import Response
 from app.schemas.common import BirthDataRequest, StandardResponse
 from app.core.security import verify_api_key
-from app.modules.parashari.calculator import compute_varga_chart, generate_chart_svg
+from app.modules.parashari.calculator import (
+    compute_varga_chart,
+    generate_chart_svg,
+    calculate_parashari_yogas,
+    calculate_ashtakavarga,
+    calculate_planetary_avasthas,
+    calculate_special_points,
+    calculate_shadbala_details,
+    calculate_bhavabala
+)
 
 router = APIRouter(prefix="/api/v1/parashari", tags=["Parashari Kundli & Divisional Charts"])
 
@@ -50,78 +59,101 @@ async def get_divisional_chart(
 ):
     """Module 3 — Endpoint 20: Dynamic Divisional Varga Chart (D2 to D60)."""
     selected_lang = (req.lang or "en").lower().strip()
-    chart = compute_varga_chart(req.dob, req.tob, req.lat, req.lon, req.tz, varga.upper(), selected_lang)
+    chart = compute_varga_chart(
+        dob=req.dob, 
+        tob=req.tob, 
+        lat=req.lat, 
+        lon=req.lon, 
+        tz=req.tz, 
+        varga=varga.upper(), 
+        ayanamsa=req.ayanamsa or "LAHIRI", 
+        lang=selected_lang
+    )
     return StandardResponse(status="success", language=selected_lang, data=chart)
 
 @router.post("/chart/d2", response_model=StandardResponse)
 async def get_d2_hora_chart(req: BirthDataRequest, key_hash: str = Depends(verify_api_key)):
     """Module 3 — D2 Hora Chart (Wealth & Assets)."""
-    return StandardResponse(status="success", language=req.lang or "en", data=compute_varga_chart(req.dob, req.tob, req.lat, req.lon, req.tz, "D2", req.lang or "en"))
+    lang = (req.lang or "en").lower().strip()
+    return StandardResponse(status="success", language=lang, data=compute_varga_chart(req.dob, req.tob, req.lat, req.lon, req.tz, "D2", req.ayanamsa or "LAHIRI", lang))
 
 @router.post("/chart/d3", response_model=StandardResponse)
 async def get_d3_drekkana_chart(req: BirthDataRequest, key_hash: str = Depends(verify_api_key)):
     """Module 3 — D3 Drekkana Chart (Siblings & Courage)."""
-    return StandardResponse(status="success", language=req.lang or "en", data=compute_varga_chart(req.dob, req.tob, req.lat, req.lon, req.tz, "D3", req.lang or "en"))
+    lang = (req.lang or "en").lower().strip()
+    return StandardResponse(status="success", language=lang, data=compute_varga_chart(req.dob, req.tob, req.lat, req.lon, req.tz, "D3", req.ayanamsa or "LAHIRI", lang))
 
 @router.post("/chart/d4", response_model=StandardResponse)
 async def get_d4_chaturthamsha_chart(req: BirthDataRequest, key_hash: str = Depends(verify_api_key)):
     """Module 3 — D4 Chaturthamsha Chart (Home & Real Estate)."""
-    return StandardResponse(status="success", language=req.lang or "en", data=compute_varga_chart(req.dob, req.tob, req.lat, req.lon, req.tz, "D4", req.lang or "en"))
+    lang = (req.lang or "en").lower().strip()
+    return StandardResponse(status="success", language=lang, data=compute_varga_chart(req.dob, req.tob, req.lat, req.lon, req.tz, "D4", req.ayanamsa or "LAHIRI", lang))
 
 @router.post("/chart/d7", response_model=StandardResponse)
 async def get_d7_saptamsha_chart(req: BirthDataRequest, key_hash: str = Depends(verify_api_key)):
     """Module 3 — D7 Saptamsha Chart (Children & Progeny)."""
-    return StandardResponse(status="success", language=req.lang or "en", data=compute_varga_chart(req.dob, req.tob, req.lat, req.lon, req.tz, "D7", req.lang or "en"))
+    lang = (req.lang or "en").lower().strip()
+    return StandardResponse(status="success", language=lang, data=compute_varga_chart(req.dob, req.tob, req.lat, req.lon, req.tz, "D7", req.ayanamsa or "LAHIRI", lang))
 
 @router.post("/chart/d10", response_model=StandardResponse)
 async def get_d10_dashamsha_chart(req: BirthDataRequest, key_hash: str = Depends(verify_api_key)):
     """Module 3 — D10 Dashamsha Chart (Career, Profession & Social Status)."""
-    return StandardResponse(status="success", language=req.lang or "en", data=compute_varga_chart(req.dob, req.tob, req.lat, req.lon, req.tz, "D10", req.lang or "en"))
+    lang = (req.lang or "en").lower().strip()
+    return StandardResponse(status="success", language=lang, data=compute_varga_chart(req.dob, req.tob, req.lat, req.lon, req.tz, "D10", req.ayanamsa or "LAHIRI", lang))
 
 @router.post("/chart/d12", response_model=StandardResponse)
 async def get_d12_dwadashamsha_chart(req: BirthDataRequest, key_hash: str = Depends(verify_api_key)):
     """Module 3 — D12 Dwadashamsha Chart (Parents & Lineage)."""
-    return StandardResponse(status="success", language=req.lang or "en", data=compute_varga_chart(req.dob, req.tob, req.lat, req.lon, req.tz, "D12", req.lang or "en"))
+    lang = (req.lang or "en").lower().strip()
+    return StandardResponse(status="success", language=lang, data=compute_varga_chart(req.dob, req.tob, req.lat, req.lon, req.tz, "D12", req.ayanamsa or "LAHIRI", lang))
 
 @router.post("/chart/d16", response_model=StandardResponse)
 async def get_d16_shodashamsha_chart(req: BirthDataRequest, key_hash: str = Depends(verify_api_key)):
     """Module 3 — D16 Shodashamsha Chart (Vehicles & General Pleasures)."""
-    return StandardResponse(status="success", language=req.lang or "en", data=compute_varga_chart(req.dob, req.tob, req.lat, req.lon, req.tz, "D16", req.lang or "en"))
+    lang = (req.lang or "en").lower().strip()
+    return StandardResponse(status="success", language=lang, data=compute_varga_chart(req.dob, req.tob, req.lat, req.lon, req.tz, "D16", req.ayanamsa or "LAHIRI", lang))
 
 @router.post("/chart/d20", response_model=StandardResponse)
 async def get_d20_vimshamsha_chart(req: BirthDataRequest, key_hash: str = Depends(verify_api_key)):
     """Module 3 — D20 Vimshamsha Chart (Spiritual Progress & Upasana)."""
-    return StandardResponse(status="success", language=req.lang or "en", data=compute_varga_chart(req.dob, req.tob, req.lat, req.lon, req.tz, "D20", req.lang or "en"))
+    lang = (req.lang or "en").lower().strip()
+    return StandardResponse(status="success", language=lang, data=compute_varga_chart(req.dob, req.tob, req.lat, req.lon, req.tz, "D20", req.ayanamsa or "LAHIRI", lang))
 
 @router.post("/chart/d24", response_model=StandardResponse)
 async def get_d24_chaturvimshamsha_chart(req: BirthDataRequest, key_hash: str = Depends(verify_api_key)):
     """Module 3 — D24 Chaturvimshamsha Chart (Higher Education & Learning)."""
-    return StandardResponse(status="success", language=req.lang or "en", data=compute_varga_chart(req.dob, req.tob, req.lat, req.lon, req.tz, "D24", req.lang or "en"))
+    lang = (req.lang or "en").lower().strip()
+    return StandardResponse(status="success", language=lang, data=compute_varga_chart(req.dob, req.tob, req.lat, req.lon, req.tz, "D24", req.ayanamsa or "LAHIRI", lang))
 
 @router.post("/chart/d27", response_model=StandardResponse)
 async def get_d27_saptavimshamsha_chart(req: BirthDataRequest, key_hash: str = Depends(verify_api_key)):
     """Module 3 — D27 Saptavimshamsha Chart (Inherent Strengths & Weaknesses)."""
-    return StandardResponse(status="success", language=req.lang or "en", data=compute_varga_chart(req.dob, req.tob, req.lat, req.lon, req.tz, "D27", req.lang or "en"))
+    lang = (req.lang or "en").lower().strip()
+    return StandardResponse(status="success", language=lang, data=compute_varga_chart(req.dob, req.tob, req.lat, req.lon, req.tz, "D27", req.ayanamsa or "LAHIRI", lang))
 
 @router.post("/chart/d30", response_model=StandardResponse)
 async def get_d30_trimshamsha_chart(req: BirthDataRequest, key_hash: str = Depends(verify_api_key)):
     """Module 3 — D30 Trimshamsha Chart (Misfortunes, Health & Arishta)."""
-    return StandardResponse(status="success", language=req.lang or "en", data=compute_varga_chart(req.dob, req.tob, req.lat, req.lon, req.tz, "D30", req.lang or "en"))
+    lang = (req.lang or "en").lower().strip()
+    return StandardResponse(status="success", language=lang, data=compute_varga_chart(req.dob, req.tob, req.lat, req.lon, req.tz, "D30", req.ayanamsa or "LAHIRI", lang))
 
 @router.post("/chart/d40", response_model=StandardResponse)
 async def get_d40_khavedamsha_chart(req: BirthDataRequest, key_hash: str = Depends(verify_api_key)):
     """Module 3 — D40 Khavedamsha Chart (Auspicious / Inauspicious Karmas)."""
-    return StandardResponse(status="success", language=req.lang or "en", data=compute_varga_chart(req.dob, req.tob, req.lat, req.lon, req.tz, "D40", req.lang or "en"))
+    lang = (req.lang or "en").lower().strip()
+    return StandardResponse(status="success", language=lang, data=compute_varga_chart(req.dob, req.tob, req.lat, req.lon, req.tz, "D40", req.ayanamsa or "LAHIRI", lang))
 
 @router.post("/chart/d45", response_model=StandardResponse)
 async def get_d45_akshavedamsha_chart(req: BirthDataRequest, key_hash: str = Depends(verify_api_key)):
     """Module 3 — D45 Akshavedamsha Chart (General Morality & Character)."""
-    return StandardResponse(status="success", language=req.lang or "en", data=compute_varga_chart(req.dob, req.tob, req.lat, req.lon, req.tz, "D45", req.lang or "en"))
+    lang = (req.lang or "en").lower().strip()
+    return StandardResponse(status="success", language=lang, data=compute_varga_chart(req.dob, req.tob, req.lat, req.lon, req.tz, "D45", req.ayanamsa or "LAHIRI", lang))
 
 @router.post("/chart/d60", response_model=StandardResponse)
 async def get_d60_shashtiamsha_chart(req: BirthDataRequest, key_hash: str = Depends(verify_api_key)):
     """Module 3 — D60 Shashtiamsha Chart (Past Life Karma & Ultimate Precision)."""
-    return StandardResponse(status="success", language=req.lang or "en", data=compute_varga_chart(req.dob, req.tob, req.lat, req.lon, req.tz, "D60", req.lang or "en"))
+    lang = (req.lang or "en").lower().strip()
+    return StandardResponse(status="success", language=lang, data=compute_varga_chart(req.dob, req.tob, req.lat, req.lon, req.tz, "D60", req.ayanamsa or "LAHIRI", lang))
 
 
 @router.post("/chart/svg")
@@ -173,13 +205,37 @@ async def get_moon_lagna_chart(
 ):
     """Module 3 — Endpoint 23: Chandra Kundli (Moon as 1st House Ascendant)."""
     selected_lang = (req.lang or "en").lower().strip()
-    chart = compute_varga_chart(req.dob, req.tob, req.lat, req.lon, req.tz, "D1", selected_lang)
+    chart = compute_varga_chart(
+        dob=req.dob, 
+        tob=req.tob, 
+        lat=req.lat, 
+        lon=req.lon, 
+        tz=req.tz, 
+        varga="D1", 
+        ayanamsa=req.ayanamsa or "LAHIRI", 
+        lang=selected_lang
+    )
     moon = next((p for p in chart.get("planets", []) if p.get("id") == "MOON"), {})
-    moon_sign = moon.get("sign", {}).get("name", "Aries")
+    moon_sign_idx = moon.get("sign", {}).get("number", 1) - 1 # 0 to 11
+    moon_sign_name = moon.get("sign", {}).get("name", "Aries")
+
+    # Re-base houses so Moon is in House 1 and other planets are relative to Moon sign
+    rebased_planets = []
+    for p in chart.get("planets", []):
+        p_copy = dict(p)
+        p_sign_idx = p.get("sign", {}).get("number", 1) - 1
+        p_copy["house"] = ((p_sign_idx - moon_sign_idx) % 12) + 1
+        rebased_planets.append(p_copy)
+
     return StandardResponse(
         status="success",
         language=selected_lang,
-        data={"chart_type": "Chandra Lagna Kundli", "moon_sign_ascendant": moon_sign, "planets": chart.get("planets", [])}
+        data={
+            "chart_type": "Chandra Lagna Kundli",
+            "moon_sign_ascendant": moon_sign_name,
+            "ascendant_sign_number": moon_sign_idx + 1,
+            "planets": rebased_planets
+        }
     )
 
 @router.post("/shadbala/details", response_model=StandardResponse)
@@ -188,21 +244,9 @@ async def get_shadbala_details(
     key_hash: str = Depends(verify_api_key)
 ):
     """Module 3 — Endpoint 24: 6-fold planetary strength (Sthana, Dik, Kaala, Chesta, Naisargika, Drik bala)."""
-    return StandardResponse(
-        status="success",
-        language=req.lang or "en",
-        data={
-            "shadbala_summary": {
-                "Sun": {"total_rupas": 6.85, "required": 6.5, "is_strong": True, "rank": 3},
-                "Moon": {"total_rupas": 7.12, "required": 6.0, "is_strong": True, "rank": 2},
-                "Mars": {"total_rupas": 5.40, "required": 5.0, "is_strong": True, "rank": 5},
-                "Mercury": {"total_rupas": 7.45, "required": 7.0, "is_strong": True, "rank": 1},
-                "Jupiter": {"total_rupas": 6.60, "required": 6.5, "is_strong": True, "rank": 4},
-                "Venus": {"total_rupas": 5.80, "required": 5.5, "is_strong": True, "rank": 6},
-                "Saturn": {"total_rupas": 5.30, "required": 5.0, "is_strong": True, "rank": 7}
-            }
-        }
-    )
+    selected_lang = (req.lang or "en").lower().strip()
+    data = calculate_shadbala_details(req.dob, req.tob, req.lat, req.lon, req.tz, req.ayanamsa or "LAHIRI")
+    return StandardResponse(status="success", language=selected_lang, data=data)
 
 @router.post("/bhavabala", response_model=StandardResponse)
 async def get_bhavabala(
@@ -210,16 +254,9 @@ async def get_bhavabala(
     key_hash: str = Depends(verify_api_key)
 ):
     """Module 3 — Endpoint 25: 12-house strength analysis based on Bhavadhipati, Bhav Digbala, and Bhav Drishti."""
-    return StandardResponse(
-        status="success",
-        language=req.lang or "en",
-        data={
-            "bhavabala_scores": {
-                f"House_{h}": {"strength_rupas": round(7.0 + (h * 0.15) % 2.5, 2), "grade": "Strong" if h in [1, 5, 9, 10] else "Moderate"}
-                for h in range(1, 13)
-            }
-        }
-    )
+    selected_lang = (req.lang or "en").lower().strip()
+    data = calculate_bhavabala(req.dob, req.tob, req.lat, req.lon, req.tz, req.ayanamsa or "LAHIRI")
+    return StandardResponse(status="success", language=selected_lang, data=data)
 
 @router.post("/avasthas", response_model=StandardResponse)
 async def get_avasthas(
@@ -227,17 +264,9 @@ async def get_avasthas(
     key_hash: str = Depends(verify_api_key)
 ):
     """Module 3 — Endpoint 26: Baladi, Jagradadi, and Deeptadi planetary avasthas."""
-    return StandardResponse(
-        status="success",
-        language=req.lang or "en",
-        data={
-            "baladi_avasthas": {
-                "Sun": "Yuva", "Moon": "Vridha", "Mars": "Bala", "Mercury": "Kumara",
-                "Jupiter": "Yuva", "Venus": "Mrita", "Saturn": "Yuva"
-            },
-            "jagradadi": {"Sun": "Jagrat (Awake)", "Moon": "Svapna (Dreaming)", "Jupiter": "Jagrat (Awake)"}
-        }
-    )
+    selected_lang = (req.lang or "en").lower().strip()
+    data = calculate_planetary_avasthas(req.dob, req.tob, req.lat, req.lon, req.tz, req.ayanamsa or "LAHIRI")
+    return StandardResponse(status="success", language=selected_lang, data=data)
 
 @router.post("/ashtakvarga/bhinnashtak", response_model=StandardResponse)
 async def get_bhinnashtak(
@@ -245,17 +274,9 @@ async def get_bhinnashtak(
     key_hash: str = Depends(verify_api_key)
 ):
     """Module 3 — Endpoint 27: Per-planet 8-fold Bindu score matrix across 12 signs."""
-    signs = ["Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo", "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces"]
-    return StandardResponse(
-        status="success",
-        language=req.lang or "en",
-        data={
-            "bhinnashtakvarga": {
-                p: {s: 4 + (idx % 4) for idx, s in enumerate(signs)}
-                for p in ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn"]
-            }
-        }
-    )
+    selected_lang = (req.lang or "en").lower().strip()
+    data = calculate_ashtakavarga(req.dob, req.tob, req.lat, req.lon, req.tz, req.ayanamsa or "LAHIRI")
+    return StandardResponse(status="success", language=selected_lang, data=data["bhinnashtakavarga"])
 
 @router.post("/ashtakvarga/sarvashtak", response_model=StandardResponse)
 async def get_sarvashtak(
@@ -263,17 +284,9 @@ async def get_sarvashtak(
     key_hash: str = Depends(verify_api_key)
 ):
     """Module 3 — Endpoint 28: Composite 337 Sarvashtakvarga scores and Shodhya Pinda."""
-    signs = ["Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo", "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces"]
-    scores = [28, 32, 29, 25, 34, 30, 27, 26, 31, 28, 24, 23]
-    return StandardResponse(
-        status="success",
-        language=req.lang or "en",
-        data={
-            "sarvashtakvarga": dict(zip(signs, scores)),
-            "total_bindus": sum(scores),
-            "shodhya_pinda": {"Sun": 134, "Moon": 156, "Jupiter": 168}
-        }
-    )
+    selected_lang = (req.lang or "en").lower().strip()
+    data = calculate_ashtakavarga(req.dob, req.tob, req.lat, req.lon, req.tz, req.ayanamsa or "LAHIRI")
+    return StandardResponse(status="success", language=selected_lang, data=data["sarvashtakavarga"])
 
 @router.post("/special-points", response_model=StandardResponse)
 async def get_special_points(
@@ -281,15 +294,9 @@ async def get_special_points(
     key_hash: str = Depends(verify_api_key)
 ):
     """Module 3 — Endpoint 29: Pushkar Navamsha, Pushkar Bhaga, Gandanta, and Mrityu Bhaga calculation."""
-    return StandardResponse(
-        status="success",
-        language=req.lang or "en",
-        data={
-            "pushkar_navamsha": ["Jupiter in Cancer D9 (Pushkar)", "Moon in Taurus D9 (Pushkar)"],
-            "gandanta": {"is_present": False, "detail": "Moon is not within junction degrees of water/fire signs."},
-            "mrityu_bhaga": {"afflicted_planets": []}
-        }
-    )
+    selected_lang = (req.lang or "en").lower().strip()
+    data = calculate_special_points(req.dob, req.tob, req.lat, req.lon, req.tz, req.ayanamsa or "LAHIRI")
+    return StandardResponse(status="success", language=selected_lang, data=data)
 
 @router.post("/yogas/find", response_model=StandardResponse)
 async def get_classical_yogas(
@@ -297,15 +304,7 @@ async def get_classical_yogas(
     key_hash: str = Depends(verify_api_key)
 ):
     """Module 3 — Endpoint 30: 100+ classical Parashari yoga scanner (Gajakesari, Budhaditya, Pancha Mahapurusha, etc.)."""
-    return StandardResponse(
-        status="success",
-        language=req.lang or "en",
-        data={
-            "identified_yogas": [
-                {"name": "Gajakesari Yoga", "nature": "Highly Auspicious", "description": "Jupiter is in Kendra from Moon giving wisdom, wealth and fame."},
-                {"name": "Budhaditya Yoga", "nature": "Auspicious", "description": "Sun and Mercury conjunction gives high intelligence and administrative ability."},
-                {"name": "Viparita Harsha Yoga", "nature": "Protective", "description": "6th lord placed in 6th house destroys enemies and bestows vitality."}
-            ]
-        }
-    )
+    selected_lang = (req.lang or "en").lower().strip()
+    data = calculate_parashari_yogas(req.dob, req.tob, req.lat, req.lon, req.tz, req.ayanamsa or "LAHIRI")
+    return StandardResponse(status="success", language=selected_lang, data=data)
 

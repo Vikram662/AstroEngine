@@ -460,6 +460,18 @@ async def health_check():
 @app.get("/ready", tags=["System"])
 async def readiness_check():
     """Readiness probe verifying operational state."""
+    import os
+    from fastapi.responses import JSONResponse
+    ephe_exists = os.path.isdir(settings.EPHE_PATH)
+    if not ephe_exists:
+        return JSONResponse(
+            status_code=503,
+            content={
+                "status": "not_ready",
+                "ephe_path": settings.EPHE_PATH,
+                "error": "Ephemeris directory missing or inaccessible"
+            }
+        )
     return {
         "status": "ready",
         "ephe_path": settings.EPHE_PATH

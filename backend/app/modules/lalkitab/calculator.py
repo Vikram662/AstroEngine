@@ -72,6 +72,7 @@ def calculate_lalkitab_chart(
         "chart_type": "Lal Kitab Kalpurush Kundli",
         "planets": planets_lk,
         "sleeping_houses": sleeping_houses,
+        "ancestral_debts": LAL_KITAB_DEBTS,
         "kudrati_debts": LAL_KITAB_DEBTS
     }
 

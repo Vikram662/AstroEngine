@@ -1,0 +1,944 @@
+{
+  "summary": {
+    "REAL & VALIDATED": 110,
+    "REAL ASYNC JOB": 7
+  },
+  "endpoints": [
+    {
+      "idx": 1,
+      "method": "POST",
+      "path": "/api/v1/advanced/jaimini/arudhas",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: ascendant_sign, arudhas"
+    },
+    {
+      "idx": 2,
+      "method": "POST",
+      "path": "/api/v1/advanced/jaimini/karakamsha",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: atmakaraka, karakamsha_lagna, interpretation"
+    },
+    {
+      "idx": 3,
+      "method": "POST",
+      "path": "/api/v1/advanced/jaimini/karakas",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: karakas"
+    },
+    {
+      "idx": 4,
+      "method": "POST",
+      "path": "/api/v1/advanced/tajik/muntha",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: muntha"
+    },
+    {
+      "idx": 5,
+      "method": "POST",
+      "path": "/api/v1/advanced/tajik/sahams",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: target_year, is_diurnal_calculation, total_calculated_sahams, sahams"
+    },
+    {
+      "idx": 6,
+      "method": "POST",
+      "path": "/api/v1/advanced/tajik/varshesh",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: varshesh_candidates"
+    },
+    {
+      "idx": 7,
+      "method": "POST",
+      "path": "/api/v1/advanced/tajik/varshphal-chart",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: target_year, completed_years, muntha, varshesh_candidates"
+    },
+    {
+      "idx": 8,
+      "method": "POST",
+      "path": "/api/v1/advanced/tajik/yogas",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: target_year, total_tajik_yogas_identified, yogas"
+    },
+    {
+      "idx": 9,
+      "method": "POST",
+      "path": "/api/v1/advanced/upagrahas",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: mathematical_upagrahas, saturnian_upagrahas"
+    },
+    {
+      "idx": 10,
+      "method": "POST",
+      "path": "/api/v1/core/ayanamsa/all",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: julian_day, ayanamsas"
+    },
+    {
+      "idx": 11,
+      "method": "GET",
+      "path": "/api/v1/core/geo/search",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: query, results"
+    },
+    {
+      "idx": 12,
+      "method": "GET",
+      "path": "/api/v1/core/geo/timezone",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: lat, lon, tz, timezone_name"
+    },
+    {
+      "idx": 13,
+      "method": "POST",
+      "path": "/api/v1/core/houses/cusps",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: house_system, ayanamsa, ascendant, midheaven_mc"
+    },
+    {
+      "idx": 14,
+      "method": "POST",
+      "path": "/api/v1/core/planets/positions",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: julian_day, ayanamsa_name, ayanamsa_degree, ascendant"
+    },
+    {
+      "idx": 15,
+      "method": "POST",
+      "path": "/api/v1/core/planets/retrograde",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: reference_date, planets"
+    },
+    {
+      "idx": 16,
+      "method": "POST",
+      "path": "/api/v1/core/sun-moon/timings",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: date, sunrise, sunset, moonrise"
+    },
+    {
+      "idx": 17,
+      "method": "POST",
+      "path": "/api/v1/dasha/char/jaimini",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: ascendant_sign, order_type, char_dasha_timeline"
+    },
+    {
+      "idx": 18,
+      "method": "POST",
+      "path": "/api/v1/dasha/vimshottari/antardasha",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: mahadasha, antardashas"
+    },
+    {
+      "idx": 19,
+      "method": "POST",
+      "path": "/api/v1/dasha/vimshottari/current",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: as_of_datetime, running_dasha"
+    },
+    {
+      "idx": 20,
+      "method": "POST",
+      "path": "/api/v1/dasha/vimshottari/mahadasha",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: birth_datetime, birth_nakshatra_lord, balance_fraction, mahadashas"
+    },
+    {
+      "idx": 21,
+      "method": "POST",
+      "path": "/api/v1/dasha/vimshottari/prana",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: level, parent_chain, pranadashas"
+    },
+    {
+      "idx": 22,
+      "method": "POST",
+      "path": "/api/v1/dasha/vimshottari/pratyantar",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: mahadasha, antardasha, pratyantardashas"
+    },
+    {
+      "idx": 23,
+      "method": "POST",
+      "path": "/api/v1/dasha/vimshottari/sookshma",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: level, parent_chain, sookshmadashas"
+    },
+    {
+      "idx": 24,
+      "method": "POST",
+      "path": "/api/v1/dasha/yogini/complete",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: cycle_duration_years, total_periods, periods"
+    },
+    {
+      "idx": 25,
+      "method": "POST",
+      "path": "/api/v1/dosha-matching/guru-chandal",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: has_guru_chandal_dosha, condition, orb_degrees, jupiter_sign_index"
+    },
+    {
+      "idx": 26,
+      "method": "POST",
+      "path": "/api/v1/dosha-matching/kalsarpa",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: is_kaal_sarp, type, rahu_house, rahu_degree"
+    },
+    {
+      "idx": 27,
+      "method": "POST",
+      "path": "/api/v1/dosha-matching/manglik",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: status, severity, is_manglik, mars_placements"
+    },
+    {
+      "idx": 28,
+      "method": "POST",
+      "path": "/api/v1/dosha-matching/matchmaking/ashtakoot",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: total_score, max_score, recommendation, kootas"
+    },
+    {
+      "idx": 29,
+      "method": "POST",
+      "path": "/api/v1/dosha-matching/matchmaking/dashakoot",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: total_poruthams, passed_poruthams_count, is_rajju_porutham_passed, poruthams_breakdown"
+    },
+    {
+      "idx": 30,
+      "method": "POST",
+      "path": "/api/v1/dosha-matching/matchmaking/exceptions",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: groom_moon_sign, bride_moon_sign, nadi_analysis, bhakoot_analysis"
+    },
+    {
+      "idx": 31,
+      "method": "POST",
+      "path": "/api/v1/dosha-matching/matchmaking/papasmya",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: groom_papasmya_points, bride_papasmya_points, points_difference, is_papasmya_balanced"
+    },
+    {
+      "idx": 32,
+      "method": "POST",
+      "path": "/api/v1/dosha-matching/pitra-dosha",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: has_pitra_dosha, severity, reasons, remedies"
+    },
+    {
+      "idx": 33,
+      "method": "POST",
+      "path": "/api/v1/dosha-matching/sade-sati/status",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: natal_moon_sign, transit_saturn_sign, transit_saturn_degree, relative_house_from_moon"
+    },
+    {
+      "idx": 34,
+      "method": "POST",
+      "path": "/api/v1/dosha-matching/sade-sati/timeline",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: natal_moon_sign, sadesati_signs, lifetime_cycles"
+    },
+    {
+      "idx": 35,
+      "method": "POST",
+      "path": "/api/v1/kp/cusps",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: cusps"
+    },
+    {
+      "idx": 36,
+      "method": "POST",
+      "path": "/api/v1/kp/event-analysis",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: event_type, description, favorable_houses, adverse_houses"
+    },
+    {
+      "idx": 37,
+      "method": "POST",
+      "path": "/api/v1/kp/horary/1-2193",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: seed_number, sub_249_number, sign_lord, star_lord"
+    },
+    {
+      "idx": 38,
+      "method": "POST",
+      "path": "/api/v1/kp/horary/1-249",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: horary_number, horary_ascendant, planets"
+    },
+    {
+      "idx": 39,
+      "method": "POST",
+      "path": "/api/v1/kp/house-significators",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: House_1, House_2, House_3, House_4"
+    },
+    {
+      "idx": 40,
+      "method": "POST",
+      "path": "/api/v1/kp/planets",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: planets"
+    },
+    {
+      "idx": 41,
+      "method": "POST",
+      "path": "/api/v1/kp/ruling-planets",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: query_datetime, ruling_planets_ordered, primary_ruling_planets, usage_guidance"
+    },
+    {
+      "idx": 42,
+      "method": "POST",
+      "path": "/api/v1/kp/significators/level-4",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: SUN, MOON, MARS, MERCURY"
+    },
+    {
+      "idx": 43,
+      "method": "POST",
+      "path": "/api/v1/lalkitab/blind-halfblind",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: sleeping_houses, andhi_kundli, dharmi_kundli, rat_ki_andhi"
+    },
+    {
+      "idx": 44,
+      "method": "POST",
+      "path": "/api/v1/lalkitab/chart/kundli",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: chart_type, planets, sleeping_houses, ancestral_debts"
+    },
+    {
+      "idx": 45,
+      "method": "POST",
+      "path": "/api/v1/lalkitab/debts/rin",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: ancestral_debts"
+    },
+    {
+      "idx": 46,
+      "method": "POST",
+      "path": "/api/v1/lalkitab/remedies/planet-wise",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: remedies"
+    },
+    {
+      "idx": 47,
+      "method": "POST",
+      "path": "/api/v1/lalkitab/varshphal/chart",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: age, target_year, progression_cycle, advice"
+    },
+    {
+      "idx": 48,
+      "method": "POST",
+      "path": "/api/v1/numerology/core-numbers",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: mulank, bhagyank, namank"
+    },
+    {
+      "idx": 49,
+      "method": "POST",
+      "path": "/api/v1/numerology/favorable",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: psychic_number, lucky_dates, favorable_colors, favorable_days"
+    },
+    {
+      "idx": 50,
+      "method": "POST",
+      "path": "/api/v1/numerology/forecast",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: target_year, personal_year, theme"
+    },
+    {
+      "idx": 51,
+      "method": "POST",
+      "path": "/api/v1/numerology/loshu-grid",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: grid_matrix, planes, missing_numbers"
+    },
+    {
+      "idx": 52,
+      "method": "POST",
+      "path": "/api/v1/numerology/missing-numbers",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: missing_numbers, remedies"
+    },
+    {
+      "idx": 53,
+      "method": "POST",
+      "path": "/api/v1/numerology/name-analysis",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: name, chaldean, pythagorean, chaldean_number"
+    },
+    {
+      "idx": 54,
+      "method": "POST",
+      "path": "/api/v1/numerology/name-correction",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: original_name, suggested_variations"
+    },
+    {
+      "idx": 55,
+      "method": "POST",
+      "path": "/api/v1/numerology/pinnacles-challenges",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: pinnacles, challenges"
+    },
+    {
+      "idx": 56,
+      "method": "POST",
+      "path": "/api/v1/panchang/advanced",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: date, rahu_kaal, yamaghanda_kaal, gulika_kaal"
+    },
+    {
+      "idx": 57,
+      "method": "POST",
+      "path": "/api/v1/panchang/bhadra",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: bhadra"
+    },
+    {
+      "idx": 58,
+      "method": "POST",
+      "path": "/api/v1/panchang/choghadiya",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: date, sunrise, sunset, day_choghadiya"
+    },
+    {
+      "idx": 59,
+      "method": "POST",
+      "path": "/api/v1/panchang/daily",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: date, time, vaar, tithi"
+    },
+    {
+      "idx": 60,
+      "method": "POST",
+      "path": "/api/v1/panchang/hora",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: date, sunrise, sunset, horas"
+    },
+    {
+      "idx": 61,
+      "method": "POST",
+      "path": "/api/v1/panchang/monthly-calendar",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: year, month, total_days, key_fasts_and_festivals"
+    },
+    {
+      "idx": 62,
+      "method": "POST",
+      "path": "/api/v1/panchang/muhurat/griha-pravesh",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: muhurat_category, scanned_days, available_auspicious_muhurats_count, muhurats"
+    },
+    {
+      "idx": 63,
+      "method": "POST",
+      "path": "/api/v1/panchang/muhurat/marriage",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: muhurat_category, scanned_days, available_auspicious_muhurats_count, muhurats"
+    },
+    {
+      "idx": 64,
+      "method": "POST",
+      "path": "/api/v1/panchang/muhurat/property-vehicle",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: muhurat_category, scanned_days, available_auspicious_muhurats_count, muhurats"
+    },
+    {
+      "idx": 65,
+      "method": "POST",
+      "path": "/api/v1/panchang/panchak",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: panchak"
+    },
+    {
+      "idx": 66,
+      "method": "POST",
+      "path": "/api/v1/parashari/ashtakvarga/bhinnashtak",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: SUN, MOON, MARS, MERCURY"
+    },
+    {
+      "idx": 67,
+      "method": "POST",
+      "path": "/api/v1/parashari/ashtakvarga/sarvashtak",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: total_bindus, sign_bindus, average_per_sign"
+    },
+    {
+      "idx": 68,
+      "method": "POST",
+      "path": "/api/v1/parashari/avasthas",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: ascendant_sign, planetary_avasthas"
+    },
+    {
+      "idx": 69,
+      "method": "POST",
+      "path": "/api/v1/parashari/bhavabala",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: ascendant_sign, bhavabala"
+    },
+    {
+      "idx": 70,
+      "method": "POST",
+      "path": "/api/v1/parashari/chart/bhav-chalit",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: chart_type, shifted_planets"
+    },
+    {
+      "idx": 71,
+      "method": "POST",
+      "path": "/api/v1/parashari/chart/d1",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: varga, ascendant, planets, houses"
+    },
+    {
+      "idx": 72,
+      "method": "POST",
+      "path": "/api/v1/parashari/chart/d10",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: varga, ascendant, planets, houses"
+    },
+    {
+      "idx": 73,
+      "method": "POST",
+      "path": "/api/v1/parashari/chart/d12",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: varga, ascendant, planets, houses"
+    },
+    {
+      "idx": 74,
+      "method": "POST",
+      "path": "/api/v1/parashari/chart/d16",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: varga, ascendant, planets, houses"
+    },
+    {
+      "idx": 75,
+      "method": "POST",
+      "path": "/api/v1/parashari/chart/d2",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: varga, ascendant, planets, houses"
+    },
+    {
+      "idx": 76,
+      "method": "POST",
+      "path": "/api/v1/parashari/chart/d20",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: varga, ascendant, planets, houses"
+    },
+    {
+      "idx": 77,
+      "method": "POST",
+      "path": "/api/v1/parashari/chart/d24",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: varga, ascendant, planets, houses"
+    },
+    {
+      "idx": 78,
+      "method": "POST",
+      "path": "/api/v1/parashari/chart/d27",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: varga, ascendant, planets, houses"
+    },
+    {
+      "idx": 79,
+      "method": "POST",
+      "path": "/api/v1/parashari/chart/d3",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: varga, ascendant, planets, houses"
+    },
+    {
+      "idx": 80,
+      "method": "POST",
+      "path": "/api/v1/parashari/chart/d30",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: varga, ascendant, planets, houses"
+    },
+    {
+      "idx": 81,
+      "method": "POST",
+      "path": "/api/v1/parashari/chart/d4",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: varga, ascendant, planets, houses"
+    },
+    {
+      "idx": 82,
+      "method": "POST",
+      "path": "/api/v1/parashari/chart/d40",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: varga, ascendant, planets, houses"
+    },
+    {
+      "idx": 83,
+      "method": "POST",
+      "path": "/api/v1/parashari/chart/d45",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: varga, ascendant, planets, houses"
+    },
+    {
+      "idx": 84,
+      "method": "POST",
+      "path": "/api/v1/parashari/chart/d60",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: varga, ascendant, planets, houses"
+    },
+    {
+      "idx": 85,
+      "method": "POST",
+      "path": "/api/v1/parashari/chart/d7",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: varga, ascendant, planets, houses"
+    },
+    {
+      "idx": 86,
+      "method": "POST",
+      "path": "/api/v1/parashari/chart/d9",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: varga, ascendant, planets, houses"
+    },
+    {
+      "idx": 87,
+      "method": "POST",
+      "path": "/api/v1/parashari/chart/divisional/{varga}",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: varga, ascendant, planets, houses"
+    },
+    {
+      "idx": 88,
+      "method": "POST",
+      "path": "/api/v1/parashari/chart/moon-lagna",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: chart_type, moon_sign_ascendant, ascendant_sign_number, planets"
+    },
+    {
+      "idx": 89,
+      "method": "POST",
+      "path": "/api/v1/parashari/chart/svg",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Custom payload"
+    },
+    {
+      "idx": 90,
+      "method": "POST",
+      "path": "/api/v1/parashari/shadbala/details",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: ascendant_sign, total_planets_analyzed, shadbala"
+    },
+    {
+      "idx": 91,
+      "method": "POST",
+      "path": "/api/v1/parashari/special-points",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: ascendant_sign, planets_special_points"
+    },
+    {
+      "idx": 92,
+      "method": "POST",
+      "path": "/api/v1/parashari/yogas/find",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: ascendant_sign, total_yogas_identified, yogas"
+    },
+    {
+      "idx": 93,
+      "method": "POST",
+      "path": "/api/v1/pdf/dosha/sade-sati",
+      "status_code": 202,
+      "category": "REAL ASYNC JOB",
+      "notes": "Job ID: pdf_job_4d2409136b8d"
+    },
+    {
+      "idx": 94,
+      "method": "POST",
+      "path": "/api/v1/pdf/kundli/basic",
+      "status_code": 202,
+      "category": "REAL ASYNC JOB",
+      "notes": "Job ID: pdf_job_f1f6503a00ad"
+    },
+    {
+      "idx": 95,
+      "method": "POST",
+      "path": "/api/v1/pdf/kundli/brihat",
+      "status_code": 202,
+      "category": "REAL ASYNC JOB",
+      "notes": "Job ID: pdf_job_be31f1314aa8"
+    },
+    {
+      "idx": 96,
+      "method": "POST",
+      "path": "/api/v1/pdf/lalkitab/full",
+      "status_code": 202,
+      "category": "REAL ASYNC JOB",
+      "notes": "Job ID: pdf_job_867d8618552a"
+    },
+    {
+      "idx": 97,
+      "method": "POST",
+      "path": "/api/v1/pdf/matching/report",
+      "status_code": 202,
+      "category": "REAL ASYNC JOB",
+      "notes": "Job ID: pdf_job_ce836ade7169"
+    },
+    {
+      "idx": 98,
+      "method": "POST",
+      "path": "/api/v1/pdf/numerology/report",
+      "status_code": 202,
+      "category": "REAL ASYNC JOB",
+      "notes": "Job ID: pdf_job_2939ab0e39a6"
+    },
+    {
+      "idx": 99,
+      "method": "POST",
+      "path": "/api/v1/pdf/preview/html",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Custom payload"
+    },
+    {
+      "idx": 100,
+      "method": "GET",
+      "path": "/api/v1/pdf/status/{job_id}",
+      "status_code": 404,
+      "category": "REAL & VALIDATED",
+      "notes": "Job status poll (404 for ungenerated demo ID is expected)"
+    },
+    {
+      "idx": 101,
+      "method": "POST",
+      "path": "/api/v1/pdf/varshphal/annual",
+      "status_code": 202,
+      "category": "REAL ASYNC JOB",
+      "notes": "Job ID: pdf_job_d75bcadb6200"
+    },
+    {
+      "idx": 102,
+      "method": "POST",
+      "path": "/api/v1/remedies/donations",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: lagna_enhancement, karmic_purgation_saturday, shadow_node_pacification"
+    },
+    {
+      "idx": 103,
+      "method": "POST",
+      "path": "/api/v1/remedies/fasting",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: janma_vaar, recommended_weekly_vrat, universal_vrat"
+    },
+    {
+      "idx": 104,
+      "method": "POST",
+      "path": "/api/v1/remedies/gemstones",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: ascendant_sign, life_stone, lucky_stone, benefic_stone"
+    },
+    {
+      "idx": 105,
+      "method": "POST",
+      "path": "/api/v1/remedies/gemstones/restrictions",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: ascendant_sign, badhaka_house, badhaka_lord, maraka_lords"
+    },
+    {
+      "idx": 106,
+      "method": "POST",
+      "path": "/api/v1/remedies/mantras",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: mantras"
+    },
+    {
+      "idx": 107,
+      "method": "POST",
+      "path": "/api/v1/remedies/rudraksha",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: rudraksha_recommendations"
+    },
+    {
+      "idx": 108,
+      "method": "POST",
+      "path": "/api/v1/remedies/yantras",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: primary_planetary_yantra, cosmic_abundance_yantra, installation_guide"
+    },
+    {
+      "idx": 109,
+      "method": "POST",
+      "path": "/api/v1/western/aspects/matrix",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: aspects"
+    },
+    {
+      "idx": 110,
+      "method": "POST",
+      "path": "/api/v1/western/big-three",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: sun_sign, moon_sign, ascendant_sign"
+    },
+    {
+      "idx": 111,
+      "method": "POST",
+      "path": "/api/v1/western/chart/wheel-svg",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Custom payload"
+    },
+    {
+      "idx": 112,
+      "method": "POST",
+      "path": "/api/v1/western/solar-return",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: solar_return_year, exact_solar_moment, solar_ascendant, annual_profection_house"
+    },
+    {
+      "idx": 113,
+      "method": "POST",
+      "path": "/api/v1/western/synastry/score",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: synastry_harmony_score, major_cross_aspects"
+    },
+    {
+      "idx": 114,
+      "method": "POST",
+      "path": "/api/v1/western/transits/daily",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: active_transits"
+    },
+    {
+      "idx": 115,
+      "method": "POST",
+      "path": "/api/v1/western/tropical-planets",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "Keys: planets"
+    },
+    {
+      "idx": 116,
+      "method": "GET",
+      "path": "/health",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "System/Health probe"
+    },
+    {
+      "idx": 117,
+      "method": "GET",
+      "path": "/ready",
+      "status_code": 200,
+      "category": "REAL & VALIDATED",
+      "notes": "System/Health probe"
+    }
+  ]
+}

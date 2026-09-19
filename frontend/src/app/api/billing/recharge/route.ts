@@ -59,18 +59,67 @@ export async function POST(req: NextRequest) {
       if (isNaN(parsedAmount) || parsedAmount <= 0) {
         return NextResponse.json({ status: "error", message: "Invalid order amount." }, { status: 400 });
       }
-
-      const orderId = `order_${crypto.randomBytes(8).toString("hex")}`;
       
       const dbKeySetting = await prisma.systemSetting.findUnique({
         where: { key: "RAZORPAY_KEY_ID" }
       });
-      const razorpayKey = dbKeySetting?.value || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY_ID;
-      if (!razorpayKey) {
+      const razorpayKey = process.env.RAZORPAY_KEY_ID || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || dbKeySetting?.value;
+      
+      const dbSecretSetting = await prisma.systemSetting.findUnique({
+        where: { key: "RAZORPAY_KEY_SECRET" }
+      });
+      let razorpaySecret = process.env.RAZORPAY_KEY_SECRET || dbSecretSetting?.value || "";
+      if (razorpaySecret.includes("your_") || razorpaySecret.includes("placeholder")) {
+        razorpaySecret = process.env.RAZORPAY_KEY_SECRET || "";
+      }
+
+      if (!razorpayKey || !razorpaySecret) {
         return NextResponse.json({
           status: "error",
-          message: "Razorpay Key ID is not configured in Database SystemSettings or environment variables."
+          message: "Razorpay Key ID and Secret must be configured to generate payment orders."
         }, { status: 500 });
+      }
+
+      let orderId = "";
+      try {
+        // Create real server-side order on Razorpay Orders API
+        const authHeader = Buffer.from(`${razorpayKey}:${razorpaySecret}`).toString("base64");
+        const orderPayload = {
+          amount: Math.round(parsedAmount * 100), // amount in paise
+          currency: "INR",
+          receipt: `rcpt_${user.id.slice(0, 8)}_${Date.now().toString().slice(-6)}`,
+          notes: {
+            userId: user.id,
+            userEmail: user.email,
+            purpose: "wallet_recharge"
+          }
+        };
+
+        const rzpRes = await fetch("https://api.razorpay.com/v1/orders", {
+          method: "POST",
+          headers: {
+            "Authorization": `Basic ${authHeader}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(orderPayload)
+        });
+
+        if (!rzpRes.ok) {
+          const rzpErr = await rzpRes.json();
+          return NextResponse.json({
+            status: "error",
+            message: `Razorpay Order creation failed: ${rzpErr?.error?.description || rzpRes.statusText}`
+          }, { status: 502 });
+        }
+
+        const rzpData = await rzpRes.json();
+        orderId = rzpData.id;
+      } catch (err: unknown) {
+        const error = err as { message?: string };
+        return NextResponse.json({
+          status: "error",
+          message: `Network error connecting to Razorpay Orders API: ${error.message || "Unknown"}`
+        }, { status: 502 });
       }
 
       // Record pending transaction with exact server-side amount to prevent client tampering
@@ -104,11 +153,14 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ status: "error", message: "Invalid recharge amount." }, { status: 400 });
       }
 
-      // Fetch Razorpay Secret from Database or Environment (Strict check, no hardcoded fallback)
+      // Fetch Razorpay Secret: ENV takes precedence over DB, and reject dummy placeholders
       const dbSecretSetting = await prisma.systemSetting.findUnique({
         where: { key: "RAZORPAY_KEY_SECRET" }
       });
-      const razorpaySecret = dbSecretSetting?.value || process.env.RAZORPAY_KEY_SECRET;
+      let razorpaySecret = process.env.RAZORPAY_KEY_SECRET || dbSecretSetting?.value || "";
+      if (razorpaySecret.includes("your_") || razorpaySecret.includes("placeholder") || razorpaySecret === "rzp_secret_placeholder") {
+        razorpaySecret = process.env.RAZORPAY_KEY_SECRET || "";
+      }
       if (!razorpaySecret) {
         return NextResponse.json({
           status: "error",
@@ -116,33 +168,31 @@ export async function POST(req: NextRequest) {
         }, { status: 500 });
       }
 
-      // 1. In production, signature, paymentId, and orderId are strictly mandatory
+      // 1. Signature, paymentId, and orderId are strictly mandatory
       if (!razorpayOrderId || !razorpayPaymentId || !razorpaySignature) {
-        if (process.env.NODE_ENV === "production") {
-          return NextResponse.json({
-            status: "error",
-            message: "Missing Razorpay payment verification parameters."
-          }, { status: 400 });
-        }
-      } else {
-        // Cryptographic HMAC SHA-256 Signature Verification:
-        const bodyToSign = `${razorpayOrderId}|${razorpayPaymentId}`;
-        const expectedSignature = crypto
-          .createHmac("sha256", razorpaySecret)
-          .update(bodyToSign)
-          .digest("hex");
+        return NextResponse.json({
+          status: "error",
+          message: "Missing Razorpay payment verification parameters."
+        }, { status: 400 });
+      }
 
-        const isSigValid = crypto.timingSafeEqual(
-          Buffer.from(expectedSignature, "utf-8"),
-          Buffer.from(razorpaySignature, "utf-8")
-        );
+      // Cryptographic HMAC SHA-256 Signature Verification:
+      const bodyToSign = `${razorpayOrderId}|${razorpayPaymentId}`;
+      const expectedSignature = crypto
+        .createHmac("sha256", razorpaySecret)
+        .update(bodyToSign)
+        .digest("hex");
 
-        if (!isSigValid) {
-          return NextResponse.json({
-            status: "error",
-            message: "Cryptographic payment verification failed. Invalid Razorpay signature."
-          }, { status: 400 });
-        }
+      const isSigValid = crypto.timingSafeEqual(
+        Buffer.from(expectedSignature, "utf-8"),
+        Buffer.from(razorpaySignature, "utf-8")
+      );
+
+      if (!isSigValid) {
+        return NextResponse.json({
+          status: "error",
+          message: "Cryptographic payment verification failed. Invalid Razorpay signature."
+        }, { status: 400 });
       }
 
       // 2. Prevent replay attacks: ensure paymentId hasn't already been processed
