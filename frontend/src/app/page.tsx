@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import axios from "axios";
 import { Navbar } from "@/components/Navbar";
+import { Footer } from "@/components/Footer";
 import { LivePlayground } from "@/components/LivePlayground";
 import { 
   Download, 
@@ -31,19 +32,24 @@ export default function HomePage() {
   const [plans, setPlans] = useState<PlanItem[]>([]);
   const [addons, setAddons] = useState<any[]>([]);
   const [loadingPlans, setLoadingPlans] = useState(true);
+  const [companyInfo, setCompanyInfo] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    // Dynamic query from MySQL via /api/plans and /api/user/addons
+    // Dynamic query from MySQL via /api/plans, /api/user/addons and /api/settings/public
     Promise.all([
       axios.get("/api/plans"),
-      axios.get("/api/user/addons")
+      axios.get("/api/user/addons"),
+      axios.get("/api/settings/public")
     ])
-      .then(([plansRes, addonsRes]) => {
+      .then(([plansRes, addonsRes, settingsRes]) => {
         if (plansRes.data?.data) {
           setPlans(plansRes.data.data);
         }
         if (addonsRes.data?.catalog) {
           setAddons(addonsRes.data.catalog);
+        }
+        if (settingsRes.data?.data) {
+          setCompanyInfo(settingsRes.data.data);
         }
       })
       .catch(() => {})
@@ -301,19 +307,8 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-zinc-200 py-10 bg-white text-xs text-zinc-500">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div>
-            © 2026 AstroEngine Inc. High-Precision Swiss Ephemeris Astrological Engine.
-          </div>
-          <div className="flex items-center gap-6">
-            <Link href="/docs" className="hover:text-zinc-800 transition">API Documentation</Link>
-            <Link href="/#playground" className="hover:text-zinc-800 transition">Playground</Link>
-            <Link href="/dashboard" className="hover:text-zinc-800 transition">Console</Link>
-          </div>
-        </div>
-      </footer>
+      {/* Dedicated Global Dynamic Footer */}
+      <Footer />
     </div>
   );
 }

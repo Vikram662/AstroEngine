@@ -22,7 +22,10 @@ import {
   ToggleRight,
   Layers,
   Wrench,
-  Search
+  Search,
+  Upload,
+  Image,
+  Copy
 } from "lucide-react";
 
 interface SettingItem {
@@ -51,6 +54,8 @@ export default function AdminSettingsPage() {
   const [newCategory, setNewCategory] = useState("GENERAL");
   const [newDesc, setNewDesc] = useState("");
   const [isAddingNew, setIsAddingNew] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [uploadSuccess, setUploadSuccess] = useState<string | null>(null);
 
   const fetchSettings = () => {
     setLoading(true);
@@ -142,9 +147,41 @@ export default function AdminSettingsPage() {
     }
   };
 
+  const handleLogoFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append("logo", file);
+
+    setUploadingLogo(true);
+    setUploadSuccess(null);
+    try {
+      const res = await axios.post("/api/admin/upload-logo", formData, {
+        headers: { "Content-Type": "multipart/form-data" }
+      });
+
+      if (res.data?.logoUrl) {
+        handleUpdateField("COMPANY_LOGO_URL", res.data.logoUrl);
+        setUploadSuccess("Logo uploaded directly to Cloudflare R2!");
+        setTimeout(() => setUploadSuccess(null), 4000);
+        fetchSettings();
+      }
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { message?: string } } };
+      alert(error.response?.data?.message || "Failed to upload logo to Cloudflare R2");
+    } finally {
+      setUploadingLogo(false);
+      // Reset the file input so same file can be selected again if needed
+      e.target.value = "";
+    }
+  };
+
   // Grouping categories
   const categories = [
     { id: "ALL", label: "All Settings", icon: Layers, count: settingsList.length },
+    { id: "COMPANY", label: "Company & Invoicing", icon: Database, count: settingsList.filter(s => s.category === "COMPANY").length },
+    { id: "SOCIAL", label: "Social Media", icon: RefreshCw, count: settingsList.filter(s => s.category === "SOCIAL").length },
     { id: "PAYMENTS", label: "Payments (Razorpay)", icon: CreditCard, count: settingsList.filter(s => s.category === "PAYMENTS").length },
     { id: "STORAGE", label: "Storage (Cloudflare R2)", icon: HardDrive, count: settingsList.filter(s => s.category === "STORAGE").length },
     { id: "EMAIL", label: "Email (SMTP)", icon: Mail, count: settingsList.filter(s => s.category === "EMAIL").length },
@@ -404,6 +441,71 @@ export default function AdminSettingsPage() {
                             }`}>
                               {boolState ? "ACTIVE (TRUE)" : "DISABLED (FALSE)"}
                             </span>
+                          </div>
+                        ) : item.key === "COMPANY_LOGO_URL" ? (
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="text"
+                                value={currentValue}
+                                onChange={(e) => handleUpdateField(item.key, e.target.value)}
+                                placeholder="https://pub-...r2.dev/branding/logo.png"
+                                className="flex-1 px-3 py-1.5 text-xs font-mono border border-slate-200 rounded-lg bg-white text-slate-900 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition"
+                              />
+                              <label
+                                className={`px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium cursor-pointer inline-flex items-center gap-1.5 shadow-xs transition ${
+                                  uploadingLogo ? "opacity-50 pointer-events-none" : ""
+                                }`}
+                              >
+                                {uploadingLogo ? (
+                                  <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-600" />
+                                ) : (
+                                  <Upload className="w-3.5 h-3.5 text-blue-600" />
+                                )}
+                                <span>{uploadingLogo ? "Uploading R2..." : "Upload File"}</span>
+                                <input
+                                  type="file"
+                                  accept="image/png,image/jpeg,image/jpg,image/webp,image/svg+xml"
+                                  onChange={handleLogoFileUpload}
+                                  className="hidden"
+                                  disabled={uploadingLogo}
+                                />
+                              </label>
+                            </div>
+
+                            {uploadSuccess && (
+                              <p className="text-[11px] text-emerald-600 font-semibold flex items-center gap-1">
+                                <CheckCircle2 className="w-3.5 h-3.5" />
+                                {uploadSuccess}
+                              </p>
+                            )}
+
+                            {/* Live Logo Preview Box */}
+                            {currentValue && (
+                              <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200 flex items-center gap-3">
+                                <div className="w-12 h-12 rounded-lg bg-white border border-slate-200 flex items-center justify-center overflow-hidden p-1 shadow-xs">
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <img
+                                    src={currentValue}
+                                    alt="Company Logo Preview"
+                                    className="max-h-full max-w-full object-contain"
+                                    onError={(e) => {
+                                      // Fallback on invalid image
+                                      (e.target as HTMLElement).style.display = "none";
+                                    }}
+                                  />
+                                </div>
+                                <div className="text-[11px] leading-tight flex-1 min-w-0">
+                                  <div className="font-semibold text-slate-800 flex items-center gap-1">
+                                    <Image className="w-3 h-3 text-slate-400" />
+                                    <span>Active Logo Preview</span>
+                                  </div>
+                                  <div className="text-slate-400 truncate font-mono text-[10px] mt-0.5" title={currentValue}>
+                                    {currentValue}
+                                  </div>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         ) : (
                           <div className="relative">

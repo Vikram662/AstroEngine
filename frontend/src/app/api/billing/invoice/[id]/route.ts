@@ -28,17 +28,73 @@ export async function GET(
       return new NextResponse("Forbidden", { status: 403 });
     }
 
-    // Fetch tax profile if available
+    // HTML entity escaping helper to prevent Stored XSS (§S16)
+    const escapeHtml = (str: string | null | undefined): string => {
+      if (!str) return "";
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    };
+
+    // Fetch dynamic company profile and tax settings from MySQL SystemSetting table
+    const companySettings = await prisma.systemSetting.findMany({
+      where: {
+        key: {
+          in: [
+            "COMPANY_NAME",
+            "COMPANY_LOGO_URL",
+            "COMPANY_LEGAL_NAME",
+            "COMPANY_TAGLINE",
+            "COMPANY_GSTIN",
+            "COMPANY_PAN",
+            "COMPANY_SAC_CODE",
+            "COMPANY_ADDRESS_LINE1",
+            "COMPANY_CITY",
+            "COMPANY_STATE",
+            "COMPANY_STATE_CODE",
+            "COMPANY_PINCODE",
+            "COMPANY_PHONE",
+            "COMPANY_EMAIL"
+          ]
+        }
+      }
+    });
+
+    const companyMap: Record<string, string> = {};
+    for (const s of companySettings) {
+      companyMap[s.key] = s.value;
+    }
+
+    const sellerName = escapeHtml(companyMap["COMPANY_NAME"] || "AstroEngine Technologies Pvt. Ltd.");
+    const sellerLogoUrl = escapeHtml(companyMap["COMPANY_LOGO_URL"] || "");
+    const sellerLegalName = escapeHtml(companyMap["COMPANY_LEGAL_NAME"] || "AstroEngine Cloud Services");
+    const sellerTagline = escapeHtml(companyMap["COMPANY_TAGLINE"] || "Enterprise Vedic & Western Astrology API Infrastructure");
+    const sellerGstin = escapeHtml(companyMap["COMPANY_GSTIN"] || "27AABCA1234F1Z8");
+    const sellerSacCode = escapeHtml(companyMap["COMPANY_SAC_CODE"] || "998313");
+    const sellerAddress = escapeHtml(companyMap["COMPANY_ADDRESS_LINE1"] || "Level 4, Tech Park, Bandra Kurla Complex");
+    const sellerCity = escapeHtml(companyMap["COMPANY_CITY"] || "Mumbai");
+    const sellerState = escapeHtml(companyMap["COMPANY_STATE"] || "Maharashtra");
+    const sellerStateCode = companyMap["COMPANY_STATE_CODE"] || "27";
+    const sellerPincode = escapeHtml(companyMap["COMPANY_PINCODE"] || "400051");
+    const sellerPhone = escapeHtml(companyMap["COMPANY_PHONE"] || "+91 22 4910 8800");
+    const sellerEmail = escapeHtml(companyMap["COMPANY_EMAIL"] || "billing@astroengine.io");
+
+    // Fetch customer tax profile if available
     const taxProfile = (tx.user as any).taxProfile || {};
-    const customerGstin = taxProfile.gstin || "";
-    const customerBusinessName = taxProfile.businessName || tx.user.name || "Enterprise Developer";
-    const customerAddress = taxProfile.address || "";
-    const customerState = taxProfile.state || "";
-    const customerPan = taxProfile.pan || (customerGstin.length >= 12 ? customerGstin.substring(2, 12) : "");
+    const customerGstin = escapeHtml(taxProfile.gstin || "");
+    const customerBusinessName = escapeHtml(taxProfile.businessName || tx.user.name || "Enterprise Developer");
+    const customerAddress = escapeHtml(taxProfile.address || "");
+    const customerState = escapeHtml(taxProfile.state || "");
+    const customerPan = escapeHtml(taxProfile.pan || (customerGstin.length >= 12 ? customerGstin.substring(2, 12) : ""));
 
     // Calculations for 18% GST:
-    // AstroEngine is in Maharashtra (State Code: 27). If customer is also MH, CGST 9% + SGST 9%. Otherwise IGST 18%.
-    const isIntraState = !customerState || customerState.toLowerCase().includes("maharashtra") || customerGstin.startsWith("27");
+    // If customer is in same state as seller (State Code match or state name match), CGST 9% + SGST 9%. Otherwise IGST 18%.
+    const isIntraState = !customerState || 
+      customerState.toLowerCase().includes(sellerState.toLowerCase()) || 
+      customerGstin.startsWith(sellerStateCode);
     
     const grossAmount = Number(tx.amount);
     const taxableValue = grossAmount / 1.18;
@@ -213,16 +269,17 @@ export async function GET(
   <div class="invoice-card">
     <div class="header">
       <div>
-        <div class="brand-title">AstroEngine Technologies Pvt. Ltd.</div>
-        <div class="brand-sub">Enterprise Vedic & Western Astrology API Infrastructure</div>
-        <div class="brand-sub" style="margin-top: 6px;">GSTIN: <strong>27AABCA1234F1Z8</strong> • SAC Code: <strong>998313</strong></div>
+        ${sellerLogoUrl ? `<img src="${sellerLogoUrl}" alt="${sellerName}" style="max-height: 44px; max-width: 180px; object-fit: contain; margin-bottom: 8px; display: block;" />` : ""}
+        <div class="brand-title">${sellerName}</div>
+        <div class="brand-sub">${sellerTagline}</div>
+        <div class="brand-sub" style="margin-top: 6px;">GSTIN: <strong>${sellerGstin}</strong> • SAC Code: <strong>${sellerSacCode}</strong></div>
       </div>
       <div class="tax-badge">
         <span class="badge-pill">Tax Invoice</span>
         <div class="invoice-meta">
           <div><strong>Invoice No:</strong> ${invoiceNumber}</div>
           <div><strong>Date of Issue:</strong> ${invoiceDate}</div>
-          <div><strong>Place of Supply:</strong> Maharashtra (27)</div>
+          <div><strong>Place of Supply:</strong> ${sellerState} (${sellerStateCode})</div>
         </div>
       </div>
     </div>
@@ -230,12 +287,12 @@ export async function GET(
     <div class="parties-grid">
       <div class="party-box">
         <h4>Billed From (Supplier)</h4>
-        <div class="party-name">AstroEngine Cloud Services</div>
+        <div class="party-name">${sellerLegalName}</div>
         <div class="party-details">
-          Level 4, Tech Park, Bandra Kurla Complex<br>
-          Mumbai, Maharashtra - 400051, India<br>
-          Email: billing@astroengine.io<br>
-          Support: +91 22 4910 8800
+          ${sellerAddress}<br>
+          ${sellerCity}, ${sellerState} - ${sellerPincode}<br>
+          Email: ${sellerEmail}<br>
+          Support: ${sellerPhone}
         </div>
       </div>
 

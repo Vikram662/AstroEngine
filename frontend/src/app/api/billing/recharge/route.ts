@@ -60,17 +60,18 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ status: "error", message: "Invalid order amount." }, { status: 400 });
       }
       
+      // 1. Fetch Razorpay Key and Secret with Database (SystemSetting table) taking first priority
       const dbKeySetting = await prisma.systemSetting.findUnique({
         where: { key: "RAZORPAY_KEY_ID" }
       });
-      const razorpayKey = process.env.RAZORPAY_KEY_ID || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || dbKeySetting?.value;
+      const razorpayKey = dbKeySetting?.value || process.env.RAZORPAY_KEY_ID || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "";
       
       const dbSecretSetting = await prisma.systemSetting.findUnique({
         where: { key: "RAZORPAY_KEY_SECRET" }
       });
-      let razorpaySecret = process.env.RAZORPAY_KEY_SECRET || dbSecretSetting?.value || "";
-      if (razorpaySecret.includes("your_") || razorpaySecret.includes("placeholder")) {
-        razorpaySecret = process.env.RAZORPAY_KEY_SECRET || "";
+      let razorpaySecret = dbSecretSetting?.value || process.env.RAZORPAY_KEY_SECRET || "";
+      if (razorpaySecret.includes("placeholder")) {
+        razorpaySecret = dbSecretSetting?.value || "";
       }
 
       if (!razorpayKey || !razorpaySecret) {
@@ -153,13 +154,13 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ status: "error", message: "Invalid recharge amount." }, { status: 400 });
       }
 
-      // Fetch Razorpay Secret: ENV takes precedence over DB, and reject dummy placeholders
+      // Fetch Razorpay Secret: Database (SystemSetting) takes priority
       const dbSecretSetting = await prisma.systemSetting.findUnique({
         where: { key: "RAZORPAY_KEY_SECRET" }
       });
-      let razorpaySecret = process.env.RAZORPAY_KEY_SECRET || dbSecretSetting?.value || "";
-      if (razorpaySecret.includes("your_") || razorpaySecret.includes("placeholder") || razorpaySecret === "rzp_secret_placeholder") {
-        razorpaySecret = process.env.RAZORPAY_KEY_SECRET || "";
+      let razorpaySecret = dbSecretSetting?.value || process.env.RAZORPAY_KEY_SECRET || "";
+      if (razorpaySecret.includes("placeholder")) {
+        razorpaySecret = dbSecretSetting?.value || "";
       }
       if (!razorpaySecret) {
         return NextResponse.json({

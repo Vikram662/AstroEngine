@@ -336,3 +336,12 @@ model SystemSetting {
   updatedAt   DateTime @updatedAt
 }
 
+// Email OTP Verification for User Registration & Security
+model EmailOtp {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  otp       String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+

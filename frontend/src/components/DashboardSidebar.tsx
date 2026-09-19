@@ -1,8 +1,9 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import axios from "axios";
 import { 
   LayoutDashboard, 
   KeyRound, 
@@ -35,16 +36,41 @@ const DASHBOARD_LINKS = [
 
 export const DashboardSidebar = () => {
   const pathname = usePathname();
+  const [logoUrl, setLogoUrl] = useState<string>("");
+  const [companyName, setCompanyName] = useState<string>("AstroEngine");
+
+  useEffect(() => {
+    axios.get("/api/settings/public")
+      .then((res) => {
+        if (res.data?.data) {
+          if (res.data.data.COMPANY_LOGO_URL) {
+            setLogoUrl(res.data.data.COMPANY_LOGO_URL);
+          }
+          if (res.data.data.COMPANY_NAME) {
+            setCompanyName(res.data.data.COMPANY_NAME.split(" ")[0] || "AstroEngine");
+          }
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   return (
     <aside className="w-64 border-r border-slate-200 bg-white flex flex-col h-screen sticky top-0 shadow-sm z-10">
       {/* Brand Header */}
       <div className="h-16 flex items-center gap-3 px-6 border-b border-slate-200 bg-slate-50/50">
-        <div className="w-8 h-8 rounded-lg bg-slate-900 text-white flex items-center justify-center font-mono font-bold text-xs shadow-sm">
-          AE
-        </div>
+        {logoUrl ? (
+          <img 
+            src={logoUrl} 
+            alt={companyName} 
+            className="h-8 max-w-[40px] object-contain rounded" 
+          />
+        ) : (
+          <div className="w-8 h-8 rounded-lg bg-slate-900 text-white flex items-center justify-center font-mono font-bold text-xs shadow-sm">
+            AE
+          </div>
+        )}
         <div>
-          <span className="font-bold text-sm tracking-tight text-slate-900">AstroEngine</span>
+          <span className="font-bold text-sm tracking-tight text-slate-900">{companyName}</span>
           <span className="text-[11px] block text-slate-500 font-medium">Developer Console</span>
         </div>
       </div>

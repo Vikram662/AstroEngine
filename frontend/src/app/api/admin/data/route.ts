@@ -87,7 +87,11 @@ export async function GET(req: NextRequest) {
 
     if (type === "pdf_jobs" || type === "pdf_queue") {
       const jobs = await prisma.pdfGenerationJob.findMany({
-        include: { user: true },
+        include: { 
+          user: {
+            select: { id: true, email: true, name: true }
+          }
+        },
         orderBy: { createdAt: "desc" },
         take: 100
       });

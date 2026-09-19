@@ -320,6 +320,7 @@ export async function POST(req: NextRequest) {
         planName: planRecord?.name || user.planTier,
         priceMonthly: planRecord?.priceMonthly !== undefined ? planRecord.priceMonthly : 4999,
         monthlyQuota: planRecord?.includedQuota || user.monthlyQuota || 35000,
+        rateLimitPerMin: planRecord?.rateLimitPerMin || 60,
         monthlyUsage: (user.monthlyUsage || 0) + 1,
         deductionType: deductionType,
         walletBalance: deductionType.includes("OVERAGE") || deductionType === "WALLET_CREDIT" ? Math.max(0, walletBalance - creditsDeducted) : walletBalance

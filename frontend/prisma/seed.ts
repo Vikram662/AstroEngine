@@ -8,15 +8,19 @@ function hashPassword(password: string): string {
 }
 
 async function main() {
+  if (process.env.NODE_ENV === "production") {
+    console.error("CRITICAL: prisma/seed.ts is disabled in production to prevent credential resets.");
+    process.exit(0);
+  }
+
   console.log("Seeding Master Admin and Core Platform Data...");
 
-  // 1. Seed or Update Master Admin
+  // 1. Seed or Update Master Admin (do NOT overwrite existing password on update)
   const adminPasswordHash = hashPassword("Admin@12345");
   const admin = await prisma.user.upsert({
     where: { email: "admin@astroengine.io" },
     update: {
       role: "ADMIN",
-      password: adminPasswordHash,
       planTier: "ENTERPRISE",
       isBlocked: false,
     },
@@ -64,7 +68,7 @@ async function main() {
     {
       tier: "STARTER" as const,
       name: "STARTER",
-      priceMonthly: 0,
+      priceMonthly: 4999,
       includedQuota: 35000,
       rateLimitPerMin: 60,
       overageCost: 0.02,

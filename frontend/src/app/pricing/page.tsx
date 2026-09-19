@@ -4,7 +4,8 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import axios from "axios";
 import { Navbar } from "@/components/Navbar";
-import { Check, Zap, Sparkles, Loader2 } from "lucide-react";
+import { Footer } from "@/components/Footer";
+import { Check, Zap, Sparkles, Layers, ShieldCheck, ArrowRight, Loader2 } from "lucide-react";
 
 interface PlanItem {
   id: string;
@@ -221,6 +222,7 @@ export default function PricingPage() {
           </>
         )}
       </div>
+      <Footer />
     </div>
   );
 }

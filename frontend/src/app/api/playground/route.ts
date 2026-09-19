@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import axios from "axios";
 
 const BACKEND_URL = process.env.ASTRO_BACKEND_URL || "http://127.0.0.1:8000";
-const INTERNAL_API_KEY = process.env.ASTRO_INTERNAL_API_KEY || "ak_live_dev_test_master_key_astro2026";
+const INTERNAL_API_KEY = process.env.ASTRO_INTERNAL_API_KEY;
 
 // Allowed playground endpoints for public testing without authentication
 const ALLOWED_PLAYGROUND_TARGETS = [
@@ -13,7 +13,7 @@ const ALLOWED_PLAYGROUND_TARGETS = [
   "/api/v1/panchang/choghadiya",
   "/api/v1/core/planets/positions",
   "/api/v1/dasha/vimshottari/current",
-  "/api/v1/matchmaking/ashtakoota",
+  "/api/v1/dosha-matching/matchmaking/ashtakoot",
   "/api/v1/western/tropical-planets"
 ];
 
@@ -21,6 +21,16 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { endpoint, payload, queryParams } = body;
+
+    if (!INTERNAL_API_KEY) {
+      return NextResponse.json(
+        {
+          status: "error",
+          message: "ASTRO_INTERNAL_API_KEY is not configured in environment variables."
+        },
+        { status: 500 }
+      );
+    }
 
     if (!endpoint || !ALLOWED_PLAYGROUND_TARGETS.includes(endpoint)) {
       return NextResponse.json(

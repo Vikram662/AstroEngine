@@ -4,29 +4,76 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import axios from "axios";
-import { Lock, Mail, ArrowRight, Loader2, AlertCircle } from "lucide-react";
+import { Lock, Mail, ArrowRight, Loader2, AlertCircle, CheckCircle2, KeyRound } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
+import { Footer } from "@/components/Footer";
 
 export default function LoginPage() {
   const router = useRouter();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [otp, setOtp] = useState("");
   const [isRegistering, setIsRegistering] = useState(false);
+  const [otpSent, setOtpSent] = useState(false);
+  const [sendingOtp, setSendingOtp] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  const handleSendOtp = async () => {
+    if (!email || !email.includes("@")) {
+      setError("Please enter a valid email address first.");
+      return;
+    }
+
+    setSendingOtp(true);
+    setError(null);
+    setSuccessMsg(null);
+
+    try {
+      const res = await axios.post("/api/auth/otp", { email });
+      if (res.data?.status === "success") {
+        setOtpSent(true);
+        setSuccessMsg(`Verification code sent to ${email}. Check your inbox!`);
+      }
+    } catch (err: unknown) {
+      const errorObj = err as { response?: { data?: { message?: string } }; message?: string };
+      setError(errorObj.response?.data?.message || errorObj.message || "Failed to send verification code.");
+    } finally {
+      setSendingOtp(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     setError(null);
 
+    // If registering and OTP not yet sent, trigger OTP first
+    if (isRegistering && !otpSent) {
+      await handleSendOtp();
+      return;
+    }
+
+    if (isRegistering && (!otp || otp.trim().length !== 6)) {
+      setError("Please enter the 6-digit verification code sent to your email.");
+      return;
+    }
+
+    setLoading(true);
+
     try {
-      const res = await axios.post("/api/auth/session", {
+      const payload: { email: string; password: string; action: string; otp?: string } = {
         email,
         password,
         action: isRegistering ? "register" : "login"
-      });
+      };
+
+      if (isRegistering) {
+        payload.otp = otp.trim();
+      }
+
+      const res = await axios.post("/api/auth/session", payload);
 
       if (res.data?.status === "success") {
         if (res.data?.role === "ADMIN" || res.data?.role === "SUPER_ADMIN") {
@@ -41,6 +88,14 @@ export default function LoginPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const switchMode = (registerMode: boolean) => {
+    setIsRegistering(registerMode);
+    setError(null);
+    setSuccessMsg(null);
+    setOtpSent(false);
+    setOtp("");
   };
 
   return (
@@ -58,7 +113,7 @@ export default function LoginPage() {
             </h1>
             <p className="text-xs text-slate-500 mt-1">
               {isRegistering 
-                ? "Get ₹100 free test credits and instant API keys."
+                ? "Verify your email with a 6-digit OTP to get ₹100 free test credits."
                 : "Enter your account email and password to access the console."}
             </p>
           </div>
@@ -67,6 +122,13 @@ export default function LoginPage() {
             <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-start gap-2">
               <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0 mt-0.5" />
               <span>{error}</span>
+            </div>
+          )}
+
+          {successMsg && (
+            <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-start gap-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
+              <span>{successMsg}</span>
             </div>
           )}
 
@@ -105,16 +167,55 @@ export default function LoginPage() {
               </div>
             </div>
 
+            {/* OTP Input Block (Shown during registration once OTP is requested) */}
+            {isRegistering && otpSent && (
+              <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                    Email Verification Code (OTP)
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleSendOtp}
+                    disabled={sendingOtp}
+                    className="text-[11px] font-semibold text-indigo-600 hover:underline disabled:opacity-50"
+                  >
+                    {sendingOtp ? "Resending..." : "Resend Code"}
+                  </button>
+                </div>
+                <div className="relative">
+                  <KeyRound className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                  <input
+                    type="text"
+                    maxLength={6}
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
+                    placeholder="Enter 6-digit OTP"
+                    className="w-full bg-white border border-slate-300 rounded-lg pl-9 pr-3 py-2 text-sm tracking-widest font-mono text-slate-900 focus:outline-none focus:border-slate-900"
+                    required
+                  />
+                </div>
+                <p className="text-[10px] text-slate-500">
+                  Please enter the 6 digits received at {email}. Valid for 10 minutes.
+                </p>
+              </div>
+            )}
+
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || sendingOtp}
               className="w-full py-2.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs shadow flex items-center justify-center gap-2 transition disabled:opacity-50"
             >
-              {loading ? (
+              {loading || sendingOtp ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
+              ) : isRegistering && !otpSent ? (
+                <>
+                  <span>Send Verification Code</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </>
               ) : (
                 <>
-                  <span>{isRegistering ? "Create Free Account" : "Sign In"}</span>
+                  <span>{isRegistering ? "Verify & Create Account" : "Sign In"}</span>
                   <ArrowRight className="w-3.5 h-3.5" />
                 </>
               )}
@@ -127,7 +228,7 @@ export default function LoginPage() {
                 Already have an account?{" "}
                 <button
                   type="button"
-                  onClick={() => setIsRegistering(false)}
+                  onClick={() => switchMode(false)}
                   className="font-bold text-slate-900 hover:underline"
                 >
                   Sign in
@@ -138,16 +239,17 @@ export default function LoginPage() {
                 Need a developer account?{" "}
                 <button
                   type="button"
-                  onClick={() => setIsRegistering(true)}
+                  onClick={() => switchMode(true)}
                   className="font-bold text-slate-900 hover:underline"
                 >
-                  Sign up for free
+                  Sign up with Email OTP
                 </button>
               </div>
             )}
           </div>
         </div>
       </div>
+      <Footer />
     </div>
   );
 }

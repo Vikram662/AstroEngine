@@ -62,8 +62,43 @@ export async function POST(req: NextRequest) {
 
     const normalizedEmail = email.toLowerCase().trim();
 
-    // ACTION 1: Register (For normal users)
+    // ACTION 1: Register (Requires Verified Email OTP)
     if (action === "register") {
+      const { otp } = body;
+
+      if (!otp || typeof otp !== "string" || otp.trim().length !== 6) {
+        return NextResponse.json(
+          { status: "error", message: "A valid 6-digit email verification code (OTP) is required to register." },
+          { status: 400 }
+        );
+      }
+
+      // Check OTP in database
+      const otpRecord = await prisma.emailOtp.findUnique({
+        where: { email: normalizedEmail }
+      });
+
+      if (!otpRecord) {
+        return NextResponse.json(
+          { status: "error", message: "No verification code requested for this email. Please request an OTP first." },
+          { status: 400 }
+        );
+      }
+
+      if (new Date() > otpRecord.expiresAt) {
+        return NextResponse.json(
+          { status: "error", message: "The verification code has expired. Please request a new one." },
+          { status: 400 }
+        );
+      }
+
+      if (otpRecord.otp !== otp.trim()) {
+        return NextResponse.json(
+          { status: "error", message: "Invalid verification code. Please check your email and enter the correct 6 digits." },
+          { status: 400 }
+        );
+      }
+
       const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
       if (existing) {
         return NextResponse.json(
@@ -71,6 +106,11 @@ export async function POST(req: NextRequest) {
           { status: 400 }
         );
       }
+
+      // Burn OTP immediately to prevent reuse
+      await prisma.emailOtp.delete({
+        where: { email: normalizedEmail }
+      });
 
       const freeCreditsSetting = await prisma.systemSetting.findUnique({
         where: { key: "DEFAULT_FREE_CREDITS" }
@@ -92,6 +132,7 @@ export async function POST(req: NextRequest) {
       const newUser = await prisma.user.create({
         data: {
           email: normalizedEmail,
+          emailVerified: true,
           password: hashNewPassword(password),
           name: normalizedEmail.split("@")[0],
           role: "USER",

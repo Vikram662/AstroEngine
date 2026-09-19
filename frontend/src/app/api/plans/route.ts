@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAdminSession } from "@/lib/authGuard";
 
 export async function GET() {
   try {
@@ -46,6 +47,11 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
+    const admin = await requireAdminSession();
+    if (!admin) {
+      return NextResponse.json({ status: "error", message: "Forbidden: Admin authorization required." }, { status: 403 });
+    }
+
     const body = await req.json();
     const { 
       tier, 
@@ -58,6 +64,28 @@ export async function POST(req: NextRequest) {
       isPopular,
       allowedModules 
     } = body;
+
+    if (!tier || !name) {
+      return NextResponse.json({ status: "error", message: "Tier and name are required." }, { status: 400 });
+    }
+
+    const parsedPrice = parseFloat(priceMonthly);
+    const parsedQuota = parseInt(includedQuota, 10);
+    const parsedRateLimit = parseInt(rateLimitPerMin, 10);
+    const parsedOverage = parseFloat(overageCost);
+
+    if (isNaN(parsedPrice) || parsedPrice < 0) {
+      return NextResponse.json({ status: "error", message: "Invalid priceMonthly." }, { status: 400 });
+    }
+    if (isNaN(parsedQuota) || parsedQuota < 0) {
+      return NextResponse.json({ status: "error", message: "Invalid includedQuota." }, { status: 400 });
+    }
+    if (isNaN(parsedRateLimit) || parsedRateLimit < 0) {
+      return NextResponse.json({ status: "error", message: "Invalid rateLimitPerMin." }, { status: 400 });
+    }
+    if (isNaN(parsedOverage) || parsedOverage < 0) {
+      return NextResponse.json({ status: "error", message: "Invalid overageCost." }, { status: 400 });
+    }
 
     const plan = await prisma.subscriptionPlan.upsert({
       where: { tier },

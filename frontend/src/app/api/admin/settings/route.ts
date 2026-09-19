@@ -24,7 +24,32 @@ export async function GET() {
       { key: "SMTP_PORT", value: "587", category: "EMAIL", description: "SMTP Port (587 for TLS, 465 for SSL)" },
       { key: "SMTP_USER", value: "notifications@astroengine.io", category: "EMAIL", description: "SMTP Username / Sender Email Address" },
       { key: "SMTP_PASSWORD", value: "abcd efgh ijkl mnop", category: "EMAIL", description: "SMTP App Password" },
-      { key: "SMTP_FROM_NAME", value: "AstroEngine Cloud Notifications", category: "EMAIL", description: "Sender Display Name" }
+      { key: "SMTP_FROM_NAME", value: "AstroEngine Cloud Notifications", category: "EMAIL", description: "Sender Display Name" },
+      
+      // Company & Legal Invoicing Profile
+      { key: "COMPANY_NAME", value: "AstroEngine Technologies Pvt. Ltd.", category: "COMPANY", description: "Official Registered Company Display Name" },
+      { key: "COMPANY_LOGO_URL", value: "", category: "COMPANY", description: "Company Brand Logo URL (PNG/SVG/WebP)" },
+      { key: "COMPANY_LEGAL_NAME", value: "AstroEngine Cloud Services", category: "COMPANY", description: "Legal Trade / Operating Name for Invoices" },
+      { key: "COMPANY_TAGLINE", value: "Enterprise Vedic & Western Astrology API Infrastructure", category: "COMPANY", description: "Company Tagline / Subtitle" },
+      { key: "COMPANY_GSTIN", value: "27AABCA1234F1Z8", category: "COMPANY", description: "Company GSTIN Number for Invoices" },
+      { key: "COMPANY_PAN", value: "AABCA1234F", category: "COMPANY", description: "Company PAN Number" },
+      { key: "COMPANY_SAC_CODE", value: "998313", category: "COMPANY", description: "GST SAC / HSN Service Code" },
+      { key: "COMPANY_ADDRESS_LINE1", value: "Level 4, Tech Park, Bandra Kurla Complex", category: "COMPANY", description: "Registered Office Address Line 1" },
+      { key: "COMPANY_CITY", value: "Mumbai", category: "COMPANY", description: "City" },
+      { key: "COMPANY_STATE", value: "Maharashtra", category: "COMPANY", description: "State" },
+      { key: "COMPANY_STATE_CODE", value: "27", category: "COMPANY", description: "GST State Code (e.g. 27 for Maharashtra)" },
+      { key: "COMPANY_PINCODE", value: "400051", category: "COMPANY", description: "Postal Pincode" },
+      { key: "COMPANY_COUNTRY", value: "India", category: "COMPANY", description: "Country" },
+      { key: "COMPANY_PHONE", value: "+91 22 4910 8800", category: "COMPANY", description: "Official Support & Billing Phone Number" },
+      { key: "COMPANY_EMAIL", value: "billing@astroengine.io", category: "COMPANY", description: "Official Billing Email Address" },
+      { key: "COMPANY_SUPPORT_EMAIL", value: "support@astroengine.io", category: "COMPANY", description: "Customer Support Email Address" },
+      { key: "COMPANY_WEBSITE", value: "https://astroengine.io", category: "COMPANY", description: "Official Website URL" },
+      
+      // Social Media Handles
+      { key: "SOCIAL_TWITTER", value: "https://x.com/astroengine", category: "SOCIAL", description: "Twitter / X Profile URL" },
+      { key: "SOCIAL_LINKEDIN", value: "https://linkedin.com/company/astroengine", category: "SOCIAL", description: "LinkedIn Organization URL" },
+      { key: "SOCIAL_YOUTUBE", value: "https://youtube.com/@astroengine", category: "SOCIAL", description: "YouTube Channel URL" },
+      { key: "SOCIAL_GITHUB", value: "https://github.com/Vikram662/AstroEngine", category: "SOCIAL", description: "GitHub Repository URL" }
     ];
 
     // Ensure all standard keys exist
@@ -39,15 +64,38 @@ export async function GET() {
       orderBy: { key: "asc" }
     });
 
+    const SENSITIVE_KEYS = [
+      "RAZORPAY_KEY_SECRET",
+      "RAZORPAY_WEBHOOK_SECRET",
+      "R2_SECRET_ACCESS_KEY",
+      "SMTP_PASSWORD",
+      "INTERNAL_SECRET_KEY",
+      "ASTRO_INTERNAL_SECRET"
+    ];
+
     const settingsMap: Record<string, string> = {};
     for (const s of existing) {
-      settingsMap[s.key] = s.value;
+      if (SENSITIVE_KEYS.includes(s.key) && s.value && s.value.length > 4) {
+        settingsMap[s.key] = `${s.value.slice(0, 3)}••••••••${s.value.slice(-3)}`;
+      } else {
+        settingsMap[s.key] = s.value;
+      }
     }
+
+    const maskedRaw = existing.map((s: { key: string; value: string; [k: string]: unknown }) => {
+      if (SENSITIVE_KEYS.includes(s.key) && s.value && s.value.length > 4) {
+        return {
+          ...s,
+          value: `${s.value.slice(0, 3)}••••••••${s.value.slice(-3)}`
+        };
+      }
+      return s;
+    });
 
     return NextResponse.json({
       status: "success",
       data: settingsMap,
-      raw: existing
+      raw: maskedRaw
     });
   } catch (error: unknown) {
     const err = error as { message?: string };
@@ -68,10 +116,14 @@ export async function POST(req: NextRequest) {
 
     for (const item of updates) {
       if (!item.key) continue;
+      const strVal = String(item.value ?? "");
+      // Skip updating if value was left masked
+      if (strVal.includes("••••••••")) continue;
+
       await prisma.systemSetting.upsert({
         where: { key: item.key },
         update: { 
-          value: String(item.value ?? "") 
+          value: strVal
         },
         create: {
           key: item.key,

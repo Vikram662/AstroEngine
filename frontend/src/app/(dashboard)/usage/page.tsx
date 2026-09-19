@@ -1,11 +1,16 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import { 
   Activity, 
   Search, 
-  Loader2
+  Loader2,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+  Filter
 } from "lucide-react";
 
 interface ApiLog {
@@ -25,6 +30,15 @@ interface UsageMetrics {
   creditsDeducted: number;
 }
 
+interface PaginationMeta {
+  page: number;
+  limit: number;
+  totalItems: number;
+  totalPages: number;
+  hasPrev: boolean;
+  hasNext: boolean;
+}
+
 export default function UsagePage() {
   const [logs, setLogs] = useState<ApiLog[]>([]);
   const [metrics, setMetrics] = useState<UsageMetrics>({
@@ -33,28 +47,56 @@ export default function UsagePage() {
     successRate: "100.0%",
     creditsDeducted: 0
   });
+  const [pagination, setPagination] = useState<PaginationMeta>({
+    page: 1,
+    limit: 15,
+    totalItems: 0,
+    totalPages: 1,
+    hasPrev: false,
+    hasNext: false
+  });
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(15);
+
+  const fetchLogs = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await axios.get("/api/user/usage", {
+        params: {
+          page,
+          limit,
+          search: searchTerm.trim()
+        }
+      });
+      if (res.data?.logs) {
+        setLogs(res.data.logs);
+      }
+      if (res.data?.pagination) {
+        setPagination(res.data.pagination);
+      }
+      if (res.data?.metrics) {
+        setMetrics(res.data.metrics);
+      }
+    } catch {
+      // Handle error gracefully
+    } finally {
+      setLoading(false);
+    }
+  }, [page, limit, searchTerm]);
 
   useEffect(() => {
-    // Dynamic query from MySQL scoped to logged-in user
-    axios.get("/api/user/usage")
-      .then(res => {
-        if (res.data?.logs) {
-          setLogs(res.data.logs);
-        }
-        if (res.data?.metrics) {
-          setMetrics(res.data.metrics);
-        }
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
+    fetchLogs();
+  }, [fetchLogs]);
 
-  const filteredLogs = logs.filter(l => 
-    (l.endpoint || "").toLowerCase().includes(searchTerm.toLowerCase()) || 
-    (l.module || "").toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
+    setPage(1); // Reset to page 1 on search
+  };
+
+  const startRecord = pagination.totalItems === 0 ? 0 : (pagination.page - 1) * pagination.limit + 1;
+  const endRecord = Math.min(pagination.page * pagination.limit, pagination.totalItems);
 
   return (
     <div className="space-y-6 max-w-5xl">
@@ -94,22 +136,40 @@ export default function UsagePage() {
         </div>
       </div>
 
-      {/* Search Input */}
-      <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
-        <div className="relative">
+      {/* Search & Filter Controls */}
+      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="relative w-full sm:w-96">
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
           <input
             type="text"
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={handleSearchChange}
             placeholder="Search by endpoint path or module name..."
-            className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-4 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-slate-400"
+            className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-4 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-slate-400 transition"
           />
+        </div>
+
+        <div className="flex items-center gap-2 text-xs text-slate-600 w-full sm:w-auto justify-end">
+          <label htmlFor="perPage" className="whitespace-nowrap">Rows per page:</label>
+          <select
+            id="perPage"
+            value={limit}
+            onChange={(e) => {
+              setLimit(Number(e.target.value));
+              setPage(1);
+            }}
+            className="bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 font-medium focus:outline-none focus:border-slate-400 cursor-pointer"
+          >
+            <option value={10}>10</option>
+            <option value={15}>15</option>
+            <option value={25}>25</option>
+            <option value={50}>50</option>
+          </select>
         </div>
       </div>
 
-      {/* Logs Table */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+      {/* Logs Table with Pagination */}
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs font-mono">
             <thead className="bg-slate-50 text-slate-600 border-b border-slate-200 font-sans font-bold">
@@ -125,20 +185,20 @@ export default function UsagePage() {
             <tbody className="divide-y divide-slate-100 text-slate-800">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-10 text-center font-sans text-xs text-slate-500">
-                    <Loader2 className="w-4 h-4 animate-spin inline mr-2" />
+                  <td colSpan={6} className="px-6 py-12 text-center font-sans text-xs text-slate-500">
+                    <Loader2 className="w-5 h-5 animate-spin inline mr-2 text-indigo-600" />
                     Fetching live telemetry logs from MySQL...
                   </td>
                 </tr>
-              ) : filteredLogs.length === 0 ? (
+              ) : logs.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-8 text-center text-slate-400 font-sans text-xs">
-                    No API request logs recorded yet for your account.
+                  <td colSpan={6} className="px-6 py-10 text-center text-slate-400 font-sans text-xs">
+                    {searchTerm ? "No logs match your search query." : "No API request logs recorded yet for your account."}
                   </td>
                 </tr>
-              ) : filteredLogs.map((log) => (
+              ) : logs.map((log) => (
                 <tr key={log.id} className="hover:bg-slate-50/70 transition">
-                  <td className="px-6 py-3.5 text-slate-500 font-sans">{log.createdAt}</td>
+                  <td className="px-6 py-3.5 text-slate-500 font-sans whitespace-nowrap">{log.createdAt}</td>
                   <td className="px-6 py-3.5 text-slate-900 font-semibold">{log.endpoint}</td>
                   <td className="px-6 py-3.5 text-slate-700 font-sans font-medium">{log.module || "General"}</td>
                   <td className="px-6 py-3.5">
@@ -156,6 +216,55 @@ export default function UsagePage() {
               ))}
             </tbody>
           </table>
+        </div>
+
+        {/* Pagination Footer */}
+        <div className="bg-slate-50 px-6 py-3.5 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 font-sans text-xs">
+          <div className="text-slate-500">
+            Showing <span className="font-semibold text-slate-800">{startRecord}</span> to{" "}
+            <span className="font-semibold text-slate-800">{endRecord}</span> of{" "}
+            <span className="font-semibold text-slate-800">{pagination.totalItems}</span> total logs
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => setPage(1)}
+              disabled={page <= 1 || loading}
+              className="p-1.5 rounded-lg border border-slate-300 hover:bg-white text-slate-600 disabled:opacity-40 disabled:cursor-not-allowed transition"
+              title="First Page"
+            >
+              <ChevronsLeft className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={!pagination.hasPrev || loading}
+              className="px-2.5 py-1.5 rounded-lg border border-slate-300 hover:bg-white text-slate-700 font-medium disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 transition"
+            >
+              <ChevronLeft className="w-3.5 h-3.5" />
+              <span>Previous</span>
+            </button>
+
+            <span className="px-3 py-1 font-semibold text-slate-800 bg-white border border-slate-200 rounded-lg">
+              Page {pagination.page} of {pagination.totalPages}
+            </span>
+
+            <button
+              onClick={() => setPage(p => Math.min(pagination.totalPages, p + 1))}
+              disabled={!pagination.hasNext || loading}
+              className="px-2.5 py-1.5 rounded-lg border border-slate-300 hover:bg-white text-slate-700 font-medium disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 transition"
+            >
+              <span>Next</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => setPage(pagination.totalPages)}
+              disabled={page >= pagination.totalPages || loading}
+              className="p-1.5 rounded-lg border border-slate-300 hover:bg-white text-slate-600 disabled:opacity-40 disabled:cursor-not-allowed transition"
+              title="Last Page"
+            >
+              <ChevronsRight className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       </div>
     </div>

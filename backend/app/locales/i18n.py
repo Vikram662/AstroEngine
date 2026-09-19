@@ -5,9 +5,14 @@ from typing import Dict, Any
 LOCALES_CACHE: Dict[str, Dict[str, Any]] = {}
 LOCALES_DIR = os.path.dirname(__file__)
 
+SUPPORTED_LOCALES = {"en", "hi", "gu", "mr", "ta", "te"}
+
 def get_locale_data(lang: str) -> Dict[str, Any]:
     """Load and cache locale JSON dictionary."""
-    clean_lang = lang.lower() if lang else "en"
+    clean_lang = (lang or "en").lower().strip()
+    if clean_lang not in SUPPORTED_LOCALES:
+        clean_lang = "en"
+
     if clean_lang in LOCALES_CACHE:
         return LOCALES_CACHE[clean_lang]
     

@@ -39,10 +39,18 @@ export async function GET() {
       where: { tier: user.planTier }
     });
 
+    // Omit sensitive credentials from user response
+    const { 
+      password: _pwd, 
+      apiKeyHash: _keyHash, 
+      accountWebhookSecret: _hookSec, 
+      ...safeUser 
+    } = user;
+
     return NextResponse.json({
       status: "success",
       data: {
-        ...user,
+        ...safeUser,
         apiLogs: formattedLogs,
         planDetails: planDetails || {
           name: user.planTier,

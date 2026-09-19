@@ -49,6 +49,8 @@ export default function AdminUsersPage() {
   const [availableAddons, setAvailableAddons] = useState<AddonOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   
   // Modals
   const [selectedUserForCredit, setSelectedUserForCredit] = useState<TenantUser | null>(null);
@@ -230,119 +232,202 @@ export default function AdminUsersPage() {
       )}
 
       {/* Users Table */}
-      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-slate-700">
-            <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
+          <table className="w-full text-left text-xs">
+            <thead className="bg-slate-50 text-slate-700 border-b border-slate-200 font-bold uppercase tracking-wider text-[11px]">
               <tr>
-                <th className="px-6 py-3">Tenant / Email</th>
-                <th className="px-6 py-3">Plan Tier</th>
-                <th className="px-6 py-3">Modular Add-ons</th>
-                <th className="px-6 py-3">Wallet Balance</th>
-                <th className="px-6 py-3">Usage / Quota</th>
-                <th className="px-6 py-3">Status</th>
-                <th className="px-6 py-3 text-right">Actions</th>
+                <th className="px-6 py-3.5">User</th>
+                <th className="px-6 py-3.5">Plan & Add-ons</th>
+                <th className="px-6 py-3.5">Balance</th>
+                <th className="px-6 py-3.5">Usage / Quota</th>
+                <th className="px-6 py-3.5">Status</th>
+                <th className="px-6 py-3.5 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-100 text-slate-700">
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-10 text-center font-sans text-xs text-slate-500">
-                    <Loader2 className="w-4 h-4 animate-spin inline mr-2" />
-                    Fetching tenants from MySQL database...
+                  <td colSpan={6} className="px-6 py-12 text-center text-slate-400">
+                    <Loader2 className="w-5 h-5 animate-spin inline mr-2 text-indigo-600" />
+                    Fetching live tenants from MySQL...
                   </td>
                 </tr>
               ) : filteredUsers.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-8 text-center text-slate-400">
-                    No users matching &quot;{searchTerm}&quot; found in database.
+                  <td colSpan={6} className="px-6 py-12 text-center text-slate-400 text-xs">
+                    No users found matching your search query.
                   </td>
                 </tr>
-              ) : filteredUsers.map((u) => {
-                const userAddonList = Array.isArray(u.activeAddons) ? u.activeAddons : [];
-                return (
-                  <tr key={u.id} className="hover:bg-slate-50/60 transition">
-                    <td className="px-6 py-4">
-                      <div className="font-bold text-slate-900">{u.name || "Developer"}</div>
-                      <div className="text-slate-500 font-mono text-[11px] mt-0.5">{u.email}</div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-mono text-[11px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-800 border border-slate-200">
-                          {u.planTier}
-                        </span>
-                        <button
-                          onClick={() => { setSelectedUserForPlan(u); setNewPlanTier(u.planTier); }}
-                          className="text-blue-600 hover:text-blue-800 p-1"
-                          title="Change Plan Tier"
-                        >
-                          <Edit className="w-3 h-3" />
-                        </button>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-mono text-[10px] text-slate-600 font-semibold">
-                          {u.planTier === "ENTERPRISE" ? (
-                            <span className="text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded">All Included</span>
-                          ) : userAddonList.length > 0 ? (
-                            <span className="bg-purple-50 text-purple-700 border border-purple-200 px-1.5 py-0.5 rounded font-bold">
-                              {userAddonList.length} Active
+              ) : (
+                filteredUsers
+                  .slice((currentPage - 1) * pageSize, currentPage * pageSize)
+                  .map((u) => {
+                    const userAddonList = Array.isArray(u.activeAddons) ? u.activeAddons : [];
+                    return (
+                      <tr key={u.id} className="hover:bg-slate-50/70 transition">
+                        {/* User */}
+                        <td className="px-6 py-4">
+                          <div className="font-semibold text-slate-900 text-xs">{u.name || "—"}</div>
+                          <div className="text-slate-500 text-[11px] font-mono">{u.email}</div>
+                          <div className="text-slate-400 text-[10px] mt-0.5 font-mono">
+                            Key: {u.apiKeyPrefix || "—"}
+                          </div>
+                        </td>
+
+                        {/* Plan & Add-ons */}
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-mono text-[11px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-800 border border-slate-200">
+                              {u.planTier}
+                            </span>
+                            <button
+                              onClick={() => { setSelectedUserForPlan(u); setNewPlanTier(u.planTier); }}
+                              className="text-blue-600 hover:text-blue-800 p-1"
+                              title="Change Plan Tier"
+                            >
+                              <Edit className="w-3 h-3" />
+                            </button>
+                          </div>
+                          <div className="flex items-center gap-1.5 mt-1">
+                            <span className="font-mono text-[10px] text-slate-600 font-semibold">
+                              {u.planTier === "ENTERPRISE" ? (
+                                <span className="text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded">All Included</span>
+                              ) : userAddonList.length > 0 ? (
+                                <span className="bg-purple-50 text-purple-700 border border-purple-200 px-1.5 py-0.5 rounded font-bold">
+                                  {userAddonList.length} Active
+                                </span>
+                              ) : (
+                                <span className="text-slate-400">None</span>
+                              )}
+                            </span>
+                            <button
+                              onClick={() => handleOpenAddonsModal(u)}
+                              className="text-purple-600 hover:text-purple-800 p-1"
+                              title="Manage User Modular Add-ons"
+                            >
+                              <Package className="w-3 h-3" />
+                            </button>
+                          </div>
+                        </td>
+
+                        {/* Balance */}
+                        <td className="px-6 py-4 font-mono font-extrabold text-slate-900">
+                          ₹{(u.walletBalance || 0).toFixed(2)}
+                        </td>
+
+                        {/* Usage / Quota */}
+                        <td className="px-6 py-4 font-mono text-[11px] text-slate-600">
+                          {(u.monthlyUsage || 0).toLocaleString()} / {(u.monthlyQuota || 0).toLocaleString()}
+                        </td>
+
+                        {/* Status */}
+                        <td className="px-6 py-4">
+                          {u.isBlocked ? (
+                            <span className="px-2 py-0.5 rounded bg-rose-100 text-rose-800 font-bold border border-rose-200 text-[10px]">
+                              BLOCKED
                             </span>
                           ) : (
-                            <span className="text-slate-400">None</span>
+                            <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold border border-emerald-200 text-[10px]">
+                              ACTIVE
+                            </span>
                           )}
-                        </span>
-                        <button
-                          onClick={() => handleOpenAddonsModal(u)}
-                          className="text-purple-600 hover:text-purple-800 p-1"
-                          title="Manage User Modular Add-ons"
-                        >
-                          <Package className="w-3 h-3" />
-                        </button>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 font-mono font-extrabold text-slate-900">
-                      ₹{(u.walletBalance || 0).toFixed(2)}
-                    </td>
-                    <td className="px-6 py-4 font-mono text-[11px] text-slate-600">
-                      {(u.monthlyUsage || 0).toLocaleString()} / {(u.monthlyQuota || 0).toLocaleString()}
-                    </td>
-                    <td className="px-6 py-4">
-                      {u.isBlocked ? (
-                        <span className="px-2 py-0.5 rounded bg-rose-100 text-rose-800 font-bold border border-rose-200 text-[10px]">
-                          BLOCKED
-                        </span>
-                      ) : (
-                        <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold border border-emerald-200 text-[10px]">
-                          ACTIVE
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 text-right space-x-2">
-                      <button
-                        onClick={() => setSelectedUserForCredit(u)}
-                        className="px-2.5 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200 text-xs font-semibold transition"
-                      >
-                        + Credit
-                      </button>
-                      <button
-                        onClick={() => toggleBlock(u.id, u.isBlocked)}
-                        className={`px-2.5 py-1 rounded text-xs font-semibold transition ${
-                          u.isBlocked
-                            ? "bg-emerald-100 hover:bg-emerald-200 text-emerald-800 border border-emerald-300"
-                            : "bg-rose-100 hover:bg-rose-200 text-rose-800 border border-rose-300"
-                        }`}
-                      >
-                        {u.isBlocked ? "Unblock" : "Block"}
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
+                        </td>
+
+                        {/* Actions */}
+                        <td className="px-6 py-4 text-right space-x-2">
+                          <button
+                            onClick={() => setSelectedUserForCredit(u)}
+                            className="px-2.5 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200 text-xs font-semibold transition"
+                          >
+                            + Credit
+                          </button>
+                          <button
+                            onClick={() => toggleBlock(u.id, u.isBlocked)}
+                            className={`px-2.5 py-1 rounded text-xs font-semibold transition ${
+                              u.isBlocked
+                                ? "bg-emerald-100 hover:bg-emerald-200 text-emerald-800 border border-emerald-300"
+                                : "bg-rose-100 hover:bg-rose-200 text-rose-800 border border-rose-300"
+                            }`}
+                          >
+                            {u.isBlocked ? "Unblock" : "Block"}
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+              )}
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Footer */}
+        {filteredUsers.length > 0 && (
+          <div className="bg-slate-50 px-6 py-3.5 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-600">
+            <div>
+              Showing <span className="font-semibold text-slate-900">
+                {(currentPage - 1) * pageSize + 1}
+              </span> to{" "}
+              <span className="font-semibold text-slate-900">
+                {Math.min(currentPage * pageSize, filteredUsers.length)}
+              </span> of{" "}
+              <span className="font-semibold text-slate-900">{filteredUsers.length}</span> total users
+            </div>
+
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage(1)}
+                  disabled={currentPage <= 1}
+                  className="px-2 py-1 rounded border border-slate-300 bg-white hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed text-xs font-semibold"
+                >
+                  &laquo;
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage <= 1}
+                  className="px-2.5 py-1 rounded border border-slate-300 bg-white hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed text-xs font-semibold"
+                >
+                  Prev
+                </button>
+                <span className="px-3 py-1 font-semibold text-slate-900 bg-white border border-slate-200 rounded">
+                  Page {currentPage} of {Math.ceil(filteredUsers.length / pageSize) || 1}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage(p => Math.min(Math.ceil(filteredUsers.length / pageSize) || 1, p + 1))}
+                  disabled={currentPage >= Math.ceil(filteredUsers.length / pageSize)}
+                  className="px-2.5 py-1 rounded border border-slate-300 bg-white hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed text-xs font-semibold"
+                >
+                  Next
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage(Math.ceil(filteredUsers.length / pageSize) || 1)}
+                  disabled={currentPage >= Math.ceil(filteredUsers.length / pageSize)}
+                  className="px-2 py-1 rounded border border-slate-300 bg-white hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed text-xs font-semibold"
+                >
+                  &raquo;
+                </button>
+              </div>
+
+              <select
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(Number(e.target.value));
+                  setCurrentPage(1);
+                }}
+                className="bg-white border border-slate-300 rounded px-2 py-1 text-xs text-slate-800 font-medium focus:outline-none"
+              >
+                <option value={10}>10 / page</option>
+                <option value={20}>20 / page</option>
+                <option value={50}>50 / page</option>
+              </select>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Credit Recharge Modal */}

@@ -203,6 +203,8 @@ echo $response;`;
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const apiBaseUrl = `${process.env.NEXT_PUBLIC_ASTRO_ENGINE_URL}`;
+
   return (
     <div className="min-h-screen flex flex-col bg-[#fafafa] text-zinc-900">
       <Navbar />
@@ -226,12 +228,13 @@ echo $response;`;
               <ExternalLink className="w-3 h-3 text-zinc-400" />
             </a>
             <a
-              href={`${process.env.NEXT_PUBLIC_ASTRO_ENGINE_URL || "http://localhost:8000"}/documentation`}
+              href={`${apiBaseUrl}/documentation`}
               target="_blank"
               rel="noreferrer"
+              id="redoc-link"
               className="px-3 py-1.5 rounded-md bg-white hover:bg-zinc-100 border border-zinc-200 text-zinc-700 text-xs font-medium flex items-center gap-1.5 transition"
             >
-              <span>Documentation</span>
+              <span>ReDoc Reference</span>
               <ExternalLink className="w-3 h-3 text-zinc-400" />
             </a>
           </div>
@@ -315,6 +318,41 @@ echo $response;`;
             </div>
           </div>
         </div>
+
+        {/* ReDoc Full API Reference Section */}
+        <div id="redoc" className="mt-12 pt-8 border-t border-zinc-200">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-lg font-bold text-zinc-900">Full Interactive ReDoc Reference</h2>
+              <p className="text-xs text-zinc-500 mt-0.5">
+                Custom-styled interactive OpenAPI documentation with all 117 endpoints, schemas, and complete request/response models.
+              </p>
+            </div>
+          </div>
+          <div className="bg-white border border-zinc-200 rounded-xl p-8 text-center shadow-sm">
+            <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-indigo-50 mb-4">
+              <ExternalLink className="w-5 h-5 text-indigo-600" />
+            </div>
+            <h3 className="text-sm font-bold text-zinc-900 mb-2">Custom ReDoc — Website-Styled API Reference</h3>
+            <p className="text-xs text-zinc-500 mb-5 max-w-md mx-auto">
+              The ReDoc UI is custom-styled to match the AstroEngine developer portal aesthetic — Inter font, clean layout, and full OpenAPI spec with 117 live endpoints.
+              Requires the FastAPI backend to be running.
+            </p>
+            <a
+              href={`${apiBaseUrl}/documentation`}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold transition shadow-sm"
+            >
+              <span>Open ReDoc Documentation</span>
+              <ExternalLink className="w-3.5 h-3.5" />
+            </a>
+            <p className="text-[11px] text-zinc-400 mt-4 font-mono">
+              → {apiBaseUrl}/documentation &nbsp;|&nbsp; Backend (FastAPI) must be running
+            </p>
+          </div>
+        </div>
+
       </div>
     </div>
   );
