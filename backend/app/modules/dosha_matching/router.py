@@ -54,7 +54,8 @@ async def get_kalsarpa_analysis(
         tob=req.tob,
         tz=req.tz,
         lat=req.lat,
-        lon=req.lon
+        lon=req.lon,
+        lang=selected_lang
     )
     return StandardResponse(status="success", language=selected_lang, data=res)
 
@@ -94,7 +95,7 @@ async def get_sadesati_status(
 ):
     """Module 8 — Endpoint 63: Real-time Saturn Sade Sati / Dhaiya phase check."""
     selected_lang = (req.lang or "en").lower().strip()
-    data = calculate_sadesati_status(req.dob, req.tob, req.tz)
+    data = calculate_sadesati_status(req.dob, req.tob, req.tz, lang=selected_lang)
     return StandardResponse(status="success", language=selected_lang, data=data)
 
 @router.post("/sade-sati/timeline", response_model=StandardResponse)

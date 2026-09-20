@@ -11,6 +11,7 @@ interface HoroscopeTabProps {
   setSelectedRashi: (rashi: string) => void;
   rashiPeriod: "daily" | "weekly" | "monthly" | "yearly";
   setRashiPeriod: (period: "daily" | "weekly" | "monthly" | "yearly") => void;
+  lang?: string;
 }
 
 export const HoroscopeTab: React.FC<HoroscopeTabProps> = ({
@@ -21,21 +22,32 @@ export const HoroscopeTab: React.FC<HoroscopeTabProps> = ({
   setSelectedRashi,
   rashiPeriod,
   setRashiPeriod,
+  lang = "en",
 }) => {
   const RASHIS = [
-    { id: "mesh", en: "Aries", hi: "मेष", symbol: "♈", lord: "Mars", element: "Fire", color: "from-red-500 to-rose-600", light: "bg-red-50 border-red-200", badge: "bg-red-600" },
-    { id: "vrishabh", en: "Taurus", hi: "वृषभ", symbol: "♉", lord: "Venus", element: "Earth", color: "from-emerald-500 to-green-600", light: "bg-emerald-50 border-emerald-200", badge: "bg-emerald-600" },
-    { id: "mithun", en: "Gemini", hi: "मिथुन", symbol: "♊", lord: "Mercury", element: "Air", color: "from-amber-500 to-yellow-600", light: "bg-amber-50 border-amber-200", badge: "bg-amber-600" },
-    { id: "kark", en: "Cancer", hi: "कर्क", symbol: "♋", lord: "Moon", element: "Water", color: "from-blue-400 to-cyan-500", light: "bg-blue-50 border-blue-200", badge: "bg-blue-500" },
-    { id: "simha", en: "Leo", hi: "सिंह", symbol: "♌", lord: "Sun", element: "Fire", color: "from-orange-500 to-amber-600", light: "bg-orange-50 border-orange-200", badge: "bg-orange-600" },
-    { id: "kanya", en: "Virgo", hi: "कन्या", symbol: "♍", lord: "Mercury", element: "Earth", color: "from-lime-500 to-green-600", light: "bg-lime-50 border-lime-200", badge: "bg-lime-600" },
-    { id: "tula", en: "Libra", hi: "तुला", symbol: "♎", lord: "Venus", element: "Air", color: "from-pink-500 to-rose-500", light: "bg-pink-50 border-pink-200", badge: "bg-pink-600" },
-    { id: "vrishchik", en: "Scorpio", hi: "वृश्चिक", symbol: "♏", lord: "Mars", element: "Water", color: "from-purple-600 to-violet-700", light: "bg-purple-50 border-purple-200", badge: "bg-purple-700" },
-    { id: "dhanu", en: "Sagittarius", hi: "धनु", symbol: "♐", lord: "Jupiter", element: "Fire", color: "from-indigo-500 to-blue-600", light: "bg-indigo-50 border-indigo-200", badge: "bg-indigo-600" },
-    { id: "makar", en: "Capricorn", hi: "मकर", symbol: "♑", lord: "Saturn", element: "Earth", color: "from-slate-500 to-gray-700", light: "bg-slate-50 border-slate-200", badge: "bg-slate-700" },
-    { id: "kumbh", en: "Aquarius", hi: "कुंभ", symbol: "♒", lord: "Saturn", element: "Air", color: "from-sky-500 to-blue-600", light: "bg-sky-50 border-sky-200", badge: "bg-sky-600" },
-    { id: "meen", en: "Pisces", hi: "मीन", symbol: "♓", lord: "Jupiter", element: "Water", color: "from-teal-500 to-cyan-600", light: "bg-teal-50 border-teal-200", badge: "bg-teal-600" },
+    { id: "mesh", en: "Aries", hi: "मेष", mr: "मेष", gu: "મેષ", ta: "மேஷம்", te: "మేషం", bn: "মেষ", symbol: "♈", lord: "Mars", element: "Fire", color: "from-red-500 to-rose-600", light: "bg-red-50 border-red-200", badge: "bg-red-600" },
+    { id: "vrishabh", en: "Taurus", hi: "वृषभ", mr: "वृषभ", gu: "વૃષભ", ta: "ரிஷபம்", te: "వృషభం", bn: "বৃষ", symbol: "♉", lord: "Venus", element: "Earth", color: "from-emerald-500 to-green-600", light: "bg-emerald-50 border-emerald-200", badge: "bg-emerald-600" },
+    { id: "mithun", en: "Gemini", hi: "मिथुन", mr: "मिथुन", gu: "મિથુન", ta: "மிதுனம்", te: "మిథునం", bn: "মিথুন", symbol: "♊", lord: "Mercury", element: "Air", color: "from-amber-500 to-yellow-600", light: "bg-amber-50 border-amber-200", badge: "bg-amber-600" },
+    { id: "kark", en: "Cancer", hi: "कर्क", mr: "कर्क", gu: "કર્ક", ta: "கடகம்", te: "కర్కాటకం", bn: "কর্কট", symbol: "♋", lord: "Moon", element: "Water", color: "from-blue-400 to-cyan-500", light: "bg-blue-50 border-blue-200", badge: "bg-blue-500" },
+    { id: "simha", en: "Leo", hi: "सिंह", mr: "सिंह", gu: "સિંહ", ta: "சிம்மம்", te: "సింహం", bn: "সিংহ", symbol: "♌", lord: "Sun", element: "Fire", color: "from-orange-500 to-amber-600", light: "bg-orange-50 border-orange-200", badge: "bg-orange-600" },
+    { id: "kanya", en: "Virgo", hi: "कन्या", mr: "कन्या", gu: "કન્યા", ta: "கன்னி", te: "కన్య", bn: "কন্যা", symbol: "♍", lord: "Mercury", element: "Earth", color: "from-lime-500 to-green-600", light: "bg-lime-50 border-lime-200", badge: "bg-lime-600" },
+    { id: "tula", en: "Libra", hi: "तुला", mr: "तूळ", gu: "તુલા", ta: "துலாம்", te: "తులా", bn: "তুলা", symbol: "♎", lord: "Venus", element: "Air", color: "from-pink-500 to-rose-500", light: "bg-pink-50 border-pink-200", badge: "bg-pink-600" },
+    { id: "vrishchik", en: "Scorpio", hi: "वृश्चिक", mr: "वृश्चिक", gu: "વૃશ્ચિક", ta: "விருச்சிகம்", te: "వృశ్చికం", bn: "বৃশ্চিক", symbol: "♏", lord: "Mars", element: "Water", color: "from-purple-600 to-violet-700", light: "bg-purple-50 border-purple-200", badge: "bg-purple-700" },
+    { id: "dhanu", en: "Sagittarius", hi: "धनु", mr: "धनु", gu: "ધન", ta: "தனுசு", te: "ధనుస్సు", bn: "ধনু", symbol: "♐", lord: "Jupiter", element: "Fire", color: "from-indigo-500 to-blue-600", light: "bg-indigo-50 border-indigo-200", badge: "bg-indigo-600" },
+    { id: "makar", en: "Capricorn", hi: "मकर", mr: "मकर", gu: "મકર", ta: "மகரம்", te: "మకరం", bn: "মকর", symbol: "♑", lord: "Saturn", element: "Earth", color: "from-slate-500 to-gray-700", light: "bg-slate-50 border-slate-200", badge: "bg-slate-700" },
+    { id: "kumbh", en: "Aquarius", hi: "कुंभ", mr: "कुंभ", gu: "કુંભ", ta: "கும்பம்", te: "కుంభం", bn: "কুম্ভ", symbol: "♒", lord: "Saturn", element: "Air", color: "from-sky-500 to-blue-600", light: "bg-sky-50 border-sky-200", badge: "bg-sky-600" },
+    { id: "meen", en: "Pisces", hi: "मीन", mr: "मीन", gu: "મીન", ta: "மீனம்", te: "మీనం", bn: "মীন", symbol: "♓", lord: "Jupiter", element: "Water", color: "from-teal-500 to-cyan-600", light: "bg-teal-50 border-teal-200", badge: "bg-teal-600" },
   ];
+
+  const getRashiNativeName = (r: any) => {
+    if (lang === "mr") return r.mr || r.hi;
+    if (lang === "gu") return r.gu || r.hi;
+    if (lang === "ta") return r.ta || r.hi;
+    if (lang === "te") return r.te || r.hi;
+    if (lang === "bn") return r.bn || r.hi;
+    if (lang === "hi") return r.hi;
+    return r.en;
+  };
 
   const getPredictions = (rashi: typeof RASHIS[0], period: string) => {
     const safePlanets = Array.isArray(planets) ? planets : [];
@@ -143,7 +155,9 @@ export const HoroscopeTab: React.FC<HoroscopeTabProps> = ({
 
       {/* 12 Rashi Selector Grid */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-4">
-        <p className="text-[10px] uppercase font-bold text-slate-400 mb-3">Select Rashi / Zodiac Sign</p>
+        <p className="text-[10px] uppercase font-bold text-slate-400 mb-3">
+          {lang === "hi" ? "राशि का चयन करें" : lang === "mr" ? "राशी निवडा" : lang === "gu" ? "રાશિ પસંદ કરો" : lang === "ta" ? "ராசியைத் தேர்ந்தெடுக்கவும்" : lang === "te" ? "రాశిని ఎంచుకోండి" : lang === "bn" ? "রাশি নির্বাচন করুন" : "Select Rashi / Zodiac Sign"}
+        </p>
         <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-12 gap-2">
           {RASHIS.map((rashi) => (
             <button
@@ -157,10 +171,10 @@ export const HoroscopeTab: React.FC<HoroscopeTabProps> = ({
             >
               <span className="text-lg leading-none">{rashi.symbol}</span>
               <span className={`text-[10px] font-black leading-tight ${selectedRashi === rashi.id ? "text-white" : "text-slate-700"}`}>
-                {rashi.en}
+                {getRashiNativeName(rashi)}
               </span>
               <span className={`text-[9px] leading-tight ${selectedRashi === rashi.id ? "text-white/80" : "text-slate-400"}`}>
-                {rashi.hi}
+                {rashi.en}
               </span>
             </button>
           ))}
@@ -175,7 +189,7 @@ export const HoroscopeTab: React.FC<HoroscopeTabProps> = ({
             <div className="flex items-center gap-4">
               <span className="text-5xl">{activeRashi.symbol}</span>
               <div>
-                <h3 className="text-2xl font-black">{activeRashi.en} ({activeRashi.hi})</h3>
+                <h3 className="text-2xl font-black">{getRashiNativeName(activeRashi)} ({activeRashi.en})</h3>
                 <p className="text-white/70 text-xs mt-0.5">Lord: {activeRashi.lord} • Element: {activeRashi.element}</p>
               </div>
             </div>
@@ -198,7 +212,7 @@ export const HoroscopeTab: React.FC<HoroscopeTabProps> = ({
           <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200">
             <div className="text-[10px] uppercase font-bold text-slate-400 mb-1 flex items-center gap-1.5">
               <Star className="w-3.5 h-3.5 text-amber-500" />
-              Astrological Overview ({rashiPeriod.toUpperCase()})
+              {lang === "hi" ? `ज्योतिषीय अवलोकन (${rashiPeriod.toUpperCase()})` : lang === "mr" ? `ज्योतिषीय आढावा (${rashiPeriod.toUpperCase()})` : lang === "gu" ? `જ્યોતિષીય વિહંગાવલોકન (${rashiPeriod.toUpperCase()})` : `Astrological Overview (${rashiPeriod.toUpperCase()})`}
             </div>
             <p className="text-sm font-medium text-slate-800 leading-relaxed">
               {preds.overview}
@@ -212,7 +226,9 @@ export const HoroscopeTab: React.FC<HoroscopeTabProps> = ({
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className="text-xl">💼</span>
-                  <h4 className="font-bold text-xs uppercase tracking-wider text-blue-900">Career & Business (कार्यक्षेत्र)</h4>
+                  <h4 className="font-bold text-xs uppercase tracking-wider text-blue-900">
+                    {lang === "hi" ? "कार्यक्षेत्र व व्यापार (Career)" : lang === "mr" ? "कार्यक्षेत्र व व्यवसाय (Career)" : lang === "gu" ? "કારકિર્દી અને વેપાર (Career)" : lang === "ta" ? "தொழில் மற்றும் வணிகம்" : lang === "te" ? "వృత్తి మరియు వ్యాపారం" : lang === "bn" ? "কর্মক্ষেত্র ও ব্যবসা" : "Career & Business"}
+                  </h4>
                 </div>
                 <span className="text-xs font-black text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full">
                   {[8, 7, 9, 6, 8, 7, 9, 6, 8, 7, 6, 8][RASHIS.findIndex((r) => r.id === selectedRashi)] || 8}/10
@@ -228,7 +244,9 @@ export const HoroscopeTab: React.FC<HoroscopeTabProps> = ({
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className="text-xl">💰</span>
-                  <h4 className="font-bold text-xs uppercase tracking-wider text-emerald-900">Finance & Wealth (धन लाभ)</h4>
+                  <h4 className="font-bold text-xs uppercase tracking-wider text-emerald-900">
+                    {lang === "hi" ? "धन व आर्थिक लाभ (Finance)" : lang === "mr" ? "वित्त व संपत्ती (Finance)" : lang === "gu" ? "નાણાં અને સમૃદ્ધિ (Finance)" : lang === "ta" ? "நிதி மற்றும் செல்வம்" : lang === "te" ? "ఆర్థిక స్థితి & ధనం" : lang === "bn" ? "আর্থিক সমৃদ্ধি" : "Finance & Wealth"}
+                  </h4>
                 </div>
                 <span className="text-xs font-black text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
                   {[7, 9, 6, 7, 8, 6, 8, 7, 6, 9, 7, 8][RASHIS.findIndex((r) => r.id === selectedRashi)] || 7}/10
@@ -244,7 +262,9 @@ export const HoroscopeTab: React.FC<HoroscopeTabProps> = ({
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className="text-xl">❤️</span>
-                  <h4 className="font-bold text-xs uppercase tracking-wider text-rose-900">Love & Relationships (प्रेम व परिवार)</h4>
+                  <h4 className="font-bold text-xs uppercase tracking-wider text-rose-900">
+                    {lang === "hi" ? "प्रेम व परिवार (Relationships)" : lang === "mr" ? "प्रेम व कौटुंबिक संबंध (Relationships)" : lang === "gu" ? "પ્રેમ અને સંબંધો (Relationships)" : lang === "ta" ? "காதல் மற்றும் உறவுகள்" : lang === "te" ? "ప్రేమ మరియు సంబంధాలు" : lang === "bn" ? "প্রেম ও সম্পর্ক" : "Love & Relationships"}
+                  </h4>
                 </div>
                 <span className="text-xs font-black text-rose-700 bg-rose-100 px-2 py-0.5 rounded-full">
                   {[9, 7, 8, 9, 7, 8, 7, 9, 8, 6, 9, 7][RASHIS.findIndex((r) => r.id === selectedRashi)] || 8}/10
@@ -260,7 +280,9 @@ export const HoroscopeTab: React.FC<HoroscopeTabProps> = ({
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className="text-xl">🏥</span>
-                  <h4 className="font-bold text-xs uppercase tracking-wider text-amber-900">Health & Vitality (स्वास्थ्य)</h4>
+                  <h4 className="font-bold text-xs uppercase tracking-wider text-amber-900">
+                    {lang === "hi" ? "स्वास्थ्य व ऊर्जा (Health)" : lang === "mr" ? "आरोग्य व ऊर्जा (Health)" : lang === "gu" ? "આરોગ્ય અને ઉર્જા (Health)" : lang === "ta" ? "உடல்நலம் மற்றும் உயிர்ச்சக்தி" : lang === "te" ? "ఆరోగ్యం మరియు శక్తి" : lang === "bn" ? "স্বাস্থ্য ও সতেজতা" : "Health & Vitality"}
+                  </h4>
                 </div>
                 <span className="text-xs font-black text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">
                   {[6, 8, 7, 8, 9, 9, 7, 6, 8, 7, 8, 6][RASHIS.findIndex((r) => r.id === selectedRashi)] || 7}/10

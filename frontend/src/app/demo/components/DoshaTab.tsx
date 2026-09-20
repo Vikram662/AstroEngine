@@ -37,11 +37,11 @@ export const DoshaTab: React.FC<DoshaTabProps> = ({
                 : "bg-emerald-100 text-emerald-800"
             }`}
           >
-            {manglikData?.is_manglik
+            {manglikData?.verdict || (manglikData?.is_manglik
               ? "Manglik (मांगलिक)"
               : manglikData?.is_cancelled
               ? "Manglik Dosha Cancelled (दोष भंग / Non-Manglik)"
-              : "Non-Manglik (अमांगलिक)"}
+              : "Non-Manglik (अमांगलिक)")}
           </span>
         </div>
 
@@ -55,7 +55,7 @@ export const DoshaTab: React.FC<DoshaTabProps> = ({
                   : "text-emerald-700 font-bold"
               }
             >
-              {manglikData?.status || "NO_DOSHA"} ({manglikData?.severity || "NONE"})
+              {manglikData?.verdict || manglikData?.status || "NO_DOSHA"} ({manglikData?.severity || "NONE"})
             </strong>
           </div>
           <div className="flex justify-between">
@@ -107,7 +107,7 @@ export const DoshaTab: React.FC<DoshaTabProps> = ({
                 : "bg-emerald-100 text-emerald-800"
             }`}
           >
-            {kaalSarpData?.has_kaal_sarp ? kaalSarpData.type : "No Kaal Sarp"}
+            {kaalSarpData?.verdict || (kaalSarpData?.has_kaal_sarp ? kaalSarpData.type : "No Kaal Sarp")}
           </span>
         </div>
 
@@ -125,7 +125,7 @@ export const DoshaTab: React.FC<DoshaTabProps> = ({
         <div className="text-xs text-slate-600 space-y-1">
           <span className="font-bold text-slate-900 block">Recommended Action:</span>
           <p className="leading-relaxed">
-            Regular chanting of Maha Mrityunjaya Mantra and offering milk to Shiva lingam on Mondays.
+            {kaalSarpData?.verdict || "Regular chanting of Maha Mrityunjaya Mantra and offering milk to Shiva lingam on Mondays."}
           </p>
         </div>
       </div>
@@ -144,7 +144,7 @@ export const DoshaTab: React.FC<DoshaTabProps> = ({
                 : "bg-emerald-100 text-emerald-800"
             }`}
           >
-            {sadeSatiStatus?.phase || (sadeSatiStatus?.is_sade_sati ? "Sade Sati Active" : "No Sade Sati")}
+            {sadeSatiStatus?.verdict || sadeSatiStatus?.phase || (sadeSatiStatus?.is_sade_sati ? "Sade Sati Active" : "No Sade Sati")}
           </span>
         </div>
 

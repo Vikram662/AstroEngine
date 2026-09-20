@@ -81,36 +81,31 @@ def calculate_daily_horoscope(
         love_score = min(95, base_score + (idx * 7) % 14)
         health_score = min(95, base_score + (idx * 2) % 14)
 
-        if lang == "hi":
-            overview = (
-                f"आज {r['name_hi']} राशि के जातकों के लिए गोचर चंद्रमा {moon_house}वें भाव में संचार कर रहा है। "
-                f"{'कार्यक्षेत्र में विशेष सफलता और नए कार्यों की शुरुआत के शुभ संकेत हैं।' if is_shubh_house else 'आज का दिन मिला-जुला रहेगा, महत्वपूर्ण निर्णयों में धैर्य और संयम रखें।'} "
-                f"राशि स्वामी {r['lord_hi']} की अनुकूल दृष्टि से आत्मविश्वास में वृद्धि होगी।"
-            )
-            career_pred = f"नौकरी व कारोबार में आपके प्रयास सफल होंगे। सहयोगियों का समर्थन मिलेगा। दोपहर के समय कोई शुभ समाचार प्राप्त हो सकता है।"
-            finance_pred = f"आर्थिक स्थिति सुदृढ़ रहेगी। धन के लेन-देन में सतर्कता बरतें। आकस्मिक लाभ के अवसर बन सकते हैं।"
-            love_pred = f"पारिवारिक और दांपत्य जीवन में मधुरता बनी रहेगी। जीवनसाथी के साथ सामंजस्य बढ़ेगा। प्रेम प्रसंगों में अनुकूलता रहेगी।"
-            health_pred = f"स्वास्थ्य सामान्य रहेगा। खान-पान में संतुलन बनाए रखें और नियमित व्यायाम या योग पर ध्यान दें।"
-            guidance = f"आज {r['lucky_color_hi']} रंग का प्रयोग शुभ रहेगा और शुभ अंक {r['lucky_number']} है।"
-        else:
-            overview = (
-                f"For {r['name_en']} natives, transiting Moon is operating in your {moon_house}th house today. "
-                f"{'Favorable day for career advancements, financial gains, and initiating ventures.' if is_shubh_house else 'A balanced day calling for patience, diplomacy, and composed communication.'} "
-                f"Ruling planet {r['lord']} infuses focus and stamina."
-            )
-            career_pred = f"Professional productivity is heightened today. Positive backing from peers or management creates fruitful outcomes."
-            finance_pred = f"Stable financial outlook. Calculated investments or deferred dues are likely to yield encouraging results."
-            love_pred = f"Harmony prevails in relationships. Open, thoughtful conversations deepen emotional understanding with your partner."
-            health_pred = f"Good overall vitality. Maintain hydration and stick to structured dietary habits throughout the day."
-            guidance = f"Auspicious color for today is {r['lucky_color']} and lucky number is {r['lucky_number']}."
+        from app.locales.content_translator import generate_horoscope_text, get_sign_i18n, get_planet_i18n
+        pred_dict = generate_horoscope_text(
+            rashi_name_en=r["name_en"],
+            rashi_idx=idx + 1,
+            lord_en=r["lord"],
+            lucky_color=r["lucky_color_hi"] if lang == "hi" else r["lucky_color"],
+            lucky_num=r["lucky_number"],
+            moon_house=moon_house,
+            is_shubh=is_shubh_house,
+            lang=lang
+        )
+        overview = pred_dict["overview"]
+        career_pred = pred_dict["career"]
+        finance_pred = pred_dict["finance"]
+        love_pred = pred_dict["love"]
+        health_pred = pred_dict["health"]
+        guidance = pred_dict["guidance"]
 
         results.append({
             "rashi_id": r["id"],
-            "name": r["name_hi"] if lang == "hi" else r["name_en"],
+            "name": get_sign_i18n(idx + 1, lang),
             "name_en": r["name_en"],
             "name_hi": r["name_hi"],
             "symbol": r["symbol"],
-            "lord": r["lord_hi"] if lang == "hi" else r["lord"],
+            "lord": get_planet_i18n(r["lord"], lang),
             "element": r["element_hi"] if lang == "hi" else r["element"],
             "lucky_color": r["lucky_color_hi"] if lang == "hi" else r["lucky_color"],
             "lucky_number": r["lucky_number"],
@@ -209,14 +204,38 @@ def calculate_monthly_horoscope(
     target_rashis = [r for r in RASHIS if r["id"] == rashi_id] if rashi_id else RASHIS
     results = []
 
+    from app.locales.content_translator import get_sign_i18n, get_planet_i18n, normalize_lang
+    clean_l = normalize_lang(lang)
+
     for r in target_rashis:
         idx = r["index"]
-        if lang == "hi":
-            overview = f"मासिक राशिफल: {r['name_hi']} राशि के लिए यह माह समग्र प्रगति एवं स्थिरता लेकर आएगा। महत्वपूर्ण योजनाएं मूर्त रूप लेंगी।"
+        sign_local = get_sign_i18n(idx, clean_l)
+        lord_local = get_planet_i18n(r["lord"], clean_l)
+
+        if clean_l == "hi":
+            overview = f"मासिक राशिफल: {sign_local} राशि के लिए यह माह समग्र प्रगति एवं स्थिरता लेकर आएगा। महत्वपूर्ण योजनाएं मूर्त रूप लेंगी।"
             career_pred = f"करियर में पदोन्नति या नवीन अवसर मिलने के प्रबल संकेत हैं। अधिकारियों का सहयोग कार्य को आसान बनाएगा।"
             finance_pred = f"दीर्घकालिक निवेशों से लाभ होगा। संपत्ति या वाहन से जुड़े सौदे अनुकूल परिणाम दे सकते हैं।"
             love_pred = f"दांपत्य जीवन में आत्मीयता बढ़ेगी। अविवाहित जातकों के लिए विवाह के उत्तम प्रस्ताव आ सकते हैं।"
             health_pred = f"स्वास्थ्य अच्छा रहेगा। नियमित दिनचर्या और योग-प्राणायाम से मानसिक शांति प्राप्त होगी।"
+        elif clean_l == "ta":
+            overview = f"மாத ராசிபலன்: {sign_local} ராசிக்கு இந்த மாதம் நற்பலன்களும் முன்னேற்றமும் தரும் மாதமாக அமையும். முயற்சிகள் கைகூடும்."
+            career_pred = f"தொழில் மற்றும் உத்தியோகத்தில் புதிய பொறுப்புகள் மற்றும் பாராட்டுக்கள் கிடைக்கும்."
+            finance_pred = f"பணப்புழக்கம் சிறப்பாக இருக்கும். முதலீடுகளில் நல்ல லாபம் கிடைக்கும்."
+            love_pred = f"குடும்பத்தில் அமைதியும் ஒற்றுமையும் நிலவும். சுப நிகழ்வுகள் நடைபெறும்."
+            health_pred = f"ஆரோக்கியம் சிறப்பாக இருக்கும். புத்துணர்ச்சியுடன் செயல்படுவீர்கள்."
+        elif clean_l == "te":
+            overview = f"నెలవారీ రాశిఫలాలు: {sign_local} రాశి వారికి ఈ నెల ఎంతో శుభదాయకంగా మరియు అభివృద్ధిదాయకంగా ఉంటుంది."
+            career_pred = f"ఉద్యోగంలో ప్రమోషన్లు లేదా నూతన అవకాశాలు లభించే సూచనలు ఉన్నాయి."
+            finance_pred = f"ఆర్థికంగా లాభదాయకమైన సమయం. వ్యాపారాలలో స్థిరమైన పురోగతి ఉంటుంది."
+            love_pred = f"కుటుంబ సభ్యులతో సంతోషంగా గడుపుతారు. శుభకార్యాల ప్రయత్నాలు ఫలిస్తాయి."
+            health_pred = f"ఆరోగ్యం బాగుంటుంది. మానసిక ప్రశాంతత లభిస్తుంది."
+        elif clean_l == "bn":
+            overview = f"মাসিক রাশিফল: {sign_local} রাশির জন্য এই মাসটি সার্বিক অগ্রগতি ও স্থিতিশীলতা নিয়ে আসবে। পরিকল্পনা সফল হবে।"
+            career_pred = f"কর্মক্ষেত্রে পদোন্নতি বা নতুন সুযোগ পাওয়ার সম্ভাবনা প্রবল। সহকর্মীদের সাহায্য পাবেন।"
+            finance_pred = f"আর্থিক দিক থেকে লাভজনক সময়। দীর্ঘমেয়াদী বিনিয়োগ ফলপ্রসূ হবে।"
+            love_pred = f"পারিবারিক জীবনে সুখ-শান্তি বজায় থাকবে। অবিবাহিতদের বিবাহের যোগ রয়েছে।"
+            health_pred = f"শারীরিক সুস্থতা বজায় থাকবে। মানসিক উদ্দীপনা বৃদ্ধি পাবে।"
         else:
             overview = f"Monthly Forecast: {r['name_en']} experiences empowering momentum this month. Strategic efforts manifest positive outcomes."
             career_pred = f"Strong prospects for career recognition, leadership roles, or securing long-term business partnerships."
@@ -226,11 +245,11 @@ def calculate_monthly_horoscope(
 
         results.append({
             "rashi_id": r["id"],
-            "name": r["name_hi"] if lang == "hi" else r["name_en"],
+            "name": sign_local,
             "name_en": r["name_en"],
             "name_hi": r["name_hi"],
             "symbol": r["symbol"],
-            "lord": r["lord_hi"] if lang == "hi" else r["lord"],
+            "lord": lord_local,
             "prediction": overview,
             "predictions": {
                 "overview": overview,
@@ -262,15 +281,38 @@ def calculate_yearly_horoscope(
     """Calculates Vedic Annual/Yearly Horoscope based on major transits."""
     target_rashis = [r for r in RASHIS if r["id"] == rashi_id] if rashi_id else RASHIS
     results = []
+    from app.locales.content_translator import get_sign_i18n, get_planet_i18n, normalize_lang
+    clean_l = normalize_lang(lang)
 
     for r in target_rashis:
         idx = r["index"]
-        if lang == "hi":
-            overview = f"वार्षिक राशिफल {year}: {r['name_hi']} राशि के लिए यह वर्ष भाग्यवर्धक एवं उन्नतिदायक सिद्ध होगा। गुरु व शनि का गोचर दीर्घकालिक सफलता सुनिश्चित करेगा।"
+        sign_local = get_sign_i18n(idx, clean_l)
+        lord_local = get_planet_i18n(r["lord"], clean_l)
+
+        if clean_l == "hi":
+            overview = f"वार्षिक राशिफल {year}: {sign_local} राशि के लिए यह वर्ष भाग्यवर्धक एवं उन्नतिदायक सिद्ध होगा। गुरु व शनि का गोचर दीर्घकालिक सफलता सुनिश्चित करेगा।"
             career_pred = f"कार्यक्षेत्र में बड़े बदलाव और उन्नति के अवसर मिलेंगे। नया उद्योग या व्यापार प्रारंभ करने के लिए अनुकूल समय है।"
             finance_pred = f"वित्तीय दृष्टि से वर्ष मजबूत रहेगा। अचल संपत्ति या भूमि-भवन में निवेश से अत्यधिक लाभ होने की संभावना है।"
             love_pred = f"पारिवारिक सुख-शांति में वृद्धि होगी। मांगलिक कार्यों के आयोजन और संतान सुख के योग बनेंगे।"
             health_pred = f"स्वास्थ्य में सुधार होगा। पुरानी व्याधियों से मुक्ति मिलेगी। जीवनशैली में सकारात्मक परिवर्तन लाभ देंगे।"
+        elif clean_l == "ta":
+            overview = f"வருட ராசிபலன் {year}: {sign_local} ராசிக்கு இந்த ஆண்டு மாபெரும் திருப்புமுனையாகவும் நற்பலன்களைத் தரும் ஆண்டாகவும் இருக்கும்."
+            career_pred = f"தொழில் வாழ்க்கையில் புதிய உயரங்களை அடைவீர்கள். வெளிநாட்டு வாய்ப்புகள் கைகூடும்."
+            finance_pred = f"வருமானம் பன்மடங்கு பெருகும். சொத்து வாங்கும் யோகம் உண்டாகும்."
+            love_pred = f"குடும்பத்தில் சுப விசேஷங்கள் நடைபெறும். உறவினர்களிடையே ஒற்றுமை பலப்படும்."
+            health_pred = f"ஆரோக்கியத்தில் நல்ல முன்னேற்றம் ஏற்படும். புத்துணர்ச்சி அதிகரிக்கும்."
+        elif clean_l == "te":
+            overview = f"వార్షిక రాశిఫలాలు {year}: {sign_local} రాశి వారికి ఈ సంవత్సరం అదృష్టం, పురోగతి కలిసివచ్చే అద్భుతమైన సమయం."
+            career_pred = f"కెరీర్‌లో ఉన్నత శిఖరాలను అధిరోహిస్తారు. వ్యాపార విస్తరణ విజయవంతమవుతుంది."
+            finance_pred = f"ధన ప్రాప్తి బాగుంటుంది. భూమి, గృహ లాభాలు కలిగే సూచనలు ఉన్నాయి."
+            love_pred = f"కుటుంబ జీవితం ఆనందదాయకంగా ఉంటుంది. వైవాహిక బంధం దృఢపడుతుంది."
+            health_pred = f"ఆరోగ్యం మెరుగుపడుతుంది. ఉత్సాహంగా పనులు పూర్తి చేస్తారు."
+        elif clean_l == "bn":
+            overview = f"বার্ষিক রাশিফল {year}: {sign_local} রাশির জন্য এই বছরটি অত্যন্ত সৌভাগ্যশালী ও সাফল্যমণ্ডিত হবে।"
+            career_pred = f"কর্মক্ষেত্রে পদোন্নতি এবং ব্যবসার প্রসার ঘটবে। নতুন উদ্যোগে সাফল্য পাবেন।"
+            finance_pred = f"আর্থিক সচ্ছলতা বৃদ্ধি পাবে। সম্পত্তি ক্রয়ের জন্য অনুকূল সময়।"
+            love_pred = f"পারিবারিক জীবনে আনন্দ ও সম্প্রীতি বজায় থাকবে। শুভ অনুষ্ঠান অনুষ্ঠিত হবে।"
+            health_pred = f"স্বাস্থ্যের উল্লেখযোগ্য উন্নতি হবে। মানসিক প্রশান্তি বজায় থাকবে।"
         else:
             overview = f"Annual Horoscope {year}: A landmark year for {r['name_en']}. Major transits of Jupiter and Saturn consolidate career and prosperity."
             career_pred = f"Substantial career milestones, promotions, and international or cross-industry expansion prospects."
@@ -280,11 +322,11 @@ def calculate_yearly_horoscope(
 
         results.append({
             "rashi_id": r["id"],
-            "name": r["name_hi"] if lang == "hi" else r["name_en"],
+            "name": sign_local,
             "name_en": r["name_en"],
             "name_hi": r["name_hi"],
             "symbol": r["symbol"],
-            "lord": r["lord_hi"] if lang == "hi" else r["lord"],
+            "lord": lord_local,
             "year": year,
             "prediction": overview,
             "predictions": {

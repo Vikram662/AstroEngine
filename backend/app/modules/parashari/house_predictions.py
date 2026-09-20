@@ -208,35 +208,29 @@ def calculate_12_houses_predictions(
         has_malefic = any(p in ["Saturn", "Mars", "Rahu", "Ketu"] for p in occupants)
         score = 85 if has_benefic and not has_malefic else (75 if not occupants else (70 if has_malefic and has_benefic else 65))
 
-        if lang == "hi":
-            occ_str = ", ".join(occupants) if occupants else "कोई प्रत्यक्ष ग्रह नहीं (दृष्टि प्रभाव)"
-            pred = (
-                f"{meta['name_hi']} में {sign_name} राशि स्थित है जिसके स्वामी {sign_info['ruler']} हैं। "
-                f"इस भाव में उपस्थित ग्रह: {occ_str}। "
-                f"{meta['domain_hi']} के क्षेत्र में यह विन्यास "
-                f"{'अत्यंत शुभ और उन्नतिदायक परिणाम प्रदान करेगा।' if score >= 80 else 'संतुलित एवं सामान्य फल देगा, परिश्रम से सफलता मिलेगी।'} "
-                f"कारक ग्रह {meta['significator']} की कृपा आपके इस जीवन क्षेत्र को मजबूती प्रदान करेगी।"
-            )
-            remedy = f"{sign_info['ruler']} और कारक {meta['significator']} की अनुकूलता हेतु नियमित ध्यान और शुभ कार्यों में दान करें।"
-        else:
-            occ_str = ", ".join(occupants) if occupants else "None directly occupying (Aspect influence active)"
-            pred = (
-                f"{meta['name_en']} falls in {sign_name} ruled by {sign_info['ruler']}. "
-                f"Occupant planets: {occ_str}. "
-                f"Regarding {meta['domain_en']}, this planetary geometry indicates "
-                f"{'highly favorable and progressive outcomes with strong natural support.' if score >= 80 else 'balanced results requiring structured effort and disciplined follow-through.'} "
-                f"Natural significator {meta['significator']} governs the ultimate fruition of this house."
-            )
-            remedy = f"Enhance {sign_info['ruler']} and {meta['significator']} energies through mindful routines and charity on relevant weekdays."
+        from app.locales.content_translator import generate_house_prediction_i18n, get_sign_i18n, get_planet_i18n, normalize_lang
+        clean_l = normalize_lang(lang)
+        h_pred_data = generate_house_prediction_i18n(
+            house_num=house_num,
+            house_name_en=meta["name_en"],
+            sign_name_en=sign_info["name_en"],
+            sign_lord_en=sign_info["ruler"],
+            domain_en=meta["domain_en"],
+            occupants=occupants,
+            score=score,
+            lang=clean_l
+        )
+        pred = h_pred_data["prediction"]
+        remedy = h_pred_data["remedy"]
 
         houses_results.append({
             "house": house_num,
-            "name": meta["name_hi"] if lang == "hi" else meta["name_en"],
+            "name": meta["name_hi"] if clean_l == "hi" else meta["name_en"],
             "name_en": meta["name_en"],
             "name_hi": meta["name_hi"],
-            "domain": meta["domain_hi"] if lang == "hi" else meta["domain_en"],
-            "sign": sign_name,
-            "sign_lord": sign_info["ruler"],
+            "domain": meta["domain_hi"] if clean_l == "hi" else meta["domain_en"],
+            "sign": get_sign_i18n(sign_info["id"], clean_l),
+            "sign_lord": get_planet_i18n(sign_info["ruler"], clean_l),
             "cusp_degree": round(cusp_deg, 2),
             "occupant_planets": occupants,
             "significator": meta["significator"],

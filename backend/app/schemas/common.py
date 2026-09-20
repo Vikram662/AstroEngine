@@ -101,7 +101,7 @@ class BirthDataRequest(BaseModel):
     tz: float = Field(5.5, description="Timezone offset in hours from UTC (e.g. 5.5 for IST, -5.0 for EST)", ge=-12.0, le=14.0, example=5.5)
     ayanamsa: Optional[Literal["LAHIRI", "RAMAN", "KP", "KRISHNAMURTI", "FAGAN_BRADLEY", "TROPICAL"]] = Field(default="LAHIRI", description="Ayanamsa mode (LAHIRI, RAMAN, KP, KRISHNAMURTI, FAGAN_BRADLEY, TROPICAL)")
     house_system: Optional[str] = Field(default="PLACIDUS", description="House calculation system: PLACIDUS, SRIPATI, EQUAL, WHOLE_SIGN, KOCH")
-    lang: Optional[str] = Field("en", description="Localization output language: en, hi, gu, mr, ta, te", example="en")
+    lang: Optional[str] = Field("en", description="Localization output language: en, hi, mr, gu, ta, te, bn", example="en")
 
 class QuotaInfo(BaseModel):
     plan: str = Field(..., description="Active subscription plan tier code (STARTER, PRO, ENTERPRISE)", example="STARTER")
@@ -154,7 +154,7 @@ class StandardResponse(BaseModel):
         }
     )
     status: Literal["success", "error"] = Field("success", description="Indicates call success status ('success')")
-    language: str = Field("en", description="Active response language locale code ('en', 'hi', 'gu', 'mr', 'ta', 'te')", example="en")
+    language: str = Field("en", description="Active response language locale code ('en', 'hi', 'mr', 'gu', 'ta', 'te', 'bn')", example="en")
     quota: Optional[QuotaInfo] = Field(None, description="Real-time subscription quota balance and plan usage breakdown")
     data: Dict[str, Any] = Field(..., description="High-precision astrological payload corresponding to the endpoint")
 

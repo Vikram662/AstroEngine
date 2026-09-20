@@ -52,7 +52,7 @@ export const Navbar = () => {
             <span className="w-1.5 h-1.5 rounded-full bg-indigo-600 animate-pulse"></span>
             Live App Demo
           </Link>
-          <Link href="/docs" className="hover:text-zinc-900 transition">
+          <Link href="/documentation" className="hover:text-zinc-900 transition">
             Documentation
           </Link>
           <Link href="/pricing" className="hover:text-zinc-900 transition">

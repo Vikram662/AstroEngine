@@ -302,9 +302,10 @@ AstroEngine uses a **Dual-Key Response Architecture**:
 | **`en`** (Default) | English | Latin | `Sun` | `Aries` |
 | **`hi`** | Hindi | Devanagari | `सूर्य` | `मेष` |
 | **`gu`** | Gujarati | Gujarati Unicode | `સૂર્ય` | `મેષ` |
-| **`mr`** | Marathi | Devanagari | `सूर्य` | `મેષ` |
+| **`mr`** | Marathi | Devanagari | `सूर्य` | `मेष` |
 | **`ta`** | Tamil | Dravidian Tamil | `சூரியன்` | `மேஷம்` |
 | **`te`** | Telugu | Telugu Unicode | `సూర్యుడు` | `మేషం` |
+| **`bn`** | Bengali | Bengali Unicode | `সূর্য` | `মেষ` |
 
 ---
 

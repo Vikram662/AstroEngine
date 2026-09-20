@@ -101,10 +101,14 @@ def calculate_manglik_dosha(
     if final_status == "MANGLIK":
         severity = "HIGH" if (manglik_from_lagna and manglik_from_moon) else "MEDIUM"
 
+    from app.locales.content_translator import get_dosha_verdict_i18n
+    verdict = get_dosha_verdict_i18n("MANGLIK", raw_is_manglik, is_cancelled, lang)
+
     return {
         "status": final_status,
         "severity": severity,
         "is_manglik": raw_is_manglik and not is_cancelled,
+        "verdict": verdict,
         "mars_placements": {
             "house_from_lagna": h_from_lagna,
             "house_from_moon": h_from_moon,
@@ -125,7 +129,8 @@ def calculate_kaal_sarp_dosha(
     tob: str,
     tz: float,
     lat: float = 28.6139,
-    lon: float = 77.2090
+    lon: float = 77.2090,
+    lang: str = "en"
 ) -> Dict[str, Any]:
     """
     Calculate Kaal Sarp Dosha:
@@ -135,6 +140,9 @@ def calculate_kaal_sarp_dosha(
     1: Anant, 2: Kulik, 3: Vasuki, 4: Shankhpal, 5: Padma, 6: Mahapadma,
     7: Takshak, 8: Karkotak, 9: Shankhachud, 10: Ghatak, 11: Vishdhar, 12: Sheshnag.
     """
+    from app.locales.content_translator import get_dosha_verdict_i18n, normalize_lang
+    clean_l = normalize_lang(lang)
+
     jd_ut = calculate_julian_day(dob, tob, tz)
     swe.set_sid_mode(swe.SIDM_LAHIRI, 0, 0)
     flags = swe.FLG_SWIEPH | swe.FLG_SIDEREAL
@@ -144,15 +152,18 @@ def calculate_kaal_sarp_dosha(
     asc_deg = ascmc[0]
     asc_sign_idx = int((asc_deg % 360.0) // 30.0)
 
-    # Get Rahu and Ketu longitudes
+    # Calculate Rahu & Ketu
     res_rahu, _ = swe.calc_ut(jd_ut, swe.MEAN_NODE, flags)
-    rahu_lon = res_rahu[0]
+    rahu_lon = res_rahu[0] % 360.0
     ketu_lon = (rahu_lon + 180.0) % 360.0
 
-    # Get 7 physical planets
-    planets_swe = [swe.SUN, swe.MOON, swe.MARS, swe.MERCURY, swe.JUPITER, swe.VENUS, swe.SATURN]
+    # Calculate 7 physical planets
+    seven_planets = [
+        swe.SUN, swe.MOON, swe.MARS, swe.MERCURY,
+        swe.JUPITER, swe.VENUS, swe.SATURN
+    ]
     planet_lons = []
-    for p in planets_swe:
+    for p in seven_planets:
         res, _ = swe.calc_ut(jd_ut, p, flags)
         planet_lons.append(res[0])
 
@@ -187,7 +198,8 @@ def calculate_kaal_sarp_dosha(
         "rahu_house": rahu_house,
         "rahu_degree": round(rahu_lon, 4),
         "ketu_degree": round(ketu_lon, 4),
-        "direction": "Direct (Udit)" if in_arc1 else ("Reverse (Anudit)" if in_arc2 else "None")
+        "direction": "Direct (Udit)" if in_arc1 else ("Reverse (Anudit)" if in_arc2 else "None"),
+        "verdict": get_dosha_verdict_i18n("KAALSARP", is_kaal_sarp, False, clean_l)
     }
 
 def calculate_ashtakoot_guna_milan(
@@ -321,17 +333,15 @@ def calculate_ashtakoot_guna_milan(
         }
     }
 
-def calculate_sadesati_status(dob: str, tob: str, tz: float) -> Dict[str, Any]:
+def calculate_sadesati_status(dob: str, tob: str, tz: float, lang: str = "en") -> Dict[str, Any]:
     """
     Real-time dynamic Saturn Sade Sati / Dhaiya phase check:
     Computes current Saturn transit sign relative to natal Moon sign.
-    12th from Moon: Rising (Charan 1)
-    1st from Moon: Peak (Charan 2)
-    2nd from Moon: Setting (Charan 3)
-    4th from Moon: Kantak Shani (Small Dhaiya)
-    8th from Moon: Ashtam Shani (Small Dhaiya)
     """
     from datetime import datetime, timezone
+    from app.locales.content_translator import get_sign_i18n, get_dosha_verdict_i18n, normalize_lang
+    clean_l = normalize_lang(lang)
+
     jd_natal = calculate_julian_day(dob, tob, tz)
     swe.set_sid_mode(swe.SIDM_LAHIRI, 0, 0)
     flags = swe.FLG_SWIEPH | swe.FLG_SIDEREAL
@@ -369,15 +379,24 @@ def calculate_sadesati_status(dob: str, tob: str, tz: float) -> Dict[str, Any]:
         "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces"
     ]
 
+    remedy_map = {
+        "hi": "शनिवार को पीपल के वृक्ष के नीचे सरसों के तेल का दीपक प्रज्वलित करें और नित्य हनुमान चालीसा का पाठ करें।",
+        "ta": "சனிக்கிழமைகளில் அரச மரத்தடியில் நல்லெண்ணெய் தீபம் ஏற்றி, தினமும் அனுமன் சாலிசா பாராயணம் செய்யவும்.",
+        "te": "శనివారాల్లో రావి చెట్టు కింద నువ్వుల నూనెతో దీపం వెలిగించండి మరియు ప్రతిరోజూ హనుమాన్ చాలీసా పఠించండి.",
+        "bn": "শনিবার অশ্বত্থ গাছের নিচে সর্ষের তেলের প্রদীপ প্রজ্জ্বলন করুন এবং প্রত্যহ হনুমান চালিশা পাঠ করুন।",
+        "en": "Recite Hanuman Chalisa daily and light a mustard oil lamp under a Peepal tree on Saturdays."
+    }
+
     return {
-        "natal_moon_sign": zodiac_signs[moon_sign_idx],
-        "transit_saturn_sign": zodiac_signs[saturn_sign_idx],
+        "natal_moon_sign": get_sign_i18n(moon_sign_idx + 1, clean_l),
+        "transit_saturn_sign": get_sign_i18n(saturn_sign_idx + 1, clean_l),
         "transit_saturn_degree": round(res_sat[0] % 30.0, 4),
         "relative_house_from_moon": rel_house,
         "is_sadesati_active": is_sadesati,
         "is_dhaiya_active": is_dhaiya,
         "phase": phase,
-        "remedy": "Recite Hanuman Chalisa daily and light a mustard oil lamp under a Peepal tree on Saturdays." if (is_sadesati or is_dhaiya) else "No severe Saturn affliction active currently."
+        "verdict": get_dosha_verdict_i18n("SADE_SATI", is_sadesati, False, clean_l),
+        "remedy": remedy_map[clean_l] if (is_sadesati or is_dhaiya) else "No severe Saturn affliction active currently."
     }
 
 def calculate_pitra_dosha(dob: str, tob: str, tz: float, lat: float, lon: float) -> Dict[str, Any]:

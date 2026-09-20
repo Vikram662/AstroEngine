@@ -34,7 +34,8 @@ import {
   Star,
   Bot,
   MessageSquare,
-  Send
+  Send,
+  ExternalLink
 } from "lucide-react";
 
 import { OverviewTab } from "./components/OverviewTab";
@@ -56,6 +57,7 @@ import { PdfTab } from "./components/PdfTab";
 import { HoroscopeTab } from "./components/HoroscopeTab";
 import { TarotTab } from "./components/TarotTab";
 import { VastuTab } from "./components/VastuTab";
+import { DEMO_TRANSLATIONS, SupportedLang } from "./i18n";
 
 interface BirthProfile {
   name: string;
@@ -1184,26 +1186,41 @@ export default function LiveDemoApp() {
   };
 
 
+  const langKey = (["en", "hi", "mr", "gu", "ta", "te", "bn"].includes(profile.lang) ? profile.lang : "en") as SupportedLang;
+  const t = DEMO_TRANSLATIONS[langKey] || DEMO_TRANSLATIONS.en;
+
+  const getLangBadgeName = (lang: string) => {
+    switch (lang) {
+      case "hi": return "हिंदी (Hindi)";
+      case "mr": return "मराठी (Marathi)";
+      case "gu": return "ગુજરાતી (Gujarati)";
+      case "ta": return "தமிழ் (Tamil)";
+      case "te": return "తెలుగు (Telugu)";
+      case "bn": return "বাংলা (Bengali)";
+      default: return "English (en)";
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50/50 pb-20">
-      {/* Top App Bar with Live API Engine badge */}
+      {/* Top App Bar with clean, calm styling */}
       <div className="bg-slate-900 text-white border-b border-slate-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                125+ API Engines Live
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-slate-800 text-indigo-300 border border-indigo-500/20">
+                {t.enginesLiveBadge}
               </span>
               <span className="px-2 py-0.5 rounded text-[10px] font-mono text-emerald-400 bg-emerald-950/40 border border-emerald-800/40 flex items-center gap-1">
                 <ShieldAlert className="w-3 h-3" />
-                Zero Secret Leakage
+                {t.securityBadge}
               </span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white mt-2">
-              AstroEngine Live Interactive App
+              {t.appTitle}
             </h1>
             <p className="text-slate-400 text-xs sm:text-sm mt-1 max-w-2xl">
-              Experience all 125+ Vedic, Jaimini, Lal Kitab, KP, Numerology, Western, Panchang, Tarot &amp; Vastu APIs combined in a real consumer-grade application.
+              {t.appSubtitle}
             </p>
           </div>
 
@@ -1211,42 +1228,42 @@ export default function LiveDemoApp() {
             <button
               onClick={() => calculateAllData(profile)}
               disabled={loading}
-              className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs transition flex items-center gap-2 shadow-lg shadow-indigo-600/20 disabled:opacity-50"
+              className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs transition flex items-center gap-2 shadow-sm disabled:opacity-50"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-              <span>{loading ? "Recalculating..." : "Recalculate All 125+ Engines"}</span>
+              <span>{loading ? t.recalculatingBtn : t.recalculateBtn}</span>
             </button>
           </div>
         </div>
       </div>
 
-      {/* Birth Profile Customizer Bar */}
-      <div className="bg-white border-b border-slate-200 sticky top-14 z-30 shadow-xs">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-2.5">
+      {/* Birth Profile Customizer Bar (Relative layout, no overlapping sticky) */}
+      <div className="bg-white border-b border-slate-200 z-20 shadow-2xs">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3">
           {/* Mode Context Badge */}
           <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-100 text-xs">
             {["panchang", "horoscope", "tarot", "vastu"].includes(activeTab) ? (
-              <div className="flex items-center gap-2 text-emerald-800">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span className="font-bold">🌐 Universal &amp; Realtime Mode:</span>
-                <span className="text-slate-600">Calculated for today's transits at <strong>{profile.cityName}</strong>. (DOB/TOB are utilized in Personal Kundli tabs).</span>
+              <div className="flex items-center gap-2 text-slate-800">
+                <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                <span className="font-bold">🌐 {t.universalModeTitle}</span>
+                <span className="text-slate-500">{t.universalModeDescPrefix}<strong>{profile.cityName}</strong>{t.universalModeDescSuffix}</span>
               </div>
             ) : (
-              <div className="flex items-center gap-2 text-indigo-900">
+              <div className="flex items-center gap-2 text-slate-800">
                 <span className="w-2 h-2 rounded-full bg-indigo-600"></span>
-                <span className="font-bold">👤 Personal Janma Kundli Mode:</span>
-                <span className="text-slate-600">Active profile for <strong>{profile.name}</strong> ({profile.dob} • {profile.tob} • {profile.cityName}).</span>
+                <span className="font-bold">👤 {t.personalModeTitle}</span>
+                <span className="text-slate-500">{t.personalModeDescPrefix}<strong>{profile.name}</strong> ({profile.dob} • {profile.tob} • {profile.cityName}).</span>
               </div>
             )}
             <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700">
-              {profile.lang === "hi" ? "हिंदी (Hindi)" : "English"}
+              {getLangBadgeName(profile.lang)}
             </span>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 items-end">
             <div>
               <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
-                Name
+                {t.nameLabel}
               </label>
               <input
                 type="text"
@@ -1258,7 +1275,7 @@ export default function LiveDemoApp() {
 
             <div>
               <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
-                Birth Date
+                {t.dobLabel}
               </label>
               <input
                 type="date"
@@ -1270,7 +1287,7 @@ export default function LiveDemoApp() {
 
             <div>
               <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
-                Birth Time
+                {t.tobLabel}
               </label>
               <input
                 type="time"
@@ -1282,7 +1299,7 @@ export default function LiveDemoApp() {
 
             <div className="relative">
               <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
-                City / Location (Live Geo API)
+                {t.cityLabel}
               </label>
               <div className="relative flex items-center">
                 <input
@@ -1292,7 +1309,7 @@ export default function LiveDemoApp() {
                   onFocus={() => {
                     if (citySearchResults.length > 0) setShowCityDropdown(true);
                   }}
-                  placeholder="Search any global city, district, village (e.g. Ajmer, Ujjain, Dubai)..."
+                  placeholder={t.cityPlaceholder}
                   className="w-full text-xs font-semibold pl-2.5 pr-8 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-slate-900 focus:bg-white focus:border-indigo-500 outline-hidden"
                 />
                 {citySearchQuery && (
@@ -1339,7 +1356,7 @@ export default function LiveDemoApp() {
 
             <div>
               <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
-                Output Language
+                {t.langLabel}
               </label>
               <select
                 value={profile.lang}
@@ -1351,8 +1368,13 @@ export default function LiveDemoApp() {
                 }}
                 className="w-full text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-slate-900 focus:bg-white focus:border-indigo-500 outline-hidden"
               >
-                <option value="en">English</option>
+                <option value="en">English (English)</option>
                 <option value="hi">हिंदी (Hindi)</option>
+                <option value="mr">मराठी (Marathi)</option>
+                <option value="gu">ગુજરાતી (Gujarati)</option>
+                <option value="ta">தமிழ் (Tamil)</option>
+                <option value="te">తెలుగు (Telugu)</option>
+                <option value="bn">বাংলা (Bengali)</option>
               </select>
             </div>
 
@@ -1363,7 +1385,7 @@ export default function LiveDemoApp() {
                 className="w-full py-1.5 px-3 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition"
               >
                 <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-                <span>Apply &amp; Refresh</span>
+                <span>{t.applyBtn}</span>
               </button>
             </div>
           </div>
@@ -1377,29 +1399,29 @@ export default function LiveDemoApp() {
           {/* Category 1: Personal Birth Profile APIs (DOB, TOB, Lat, Lon, Name) */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between px-1">
-              <span className="text-[10px] font-black uppercase tracking-wider text-indigo-700 bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-200/60 flex items-center gap-1.5">
-                <span>👤</span>
-                <span>Individual Janma Kundli Engines (जन्म विवरण आधारित: DOB • TOB • Coordinates)</span>
+              <span className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-indigo-600"></span>
+                <span>{t.cat1Title}</span>
               </span>
-              <span className="text-[10px] font-semibold text-slate-400">15 Personal Modules</span>
+              <span className="text-[10px] font-semibold text-slate-400">{t.cat1Count}</span>
             </div>
             <div className="flex items-center gap-1 overflow-x-auto pb-1 scrollbar-none">
               {[
-                { id: "overview", label: "Overview", icon: Sparkles },
-                { id: "ai_astrologer", label: "AI Astrologer (पूछें सवाल)", icon: Bot },
-                { id: "kundli", label: "Kundli Charts (D1-D60)", icon: Compass },
-                { id: "planets", label: "Graha Positions", icon: Sun },
-                { id: "dasha", label: "Vimshottari & Yogini Dasha", icon: Clock },
-                { id: "yogas", label: "Ashtakavarga & Yogas (अष्टकवर्ग)", icon: Flame },
-                { id: "dosha", label: "Dosha Suite (Sade Sati/Manglik)", icon: ShieldAlert },
-                { id: "matching", label: "Kundli Milan (36 Guna)", icon: HeartHandshake },
-                { id: "numerology", label: "Numerology & Lo Shu", icon: Hash },
-                { id: "western", label: "Western Astrology", icon: Globe },
-                { id: "remedies", label: "Remedies, Mantras & Vrat", icon: Award },
-                { id: "kp", label: "KP System (केपी कुंडली)", icon: Sliders },
-                { id: "lalkitab", label: "Lal Kitab (लाल किताब)", icon: BookOpen },
-                { id: "tajik", label: "Jaimini & Tajik Varshphal", icon: Eye },
-                { id: "pdf", label: "PDF Reports Download", icon: FileDown },
+                { id: "overview", label: t.tabs.overview, icon: Sparkles, endpoint: "POST /api/v1/parashari/chart/d1", work: "Lagna Kundli, Bhavas, Current Dasha, Quick Panchang & Graha Sphuta Summary" },
+                { id: "ai_astrologer", label: t.tabs.ai_astrologer, icon: Bot, endpoint: "POST /api/v1/ai/consult", work: "AI-powered Classical Parashari Consultation with Dasha analysis and timing" },
+                { id: "kundli", label: t.tabs.kundli, icon: Compass, endpoint: "POST /api/v1/parashari/varga/d1..d60", work: "Generates D1 to D60 High-Precision Harmonic Divisional SVG Charts & Bhavaphala" },
+                { id: "planets", label: t.tabs.planets, icon: Sun, endpoint: "POST /api/v1/core/planets/positions", work: "Real-time Swiss Ephemeris Graha Sphuta, Retrograde Motion, House Cusps & Timings" },
+                { id: "dasha", label: t.tabs.dasha, icon: Clock, endpoint: "POST /api/v1/dasha/vimshottari/tree", work: "120-Year Vimshottari 5-Tier Hierarchy (MD > AD > PD > SD > Prana) & Yogini Dasha" },
+                { id: "yogas", label: t.tabs.yogas, icon: Flame, endpoint: "POST /api/v1/parashari/yogas", work: "Sarvashtakavarga 337 Bindus, Bhinnashtakavarga, Raja Yogas & Shadbala Strengths" },
+                { id: "dosha", label: t.tabs.dosha, icon: ShieldAlert, endpoint: "POST /api/v1/dosha/all", work: "Manglik with 20+ Classical Cancellations, Shani Sade Sati Transit, Kaal Sarp & Pitra Dosha" },
+                { id: "matching", label: t.tabs.matching, icon: HeartHandshake, endpoint: "POST /api/v1/matchmaking/ashtakoota", work: "Vedic 36 Guna Milan, Dashakoota, Papasamya, Nadi Dosha exceptions & Verdict" },
+                { id: "numerology", label: t.tabs.numerology, icon: Hash, endpoint: "POST /api/v1/numerology/comprehensive", work: "Mulank, Bhagyank, Namank, 3x3 Lo Shu Magic Grid 8 Planes & Year Forecast" },
+                { id: "western", label: t.tabs.western, icon: Globe, endpoint: "POST /api/v1/western/big-three", work: "Tropical/Sayana Zodiac, Sun-Moon-Rising Big Three, Aspects Grid & Circular Wheel SVG" },
+                { id: "remedies", label: t.tabs.remedies, icon: Award, endpoint: "POST /api/v1/remedies/gemstones", work: "Life/Lucky/Benefic Gemstones, 1-14 Mukhi Rudraksha, Tantrik Beej Mantras, Yantras & Fasting" },
+                { id: "kp", label: t.tabs.kp, icon: Sliders, endpoint: "POST /api/v1/kp/planets", work: "Krishnamurti Paddhati Sign/Star/Sub-Lords, Placidus Cusps, 1-249 Horary & Ruling Planets" },
+                { id: "lalkitab", label: t.tabs.lalkitab, icon: BookOpen, endpoint: "POST /api/v1/lalkitab/chart/kundli", work: "Lal Kitab Fixed Kalpurush Houses, Sleeping Houses/Planets, 6 Debts & Specific Upay" },
+                { id: "tajik", label: t.tabs.tajik, icon: Eye, endpoint: "POST /api/v1/advanced/jaimini/karakas", work: "7 Jaimini Chara Karakas, Chara Dasha, Tajik Varshphal, Muntha, Sahams & 16 Tajik Yogas" },
+                { id: "pdf", label: t.tabs.pdf, icon: FileDown, endpoint: "POST /api/v1/pdf/kundli/basic", work: "Async PDF Generation Queue (HTTP 202) for 20-80 page branded client astrology reports" },
               ].map(tab => {
                 const Icon = tab.icon;
                 const isActive = activeTab === tab.id;
@@ -1407,8 +1429,9 @@ export default function LiveDemoApp() {
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap flex items-center gap-1.5 transition ${isActive
-                        ? "bg-slate-900 text-white shadow-xs"
+                    title={`${tab.endpoint} — ${tab.work}`}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap flex items-center gap-1.5 transition ${isActive
+                        ? "bg-slate-900 text-white shadow-2xs"
                         : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
                       }`}
                   >
@@ -1423,18 +1446,18 @@ export default function LiveDemoApp() {
           {/* Category 2: Universal & Daily Services (Panchang, Choghadiya, Muhurat, Rashifal, Tarot, Vastu) */}
           <div className="space-y-1.5 pt-2 border-t border-slate-100">
             <div className="flex items-center justify-between px-1">
-              <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200/60 flex items-center gap-1.5">
-                <span>🌐</span>
-                <span>Universal, Realtime &amp; Daily Services (सार्वभौमिक व दैनिक सेवाएं: पंचांग • राशिफल • टैरो • वास्तु)</span>
+              <span className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+                <span>{t.cat2Title}</span>
               </span>
-              <span className="text-[10px] font-semibold text-emerald-700 font-mono">Realtime / Daily / Event</span>
+              <span className="text-[10px] font-semibold text-slate-400 font-mono">{t.cat2Count}</span>
             </div>
             <div className="flex items-center gap-1 overflow-x-auto pb-1 scrollbar-none">
               {[
-                { id: "panchang", label: "Panchang, Choghadiya & Muhurat (दैनिक पंचांग)", icon: Calendar },
-                { id: "horoscope", label: "Rashifal — All 12 Rashis (12 राशियों का राशिफल)", icon: Star },
-                { id: "tarot", label: "Tarot Card Reading (टैरो परामर्श)", icon: Sparkles },
-                { id: "vastu", label: "16-Zone MahaVastu (महावास्तु दोष व निवारण)", icon: Compass },
+                { id: "panchang", label: t.tabs.panchang, icon: Calendar, endpoint: "POST /api/v1/panchang/daily", work: "Tithi, Vaar Lord, Nakshatra, Yoga, Karana, 16 Day/Night Choghadiya, Hora & Shubh Muhurat" },
+                { id: "horoscope", label: t.tabs.horoscope, icon: Star, endpoint: "POST /api/v1/panchang/horoscope/daily", work: "Real-time Daily, Weekly, Monthly & Yearly Horoscope predictions for all 12 Rashis in 5 languages" },
+                { id: "tarot", label: t.tabs.tarot, icon: Sparkles, endpoint: "POST /api/v1/tarot/draw", work: "78 Rider-Waite Tarot Deck readings: Daily Card, 3-Card Spread (Past/Present/Future), Celtic Cross" },
+                { id: "vastu", label: t.tabs.vastu, icon: Compass, endpoint: "POST /api/v1/vastu/evaluate", work: "16 Vedic MahaVastu zones evaluation, 5 elemental imbalances (Pancha Tattva) & Non-demolition cures" },
               ].map(tab => {
                 const Icon = tab.icon;
                 const isActive = activeTab === tab.id;
@@ -1442,12 +1465,13 @@ export default function LiveDemoApp() {
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap flex items-center gap-1.5 transition ${isActive
-                        ? "bg-emerald-800 text-white shadow-xs"
-                        : "text-slate-600 hover:text-emerald-950 hover:bg-emerald-50"
+                    title={`${tab.endpoint} — ${tab.work}`}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap flex items-center gap-1.5 transition ${isActive
+                        ? "bg-slate-900 text-white shadow-2xs"
+                        : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
                       }`}
                   >
-                    <Icon className={`w-3.5 h-3.5 ${isActive ? "text-emerald-300" : "text-emerald-600"}`} />
+                    <Icon className={`w-3.5 h-3.5 ${isActive ? "text-emerald-400" : "text-slate-400"}`} />
                     <span>{tab.label}</span>
                   </button>
                 );
@@ -1455,6 +1479,172 @@ export default function LiveDemoApp() {
             </div>
           </div>
         </div>
+
+        {/* Live Engine Description Header: Clean, modern card */}
+        {(() => {
+          const tabMetaMap: Record<string, { title: string; endpoint: string; purpose: string; requiresBirth: boolean }> = {
+            overview: {
+              title: t.tabMeta.overview?.title || "Overview",
+              endpoint: "/api/v1/parashari/chart/d1 & /api/v1/core/planets/positions",
+              purpose: t.tabMeta.overview?.purpose || "",
+              requiresBirth: true
+            },
+            ai_astrologer: {
+              title: t.tabMeta.ai_astrologer?.title || "AI Astrologer",
+              endpoint: "/api/v1/ai/consult",
+              purpose: t.tabMeta.ai_astrologer?.purpose || "",
+              requiresBirth: true
+            },
+            kundli: {
+              title: t.tabMeta.kundli?.title || "Kundli Charts",
+              endpoint: "/api/v1/parashari/chart/d1..d60 & /bhav-chalit",
+              purpose: t.tabMeta.kundli?.purpose || "",
+              requiresBirth: true
+            },
+            planets: {
+              title: t.tabMeta.planets?.title || "Planetary Positions",
+              endpoint: "/api/v1/core/planets/positions & /timings/sun-moon",
+              purpose: t.tabMeta.planets?.purpose || "",
+              requiresBirth: true
+            },
+            dasha: {
+              title: t.tabMeta.dasha?.title || "Dasha Hierarchy",
+              endpoint: "/api/v1/dasha/vimshottari/current & /tree",
+              purpose: t.tabMeta.dasha?.purpose || "",
+              requiresBirth: true
+            },
+            yogas: {
+              title: t.tabMeta.yogas?.title || "Yogas & Ashtakavarga",
+              endpoint: "/api/v1/parashari/ashtakavarga & /yogas",
+              purpose: t.tabMeta.yogas?.purpose || "",
+              requiresBirth: true
+            },
+            dosha: {
+              title: t.tabMeta.dosha?.title || "Dosha Suite",
+              endpoint: "/api/v1/dosha/manglik & /sade-sati & /kaal-sarp",
+              purpose: t.tabMeta.dosha?.purpose || "",
+              requiresBirth: true
+            },
+            matching: {
+              title: t.tabMeta.matching?.title || "Kundli Milan",
+              endpoint: "/api/v1/matchmaking/ashtakoota & /dashakoota",
+              purpose: t.tabMeta.matching?.purpose || "",
+              requiresBirth: true
+            },
+            numerology: {
+              title: t.tabMeta.numerology?.title || "Numerology & Lo Shu",
+              endpoint: "/api/v1/numerology/comprehensive & /loshu",
+              purpose: t.tabMeta.numerology?.purpose || "",
+              requiresBirth: true
+            },
+            western: {
+              title: t.tabMeta.western?.title || "Western Tropical",
+              endpoint: "/api/v1/western/big-three & /wheel",
+              purpose: t.tabMeta.western?.purpose || "",
+              requiresBirth: true
+            },
+            remedies: {
+              title: t.tabMeta.remedies?.title || "Vedic Remedies",
+              endpoint: "/api/v1/remedies/gemstones & /rudraksha & /mantras",
+              purpose: t.tabMeta.remedies?.purpose || "",
+              requiresBirth: true
+            },
+            kp: {
+              title: t.tabMeta.kp?.title || "KP System",
+              endpoint: "/api/v1/kp/planets & /cusps & /horary",
+              purpose: t.tabMeta.kp?.purpose || "",
+              requiresBirth: true
+            },
+            lalkitab: {
+              title: t.tabMeta.lalkitab?.title || "Lal Kitab System",
+              endpoint: "/api/v1/lalkitab/chart/kundli & /debts & /remedies",
+              purpose: t.tabMeta.lalkitab?.purpose || "",
+              requiresBirth: true
+            },
+            tajik: {
+              title: t.tabMeta.tajik?.title || "Tajik Varshphal & Jaimini",
+              endpoint: "/api/v1/advanced/tajik/varshphal & /jaimini/karakas",
+              purpose: t.tabMeta.tajik?.purpose || "",
+              requiresBirth: true
+            },
+            pdf: {
+              title: t.tabMeta.pdf?.title || "PDF Report Engine",
+              endpoint: "/api/v1/pdf/kundli/basic & /status",
+              purpose: t.tabMeta.pdf?.purpose || "",
+              requiresBirth: true
+            },
+            panchang: {
+              title: t.tabMeta.panchang?.title || "Panchang & Muhurat",
+              endpoint: "/api/v1/panchang/daily & /choghadiya & /hora",
+              purpose: t.tabMeta.panchang?.purpose || "",
+              requiresBirth: false
+            },
+            horoscope: {
+              title: t.tabMeta.horoscope?.title || "12 Rashi Forecast",
+              endpoint: "/api/v1/panchang/horoscope/daily & /weekly & /yearly",
+              purpose: t.tabMeta.horoscope?.purpose || "",
+              requiresBirth: false
+            },
+            tarot: {
+              title: t.tabMeta.tarot?.title || "78-Card Tarot Suite",
+              endpoint: "/api/v1/tarot/draw & /spread/three-card & /celtic-cross",
+              purpose: t.tabMeta.tarot?.purpose || "",
+              requiresBirth: false
+            },
+            vastu: {
+              title: t.tabMeta.vastu?.title || "16-Zone MahaVastu",
+              endpoint: "/api/v1/vastu/evaluate",
+              purpose: t.tabMeta.vastu?.purpose || "",
+              requiresBirth: false
+            }
+          };
+
+          const currentMeta = tabMetaMap[activeTab] || {
+            title: t.fallbackTitle,
+            endpoint: "/api/v1/...",
+            purpose: t.fallbackPurpose,
+            requiresBirth: true
+          };
+
+          return (
+            <div className="mt-4 p-4 rounded-xl bg-white border border-slate-200 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+              <div className="space-y-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                    {currentMeta.title}
+                  </span>
+                  <span className="font-mono text-[11px] px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-medium">
+                    {currentMeta.endpoint}
+                  </span>
+                  {currentMeta.requiresBirth ? (
+                    <span className="text-[10px] font-medium px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-100">
+                      {t.birthProfileBadge}
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-medium px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-100">
+                      {t.universalModeBadge}
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-slate-600 leading-relaxed max-w-4xl">
+                  <strong className="text-slate-900 font-semibold">{t.metaScopeLabel}</strong>
+                  {currentMeta.purpose}
+                </p>
+              </div>
+              <div className="shrink-0 flex items-center gap-2 text-xs">
+                <a
+                  href="/documentation"
+                  target="_blank"
+                  className="px-2.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white font-medium flex items-center gap-1 transition text-[11px]"
+                >
+                  <span>{t.apiSpecsBtn}</span>
+                  <ExternalLink className="w-3 h-3 text-slate-400" />
+                </a>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Tab Content Display */}
         <div className="mt-6">
@@ -1473,6 +1663,7 @@ export default function LiveDemoApp() {
               profile={profile}
               manglikData={manglikData}
               kaalSarpData={kaalSarpData}
+              lang={profile.lang}
             />
           )}
 
@@ -1536,6 +1727,7 @@ export default function LiveDemoApp() {
               d1Chart={d1Chart}
               currentDasha={currentDasha}
               sunMoonTimings={sunMoonTimings}
+              lang={profile.lang}
             />
           )}
 
@@ -1685,6 +1877,7 @@ export default function LiveDemoApp() {
               setSelectedRashi={setSelectedRashi}
               rashiPeriod={rashiPeriod}
               setRashiPeriod={setRashiPeriod}
+              lang={profile.lang}
             />
           )}
 

@@ -18,6 +18,7 @@ interface PanchangTabProps {
   d1Chart?: any;
   currentDasha?: any;
   sunMoonTimings?: any;
+  lang?: string;
 }
 
 export const PanchangTab: React.FC<PanchangTabProps> = ({
@@ -36,38 +37,78 @@ export const PanchangTab: React.FC<PanchangTabProps> = ({
   d1Chart,
   currentDasha,
   sunMoonTimings,
+  lang = "en",
 }) => {
+  const isHi = lang === "hi";
+  const isMr = lang === "mr";
+  const isGu = lang === "gu";
+  const isTa = lang === "ta";
+  const isTe = lang === "te";
+  const isBn = lang === "bn";
+
+  const getLimbLabel = (key: string) => {
+    switch (key) {
+      case "tithi":
+        return isHi ? "तिथि" : isMr ? "तिथी" : isGu ? "તિથિ" : isTa ? "திதி" : isTe ? "తిథి" : isBn ? "তিথি" : "Tithi";
+      case "nakshatra":
+        return isHi ? "नक्षत्र" : isMr ? "नक्षत्र" : isGu ? "નક્ષત્ર" : isTa ? "நட்சத்திரம்" : isTe ? "నక్షత్రం" : isBn ? "নক্ষত্র" : "Nakshatra";
+      case "yoga":
+        return isHi ? "योग" : isMr ? "योग" : isGu ? "યોગ" : isTa ? "யோகம்" : isTe ? "యోగం" : isBn ? "যোগ" : "Yoga";
+      case "karana":
+        return isHi ? "करण" : isMr ? "करण" : isGu ? "કરણ" : isTa ? "கரணம்" : isTe ? "కరణం" : isBn ? "করণ" : "Karana";
+      case "vaar":
+        return isHi ? "वार" : isMr ? "वार" : isGu ? "વાર" : isTa ? "வாரம்" : isTe ? "వారం" : isBn ? "বার" : "Vaar";
+      default:
+        return key;
+    }
+  };
+
+  const getSunLabel = (key: string) => {
+    switch (key) {
+      case "sunrise":
+        return isHi ? "सूर्योदय" : isMr ? "सूर्योदय" : isGu ? "સૂર્યોદય" : isTa ? "சூரியோதயம்" : isTe ? "సూర్యోదయం" : isBn ? "সূর্যোদয়" : "Sunrise";
+      case "sunset":
+        return isHi ? "सूर्यास्त" : isMr ? "सूर्यास्त" : isGu ? "સૂર્યાસ્ત" : isTa ? "சூரியாஸ்தமனம்" : isTe ? "సూర్యాస్తమయం" : isBn ? "সূর্যাস্ত" : "Sunset";
+      case "moonrise":
+        return isHi ? "चंद्रोदय" : isMr ? "चंद्रोदय" : isGu ? "ચંદ્રોદય" : isTa ? "சந்திரோதயம்" : isTe ? "చంద్రోదయం" : isBn ? "চন্দ্রোদয়" : "Moonrise";
+      case "moonset":
+        return isHi ? "चंद्रास्त" : isMr ? "चंद्रास्त" : isGu ? "ચંદ્રાસ્ત" : isTa ? "சந்திராஸ்தமனம்" : isTe ? "చంద్రాస్తమయం" : isBn ? "চন্দ্রাস্ত" : "Moonset";
+      default:
+        return key;
+    }
+  };
+
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
       {/* 5 Panchang Limbs */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         {[
           {
-            title: "Tithi (तिथि)",
+            title: getLimbLabel("tithi"),
             val: (typeof panchang?.tithi === "object" ? panchang.tithi?.name : panchang?.tithi) || "Shukla Dashami",
             sub: panchang?.tithi?.paksha || "",
             icon: "🌙",
           },
           {
-            title: "Nakshatra (नक्षत्र)",
+            title: getLimbLabel("nakshatra"),
             val: (typeof panchang?.nakshatra === "object" ? panchang.nakshatra?.name : panchang?.nakshatra) || "Rohini",
             sub: panchang?.nakshatra?.lord || "",
             icon: "⭐",
           },
           {
-            title: "Yoga (योग)",
+            title: getLimbLabel("yoga"),
             val: (typeof panchang?.yoga === "object" ? panchang.yoga?.name : panchang?.yoga) || "Shobhana",
             sub: "Luni-Solar",
             icon: "☀️",
           },
           {
-            title: "Karana (करण)",
+            title: getLimbLabel("karana"),
             val: (typeof panchang?.karana === "object" ? panchang.karana?.name : panchang?.karana) || "Kaulava",
             sub: "Half-tithi",
             icon: "🔆",
           },
           {
-            title: "Vaar (वार)",
+            title: getLimbLabel("vaar"),
             val: (typeof panchang?.vaar === "object" ? panchang.vaar?.name || panchang.vaar?.id : panchang?.vaar) || "Thursday",
             sub: panchang?.vaar?.lord || "Jupiter",
             icon: "📅",
@@ -89,10 +130,10 @@ export const PanchangTab: React.FC<PanchangTabProps> = ({
       {sunMoonTimings && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            { label: "Sunrise (सूर्योदय)", val: sunMoonTimings.sunrise || sunMoonTimings.sun_rise || panchang?.sunrise, icon: "🌅", color: "bg-amber-50 border-amber-200" },
-            { label: "Sunset (सूर्यास्त)", val: sunMoonTimings.sunset || sunMoonTimings.sun_set || panchang?.sunset, icon: "🌇", color: "bg-orange-50 border-orange-200" },
-            { label: "Moonrise (चंद्रोदय)", val: sunMoonTimings.moonrise || sunMoonTimings.moon_rise || panchang?.moonrise, icon: "🌕", color: "bg-indigo-50 border-indigo-200" },
-            { label: "Moonset", val: sunMoonTimings.moonset || sunMoonTimings.moon_set || panchang?.moonset, icon: "🌑", color: "bg-slate-50 border-slate-200" },
+            { label: getSunLabel("sunrise"), val: sunMoonTimings.sunrise || sunMoonTimings.sun_rise || panchang?.sunrise, icon: "🌅", color: "bg-amber-50 border-amber-200" },
+            { label: getSunLabel("sunset"), val: sunMoonTimings.sunset || sunMoonTimings.sun_set || panchang?.sunset, icon: "🌇", color: "bg-orange-50 border-orange-200" },
+            { label: getSunLabel("moonrise"), val: sunMoonTimings.moonrise || sunMoonTimings.moon_rise || panchang?.moonrise, icon: "🌕", color: "bg-indigo-50 border-indigo-200" },
+            { label: getSunLabel("moonset"), val: sunMoonTimings.moonset || sunMoonTimings.moon_set || panchang?.moonset, icon: "🌑", color: "bg-slate-50 border-slate-200" },
           ].map((t, i) => (
             <div key={i} className={`p-4 rounded-2xl border text-center ${t.color}`}>
               <div className="text-2xl mb-1">{t.icon}</div>

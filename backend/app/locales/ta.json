@@ -55,5 +55,30 @@
     "PURVA_BHADRAPADA": "பூரட்டாதி",
     "UTTARA_BHADRAPADA": "உத்திரட்டாதி",
     "REVATI": "ரேவதி"
+  },
+  "vaars": {
+    "SUNDAY": "ஞாயிறு",
+    "MONDAY": "திங்கள்",
+    "TUESDAY": "செவ்வாய்",
+    "WEDNESDAY": "புதன்",
+    "THURSDAY": "வியாழன்",
+    "FRIDAY": "வெள்ளி",
+    "SATURDAY": "சனி"
+  },
+  "choghadiya": {
+    "UDWEG": "உத்வேகம் (தீது)",
+    "CHAL": "சரம் (நடுநிலை)",
+    "LABH": "லாபம் (சுபம்)",
+    "AMRIT": "அமிர்தம் (உத்தமம்)",
+    "KAAL": "காலம் (தீது)",
+    "SHUBH": "சுபம் (நன்று)",
+    "ROG": "ரோகம் (தீது)"
+  },
+  "doshas": {
+    "MANGLIK": "செவ்வாய் தோஷம்",
+    "SADE_SATI": "ஏழரை சனி",
+    "KAALSARP": "காலசர்ப்ப தோஷம்",
+    "PITRA": "பித்ரு தோஷம்",
+    "GURU_CHANDAL": "குரு சண்டாள தோஷம்"
   }
 }

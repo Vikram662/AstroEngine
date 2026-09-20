@@ -55,5 +55,30 @@
     "PURVA_BHADRAPADA": "પૂર્વા ભાદ્રપદ",
     "UTTARA_BHADRAPADA": "ઉત્તરા ભાદ્રપદ",
     "REVATI": "રેવતી"
+  },
+  "vaars": {
+    "SUNDAY": "રવિવાર",
+    "MONDAY": "સોમવાર",
+    "TUESDAY": "મંગળવાર",
+    "WEDNESDAY": "બુધવાર",
+    "THURSDAY": "ગુરુવાર",
+    "FRIDAY": "શુક્રવાર",
+    "SATURDAY": "શનિવાર"
+  },
+  "choghadiya": {
+    "UDWEG": "ઉદ્વેગ (અશુભ)",
+    "CHAL": "ચલ (સામાન્ય)",
+    "LABH": "લાભ (શુભ)",
+    "AMRIT": "અમૃત (શ્રેષ્ઠ)",
+    "KAAL": "કાળ (હાનિ)",
+    "SHUBH": "શુભ (ઉત્તમ)",
+    "ROG": "રોગ (અશુભ)"
+  },
+  "doshas": {
+    "MANGLIK": "માંગલિક દોષ",
+    "SADE_SATI": "શનિ સાડાસાતી",
+    "KAALSARP": "કાલસર્પ દોષ",
+    "PITRA": "પિતૃ દોષ",
+    "GURU_CHANDAL": "ગુરુ ચાંડાળ દોષ"
   }
 }

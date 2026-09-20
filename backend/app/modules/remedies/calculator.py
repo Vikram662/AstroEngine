@@ -77,9 +77,23 @@ def calculate_gemstone_recommendations(
     maraka_7 = ZODIAC_SIGNS[(asc_sign_idx + 6) % 12]["ruler"]
     maraka_planets = list(set([maraka_2, maraka_7]))
 
+    # Multilingual Gemstone Names Catalog
+    GEMSTONE_NAMES_I18N = {
+        "SUN": {"en": "Ruby", "hi": "माणिक्य (Ruby)", "ta": "மாணிக்கம் (Ruby)", "te": "కెంపు (Ruby)", "bn": "চুনি (Ruby)"},
+        "MOON": {"en": "Pearl", "hi": "मोती (Pearl)", "ta": "முத்து (Pearl)", "te": "ముత్యం (Pearl)", "bn": "মুক্তো (Pearl)"},
+        "MARS": {"en": "Red Coral", "hi": "मूँगा (Red Coral)", "ta": "பவளம் (Red Coral)", "te": "పగడం (Red Coral)", "bn": "পলা (Red Coral)"},
+        "MERCURY": {"en": "Emerald", "hi": "पन्ना (Emerald)", "ta": "மரகதம் (Emerald)", "te": "మరకతం / పచ్చ (Emerald)", "bn": "পান্না (Emerald)"},
+        "JUPITER": {"en": "Yellow Sapphire", "hi": "पुखराज (Yellow Sapphire)", "ta": "புஷ்பராகம் (Yellow Sapphire)", "te": "పుష్యరాగం (Yellow Sapphire)", "bn": "পোখরাজ (Yellow Sapphire)"},
+        "VENUS": {"en": "Diamond / White Sapphire", "hi": "हीरा / ओपल (Diamond)", "ta": "வைரம் (Diamond)", "te": "వజ్రం (Diamond)", "bn": "হীরে (Diamond)"},
+        "SATURN": {"en": "Blue Sapphire", "hi": "नीलम (Blue Sapphire)", "ta": "நீலக்கல் (Blue Sapphire)", "te": "నీలం (Blue Sapphire)", "bn": "নীলা (Blue Sapphire)"},
+        "RAHU": {"en": "Hessonite (Gomed)", "hi": "गोमेद (Hessonite)", "ta": "கோமேதகம் (Hessonite)", "te": "గోమేధికం (Hessonite)", "bn": "গোমেদ (Hessonite)"},
+        "KETU": {"en": "Cat's Eye (Lehsunia)", "hi": "लहसुनिया (Cat's Eye)", "ta": "வைடூரியம் (Cat's Eye)", "te": "వైడూర్యం (Cat's Eye)", "bn": "বৈদূর্য (Cat's Eye)"}
+    }
+
     def get_gem_meta(planet: str):
         meta = GEMSTONE_CATALOG.get(planet, GEMSTONE_CATALOG["SUN"])
-        stone_name = meta["stone_hi"] if lang == "hi" else meta["stone_en"]
+        names_dict = GEMSTONE_NAMES_I18N.get(planet, {"en": meta["stone_en"]})
+        stone_name = names_dict.get(lang, names_dict.get("en", meta["stone_en"]))
         p_name = translate_entity("planets", planet, lang, planet.capitalize())
         return {
             "planet_id": planet,

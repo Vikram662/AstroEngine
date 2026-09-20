@@ -139,18 +139,19 @@ def calculate_daily_panchang(
 
     weekday_idx = effective_dt.weekday() # 0 = Monday, 6 = Sunday
     vaar_meta = VAARS[weekday_idx]
+    clean_lang = (lang or "en").lower().strip()
 
     return {
         "date": dob,
         "time": tob,
         "vaar": {
             "id": vaar_meta["id"],
-            "name": vaar_meta["name_hi"] if lang == "hi" else vaar_meta["name_en"],
-            "lord": vaar_meta["lord"]
+            "name": translate_entity("vaars", vaar_meta["id"], clean_lang, vaar_meta["name_hi"] if clean_lang == "hi" else vaar_meta["name_en"]),
+            "lord": translate_entity("planets", vaar_meta["lord"], clean_lang, vaar_meta["lord"])
         },
         "tithi": {
             "id": tithi_meta["id"],
-            "name": tithi_meta["name_hi"] if lang == "hi" else tithi_meta["name_en"],
+            "name": translate_entity("tithis", tithi_meta["id"], clean_lang, tithi_meta["name_hi"] if clean_lang == "hi" else tithi_meta["name_en"]),
             "paksha": tithi_meta["paksha"],
             "number": tithi_index + 1,
             "percent_completed": tithi_percent_passed
@@ -240,6 +241,7 @@ def calculate_choghadiya(
         return f"{sec // 3600:02d}:{(sec % 3600) // 60:02d}:{(sec % 60):02d}"
 
     day_slots = []
+    clean_lang = (lang or "en").lower().strip()
     for i, chog_key in enumerate(selected_day_pattern):
         start_s = sr_sec + (i * day_slot_sec)
         end_s = start_s + day_slot_sec
@@ -247,8 +249,8 @@ def calculate_choghadiya(
         day_slots.append({
             "slot_number": i + 1,
             "name": chog_key,
-            "nature": meta["nature_hi"] if lang == "hi" else meta["nature"],
-            "ruler": meta["ruler"],
+            "nature": translate_entity("choghadiya", chog_key, clean_lang, meta["nature_hi"] if clean_lang == "hi" else meta["nature"]),
+            "ruler": translate_entity("planets", meta["ruler"], clean_lang, meta["ruler"]),
             "start_time": fmt(start_s),
             "end_time": fmt(end_s)
         })
@@ -261,8 +263,8 @@ def calculate_choghadiya(
         night_slots.append({
             "slot_number": i + 1,
             "name": chog_key,
-            "nature": meta["nature_hi"] if lang == "hi" else meta["nature"],
-            "ruler": meta["ruler"],
+            "nature": translate_entity("choghadiya", chog_key, clean_lang, meta["nature_hi"] if clean_lang == "hi" else meta["nature"]),
+            "ruler": translate_entity("planets", meta["ruler"], clean_lang, meta["ruler"]),
             "start_time": fmt(start_s),
             "end_time": fmt(end_s)
         })

@@ -17,6 +17,7 @@ interface OverviewTabProps {
   profile: any;
   manglikData: any;
   kaalSarpData: any;
+  lang?: string;
 }
 
 export const OverviewTab: React.FC<OverviewTabProps> = ({
@@ -33,7 +34,23 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   profile,
   manglikData,
   kaalSarpData,
+  lang = "en",
 }) => {
+  const isHi = lang === "hi";
+  const isMr = lang === "mr";
+  const isGu = lang === "gu";
+  const isTa = lang === "ta";
+  const isTe = lang === "te";
+  const isBn = lang === "bn";
+
+  const labels = {
+    lagna: isHi ? "लग्न (प्रथम भाव)" : isMr ? "लग्न (पहिले स्थान)" : isGu ? "લગ્ન (પ્રથમ ભાવ)" : isTa ? "லக்னம்" : isTe ? "లగ్నం" : isBn ? "লগ্ন" : "Lagna (Ascendant)",
+    moonSign: isHi ? "चंद्र राशि (जन्म राशि)" : isMr ? "चंद्र राशी (जन्म राशी)" : isGu ? "ચંદ્ર રાશિ (જન્મ રાશિ)" : isTa ? "சந்திர ராசி" : isTe ? "చంద్ర రాశి" : isBn ? "চন্দ্র রাশি" : "Moon Sign (Janma Rashi)",
+    sunSign: isHi ? "सूर्य राशि" : isMr ? "सूर्य राशी" : isGu ? "સૂર્ય રાશિ" : isTa ? "சூரிய ராசி" : isTe ? "సూర్య రాశి" : isBn ? "সূর্য রাশি" : "Sun Sign (Surya Rashi)",
+    currentDasha: isHi ? "वर्तमान महादशा" : isMr ? "चालू महादशा" : isGu ? "ચાલુ મહાદશા" : isTa ? "தற்போதைய தசா" : isTe ? "ప్రస్తుత దశ" : isBn ? "বর্তমান মহাদশা" : "Current Dasha",
+    antar: isHi ? "अंतर्दशा" : isMr ? "अंतर्दशा" : isGu ? "અંતર્દશા" : isTa ? "புக்தி" : isTe ? "అంతర్దశ" : isBn ? "অন্তর্দশা" : "Antar",
+  };
+
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
       {/* Quick Summary Cards */}
@@ -41,7 +58,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         {/* Card 1: Lagna */}
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
           <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-            Lagna (Ascendant)
+            {labels.lagna}
           </div>
           <div className="text-xl font-black text-slate-900 mt-1">
             {typeof d1Chart?.ascendant?.sign === "object"
@@ -60,7 +77,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         {/* Card 2: Vedic Moon Sign (Janma Rashi) */}
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
           <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-            Moon Sign (जन्म राशि)
+            {labels.moonSign}
           </div>
           {(() => {
             const moonPlanet = planets.find(
@@ -105,7 +122,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         {/* Card 3: Vedic Sun Sign (Surya Rashi) */}
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
           <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-            Sun Sign (सूर्य राशि)
+            {labels.sunSign}
           </div>
           {(() => {
             const sunPlanet = planets.find(
@@ -141,7 +158,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         {/* Card 4: Current Dasha */}
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
           <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-            Current Dasha (वर्तमान दशा)
+            {labels.currentDasha}
           </div>
           {(() => {
             const mdName =
@@ -162,7 +179,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                   {mdName}
                 </div>
                 <div className="text-xs text-slate-500 mt-0.5">
-                  Antar: <strong>{adName}</strong> {pdName ? `> ${pdName}` : ""}
+                  {labels.antar}: <strong>{adName}</strong> {pdName ? `> ${pdName}` : ""}
                 </div>
               </>
             );
