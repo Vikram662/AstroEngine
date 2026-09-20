@@ -77,12 +77,13 @@ async def process_pdf_job_async(
 
         title_readable = report_type.replace("_", " ").title()
 
-        # 2. Real PDF Rendering (Binary PDF 1.4 stream)
+        # 2. Real PDF Rendering (Tailored Multi-Page Binary PDF 1.4 vector stream)
         pdf_bytes = render_real_pdf_bytes(
             report_title=f"{title_readable} Horoscope",
             birth_data=birth_data,
             chart=chart,
             branding=branding,
+            report_type=report_type,
             lang=lang
         )
 

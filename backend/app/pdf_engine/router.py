@@ -183,7 +183,10 @@ async def create_matching_pdf_job(
 
     job_id = f"pdf_job_{uuid.uuid4().hex[:12]}"
     selected_lang = (req.lang or "en").lower().strip()
-    birth_data = {"dob": req.dob, "tob": req.tob, "lat": req.lat, "lon": req.lon, "tz": req.tz}
+    birth_data = {
+        "dob": req.dob, "tob": req.tob, "lat": req.lat, "lon": req.lon, "tz": req.tz,
+        "girl_dob": req.girl_dob, "girl_tob": req.girl_tob, "girl_lat": req.girl_lat, "girl_lon": req.girl_lon, "girl_tz": req.girl_tz
+    }
     branding_dict = req.branding.dict() if req.branding else {}
 
     PDF_JOBS[job_id] = {
@@ -220,7 +223,10 @@ async def create_varshphal_pdf_job(
 
     job_id = f"pdf_job_{uuid.uuid4().hex[:12]}"
     selected_lang = (req.lang or "en").lower().strip()
-    birth_data = {"dob": req.dob, "tob": req.tob, "lat": req.lat, "lon": req.lon, "tz": req.tz}
+    birth_data = {
+        "dob": req.dob, "tob": req.tob, "lat": req.lat, "lon": req.lon, "tz": req.tz,
+        "target_year": req.target_year or 2026
+    }
     branding_dict = req.branding.dict() if req.branding else {}
 
     PDF_JOBS[job_id] = {

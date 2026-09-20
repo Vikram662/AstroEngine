@@ -48,6 +48,13 @@ class PdfReportRequest(BaseModel):
     lang: Optional[str] = Field("en", description="Output language: en, hi, gu, mr, ta, te", example="en")
     branding: Optional[BrandingConfig] = Field(default_factory=BrandingConfig, description="White-label custom header/footer metadata")
     webhook_url: Optional[str] = Field(None, description="Optional HTTPS callback URL on completion", example="https://api.yourdomain.com/webhooks/pdf-completed")
+    # Optional parameters for Matchmaking & Varshphal reports
+    girl_dob: Optional[str] = Field(None, description="Partner Date of birth for matchmaking", example="1997-04-18")
+    girl_tob: Optional[str] = Field(None, description="Partner Time of birth", example="08:15")
+    girl_lat: Optional[float] = Field(None, description="Partner Latitude", example=28.6139)
+    girl_lon: Optional[float] = Field(None, description="Partner Longitude", example=77.2090)
+    girl_tz: Optional[float] = Field(5.5, description="Partner Timezone offset", example=5.5)
+    target_year: Optional[int] = Field(None, description="Target year for Varshphal solar return", example=2026)
 
 class PdfJobResponse(BaseModel):
     model_config = ConfigDict(
