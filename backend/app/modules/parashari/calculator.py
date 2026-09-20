@@ -564,6 +564,94 @@ def generate_chart_svg(
     def h_sign(h: int) -> int:
         return ((asc_sign_num + (h - 1) - 1) % 12) + 1
 
+    # ══════════════════════════════════════════════════════════════════════════
+    # SOUTH INDIAN CHART GENERATOR (Fixed Zodiac Box Grid with Lagna marker)
+    # ══════════════════════════════════════════════════════════════════════════
+    if chart_style and chart_style.upper() in ["SOUTH_INDIAN", "SOUTH"]:
+        # South Indian fixed sign boxes:
+        # Row 1: Pisces (12), Aries (1), Taurus (2), Gemini (3)
+        # Row 2: Aquarius (11), [CENTER], Cancer (4)
+        # Row 3: Capricorn (10), [CENTER], Leo (5)
+        # Row 4: Sagittarius (9), Scorpio (8), Libra (7), Virgo (6)
+        SIGN_BOX_COORDS = {
+            12: (10,  10,  95, 95, 57, 57),
+            1:  (105, 10,  95, 95, 152, 57),
+            2:  (200, 10,  95, 95, 247, 57),
+            3:  (295, 10,  95, 95, 342, 57),
+            11: (10,  105, 95, 95, 57, 152),
+            4:  (295, 105, 95, 95, 342, 152),
+            10: (10,  200, 95, 95, 57, 247),
+            5:  (295, 200, 95, 95, 342, 247),
+            9:  (10,  295, 95, 95, 57, 342),
+            8:  (105, 295, 95, 95, 152, 342),
+            7:  (200, 295, 95, 95, 247, 342),
+            6:  (295, 295, 95, 95, 342, 342),
+        }
+        SIGN_NAMES = {
+            1: "Mesha", 2: "Vrish", 3: "Mithun", 4: "Karka",
+            5: "Simha", 6: "Kanya", 7: "Tula", 8: "Vrishc",
+            9: "Dhanu", 10: "Makar", 11: "Kumbh", 12: "Meena"
+        }
+
+        # Sign to house mapping:
+        # Sign S contains house H = ((S - asc_sign_num) % 12) + 1
+        sign_planets: Dict[int, list] = {s: [] for s in range(1, 13)}
+        for p in chart_data.get("planets", []):
+            p_id = p.get("id", "")
+            p_sign = p.get("sign", {}).get("number")
+            if not p_sign:
+                h_num = p.get("house", 1)
+                p_sign = h_sign(h_num)
+            
+            p_label = HINDI_PLANET_ABBR.get(p_id, p_id[:2]) if lang == "hi" else ENGLISH_PLANET_ABBR.get(p_id, p_id[:2].capitalize())
+            dignity = p.get("dignity")
+            color = "#047857" if dignity == "EXALTED" else ("#dc2626" if dignity == "DEBILITATED" else "#1e3a8a")
+            deg_s = ""
+            if "norm_degree" in p:
+                nd = float(p["norm_degree"])
+                deg_s = f" {int(nd)}°"
+            sign_planets[p_sign].append((f"{p_label}{deg_s}", color))
+
+        box_elements = []
+        for s_idx, (bx, by, bw, bh, cx, cy) in SIGN_BOX_COORDS.items():
+            is_lagna = (s_idx == asc_sign_num)
+            lagna_mark = ""
+            if is_lagna:
+                lagna_mark = f'''
+                <line x1="{bx}" y1="{by}" x2="{bx + bw}" y2="{by + bh}" stroke="#dc2626" stroke-width="1.5" stroke-dasharray="2 2"/>
+                <text x="{bx + 6}" y="{by + 16}" font-size="10" font-weight="900" fill="#dc2626">ASC (लग्न)</text>
+                '''
+            s_name = SIGN_NAMES[s_idx]
+            p_items = sign_planets[s_idx]
+            p_lines = []
+            start_y = by + 28 if is_lagna else by + 20
+            for itm, col in p_items[:4]:
+                p_lines.append(f'<text x="{cx}" y="{start_y}" text-anchor="middle" font-size="9.5" fill="{col}" font-weight="bold">{itm}</text>')
+                start_y += 13
+
+            box_svg = f'''
+            <rect x="{bx}" y="{by}" width="{bw}" height="{bh}" fill="#fffdfa" stroke="#b45309" stroke-width="1.2"/>
+            <text x="{bx + bw - 4}" y="{by + bh - 4}" text-anchor="end" font-size="8.5" fill="#a16207" font-weight="bold">{s_name}</text>
+            {lagna_mark}
+            {''.join(p_lines)}
+            '''
+            box_elements.append(box_svg)
+
+        south_svg = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="100%" height="100%" style="font-family:'Segoe UI',Roboto,sans-serif; background:#fefdf8; border:2px solid #b45309; border-radius:8px;">
+        <!-- Outer Border -->
+        <rect x="10" y="10" width="380" height="380" fill="none" stroke="#b45309" stroke-width="2"/>
+        <!-- Central Hollow Area -->
+        <rect x="105" y="105" width="190" height="190" fill="#fffbeb" stroke="#b45309" stroke-width="1.5"/>
+        <text x="200" y="185" text-anchor="middle" font-size="16" fill="#92400e" font-weight="bold" letter-spacing="1">{chart_data.get('varga', 'D1')}</text>
+        <text x="200" y="208" text-anchor="middle" font-size="11" fill="#78350f" font-weight="bold">South Indian Style (दक्षिण भारतीय)</text>
+        <text x="200" y="226" text-anchor="middle" font-size="10" fill="#b45309">Lagna: {SIGN_NAMES.get(asc_sign_num, "")}</text>
+        {''.join(box_elements)}
+        </svg>'''
+        return south_svg
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # NORTH INDIAN CHART GENERATOR (Default Diamond Grid)
+    # ══════════════════════════════════════════════════════════════════════════
     svg = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="100%" height="100%" style="font-family:'Segoe UI',Roboto,Helvetica,sans-serif; background:#fffdfa; border:2px solid #b45309; border-radius:8px;">
     <!-- Outer boundary & Main Diagonals -->
     <rect x="8" y="8" width="384" height="384" fill="none" stroke="#b45309" stroke-width="2"/>

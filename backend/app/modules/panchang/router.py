@@ -160,3 +160,102 @@ async def get_property_vehicle_muhurats(
     data = calculate_muhurat_selection(req.dob, req.lat, req.lon, req.tz, "PROPERTY_VEHICLE", 15)
     return StandardResponse(status="success", language=selected_lang, data=data)
 
+
+# ═══════════════════════════════════════════════════════════════════════════
+# HOROSCOPE & RASHIFAL APIS (All 12 Rashis: Daily, Weekly, Monthly, Yearly)
+# ═══════════════════════════════════════════════════════════════════════════
+from app.modules.panchang.horoscope import (
+    calculate_daily_horoscope,
+    calculate_weekly_horoscope,
+    calculate_monthly_horoscope,
+    calculate_yearly_horoscope
+)
+
+@router.post("/horoscope/daily", response_model=StandardResponse)
+async def get_daily_horoscope(
+    req: BirthDataRequest,
+    key_hash: str = Depends(verify_api_key)
+):
+    """
+    Daily Horoscope / Rashifal for all 12 Rashis or user's sign.
+    Calculates Moon transit house, career/finance/love/health scores, lucky numbers, and colors.
+    """
+    selected_lang = (req.lang or "en").lower().strip()
+    data = calculate_daily_horoscope(
+        dob=req.dob,
+        tob=req.tob or "06:00",
+        tz=req.tz,
+        lang=selected_lang
+    )
+    return StandardResponse(status="success", language=selected_lang, data=data)
+
+@router.post("/horoscope/weekly", response_model=StandardResponse)
+async def get_weekly_horoscope(
+    req: BirthDataRequest,
+    key_hash: str = Depends(verify_api_key)
+):
+    """Weekly Horoscope / Rashifal for all 12 Rashis."""
+    selected_lang = (req.lang or "en").lower().strip()
+    data = calculate_weekly_horoscope(
+        dob=req.dob,
+        tz=req.tz,
+        lang=selected_lang
+    )
+    return StandardResponse(status="success", language=selected_lang, data=data)
+
+@router.post("/horoscope/monthly", response_model=StandardResponse)
+async def get_monthly_horoscope(
+    req: BirthDataRequest,
+    key_hash: str = Depends(verify_api_key)
+):
+    """Monthly Horoscope / Rashifal for all 12 Rashis with best dates."""
+    selected_lang = (req.lang or "en").lower().strip()
+    data = calculate_monthly_horoscope(
+        dob=req.dob,
+        tz=req.tz,
+        lang=selected_lang
+    )
+    return StandardResponse(status="success", language=selected_lang, data=data)
+
+@router.post("/horoscope/yearly", response_model=StandardResponse)
+async def get_yearly_horoscope(
+    req: BirthDataRequest,
+    key_hash: str = Depends(verify_api_key)
+):
+    """Annual / Yearly Horoscope for all 12 Rashis based on major planetary transits."""
+    selected_lang = (req.lang or "en").lower().strip()
+    year = int(req.dob.split("-")[0]) if req.dob else 2026
+    if year < 2020 or year > 2035:
+        year = 2026
+    data = calculate_yearly_horoscope(
+        year=year,
+        lang=selected_lang
+    )
+    return StandardResponse(status="success", language=selected_lang, data=data)
+
+# ═══════════════════════════════════════════════════════════════════════════
+# NAMAKSHAR & BABY NAMING (Janma Nakshatra Pada Syllables & Deity)
+# ═══════════════════════════════════════════════════════════════════════════
+from app.modules.panchang.namakshar import calculate_namakshar_and_naming
+
+@router.post("/namakshar", response_model=StandardResponse)
+async def get_namakshar_analysis(
+    req: BirthDataRequest,
+    key_hash: str = Depends(verify_api_key)
+):
+    """
+    Namakshar & Baby Naming API:
+    Calculates exact Janma Nakshatra Pada syllable (नामाक्षर), starting letters,
+    ruling deity, Rashi, and numerological Mulank for child naming ceremonies.
+    """
+    selected_lang = (req.lang or "en").lower().strip()
+    data = calculate_namakshar_and_naming(
+        dob=req.dob,
+        tob=req.tob,
+        tz=req.tz,
+        lat=req.lat,
+        lon=req.lon,
+        lang=selected_lang
+    )
+    return StandardResponse(status="success", language=selected_lang, data=data)
+

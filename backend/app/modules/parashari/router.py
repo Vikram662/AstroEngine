@@ -160,11 +160,12 @@ async def get_d60_shashtiamsha_chart(req: BirthDataRequest, key_hash: str = Depe
 async def get_chart_svg(
     req: BirthDataRequest,
     varga: str = "D1",
+    chart_style: str = "NORTH_INDIAN",
     key_hash: str = Depends(verify_api_key)
 ):
     """
     Module 3 — Endpoint 21: High-Performance Vector SVG Chart Generator.
-    Returns direct SVG image data for seamless UI rendering or PDF embedding.
+    Supports chart_style="NORTH_INDIAN" (Diamond) and "SOUTH_INDIAN" (Fixed Zodiac Box Grid).
     """
     selected_lang = (req.lang or "en").lower().strip()
     chart = compute_varga_chart(
@@ -176,7 +177,7 @@ async def get_chart_svg(
         varga=varga.upper(),
         lang=selected_lang
     )
-    svg_content = generate_chart_svg(chart)
+    svg_content = generate_chart_svg(chart, chart_style=chart_style)
     return Response(content=svg_content, media_type="image/svg+xml")
 
 @router.post("/chart/bhav-chalit", response_model=StandardResponse)
@@ -306,5 +307,32 @@ async def get_classical_yogas(
     """Module 3 — Endpoint 30: 100+ classical Parashari yoga scanner (Gajakesari, Budhaditya, Pancha Mahapurusha, etc.)."""
     selected_lang = (req.lang or "en").lower().strip()
     data = calculate_parashari_yogas(req.dob, req.tob, req.lat, req.lon, req.tz, req.ayanamsa or "LAHIRI")
+    return StandardResponse(status="success", language=selected_lang, data=data)
+
+# ═══════════════════════════════════════════════════════════════════════════
+# 12 HOUSES (BHAVAPHALA) & LIFE PREDICTIONS ENGINE
+# ═══════════════════════════════════════════════════════════════════════════
+from app.modules.parashari.house_predictions import calculate_12_houses_predictions
+
+@router.post("/predictions/12-houses", response_model=StandardResponse)
+async def get_12_houses_predictions(
+    req: BirthDataRequest,
+    key_hash: str = Depends(verify_api_key)
+):
+    """
+    12 Houses Bhavaphala & Life Predictions API:
+    Calculates detailed predictions for all 12 Houses (Career, Wealth, Spouse, Health, Luck, Moksha),
+    sign lords, occupants, potency scores, and classical Parashari remedies.
+    """
+    selected_lang = (req.lang or "en").lower().strip()
+    data = calculate_12_houses_predictions(
+        dob=req.dob,
+        tob=req.tob,
+        lat=req.lat,
+        lon=req.lon,
+        tz=req.tz,
+        ayanamsa=req.ayanamsa or "LAHIRI",
+        lang=selected_lang
+    )
     return StandardResponse(status="success", language=selected_lang, data=data)
 

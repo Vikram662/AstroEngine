@@ -107,8 +107,15 @@ async def get_level_4_significators(
 ):
     """Module 5 — Endpoint 41: 4-Grade (A/B/C/D) KP Significator Table."""
     selected_lang = (req.lang or "en").lower().strip()
-    data = calculate_kp_significators(req.dob, req.tob, req.lat, req.lon, req.tz)
-    return StandardResponse(status="success", language=selected_lang, data=data["planet_4_level_significators"])
+    calc_data = calculate_kp_significators(req.dob, req.tob, req.lat, req.lon, req.tz)
+    # Include both per-house and per-planet 4-grade mappings so frontend renders perfectly
+    combined_data = {
+        **calc_data["house_significators"],
+        "houses": calc_data["house_significators"],
+        "planets": calc_data["planet_4_level_significators"],
+        "planet_4_level_significators": calc_data["planet_4_level_significators"]
+    }
+    return StandardResponse(status="success", language=selected_lang, data=combined_data)
 
 @router.post("/house-significators", response_model=StandardResponse)
 async def get_house_significators(

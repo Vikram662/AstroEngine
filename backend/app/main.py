@@ -14,6 +14,9 @@ from app.modules.western.router import router as western_router
 from app.modules.lalkitab.router import router as lalkitab_router
 from app.modules.advanced.router import router as advanced_router
 from app.pdf_engine.router import router as pdf_router
+from app.modules.ai_astrologer.router import router as ai_astrologer_router
+from app.modules.tarot.router import router as tarot_router
+from app.modules.vastu.router import router as vastu_router
 
 TAGS_METADATA = [
     {
@@ -492,6 +495,9 @@ app.include_router(western_router, responses=ENDPOINT_RESPONSES)
 app.include_router(lalkitab_router, responses=ENDPOINT_RESPONSES)
 app.include_router(advanced_router, responses=ENDPOINT_RESPONSES)
 app.include_router(pdf_router, responses=ENDPOINT_RESPONSES)
+app.include_router(ai_astrologer_router, responses=ENDPOINT_RESPONSES)
+app.include_router(tarot_router, responses=ENDPOINT_RESPONSES)
+app.include_router(vastu_router, responses=ENDPOINT_RESPONSES)
 
 @app.get("/documentation", response_class=HTMLResponse, include_in_schema=False)
 @app.get("/redoc", response_class=HTMLResponse, include_in_schema=False)

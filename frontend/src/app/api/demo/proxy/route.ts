@@ -112,3 +112,56 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(data, { status });
   }
 }
+
+export async function GET(request: NextRequest) {
+  try {
+    if (!INTERNAL_API_KEY) {
+      return NextResponse.json({ status: "error", message: "Server not configured." }, { status: 500 });
+    }
+
+    const { searchParams } = new URL(request.url);
+    const dlMode = searchParams.get("dl");
+    const jobId = searchParams.get("job_id");
+    const endpoint = searchParams.get("endpoint");
+
+    // \u2500\u2500 PDF Binary Download Mode \u2500\u2500
+    if (dlMode === "pdf" && jobId) {
+      const safeJobId = jobId.replace(/[^a-zA-Z0-9_-]/g, "");
+      const targetUrl = `${BACKEND_URL}/api/v1/pdf/download/${safeJobId}`;
+      const response = await axios({
+        method: "GET",
+        url: targetUrl,
+        headers: { "x-api-key": INTERNAL_API_KEY },
+        responseType: "arraybuffer",
+        timeout: 30000
+      });
+      return new NextResponse(response.data, {
+        status: 200,
+        headers: {
+          "Content-Type": "application/pdf",
+          "Content-Disposition": `attachment; filename="${safeJobId}.pdf"`
+        }
+      });
+    }
+
+    // \u2500\u2500 Generic GET proxy (PDF status polling) \u2500\u2500
+    if (endpoint && typeof endpoint === "string" && endpoint.startsWith("/api/v1/")) {
+      const targetUrl = new URL(endpoint, BACKEND_URL);
+      const response = await axios({
+        method: "GET",
+        url: targetUrl.toString(),
+        headers: { "x-api-key": INTERNAL_API_KEY, "Content-Type": "application/json" },
+        timeout: 10000
+      });
+      return NextResponse.json(response.data, { status: response.status });
+    }
+
+    return NextResponse.json({ status: "error", message: "Missing required params." }, { status: 400 });
+  } catch (err: unknown) {
+    const error = err as any;
+    return NextResponse.json({
+      status: "error",
+      message: error.message || "Proxy GET failed."
+    }, { status: error.response?.status || 500 });
+  }
+}

@@ -474,6 +474,20 @@ def get_running_dasha_tree(
         }
     }
 
+def calculate_current_dasha(dob: str, tob: str, tz: float, moon_lon: float = 0.0) -> Dict[str, Any]:
+    """Convenience wrapper to get running Dasha hierarchy."""
+    if moon_lon == 0.0:
+        try:
+            from app.modules.core_astronomy.calculator import calculate_planet_positions
+            pos = calculate_planet_positions(dob, tob, 28.6139, 77.2090, tz)
+            for p in pos.get("planets", []):
+                if p.get("id") == "MOON":
+                    moon_lon = p.get("full_degree", 45.0)
+                    break
+        except Exception:
+            moon_lon = 45.0
+    return get_running_dasha_tree(dob, tob, tz, moon_lon)
+
 # 8 Yoginis in classical sequence with ruling planets and year spans (Total = 36 years)
 YOGINI_SEQUENCE = [
     {"id": "MANGALA", "ruler": "MOON", "years": 1.0, "deity": "Mangala (Auspicious)"},

@@ -307,15 +307,22 @@ def calculate_kp_significators(
         # Grade C: In star of house lord
         c_planets = [pid for pid, st_lord in p_stars.items() if st_lord == d_planet]
 
-        house_sig_table[f"House_{h}"] = {
+        house_data = {
             "house": h,
             "sign_lord": d_planet,
+            "grade_a": list(set(a_planets)),
+            "grade_b": list(set(b_planets)),
+            "grade_c": list(set(c_planets)),
+            "grade_d": [d_planet],
             "grade_a_strongest": list(set(a_planets)),
             "grade_b_occupants": list(set(b_planets)),
             "grade_c_lord_stars": list(set(c_planets)),
             "grade_d_house_lord": [d_planet],
             "all_significators": list(set(a_planets + b_planets + c_planets + [d_planet]))
         }
+        house_sig_table[f"House_{h}"] = house_data
+        house_sig_table[f"house_{h}"] = house_data
+        house_sig_table[str(h)] = house_data
 
     # Per-planet 4-grade summary
     planet_sig_table = {}
