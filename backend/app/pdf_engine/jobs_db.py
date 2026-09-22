@@ -21,10 +21,16 @@ def init_db():
                 credits_cost REAL DEFAULT 0.0,
                 refunded INTEGER DEFAULT 0,
                 failure_reason TEXT,
+                owner_key_hash TEXT,
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL
             )
         """)
+        # Migration for DBs created before owner_key_hash existed.
+        try:
+            cursor.execute("ALTER TABLE pdf_jobs ADD COLUMN owner_key_hash TEXT")
+        except sqlite3.OperationalError:
+            pass  # column already exists
         conn.commit()
 
 init_db()
@@ -113,9 +119,9 @@ class PersistentJobStore:
             with sqlite3.connect(DB_PATH) as conn:
                 cursor = conn.cursor()
                 cursor.execute("""
-                    INSERT OR REPLACE INTO pdf_jobs 
-                    (job_id, report_type, language, status, file_url, file_path, credits_cost, refunded, failure_reason, created_at, updated_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    INSERT OR REPLACE INTO pdf_jobs
+                    (job_id, report_type, language, status, file_url, file_path, credits_cost, refunded, failure_reason, owner_key_hash, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
                     job_id,
                     value.get("report_type", "kundli_basic"),
@@ -126,6 +132,7 @@ class PersistentJobStore:
                     value.get("credits_cost", 0.0),
                     1 if value.get("refunded") else 0,
                     value.get("failure_reason"),
+                    value.get("owner_key_hash"),
                     now,
                     now
                 ))

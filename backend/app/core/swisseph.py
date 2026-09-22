@@ -14,6 +14,7 @@ AYANAMSA_MODES = {
     "LAHIRI": swe.SIDM_LAHIRI,
     "RAMAN": swe.SIDM_RAMAN,
     "KP": swe.SIDM_KRISHNAMURTI,
+    "KRISHNAMURTI": swe.SIDM_KRISHNAMURTI,  # alias — BirthDataRequest.ayanamsa accepts both "KP" and "KRISHNAMURTI"
     "FAGAN_BRADLEY": swe.SIDM_FAGAN_BRADLEY,
     "TROPICAL": -1,  # Special flag for Sayana / Western calculations
 }
@@ -156,4 +157,22 @@ def calculate_moon_longitude(dob: str, tob: str, tz: float) -> float:
     flags = swe.FLG_SWIEPH | swe.FLG_SPEED | swe.FLG_SIDEREAL
     moon_res, _ = swe.calc_ut(jd_ut, swe.MOON, flags)
     return float(moon_res[0])
+
+
+def find_solar_return_jd(natal_jd_ut: float, target_year: int) -> float:
+    """
+    Exact UT Julian Day when the transiting Sun returns to its natal (tropical)
+    longitude within `target_year` -- the astronomical moment a Solar Return /
+    Varshaphal chart is cast for. Uses Swiss Ephemeris's own crossing-finder
+    (swe.solcross_ut) rather than a hand-rolled search. Solar-longitude crossing
+    time is effectively identical whether computed tropically or sidereally (the
+    two frames differ only by the slowly-precessing ayanamsa, ~50 arcsec/year,
+    a few minutes at most against the Sun's ~1 deg/day motion), so this searches
+    in the tropical frame and the caller applies sidereal flags separately when
+    reading planetary positions at the returned moment.
+    """
+    natal_sun, _ = swe.calc_ut(natal_jd_ut, swe.SUN, swe.FLG_SWIEPH)
+    natal_sun_lon = natal_sun[0]
+    search_start_jd = swe.julday(target_year, 1, 1, 0.0)
+    return swe.solcross_ut(natal_sun_lon, search_start_jd, swe.FLG_SWIEPH)
 

@@ -10,8 +10,19 @@ from app.modules.parashari.calculator import (
     calculate_planetary_avasthas,
     calculate_special_points,
     calculate_shadbala_details,
-    calculate_bhavabala
+    calculate_bhavabala,
+    VARGA_FACTORS
 )
+
+
+def _validate_varga(varga: str) -> str:
+    clean = varga.upper().strip()
+    if clean not in VARGA_FACTORS:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Unknown varga '{varga}'. Valid options: {sorted(VARGA_FACTORS.keys())}"
+        )
+    return clean
 
 router = APIRouter(prefix="/api/v1/parashari", tags=["Parashari Kundli & Divisional Charts"])
 
@@ -59,14 +70,15 @@ async def get_divisional_chart(
 ):
     """Module 3 — Endpoint 20: Dynamic Divisional Varga Chart (D2 to D60)."""
     selected_lang = (req.lang or "en").lower().strip()
+    clean_varga = _validate_varga(varga)
     chart = compute_varga_chart(
-        dob=req.dob, 
-        tob=req.tob, 
-        lat=req.lat, 
-        lon=req.lon, 
-        tz=req.tz, 
-        varga=varga.upper(), 
-        ayanamsa=req.ayanamsa or "LAHIRI", 
+        dob=req.dob,
+        tob=req.tob,
+        lat=req.lat,
+        lon=req.lon,
+        tz=req.tz,
+        varga=clean_varga,
+        ayanamsa=req.ayanamsa or "LAHIRI",
         lang=selected_lang
     )
     return StandardResponse(status="success", language=selected_lang, data=chart)
@@ -165,16 +177,18 @@ async def get_chart_svg(
 ):
     """
     Module 3 — Endpoint 21: High-Performance Vector SVG Chart Generator.
-    Supports chart_style="NORTH_INDIAN" (Diamond) and "SOUTH_INDIAN" (Fixed Zodiac Box Grid).
+    Supports chart_style="NORTH_INDIAN" (Diamond), "SOUTH_INDIAN" (Fixed Zodiac Box
+    Grid), and "EAST_INDIAN" (Bengali/Odia sign-fixed diamond).
     """
     selected_lang = (req.lang or "en").lower().strip()
+    clean_varga = _validate_varga(varga)
     chart = compute_varga_chart(
         dob=req.dob,
         tob=req.tob,
         lat=req.lat,
         lon=req.lon,
         tz=req.tz,
-        varga=varga.upper(),
+        varga=clean_varga,
         lang=selected_lang
     )
     svg_content = generate_chart_svg(chart, chart_style=chart_style)
@@ -264,7 +278,7 @@ async def get_avasthas(
     req: BirthDataRequest,
     key_hash: str = Depends(verify_api_key)
 ):
-    """Module 3 — Endpoint 26: Baladi, Jagradadi, and Deeptadi planetary avasthas."""
+    """Module 3 — Endpoint 26: Baladi and Jagradadi planetary avasthas. (Deeptadi avastha is not implemented.)"""
     selected_lang = (req.lang or "en").lower().strip()
     data = calculate_planetary_avasthas(req.dob, req.tob, req.lat, req.lon, req.tz, req.ayanamsa or "LAHIRI")
     return StandardResponse(status="success", language=selected_lang, data=data)
@@ -304,7 +318,7 @@ async def get_classical_yogas(
     req: BirthDataRequest,
     key_hash: str = Depends(verify_api_key)
 ):
-    """Module 3 — Endpoint 30: 100+ classical Parashari yoga scanner (Gajakesari, Budhaditya, Pancha Mahapurusha, etc.)."""
+    """Module 3 — Endpoint 30: Classical Parashari yoga scanner — 10 yogas checked (Budhaditya, Gajakesari, the 5 Pancha Mahapurusha yogas, Chandra-Mangala, Amala, Kemadruma), not the "100+" this endpoint previously claimed."""
     selected_lang = (req.lang or "en").lower().strip()
     data = calculate_parashari_yogas(req.dob, req.tob, req.lat, req.lon, req.tz, req.ayanamsa or "LAHIRI")
     return StandardResponse(status="success", language=selected_lang, data=data)

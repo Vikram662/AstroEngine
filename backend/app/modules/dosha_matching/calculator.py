@@ -9,6 +9,88 @@ from app.core.swisseph import (
 
 MANGLIK_HOUSES = [1, 2, 4, 7, 8, 12]
 
+# --- Classical Ashtakoot lookup tables (Vashya, Yoni, Graha Maitri) ---
+# Signs 1-12 = Aries..Pisces. Vashya group by whole sign (standard BPHS grouping;
+# some texts subdivide Sagittarius/Capricorn by degree -- this uses the common
+# whole-sign convention, matching the "spec me decide karo" precedent set
+# elsewhere in this codebase's review for other convention-dependent rules).
+VASHYA_GROUP = {
+    1: "CHATUSHPADA", 2: "CHATUSHPADA", 3: "MANAVA", 4: "JALACHARA",
+    5: "VANACHARA", 6: "MANAVA", 7: "MANAVA", 8: "KEETA",
+    9: "CHATUSHPADA", 10: "CHATUSHPADA", 11: "MANAVA", 12: "JALACHARA",
+}
+# Symmetric 5x5 Vashya compatibility points (out of 2), standard cited matrix.
+VASHYA_POINTS = {
+    frozenset(["MANAVA", "MANAVA"]): 2.0, frozenset(["CHATUSHPADA", "CHATUSHPADA"]): 2.0,
+    frozenset(["VANACHARA", "VANACHARA"]): 2.0, frozenset(["JALACHARA", "JALACHARA"]): 2.0,
+    frozenset(["KEETA", "KEETA"]): 2.0,
+    frozenset(["MANAVA", "CHATUSHPADA"]): 1.0, frozenset(["CHATUSHPADA", "JALACHARA"]): 1.0,
+    frozenset(["JALACHARA", "KEETA"]): 1.0,
+    frozenset(["MANAVA", "JALACHARA"]): 0.5, frozenset(["CHATUSHPADA", "KEETA"]): 0.5,
+    frozenset(["MANAVA", "VANACHARA"]): 0.0, frozenset(["MANAVA", "KEETA"]): 0.0,
+    frozenset(["CHATUSHPADA", "VANACHARA"]): 0.0, frozenset(["VANACHARA", "JALACHARA"]): 0.0,
+    frozenset(["VANACHARA", "KEETA"]): 0.0,
+}
+
+# Nakshatra (1-27) -> (animal, gender). Standard classical Yoni table -- Mongoose
+# (Uttarashada) is the one animal with no pair, appearing for a single nakshatra.
+YONI_ANIMAL = {
+    1: ("HORSE", "M"), 2: ("ELEPHANT", "M"), 3: ("SHEEP", "F"), 4: ("SERPENT", "M"),
+    5: ("SERPENT", "F"), 6: ("DOG", "F"), 7: ("CAT", "F"), 8: ("SHEEP", "M"),
+    9: ("CAT", "M"), 10: ("RAT", "M"), 11: ("RAT", "F"), 12: ("COW", "M"),
+    13: ("BUFFALO", "F"), 14: ("TIGER", "F"), 15: ("BUFFALO", "M"), 16: ("TIGER", "M"),
+    17: ("DEER", "F"), 18: ("DEER", "M"), 19: ("DOG", "M"), 20: ("MONKEY", "M"),
+    21: ("MONGOOSE", "M"), 22: ("MONKEY", "F"), 23: ("LION", "F"), 24: ("HORSE", "F"),
+    25: ("LION", "M"), 26: ("COW", "F"), 27: ("ELEPHANT", "F"),
+}
+# Classical natural-enemy animal pairs (0 points when matched against each other).
+YONI_ENEMY_PAIRS = {
+    frozenset(["COW", "TIGER"]), frozenset(["ELEPHANT", "LION"]),
+    frozenset(["HORSE", "BUFFALO"]), frozenset(["DOG", "DEER"]),
+    frozenset(["SERPENT", "MONGOOSE"]), frozenset(["RAT", "CAT"]),
+    frozenset(["SHEEP", "MONKEY"]),
+}
+
+# BPHS natural friendship (Naisargika Maitri) per planet, one-directional.
+NATURAL_FRIENDSHIP = {
+    "SUN": {"friends": {"MOON", "MARS", "JUPITER"}, "enemies": {"VENUS", "SATURN"}},
+    "MOON": {"friends": {"SUN", "MERCURY"}, "enemies": set()},
+    "MARS": {"friends": {"SUN", "MOON", "JUPITER"}, "enemies": {"MERCURY"}},
+    "MERCURY": {"friends": {"SUN", "VENUS"}, "enemies": {"MOON"}},
+    "JUPITER": {"friends": {"SUN", "MOON", "MARS"}, "enemies": {"MERCURY", "VENUS"}},
+    "VENUS": {"friends": {"MERCURY", "SATURN"}, "enemies": {"SUN", "MOON"}},
+    "SATURN": {"friends": {"MERCURY", "VENUS"}, "enemies": {"SUN", "MOON", "MARS"}},
+}
+
+
+def _relation(a: str, b: str) -> str:
+    if b in NATURAL_FRIENDSHIP[a]["friends"]:
+        return "FRIEND"
+    if b in NATURAL_FRIENDSHIP[a]["enemies"]:
+        return "ENEMY"
+    return "NEUTRAL"
+
+
+def _graha_maitri_points(lord_a: str, lord_b: str) -> float:
+    """Panchadha Maitri (5-fold compound relationship) between two sign lords,
+    combining both directions of natural friendship into the standard Ashtakoot
+    Graha Maitri point scale (5/4/3/1/0)."""
+    if lord_a == lord_b:
+        return 5.0
+    rel_ab = _relation(lord_a, lord_b)
+    rel_ba = _relation(lord_b, lord_a)
+    if rel_ab == "FRIEND" and rel_ba == "FRIEND":
+        return 5.0
+    if rel_ab == "ENEMY" and rel_ba == "ENEMY":
+        return 0.0
+    if "ENEMY" in (rel_ab, rel_ba) and "NEUTRAL" in (rel_ab, rel_ba):
+        return 1.0
+    if "FRIEND" in (rel_ab, rel_ba) and "ENEMY" in (rel_ab, rel_ba):
+        return 3.0
+    if rel_ab == "NEUTRAL" and rel_ba == "NEUTRAL":
+        return 3.0
+    return 4.0  # one FRIEND + one NEUTRAL
+
 def calculate_manglik_dosha(
     dob: str,
     tob: str,
@@ -22,7 +104,10 @@ def calculate_manglik_dosha(
     1. Lagna (Ascendant)
     2. Moon (Chandra)
     3. Venus (Shukra)
-    Includes 20+ classical cancellation exceptions (Own sign, Exalted, Jupiter aspect).
+    Includes 12 classical cancellation checks (own sign/exalted/debilitated Mars,
+    Jupiter conjunction/5th/7th/9th aspect on Mars, house+sign-specific exceptions,
+    Yogakaraka Lagnas) — not the 20+ this used to claim; that count was aspirational,
+    not implemented.
     """
     jd_ut = calculate_julian_day(dob, tob, tz)
     swe.set_sid_mode(swe.SIDM_LAHIRI, 0, 0)
@@ -261,9 +346,10 @@ def calculate_ashtakoot_guna_milan(
     # 1. Varna (1 pt)
     varna_pts = 1.0 if g_varna >= b_varna else 0.0
 
-    # 2. Vashya (2 pts)
-    vashya_diff = abs(g_sign - b_sign)
-    vashya_pts = 2.0 if vashya_diff in [0, 4, 8] else (1.0 if vashya_diff in [2, 6] else 0.5)
+    # 2. Vashya (2 pts): classical Vashya-group compatibility (Appendix A5)
+    g_vashya_group = VASHYA_GROUP[g_sign]
+    b_vashya_group = VASHYA_GROUP[b_sign]
+    vashya_pts = VASHYA_POINTS[frozenset([g_vashya_group, b_vashya_group])]
 
     # 3. Tara (3 pts): Classical 2-way evaluation
     # Remainder 3, 5, 7 = inauspicious (Vipat, Pratyari, Vadha)
@@ -279,12 +365,22 @@ def calculate_ashtakoot_guna_milan(
     else:
         tara_pts = 0.0
 
-    # 4. Yoni (4 pts)
-    yoni_diff = abs(g_nak - b_nak) % 14
-    yoni_pts = 4.0 if yoni_diff == 0 else (2.0 if yoni_diff < 5 else 1.0)
+    # 4. Yoni (4 pts): classical nakshatra-animal compatibility (Appendix A5)
+    g_yoni_animal, g_yoni_gender = YONI_ANIMAL[g_nak]
+    b_yoni_animal, b_yoni_gender = YONI_ANIMAL[b_nak]
+    if g_yoni_animal == b_yoni_animal:
+        yoni_pts = 4.0 if g_yoni_gender == b_yoni_gender else 3.0
+    elif frozenset([g_yoni_animal, b_yoni_animal]) in YONI_ENEMY_PAIRS:
+        yoni_pts = 0.0
+    else:
+        yoni_pts = 2.0
 
-    # 5. Graha Maitri (5 pts)
-    maitri_pts = 5.0 if g_sign == b_sign else (4.0 if abs(g_sign - b_sign) in [4, 8] else 3.0)
+    # 5. Graha Maitri (5 pts): Panchadha Maitri between the two Moon-sign lords (Appendix A5)
+    ZODIAC_LORDS = ["MARS", "VENUS", "MERCURY", "MOON", "SUN", "MERCURY",
+                     "VENUS", "MARS", "JUPITER", "SATURN", "SATURN", "JUPITER"]
+    g_moon_lord = ZODIAC_LORDS[g_sign - 1]
+    b_moon_lord = ZODIAC_LORDS[b_sign - 1]
+    maitri_pts = _graha_maitri_points(g_moon_lord, b_moon_lord)
 
     # 6. Gana (6 pts): Classical Gana points matrix
     if g_gana == b_gana:
@@ -323,10 +419,10 @@ def calculate_ashtakoot_guna_milan(
         "recommendation": recommendation,
         "kootas": {
             "varna": {"points": varna_pts, "max": 1.0},
-            "vashya": {"points": vashya_pts, "max": 2.0},
+            "vashya": {"points": vashya_pts, "max": 2.0, "groom_group": g_vashya_group, "bride_group": b_vashya_group},
             "tara": {"points": tara_pts, "max": 3.0},
-            "yoni": {"points": yoni_pts, "max": 4.0},
-            "graha_maitri": {"points": maitri_pts, "max": 5.0},
+            "yoni": {"points": yoni_pts, "max": 4.0, "groom_yoni": g_yoni_animal, "bride_yoni": b_yoni_animal},
+            "graha_maitri": {"points": maitri_pts, "max": 5.0, "groom_moon_lord": g_moon_lord, "bride_moon_lord": b_moon_lord},
             "gana": {"points": gana_pts, "max": 6.0},
             "bhakoot": {"points": bhakoot_pts, "max": 7.0, "has_dosha": bhakoot_dosha},
             "nadi": {"points": nadi_pts, "max": 8.0, "has_dosha": nadi_dosha}

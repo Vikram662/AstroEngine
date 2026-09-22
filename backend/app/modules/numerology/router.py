@@ -38,13 +38,15 @@ async def get_missing_numbers(
     key_hash: str = Depends(verify_api_key)
 ):
     """Module 10 — Endpoint 80: Missing Lo Shu numbers and practical balancing remedies."""
+    from app.modules.numerology.calculator import MISSING_NUMBER_REMEDIES
     grid_data = calculate_loshu_grid(req.dob)
+    missing = grid_data.get("missing_numbers", [])
     return StandardResponse(
         status="success",
         language=req.lang or "en",
         data={
-            "missing_numbers": grid_data.get("missing_numbers", []),
-            "remedies": [f"Remedy for missing number {n}: Wear crystal bracelet or keep corresponding color item" for n in grid_data.get("missing_numbers", [])]
+            "missing_numbers": missing,
+            "remedies": [MISSING_NUMBER_REMEDIES[n] for n in missing]
         }
     )
 
@@ -109,6 +111,7 @@ async def get_numerology_forecast(
     key_hash: str = Depends(verify_api_key)
 ):
     """Module 10 — Endpoint 83: Personal Year, Personal Month, and Personal Day numerology cycles."""
+    from app.modules.numerology.calculator import PERSONAL_YEAR_THEMES
     b_day = int(req.dob.split("-")[2])
     b_month = int(req.dob.split("-")[1])
     py = sum(int(d) for d in str(b_day) + str(b_month) + str(target_year))
@@ -118,7 +121,7 @@ async def get_numerology_forecast(
     return StandardResponse(
         status="success",
         language=req.lang or "en",
-        data={"target_year": target_year, "personal_year": py, "theme": "New beginnings, dynamic action, and professional enterprise"}
+        data={"target_year": target_year, "personal_year": py, "theme": PERSONAL_YEAR_THEMES[py]}
     )
 
 @router.post("/pinnacles-challenges", response_model=StandardResponse)
@@ -127,17 +130,14 @@ async def get_pinnacles_challenges(
     key_hash: str = Depends(verify_api_key)
 ):
     """Module 10 — Endpoint 84: 4 Major Life Pinnacles and 4 Challenge Numbers."""
+    from app.modules.numerology.calculator import calculate_pinnacles_challenges
+    computed = calculate_pinnacles_challenges(req.dob)
     return StandardResponse(
         status="success",
         language=req.lang or "en",
         data={
-            "pinnacles": [
-                {"pinnacle": 1, "age_span": "0 - 32", "number": 3},
-                {"pinnacle": 2, "age_span": "33 - 41", "number": 5},
-                {"pinnacle": 3, "age_span": "42 - 50", "number": 8},
-                {"pinnacle": 4, "age_span": "51+", "number": 1}
-            ],
-            "challenges": [{"challenge": 1, "number": 2}, {"challenge": 2, "number": 1}, {"challenge": 3, "number": 1}, {"challenge": 4, "number": 0}]
+            "pinnacles": computed["pinnacles"],
+            "challenges": computed["challenges"]
         }
     )
 
@@ -147,19 +147,13 @@ async def get_favorable_elements(
     key_hash: str = Depends(verify_api_key)
 ):
     """Module 10 — Endpoint 85: Favorable dates, auspicious colors, lucky numbers, and gems."""
+    from app.modules.numerology.calculator import get_favorable_profile
     core = calculate_core_numbers(req.dob, "")
     mulank_dict = core.get("mulank", {})
     mulank = mulank_dict.get("number", 1) if isinstance(mulank_dict, dict) else int(mulank_dict)
     return StandardResponse(
         status="success",
         language=req.lang or "en",
-        data={
-            "psychic_number": mulank,
-            "lucky_dates": [mulank, mulank + 9, mulank + 18] if mulank <= 9 else [mulank],
-            "favorable_colors": ["Golden Yellow", "White", "Light Orange"],
-            "favorable_days": ["Sunday", "Thursday"],
-            "neutral_numbers": [2, 3, 7],
-            "avoid_numbers": [8]
-        }
+        data=get_favorable_profile(mulank)
     )
 

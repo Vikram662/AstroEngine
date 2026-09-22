@@ -37,7 +37,7 @@ async def get_tajik_varshphal_chart(
     Tajik Solar Return chart analysis with Muntha house and Varshesh candidates.
     """
     selected_lang = (req.lang or "en").lower().strip()
-    data = calculate_tajik_varshphal(req.dob, target_year, req.lat, req.lon, req.tz)
+    data = calculate_tajik_varshphal(req.dob, target_year, req.lat, req.lon, req.tz, req.tob)
     return StandardResponse(status="success", language=selected_lang, data=data)
 
 from fastapi import HTTPException
@@ -79,7 +79,7 @@ async def get_tajik_muntha(
     key_hash: str = Depends(verify_api_key)
 ):
     """Module 7 — Endpoint 57: Tajik Muntha house progression and Muntha Lord."""
-    data = calculate_tajik_varshphal(req.dob, target_year, req.lat, req.lon, req.tz)
+    data = calculate_tajik_varshphal(req.dob, target_year, req.lat, req.lon, req.tz, req.tob)
     return StandardResponse(status="success", language=req.lang or "en", data={"muntha": data.get("muntha", {})})
 
 @router.post("/tajik/varshesh", response_model=StandardResponse)
@@ -89,8 +89,11 @@ async def get_tajik_varshesh(
     key_hash: str = Depends(verify_api_key)
 ):
     """Module 7 — Endpoint 58: Panchadhikari Year Lord (Varshesh) selection."""
-    data = calculate_tajik_varshphal(req.dob, target_year, req.lat, req.lon, req.tz)
-    return StandardResponse(status="success", language=req.lang or "en", data={"varshesh_candidates": data.get("varshesh_candidates", [])})
+    data = calculate_tajik_varshphal(req.dob, target_year, req.lat, req.lon, req.tz, req.tob)
+    return StandardResponse(status="success", language=req.lang or "en", data={
+        "varshesh_candidates": data.get("varshesh_candidates", []),
+        "likely_varshesh": data.get("likely_varshesh", {}),
+    })
 
 @router.post("/tajik/yogas", response_model=StandardResponse)
 async def get_tajik_yogas(

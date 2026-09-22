@@ -63,8 +63,9 @@ async def process_pdf_job_async(
     """
     try:
         jobs_store.update_status(job_id=job_id, status="PROCESSING")
-        
-        # 1. Real Astrological Calculation (Always use English canonical names for vector PDF rendering)
+
+        # 1. Real Astrological Calculation, localized to the requested report language
+        # (planet/sign names come back pre-translated via translate_entity()).
         chart = compute_varga_chart(
             dob=birth_data["dob"],
             tob=birth_data["tob"],
@@ -72,7 +73,7 @@ async def process_pdf_job_async(
             lon=birth_data["lon"],
             tz=birth_data["tz"],
             varga="D1",
-            lang="en"
+            lang=lang
         )
 
         title_readable = report_type.replace("_", " ").title()

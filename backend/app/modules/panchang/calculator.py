@@ -1,8 +1,59 @@
 import swisseph as swe
 from datetime import datetime, timedelta
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Callable
 from app.core.swisseph import calculate_julian_day, get_nakshatra_info
 from app.locales.i18n import translate_entity
+
+
+def _sidereal_sun_moon(jd_ut: float, with_speed: bool = False):
+    """Lahiri sidereal Sun/Moon longitudes (and speeds, if requested) at jd_ut."""
+    swe.set_sid_mode(swe.SIDM_LAHIRI, 0, 0)
+    flags = swe.FLG_SWIEPH | swe.FLG_SIDEREAL | (swe.FLG_SPEED if with_speed else 0)
+    sun_res, _ = swe.calc_ut(jd_ut, swe.SUN, flags)
+    moon_res, _ = swe.calc_ut(jd_ut, swe.MOON, flags)
+    return sun_res, moon_res
+
+
+def _find_next_boundary(jd_start: float, angle_fn: Callable[[float], float], target_deg: float, nominal_speed_deg_per_day: float, max_iter: int = 12) -> float:
+    """
+    Find the next jd_ut >= jd_start where angle_fn(jd) (a slowly-varying, monotonically
+    increasing 0-360 angle) reaches target_deg (mod 360). Newton-style refinement using
+    the instantaneous planetary speed as the derivative estimate.
+    """
+    jd_guess = jd_start
+    for _ in range(max_iter):
+        current = angle_fn(jd_guess) % 360.0
+        diff = (target_deg - current) % 360.0
+        if diff > 180.0:
+            diff -= 360.0
+        if abs(diff) < 1e-6:
+            break
+        jd_guess += diff / nominal_speed_deg_per_day
+    return jd_guess
+
+
+def _find_prev_boundary(jd_start: float, angle_fn: Callable[[float], float], target_deg: float, nominal_speed_deg_per_day: float, max_iter: int = 12) -> float:
+    """Same as _find_next_boundary but searches backward for the most recent crossing."""
+    jd_guess = jd_start
+    for _ in range(max_iter):
+        current = angle_fn(jd_guess) % 360.0
+        diff = (target_deg - current) % 360.0
+        if diff < 180.0:
+            diff -= 360.0
+        if abs(diff) < 1e-6:
+            break
+        jd_guess += diff / nominal_speed_deg_per_day
+    return jd_guess
+
+
+def _jd_to_local_datetime_str(jd_ut: float, tz: float) -> str:
+    local_jd = jd_ut + (tz / 24.0)
+    y, m, d, hour_dec = swe.revjul(local_jd, swe.GREG_CAL)
+    total_seconds = int(round(hour_dec * 3600.0)) % 86400
+    h = total_seconds // 3600
+    mi = (total_seconds % 3600) // 60
+    s = total_seconds % 60
+    return f"{y:04d}-{m:02d}-{d:02d} {h:02d}:{mi:02d}:{s:02d}"
 
 # 30 Tithis (15 Shukla, 15 Krishna)
 TITHIS = [
@@ -114,6 +165,36 @@ def calculate_daily_panchang(
     else:
         karana_name = REPEATING_KARANAS[(karana_idx - 1) % 7]
 
+    # End-times: solve for when each limb's angle next crosses its boundary,
+    # using the instantaneous Sun/Moon speed as the Newton-step derivative.
+    sun_speed = sun_res[3]
+    moon_speed = moon_res[3]
+    tithi_karana_speed = moon_speed - sun_speed
+    yoga_speed = moon_speed + sun_speed
+
+    def _tithi_karana_angle(jd: float) -> float:
+        s, m = _sidereal_sun_moon(jd)
+        return (m[0] - s[0]) % 360.0
+
+    def _nakshatra_angle(jd: float) -> float:
+        _, m = _sidereal_sun_moon(jd)
+        return m[0]
+
+    def _yoga_angle(jd: float) -> float:
+        s, m = _sidereal_sun_moon(jd)
+        return (s[0] + m[0]) % 360.0
+
+    tithi_end_jd = _find_next_boundary(jd_ut, _tithi_karana_angle, (tithi_index + 1) * 12.0, tithi_karana_speed)
+    karana_end_jd = _find_next_boundary(jd_ut, _tithi_karana_angle, (karana_idx + 1) * 6.0, tithi_karana_speed)
+    nak_span = 360.0 / 27.0
+    nakshatra_end_jd = _find_next_boundary(jd_ut, _nakshatra_angle, (moon_nak["index"]) * nak_span, moon_speed)
+    yoga_end_jd = _find_next_boundary(jd_ut, _yoga_angle, (yoga_index + 1) * yoga_span, yoga_speed)
+
+    tithi_end_str = _jd_to_local_datetime_str(tithi_end_jd, tz)
+    karana_end_str = _jd_to_local_datetime_str(karana_end_jd, tz)
+    nakshatra_end_str = _jd_to_local_datetime_str(nakshatra_end_jd, tz)
+    yoga_end_str = _jd_to_local_datetime_str(yoga_end_jd, tz)
+
     # 5. Vaar (Vedic Weekday from Sunrise)
     dt = datetime.strptime(dob, "%Y-%m-%d")
     # Check if time of birth is before local sunrise
@@ -154,25 +235,29 @@ def calculate_daily_panchang(
             "name": translate_entity("tithis", tithi_meta["id"], clean_lang, tithi_meta["name_hi"] if clean_lang == "hi" else tithi_meta["name_en"]),
             "paksha": tithi_meta["paksha"],
             "number": tithi_index + 1,
-            "percent_completed": tithi_percent_passed
+            "percent_completed": tithi_percent_passed,
+            "end_time": tithi_end_str
         },
         "nakshatra": {
             "id": moon_nak["id"],
             "name": translate_entity("nakshatras", moon_nak["id"], lang, moon_nak["name_en"]),
             "number": moon_nak["index"],
             "pada": moon_nak["pada"],
-            "lord": moon_nak["lord"]
+            "lord": moon_nak["lord"],
+            "end_time": nakshatra_end_str
         },
         "moon_degree": round(moon_lon, 4),
         "yoga": {
             "id": yoga_name.upper(),
             "name": yoga_name,
-            "number": yoga_index + 1
+            "number": yoga_index + 1,
+            "end_time": yoga_end_str
         },
         "karana": {
             "id": karana_name.upper(),
             "name": karana_name,
-            "is_vishti_bhadra": karana_name == "Vishti"
+            "is_vishti_bhadra": karana_name == "Vishti",
+            "end_time": karana_end_str
         }
     }
 
@@ -311,14 +396,19 @@ def calculate_advanced_muhurats(
         s = int(s) % 86400
         return f"{s // 3600:02d}:{(s % 3600) // 60:02d}:{(s % 60):02d}"
 
+    # Abhijit Muhurat: the 8th of 15 equal muhurtas spanning sunrise-to-sunset
+    # (day_span / 15), centered on local solar noon — not a fixed 48-minute window.
+    day_muhurta_sec = (ss_sec - sr_sec) / 15.0
+    abhijit_half = day_muhurta_sec / 2.0
+
     return {
         "date": dob,
         "rahu_kaal": part_time(rahu_parts[w]),
         "yamaghanda_kaal": part_time(yam_parts[w]),
         "gulika_kaal": part_time(gulika_parts[w]),
         "abhijit_muhurat": {
-            "start": fmt(mid_day_sec - 1440), # 24 min before midday
-            "end": fmt(mid_day_sec + 1440),   # 24 min after midday
+            "start": fmt(mid_day_sec - abhijit_half),
+            "end": fmt(mid_day_sec + abhijit_half),
             "is_auspicious": True
         },
         "brahma_muhurat": {
@@ -392,26 +482,61 @@ def calculate_hora_schedule(
         "horas": horas
     }
 
+
+# Classical Panchak type by the weekday it *starts* on (Samanya = ordinary, no special hazard)
+PANCHAK_TYPE_BY_WEEKDAY = {
+    0: "Raj Panchak",      # Monday
+    1: "Agni Panchak",     # Tuesday
+    2: "Samanya Panchak",  # Wednesday
+    3: "Samanya Panchak",  # Thursday
+    4: "Chor Panchak",     # Friday
+    5: "Mrityu Panchak",   # Saturday
+    6: "Rog Panchak",      # Sunday
+}
+
+# Moon-sign residence of Bhadra (Vishti Karana), per muhurta texts
+BHADRA_SWARGA_SIGNS = {0, 1, 2, 7}   # Mesha, Vrishabha, Mithuna, Vrischika
+BHADRA_PATALA_SIGNS = {5, 6, 8, 9}   # Kanya, Tula, Dhanu, Makara
+# Remaining signs (Karka, Simha, Kumbha, Meena) => Bhu/Mrityu Loka
+
+PANCHAK_START_DEG = 296.0 + 40.0 / 60.0  # Dhanishtha pada 3 start (296°40')
+
+
 def calculate_bhadra_panchak(dob: str, tob: str, lat: float, lon: float, tz: float) -> Dict[str, Any]:
     """Module 2 — Endpoint 12 & 13: Bhadra & Panchak calculations."""
+    jd_ut = calculate_julian_day(dob, tob, tz)
     panchang = calculate_daily_panchang(dob, tob, lat, lon, tz)
     karana_name = panchang["karana"]["name"]
     nakshatra_id = panchang["nakshatra"]["id"]
-
-    # Bhadra occurs during Vishti Karana
-    has_bhadra = "Vishti" in karana_name
-    bhadra_loka = "Swarga Loka" if panchang["tithi"]["paksha"] == "SHUKLA" else "Mrityu Loka"
-
-    # Panchak occurs when Moon is in Aquarius & Pisces (from Dhanishta 3rd pada onwards: 296° 40' to 360°)
     moon_deg = panchang.get("moon_degree", 0.0)
-    # If moon_degree is available or check nakshatra + pada
-    if nakshatra_id == "DHANISHTA":
-        # Pada 3 and 4 only
-        is_panchak = (moon_deg >= 296.6667)
+
+    # Bhadra occurs during Vishti Karana; its residence loka is by the Moon's sign,
+    # not by paksha.
+    has_bhadra = "Vishti" in karana_name
+    moon_sign_idx = int(moon_deg // 30.0) % 12
+    if moon_sign_idx in BHADRA_SWARGA_SIGNS:
+        bhadra_loka = "Swarga Loka"
+    elif moon_sign_idx in BHADRA_PATALA_SIGNS:
+        bhadra_loka = "Patala Loka"
+    else:
+        bhadra_loka = "Bhu/Mrityu Loka"
+
+    # Panchak: Moon from Dhanishtha pada 3 (296°40') through the end of Revati (360°/0°).
+    if nakshatra_id == "DHANISHTHA":
+        is_panchak = (moon_deg >= PANCHAK_START_DEG)
     else:
         is_panchak = nakshatra_id in ["SHATABHISHA", "PURVA_BHADRAPADA", "UTTARA_BHADRAPADA", "REVATI"]
-    w_day = datetime.strptime(dob, "%Y-%m-%d").weekday()
-    panchak_type = "Rog Panchak" if w_day == 6 else ("Agni Panchak" if w_day == 1 else "Normal Panchak")
+
+    panchak_type = "None"
+    if is_panchak:
+        # Type is decided by the weekday Panchak *started* on, not the queried day.
+        _, moon_res_speed = _sidereal_sun_moon(jd_ut, with_speed=True)
+        moon_speed = moon_res_speed[3]
+        start_jd = _find_prev_boundary(jd_ut, lambda jd: _sidereal_sun_moon(jd)[1][0] % 360.0, PANCHAK_START_DEG, moon_speed)
+        start_local_jd = start_jd + (tz / 24.0)
+        y, m, d, _ = swe.revjul(start_local_jd, swe.GREG_CAL)
+        start_weekday = datetime(y, m, d).weekday()
+        panchak_type = PANCHAK_TYPE_BY_WEEKDAY[start_weekday]
 
     return {
         "bhadra": {
@@ -422,7 +547,7 @@ def calculate_bhadra_panchak(dob: str, tob: str, lat: float, lon: float, tz: flo
         },
         "panchak": {
             "is_active": is_panchak,
-            "type": panchak_type if is_panchak else "None",
+            "type": panchak_type,
             "active_nakshatra": panchang["nakshatra"]["name"]
         }
     }

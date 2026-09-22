@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Query
 from app.schemas.common import BirthDataRequest, StandardResponse
 from app.core.security import verify_api_key
-from app.modules.lalkitab.calculator import calculate_lalkitab_chart, calculate_lalkitab_varshphal
+from app.modules.lalkitab.calculator import calculate_lalkitab_chart, calculate_lalkitab_varshphal, calculate_lalkitab_kundli_flags
 
 router = APIRouter(prefix="/api/v1/lalkitab", tags=["Lal Kitab System"])
 
@@ -82,14 +82,13 @@ async def get_blind_halfblind_chart(
     """Module 6 — Endpoint 49: Andhe / Dharmi / Sleeping house analysis."""
     selected_lang = (req.lang or "en").lower().strip()
     data = calculate_lalkitab_chart(req.dob, req.tob, req.lat, req.lon, req.tz, selected_lang)
+    flags = calculate_lalkitab_kundli_flags(data["planets"], data["houses_planets"])
     return StandardResponse(
         status="success",
         language=selected_lang,
         data={
             "sleeping_houses": data.get("sleeping_houses", []),
-            "andhi_kundli": False,
-            "dharmi_kundli": True,
-            "rat_ki_andhi": False
+            **flags
         }
     )
 

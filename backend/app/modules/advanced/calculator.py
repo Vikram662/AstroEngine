@@ -1,8 +1,122 @@
 import swisseph as swe
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Dict, Any, List
-from app.core.swisseph import calculate_julian_day, VEDIC_PLANETS, ZODIAC_SIGNS
+from app.core.swisseph import calculate_julian_day, VEDIC_PLANETS, ZODIAC_SIGNS, find_solar_return_jd
 from app.locales.i18n import translate_entity
+
+# Classical Tajik Trirashi (triplicity) lords by element and day/night birth.
+# Multiple BPHS/Tajik texts differ slightly on the water triplicity's night lord
+# (Mars vs Venus); this uses the commonly-cited Sun/Jupiter, Venus/Moon,
+# Saturn/Mercury, Venus/Mars sequence.
+TRIPLICITY_LORDS = {
+    0: {"day": "SUN", "night": "JUPITER"},      # Fire: Aries, Leo, Sagittarius
+    1: {"day": "VENUS", "night": "MOON"},       # Earth: Taurus, Virgo, Capricorn
+    2: {"day": "SATURN", "night": "MERCURY"},   # Air: Gemini, Libra, Aquarius
+    3: {"day": "VENUS", "night": "MARS"},       # Water: Cancer, Scorpio, Pisces
+}
+WEEKDAY_LORDS = ["MOON", "MARS", "MERCURY", "JUPITER", "VENUS", "SATURN", "SUN"]  # Python weekday(): Mon=0..Sun=6
+CHALDEAN_HORA_ORDER = ["SATURN", "JUPITER", "MARS", "SUN", "VENUS", "MERCURY", "MOON"]
+
+
+def calculate_panchadhikari_varshesh(
+    dob: str, tob: str, lat: float, lon: float, tz: float, target_year: int
+) -> Dict[str, Any]:
+    """
+    Classical Tajik Panchadhikari: the 5 candidate lords contending for Varshesh
+    (Lord of the Year) -- Varsha Lagnesh (solar-return ascendant lord), Muntha
+    Lord, Trirashi/Triplicity Lord (by natal Moon's element + day/night birth),
+    Dinesh (weekday lord of the return moment) and Horesh (classical Chaldean
+    planetary-hour lord at the return moment). Full Panchavargeeya Bala scoring
+    (Uchcha/Sthana/Dig bala etc.) to auto-select the single strongest candidate is
+    a separate, larger undertaking; this returns the 5 real computed candidates
+    with the classical natural-strength tie-break order (Sun > Moon > Jupiter >
+    Venus > Mercury > Mars > Saturn) noted for reference.
+    """
+    from app.modules.core_astronomy.advanced_astronomy import calculate_sun_moon_timings
+
+    natal_jd = calculate_julian_day(dob, tob, tz)
+    swe.set_sid_mode(swe.SIDM_LAHIRI, 0, 0)
+    sid_flags = swe.FLG_SWIEPH | swe.FLG_SIDEREAL
+
+    # Natal ascendant sign (for Muntha) and day/night status (for Trirashi lord)
+    natal_cusps, natal_ascmc = swe.houses_ex(natal_jd, lat, lon, b'W', sid_flags)
+    natal_asc_sign = int((natal_ascmc[0] % 360.0) // 30.0)
+    natal_moon, _ = swe.calc_ut(natal_jd, swe.MOON, sid_flags)
+    natal_moon_sign = int((natal_moon[0] % 360.0) // 30.0)
+
+    natal_timings = calculate_sun_moon_timings(dob, lat, lon, tz)
+    tob_parts = [int(p) for p in tob.split(":")]
+    tob_minutes = tob_parts[0] * 60 + tob_parts[1]
+    sr_parts = [int(p) for p in natal_timings["sunrise"].split(":")]
+    ss_parts = [int(p) for p in natal_timings["sunset"].split(":")]
+    sr_minutes = sr_parts[0] * 60 + sr_parts[1]
+    ss_minutes = ss_parts[0] * 60 + ss_parts[1]
+    is_day_birth = sr_minutes <= tob_minutes < ss_minutes
+
+    element = natal_moon_sign % 4
+    trirashi_lord = TRIPLICITY_LORDS[element]["day" if is_day_birth else "night"]
+
+    # Solar return moment + Varsha Lagnesh
+    return_jd = find_solar_return_jd(natal_jd, target_year)
+    return_cusps, return_ascmc = swe.houses_ex(return_jd, lat, lon, b'W', sid_flags)
+    return_asc_sign = int((return_ascmc[0] % 360.0) // 30.0)
+    varsha_lagnesh = ZODIAC_SIGNS[return_asc_sign]["ruler"]
+
+    completed_years = max(0, target_year - int(dob[:4]))
+    muntha_sign = (natal_asc_sign + completed_years) % 12
+    muntha_lord = ZODIAC_SIGNS[muntha_sign]["ruler"]
+
+    # Dinesh: weekday lord of the return moment (UTC calendar date of the crossing)
+    y, m, d, h_ut = swe.revjul(return_jd, swe.GREG_CAL)
+    return_dt_utc = datetime(y, m, d) + timedelta(hours=h_ut)
+    dinesh = WEEKDAY_LORDS[return_dt_utc.weekday()]
+
+    # Horesh: classical Chaldean planetary-hour lord at the return moment, using
+    # sunrise/sunset of that specific return day at the natal location.
+    return_local_dob = return_dt_utc.strftime("%Y-%m-%d")
+    return_day_timings = calculate_sun_moon_timings(return_local_dob, lat, lon, tz)
+    rsr = [int(p) for p in return_day_timings["sunrise"].split(":")]
+    rss = [int(p) for p in return_day_timings["sunset"].split(":")]
+    sunrise_min = rsr[0] * 60 + rsr[1]
+    sunset_min = rss[0] * 60 + rss[1]
+    return_local_hour = (h_ut + tz) % 24
+    return_min_of_day = int(round(return_local_hour * 60))
+
+    weekday_first_hora_lord = WEEKDAY_LORDS[return_dt_utc.weekday()]
+    start_idx = CHALDEAN_HORA_ORDER.index(weekday_first_hora_lord)
+    if sunrise_min <= return_min_of_day < sunset_min:
+        hora_span = (sunset_min - sunrise_min) / 12.0
+        hora_number = int((return_min_of_day - sunrise_min) / hora_span) if hora_span > 0 else 0
+    else:
+        night_len = (1440 - sunset_min) + sunrise_min
+        hora_span = night_len / 12.0
+        elapsed = (return_min_of_day - sunset_min) % 1440
+        hora_number = 12 + (int(elapsed / hora_span) if hora_span > 0 else 0)
+    horesh = CHALDEAN_HORA_ORDER[(start_idx + hora_number) % 7]
+
+    candidates = [
+        {"role": "Varsha Lagnesh", "planet": varsha_lagnesh, "basis": f"Lord of {ZODIAC_SIGNS[return_asc_sign]['name_en']} (solar return ascendant)"},
+        {"role": "Muntha Lord", "planet": muntha_lord, "basis": f"Lord of {ZODIAC_SIGNS[muntha_sign]['name_en']} (Muntha sign)"},
+        {"role": "Trirashi (Triplicity) Lord", "planet": trirashi_lord, "basis": f"{'Day' if is_day_birth else 'Night'} lord of natal Moon's {['Fire','Earth','Air','Water'][element]} triplicity"},
+        {"role": "Dinesh (Day Lord)", "planet": dinesh, "basis": f"Weekday lord of the return moment ({return_dt_utc.strftime('%A')})"},
+        {"role": "Horesh (Hour Lord)", "planet": horesh, "basis": "Chaldean planetary-hour lord at the exact return moment"},
+    ]
+    STRENGTH_ORDER = ["SUN", "MOON", "JUPITER", "VENUS", "MERCURY", "MARS", "SATURN"]
+    tally: Dict[str, int] = {}
+    for c in candidates:
+        tally[c["planet"]] = tally.get(c["planet"], 0) + 1
+    best_count = max(tally.values())
+    tied = [p for p, n in tally.items() if n == best_count]
+    likely_varshesh = sorted(tied, key=lambda p: STRENGTH_ORDER.index(p) if p in STRENGTH_ORDER else 99)[0]
+
+    return {
+        "exact_solar_return_utc": return_dt_utc.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "varshesh_candidates": candidates,
+        "likely_varshesh": {
+            "planet": likely_varshesh,
+            "method": "Most frequent candidate among the 5 Panchadhikari roles, classical natural-strength order (Sun>Moon>Jupiter>Venus>Mercury>Mars>Saturn) as tie-break. Full Panchavargeeya Bala point-scoring is not yet implemented.",
+        },
+    }
 
 CHARA_KARAKA_NAMES = [
     "Atmakaraka (Soul / Core Self)",
@@ -69,12 +183,13 @@ def calculate_tajik_varshphal(
     target_year: int,
     birth_lat: float,
     birth_lon: float,
-    tz: float
+    tz: float,
+    tob: str = "12:00"
 ) -> Dict[str, Any]:
     """
     Calculate Tajik Varshphal (Solar Return) parameters:
     - Muntha calculation: (Birth Lagna Sign + Completed Years) % 12
-    - Varshesh (Lord of the Year) candidate evaluation
+    - Varshesh (Lord of the Year): real 5-candidate Panchadhikari evaluation
     """
     birth_year = int(dob[:4])
     completed_years = target_year - birth_year
@@ -84,6 +199,8 @@ def calculate_tajik_varshphal(
     # Approximate Muntha house from Lagna
     muntha_house = (completed_years % 12) + 1
 
+    panchadhikari = calculate_panchadhikari_varshesh(dob, tob, birth_lat, birth_lon, tz, target_year)
+
     return {
         "target_year": target_year,
         "completed_years": completed_years,
@@ -91,7 +208,9 @@ def calculate_tajik_varshphal(
             "house": muntha_house,
             "significance": "Auspicious if in Kendra (1,4,7,10) or Trikona (5,9); Inauspicious if in 6, 8, 12."
         },
-        "varshesh_candidates": ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn"]
+        "exact_solar_return_utc": panchadhikari["exact_solar_return_utc"],
+        "varshesh_candidates": panchadhikari["varshesh_candidates"],
+        "likely_varshesh": panchadhikari["likely_varshesh"],
     }
 
 def calculate_karakamsha_chart(

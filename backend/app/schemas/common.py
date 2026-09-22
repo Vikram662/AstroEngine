@@ -99,6 +99,7 @@ class BirthDataRequest(BaseModel):
     lat: float = Field(..., description="Geographic latitude in decimal degrees (-90.0 to +90.0)", ge=-90.0, le=90.0, example=24.5854)
     lon: float = Field(..., description="Geographic longitude in decimal degrees (-180.0 to +180.0)", ge=-180.0, le=180.0, example=73.7125)
     tz: float = Field(5.5, description="Timezone offset in hours from UTC (e.g. 5.5 for IST, -5.0 for EST)", ge=-12.0, le=14.0, example=5.5)
+    date: Optional[str] = Field(default=None, pattern=r"^\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01])$", description="Target calendar date (YYYY-MM-DD) for date-based lookups such as Panchang and Muhurat, which are not tied to anyone's birth. When provided, takes priority over 'dob' on those endpoints; 'dob' is still required by the shared schema but is ignored by them in that case.", example="2026-03-15")
     ayanamsa: Optional[Literal["LAHIRI", "RAMAN", "KP", "KRISHNAMURTI", "FAGAN_BRADLEY", "TROPICAL"]] = Field(default="LAHIRI", description="Ayanamsa mode (LAHIRI, RAMAN, KP, KRISHNAMURTI, FAGAN_BRADLEY, TROPICAL)")
     house_system: Optional[str] = Field(default="PLACIDUS", description="House calculation system: PLACIDUS, SRIPATI, EQUAL, WHOLE_SIGN, KOCH")
     lang: Optional[str] = Field("en", description="Localization output language: en, hi, mr, gu, ta, te, bn", example="en")

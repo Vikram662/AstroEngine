@@ -1,14 +1,16 @@
 from typing import Optional
 from datetime import datetime
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from app.schemas.common import BirthDataRequest, StandardResponse
 from app.core.security import verify_api_key
+from app.core.swisseph import AYANAMSA_MODES
 from app.modules.core_astronomy.calculator import calculate_planetary_positions
 from app.modules.core_astronomy.advanced_astronomy import (
     calculate_house_cusps,
     calculate_retrograde_details,
     calculate_sun_moon_timings,
     calculate_ayanamsa_comparison,
+    HOUSE_SYSTEMS,
 )
 
 router = APIRouter(prefix="/api/v1/core", tags=["Core Astronomy"])
@@ -42,6 +44,18 @@ async def get_house_cusps(
 ):
     """Module 1 — Endpoint 3: Calculate 12 house cusps under Placidus, Sripati, Equal, or Whole Sign."""
     selected_lang = (req.lang or "en").lower().strip()
+    requested_house_system = (req.house_system or "PLACIDUS").upper().strip()
+    if requested_house_system not in HOUSE_SYSTEMS:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Unknown house_system '{requested_house_system}'. Valid options: {sorted(HOUSE_SYSTEMS.keys())}"
+        )
+    requested_ayanamsa = (req.ayanamsa or "LAHIRI").upper().strip()
+    if requested_ayanamsa not in AYANAMSA_MODES:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Unknown ayanamsa '{requested_ayanamsa}'. Valid options: {sorted(AYANAMSA_MODES.keys())}"
+        )
     cusps_data = calculate_house_cusps(
         dob=req.dob,
         tob=req.tob,

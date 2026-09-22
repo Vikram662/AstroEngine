@@ -125,7 +125,15 @@ def calculate_gemstone_recommendations(
         "maraka_caution": {
             "maraka_lords": maraka_planets,
             "warning": "Avoid stones of 2nd/7th lords if undergoing Maraka dasha or critical health phases."
-        }
+        },
+        "disclaimer": translate_entity(
+            "remedies_disclaimers", "GEMSTONE", lang,
+            "This recommendation is based on house lordship (Lagna/5th/9th) only — it does not "
+            "assess planetary strength (Shadbala), functional benefic/malefic status for this "
+            "specific chart, or affliction. Gemstones can intensify a planet's effect, including "
+            "a malefic one; get a full-chart review from a qualified astrologer and, for costly "
+            "stones, a brief trial period before committing, rather than acting on this alone."
+        )
     }
 
 def get_rudraksha_recommendations(lagna_lord: str) -> List[Dict[str, Any]]:

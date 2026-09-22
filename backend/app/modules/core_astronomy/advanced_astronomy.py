@@ -12,11 +12,28 @@ from app.locales.i18n import translate_entity
 
 HOUSE_SYSTEMS = {
     "PLACIDUS": b'P',
-    "SRIPATI": b'O',      # Porphyry / close to Sripati bhava
-    "EQUAL": b'A',        # Equal house system
-    "WHOLE_SIGN": b'W',   # Whole Sign
+    "SRIPATI": b'O',       # Sripati is derived from Porphyry cusps, see _porphyry_to_sripati()
+    "EQUAL": b'A',         # Equal house system
+    "WHOLE_SIGN": b'W',    # Whole Sign
     "KOCH": b'K',
 }
+
+
+def _porphyry_to_sripati(porphyry_cusps: tuple) -> List[float]:
+    """
+    Sripati bhava cusps, per the classical definition (Astrodienst house-system
+    reference): compute Porphyry cusps first (each quadrant trisected in ecliptic
+    longitude), then move each house's cusp to the midpoint of the *previous*
+    house's span. Under this system the Ascendant/MC are no longer identical to
+    the house 1/10 cusps.
+    """
+    sripati_cusps = []
+    for i in range(12):
+        prev_cusp = porphyry_cusps[i - 1]
+        curr_cusp = porphyry_cusps[i]
+        span = (curr_cusp - prev_cusp) % 360.0
+        sripati_cusps.append((prev_cusp + span / 2.0) % 360.0)
+    return sripati_cusps
 
 def calculate_house_cusps(
     dob: str,
@@ -40,7 +57,9 @@ def calculate_house_cusps(
         calc_flag = swe.FLG_SWIEPH
 
     cusps, ascmc = swe.houses_ex(jd_ut, lat, lon, hsys, calc_flag)
-    
+    if house_system.upper() == "SRIPATI":
+        cusps = _porphyry_to_sripati(cusps)
+
     houses_list = []
     # cusps has 12 items (index 0 to 11 correspond to Houses 1 to 12)
     for i, cusp_deg in enumerate(cusps):
@@ -156,9 +175,12 @@ def calculate_sun_moon_timings(
     jd_midnight_ut = swe.julday(base_date.year, base_date.month, base_date.day, ut_decimal_hour, swe.GREG_CAL)
     geopos = (lon, lat, 0.0) # lon, lat, altitude in meters
 
-    # Sunrise & Sunset (center of disc, accounting for atmospheric refraction)
-    rs_flags = swe.CALC_RISE | swe.BIT_DISC_CENTER
-    set_flags = swe.CALC_SET | swe.BIT_DISC_CENTER
+    # Sunrise & Sunset — upper-limb convention (traditional/civil rise-set: the
+    # moment the disc's upper edge crosses the horizon, with standard refraction).
+    # No BIT_DISC_CENTER: that flag times the disc *center* crossing instead,
+    # which comes out ~73s late relative to the upper-limb moment.
+    rs_flags = swe.CALC_RISE
+    set_flags = swe.CALC_SET
 
     # Correct signature: swe.rise_trans(tjdut, body, rsmi, geopos, atpress, attemp, flags)
     ret_rise, rise_time = swe.rise_trans(jd_midnight_ut, swe.SUN, rs_flags, geopos, 1013.25, 10.0, swe.FLG_SWIEPH)

@@ -1,4 +1,5 @@
 import swisseph as swe
+from datetime import datetime, timedelta
 from typing import Dict, Any, List
 from app.core.swisseph import (
     calculate_julian_day,
@@ -27,6 +28,158 @@ VARGA_FACTORS = {
     "D45": 45,  # Akshavedamsha (General well-being)
     "D60": 60,  # Shashtiamsha (Past karma, All matters)
 }
+
+# Classical Dignities (Exaltation / Debilitation / Own Sign indices 0-11)
+# Signs: 0=Aries, 1=Taurus, 2=Gemini, 3=Cancer, 4=Leo, 5=Virgo, 6=Libra, 7=Scorpio, 8=Sagittarius, 9=Capricorn, 10=Aquarius, 11=Pisces
+EXALTATION_SIGNS = {
+    "SUN": 0, "MOON": 1, "MARS": 9, "MERCURY": 5, "JUPITER": 3, "VENUS": 11, "SATURN": 6, "RAHU": 1, "KETU": 7
+}
+DEBILITATION_SIGNS = {
+    "SUN": 6, "MOON": 7, "MARS": 3, "MERCURY": 11, "JUPITER": 9, "VENUS": 5, "SATURN": 0, "RAHU": 7, "KETU": 1
+}
+OWN_SIGNS = {
+    "SUN": [4], "MOON": [3], "MARS": [0, 7], "MERCURY": [2, 5], "JUPITER": [8, 11], "VENUS": [1, 6], "SATURN": [9, 10]
+}
+COMBUST_ORBS = {
+    "MOON": 12.0, "MARS": 17.0, "MERCURY": 14.0, "JUPITER": 11.0, "VENUS": 10.0, "SATURN": 15.0
+}
+
+# Classical Moolatrikona sign + degree span per BPHS (distinct from Own Sign for
+# Moon/Mars/Mercury/Jupiter/Venus/Saturn — only Sun's happens to coincide with its own sign).
+# (sign_index, start_degree, end_degree)
+MOOLATRIKONA_RANGES = {
+    "SUN": (4, 0.0, 20.0),      # Leo 0-20
+    "MOON": (1, 4.0, 30.0),     # Taurus 4-30
+    "MARS": (0, 0.0, 12.0),     # Aries 0-12
+    "MERCURY": (5, 15.0, 20.0), # Virgo 15-20
+    "JUPITER": (8, 0.0, 10.0),  # Sagittarius 0-10
+    "VENUS": (6, 0.0, 15.0),    # Libra 0-15
+    "SATURN": (10, 0.0, 20.0),  # Aquarius 0-20
+}
+
+# Deep exaltation degree (within the exaltation sign) per BPHS; debilitation point is +180 deg.
+DEEP_EXALTATION_DEGREE = {
+    "SUN": 0 * 30 + 10.0,      # 10 Aries
+    "MOON": 1 * 30 + 3.0,      # 3 Taurus
+    "MARS": 9 * 30 + 28.0,     # 28 Capricorn
+    "MERCURY": 5 * 30 + 15.0,  # 15 Virgo
+    "JUPITER": 3 * 30 + 5.0,   # 5 Cancer
+    "VENUS": 11 * 30 + 27.0,   # 27 Pisces
+    "SATURN": 6 * 30 + 20.0,   # 20 Libra
+}
+
+# BPHS natural friendship (Naisargika Maitri) per planet, one-directional — mirrors
+# dosha_matching.calculator.NATURAL_FRIENDSHIP (kept local here to avoid a cross-module
+# import cycle, since dosha_matching already depends on parashari for chart data).
+NATURAL_FRIENDSHIP = {
+    "SUN": {"friends": {"MOON", "MARS", "JUPITER"}, "enemies": {"VENUS", "SATURN"}},
+    "MOON": {"friends": {"SUN", "MERCURY"}, "enemies": set()},
+    "MARS": {"friends": {"SUN", "MOON", "JUPITER"}, "enemies": {"MERCURY"}},
+    "MERCURY": {"friends": {"SUN", "VENUS"}, "enemies": {"MOON"}},
+    "JUPITER": {"friends": {"SUN", "MOON", "MARS"}, "enemies": {"MERCURY", "VENUS"}},
+    "VENUS": {"friends": {"MERCURY", "SATURN"}, "enemies": {"SUN", "MOON"}},
+    "SATURN": {"friends": {"MERCURY", "VENUS"}, "enemies": {"SUN", "MOON", "MARS"}},
+}
+
+_COMPOUND_RELATION_TABLE = {
+    ("FRIEND", "FRIEND"): "GREAT_FRIEND",
+    ("FRIEND", "NEUTRAL"): "FRIEND", ("NEUTRAL", "FRIEND"): "FRIEND",
+    ("FRIEND", "ENEMY"): "NEUTRAL", ("ENEMY", "FRIEND"): "NEUTRAL",
+    ("NEUTRAL", "NEUTRAL"): "NEUTRAL",
+    ("NEUTRAL", "ENEMY"): "ENEMY", ("ENEMY", "NEUTRAL"): "ENEMY",
+    ("ENEMY", "ENEMY"): "GREAT_ENEMY",
+}
+
+
+def _natural_relation(a: str, b: str) -> str:
+    """One-directional Naisargika Maitri: how planet `a` regards planet `b`."""
+    if b in NATURAL_FRIENDSHIP.get(a, {}).get("friends", set()):
+        return "FRIEND"
+    if b in NATURAL_FRIENDSHIP.get(a, {}).get("enemies", set()):
+        return "ENEMY"
+    return "NEUTRAL"
+
+
+def compute_compound_dignity(pid: str, sign_idx: int, deg_in_sign: float, d1_sign_of: Dict[str, int], is_d1: bool = False, include_exaltation: bool = True) -> str:
+    """
+    Classical Panchadha Maitri (5-fold compound) dignity of `pid` occupying `sign_idx`
+    (at `deg_in_sign` degrees into that sign), combining Naisargika (natural) +
+    Tatkalika (temporal, from D1 sign positions in `d1_sign_of`) friendship toward the
+    sign's ruling lord. Returns one of:
+    EXALTED / DEBILITATED / MOOLATRIKONA / OWN / GREAT_FRIEND / FRIEND / NEUTRAL / ENEMY / GREAT_ENEMY.
+    Temporal friendship is symmetric by construction (houses 2/3/4/10/11/12 from each
+    other are mutual temporal friends; the rest mutual temporal enemies), so only one
+    direction needs to be checked.
+    `include_exaltation=False` skips the Exalted/Debilitated short-circuit — used by
+    Saptavargaja Bala, whose classical point table has no separate exaltation tier
+    (exaltation strength is captured entirely by the separate Uchcha Bala component;
+    an exalted planet's Saptavargaja points come from its ordinary relation to the sign lord).
+    """
+    if include_exaltation and pid in EXALTATION_SIGNS and sign_idx == EXALTATION_SIGNS[pid]:
+        return "EXALTED"
+    if include_exaltation and pid in DEBILITATION_SIGNS and sign_idx == DEBILITATION_SIGNS[pid]:
+        return "DEBILITATED"
+    if is_d1 and pid in MOOLATRIKONA_RANGES:
+        mt_sign, mt_lo, mt_hi = MOOLATRIKONA_RANGES[pid]
+        if sign_idx == mt_sign and mt_lo <= deg_in_sign < mt_hi:
+            return "MOOLATRIKONA"
+    if sign_idx in OWN_SIGNS.get(pid, []):
+        return "OWN"
+
+    owner = ZODIAC_SIGNS[sign_idx]["ruler"]
+    if owner == pid:
+        return "OWN"
+
+    natural = _natural_relation(pid, owner)
+    owner_d1_sign = d1_sign_of.get(owner)
+    planet_d1_sign = d1_sign_of.get(pid)
+    if owner_d1_sign is None or planet_d1_sign is None:
+        return natural if natural in ("FRIEND", "ENEMY") else "NEUTRAL"
+
+    house_diff = ((owner_d1_sign - planet_d1_sign) % 12) + 1
+    temporal = "FRIEND" if house_diff in (2, 3, 4, 10, 11, 12) else "ENEMY"
+    return _COMPOUND_RELATION_TABLE.get((natural, temporal), "NEUTRAL")
+
+
+def sputa_drishti_raw(angle: float, aspecting_pid: str) -> float:
+    """
+    Classical Sputa Drishti (exact aspect strength, 0-60 Virupas before benefic/malefic
+    rectification), piecewise by angular separation from the aspecting planet, with the
+    special full-strength zones for Mars (4th/8th), Jupiter (5th/9th) and Saturn (3rd/10th).
+    Sourced verbatim from the PyJHora reference implementation's __drik_bala_calc_1.
+    `angle` = (aspected_longitude - aspecting_longitude) % 360.
+    """
+    a = angle % 360.0
+    if a < 30.0:
+        v = 0.0
+    elif a < 60.0:
+        v = 0.5 * (a - 30.0)
+    elif a < 90.0:
+        v = (a - 60.0) + 15.0
+        if aspecting_pid == "SATURN":
+            v += 45.0
+    elif a < 120.0:
+        v = 0.5 * (120.0 - a) + 30.0
+        if aspecting_pid == "MARS":
+            v += 15.0
+    elif a < 150.0:
+        v = (150.0 - a)
+        if aspecting_pid == "JUPITER":
+            v += 30.0
+    elif a < 180.0:
+        v = 2.0 * (a - 150.0)
+    elif a < 300.0:
+        v = 0.5 * (300.0 - a)
+        if aspecting_pid == "MARS" and 210.0 <= a < 240.0:
+            v += 15.0
+        if aspecting_pid == "JUPITER" and 240.0 <= a < 270.0:
+            v += 30.0
+        if aspecting_pid == "SATURN" and 270.0 <= a < 300.0:
+            v += 45.0
+    else:
+        v = 0.0
+    return v
+
 
 def compute_d9_navamsha_sign(longitude: float) -> int:
     """
@@ -227,21 +380,8 @@ def compute_varga_chart(
                 sun_lon = p_lon
         raw_planets.append((p, p_id, p_lon, speed, is_ret))
 
-    # Classical Dignities (Exaltation / Debilitation / Own Sign indices 0-11)
-    # Signs: 0=Aries, 1=Taurus, 2=Gemini, 3=Cancer, 4=Leo, 5=Virgo, 6=Libra, 7=Scorpio, 8=Sagittarius, 9=Capricorn, 10=Aquarius, 11=Pisces
-    EXALTATION_SIGNS = {
-        "SUN": 0, "MOON": 1, "MARS": 9, "MERCURY": 5, "JUPITER": 3, "VENUS": 11, "SATURN": 6, "RAHU": 1, "KETU": 7
-    }
-    DEBILITATION_SIGNS = {
-        "SUN": 6, "MOON": 7, "MARS": 3, "MERCURY": 11, "JUPITER": 9, "VENUS": 5, "SATURN": 0, "RAHU": 7, "KETU": 1
-    }
-    OWN_SIGNS = {
-        "SUN": [4], "MOON": [3], "MARS": [0, 7], "MERCURY": [2, 5], "JUPITER": [8, 11], "VENUS": [1, 6], "SATURN": [9, 10]
-    }
-    COMBUST_ORBS = {
-        "MOON": 12.0, "MARS": 17.0, "MERCURY": 14.0, "JUPITER": 11.0, "VENUS": 10.0, "SATURN": 15.0
-    }
-
+    # Dignity tables (EXALTATION_SIGNS / DEBILITATION_SIGNS / OWN_SIGNS / COMBUST_ORBS)
+    # are module-level constants defined above, shared with the Shadbala/Avastha dignity helpers.
     for p, p_id, p_lon, speed, is_ret in raw_planets:
         # Target Varga sign index for planet using classical rules
         p_sign_idx = compute_varga_sign(p_lon, clean_varga)
@@ -290,7 +430,8 @@ def compute_varga_chart(
             },
             "is_retrograde": is_ret,
             "dignity": dignity,
-            "is_combust": is_combust
+            "is_combust": is_combust,
+            "speed": round(speed, 6)
         }
         planets_data.append(planet_entry)
         houses_dict[house_num].append(p_id)
@@ -447,7 +588,10 @@ def generate_chart_svg(
     chart_style: str = "NORTH_INDIAN"
 ) -> str:
     """
-    Generate crisp, rich, AstroSage-standard inline SVG Kundli diagram (North Indian diamond format).
+    Generate crisp, rich, AstroSage-standard inline SVG Kundli diagram.
+    Supports chart_style="NORTH_INDIAN" (default, house-fixed diamond),
+    "SOUTH_INDIAN" (sign-fixed box grid), and "EAST_INDIAN" (sign-fixed diamond,
+    Aries at top, counter-clockwise).
     Displays:
     - House sign numbers (Lagna and Bhavas)
     - Planet abbreviation (in Hindi or English)
@@ -459,11 +603,14 @@ def generate_chart_svg(
     asc_sign_num = chart_data["ascendant"]["sign"]["number"]
     lang = (chart_data.get("language") or "en").lower().strip()
     
-    # Map rich planet strings into each house
+    # Map rich planet strings into each house (and, in parallel, each sign —
+    # used by the East Indian renderer, which is sign-fixed rather than house-fixed)
     house_planets = {h: [] for h in range(1, 13)}
+    sign_planets_fixed = {s: [] for s in range(1, 13)}
     for p in chart_data.get("planets", []):
         p_id = p.get("id", "")
         h_num = p.get("house", 1)
+        p_sign_num = p.get("sign", {}).get("number", 1)
         
         # Abbreviation
         if lang == "hi":
@@ -517,6 +664,7 @@ def generate_chart_svg(
             color = "#b45309" # amber for retrograde (वक्री)
         
         house_planets[h_num].append((item_text, color))
+        sign_planets_fixed[p_sign_num].append((item_text, color))
 
     # House layout config: each house has (center_x, center_y, max_height, max_width)
     # These define the safe drawing zone per house in the 400x400 North Indian grid
@@ -536,12 +684,11 @@ def generate_chart_svg(
         12: (300, 72,  55,  80),    # Top-right corner triangle
     }
 
-    def render_house_items(h_idx: int, _cx: int = 0, _sy: int = 0, _lh: int = 12) -> str:
-        items = house_planets.get(h_idx, [])
+    def render_zone_items(zone_idx: int, items: list) -> str:
         if not items:
             return ""
 
-        cx, cy, max_h, max_w = HOUSE_ZONES[h_idx]
+        cx, cy, max_h, max_w = HOUSE_ZONES[zone_idx]
         n = len(items)
         font_size = 10
         line_h = 11
@@ -560,9 +707,51 @@ def generate_chart_svg(
 
         return "\n    ".join(lines)
 
+    def render_house_items(h_idx: int, _cx: int = 0, _sy: int = 0, _lh: int = 12) -> str:
+        return render_zone_items(h_idx, house_planets.get(h_idx, []))
+
     # Compute 12 house sign numbers
     def h_sign(h: int) -> int:
         return ((asc_sign_num + (h - 1) - 1) % 12) + 1
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # EAST INDIAN CHART GENERATOR (Bengali/Odia — sign-fixed diamond, Aries at
+    # top, signs running counter-clockwise; same diamond geometry as North
+    # Indian but each compartment holds a FIXED sign instead of a fixed house —
+    # the house number displayed there rotates with the Ascendant instead).
+    # ══════════════════════════════════════════════════════════════════════════
+    if chart_style and chart_style.upper() in ["EAST_INDIAN", "EAST", "BENGALI"]:
+        SIGN_ABBR = {
+            1: "Ari", 2: "Tau", 3: "Gem", 4: "Can", 5: "Leo", 6: "Vir",
+            7: "Lib", 8: "Sco", 9: "Sag", 10: "Cap", 11: "Aqu", 12: "Pis"
+        }
+
+        def house_of_sign(sign_num: int) -> int:
+            return ((sign_num - asc_sign_num) % 12) + 1
+
+        zone_labels = []
+        zone_items = []
+        for sign_num in range(1, 13):
+            cx, cy, _, _ = HOUSE_ZONES[sign_num]
+            is_lagna = (sign_num == asc_sign_num)
+            label_y = cy - 40 if sign_num in (1, 4, 7, 10) else cy - 28
+            lagna_mark = ' <tspan fill="#dc2626">(लग्न)</tspan>' if is_lagna else ""
+            zone_labels.append(
+                f'<text x="{cx}" y="{label_y}" text-anchor="middle" font-size="9.5" '
+                f'fill="#a16207" font-weight="bold">{SIGN_ABBR[sign_num]} · H{house_of_sign(sign_num)}{lagna_mark}</text>'
+            )
+            zone_items.append(render_zone_items(sign_num, sign_planets_fixed.get(sign_num, [])))
+
+        east_svg = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="100%" height="100%" style="font-family:'Segoe UI',Roboto,Helvetica,sans-serif; background:#fffdfa; border:2px solid #b45309; border-radius:8px;">
+    <rect x="8" y="8" width="384" height="384" fill="none" stroke="#b45309" stroke-width="2"/>
+    <line x1="8" y1="8" x2="392" y2="392" stroke="#b45309" stroke-width="1.8"/>
+    <line x1="8" y1="392" x2="392" y2="8" stroke="#b45309" stroke-width="1.8"/>
+    <polygon points="200,8 392,200 200,392 8,200" fill="none" stroke="#b45309" stroke-width="1.8"/>
+    <text x="200" y="204" text-anchor="middle" font-size="12" fill="#92400e" font-weight="bold" letter-spacing="1">{chart_data.get('varga', 'D1')}</text>
+    {''.join(zone_labels)}
+    {''.join(zone_items)}
+</svg>'''
+        return east_svg
 
     # ══════════════════════════════════════════════════════════════════════════
     # SOUTH INDIAN CHART GENERATOR (Fixed Zodiac Box Grid with Lagna marker)
@@ -992,19 +1181,21 @@ def calculate_planetary_avasthas(
     1. Baladi Avasthas (Age States based on degree in sign):
        - Odd Signs: 0-6° Bala (Infant), 6-12° Kumara (Youth), 12-18° Yuva (Adolescent/Prime), 18-24° Vriddha (Old), 24-30° Mrita (Dead).
        - Even Signs: Reversed order.
-    2. Jagradadi Avasthas (Alertness based on dignity):
-       - Jagrata (Awake - Own/Exaltation sign)
-       - Swapna (Dreaming - Friend sign)
-       - Sushupti (Deep Sleep - Enemy/Debilitation sign)
+    2. Jagradadi Avasthas (Alertness based on full Panchadha Maitri dignity toward the
+       sign lord — Jagrata for Exalted/Moolatrikona/Own/Great-Friend, Swapna for
+       Friend/Neutral, Sushupti for Enemy/Great-Enemy/Debilitated).
     """
     from app.modules.parashari.calculator import calculate_varga_chart
     chart = calculate_varga_chart(dob, tob, lat, lon, tz, "D1", ayanamsa)
+
+    d1_sign_of = {p["id"]: p["sign"]["number"] - 1 for p in chart["planets"]}
 
     avasthas = {}
     for p in chart["planets"]:
         pid = p["id"]
         deg_in_sign = p["longitude"] % 30.0
         sign_num = p["sign"]["number"] # 1 to 12
+        sign_idx = sign_num - 1
         is_odd = (sign_num % 2 != 0)
 
         # 1. Baladi Avastha
@@ -1016,11 +1207,13 @@ def calculate_planetary_avasthas(
             baladi_names = ["Mrita (Dead - 0% fruit)", "Vriddha (Old - Negligible fruit)", "Yuva (Prime Adult - 100% full fruit)", "Kumara (Youth - 50% fruit)", "Bala (Infant - 25% fruit)"]
             baladi = baladi_names[segment]
 
-        # 2. Jagradadi Avastha
-        dignity = p.get("dignity", "NEUTRAL")
-        if dignity in ["OWN_SIGN", "EXALTED", "MOOLATRIKONA"]:
+        # 2. Jagradadi Avastha — real Panchadha Maitri dignity (natural + temporal
+        # friendship toward the occupied sign's lord), not just the coarse
+        # Exalted/Debilitated/Own/Neutral field used elsewhere, so Swapna is actually reachable.
+        dignity = compute_compound_dignity(pid, sign_idx, deg_in_sign, d1_sign_of, is_d1=True)
+        if dignity in ("EXALTED", "MOOLATRIKONA", "OWN", "GREAT_FRIEND"):
             jagradadi = "Jagrata (Awake - Highly Conscious & Effective)"
-        elif dignity in ["FRIEND", "GREAT_FRIEND"]:
+        elif dignity in ("FRIEND", "NEUTRAL"):
             jagradadi = "Swapna (Dreaming - Moderately Active)"
         else:
             jagradadi = "Sushupti (Sleeping - Subdued & Dormant)"
@@ -1031,6 +1224,7 @@ def calculate_planetary_avasthas(
             "sign": p["sign"]["name"],
             "degree_in_sign": round(deg_in_sign, 2),
             "baladi_avastha": baladi,
+            "dignity_toward_sign_lord": dignity,
             "jagradadi_avastha": jagradadi
         }
 
@@ -1118,89 +1312,293 @@ def calculate_shadbala_details(
     ayanamsa: str = "LAHIRI"
 ) -> Dict[str, Any]:
     """
-    Module 3 — Endpoint 24: 6-Fold Planetary Strength (Shadbala).
-    Classical BPHS components in Virupas and Rupas (60 Virupas = 1 Rupa):
-    1. Sthana Bala (Positional Strength: Uchcha, Saptavargaja, Ojayugmarashi, Kendradi, Drekkana)
-    2. Dig Bala (Directional Strength: Jupiter/Mercury in 1st, Sun/Mars in 10th, Saturn in 7th, Moon/Venus in 4th)
-    3. Kaala Bala (Temporal Strength: Nathonnatha, Paksha, Tribhaga, Varsha, Masa, Dina, Hora, Yudhdha)
-    4. Chesta Bala (Motional Strength: Planetary speed and retrograde motion)
-    5. Naisargika Bala (Natural Strength: Fixed classical hierarchy Sun > Moon > Venus > Jupiter > Mercury > Mars > Saturn)
-    6. Drik Bala (Aspectual Strength: Drishti received from benefics and malefics)
+    Module 3 — Endpoint 24: 6-Fold Planetary Strength (Shadbala), BPHS Ch. 27.
+
+    Formulas cross-checked against the Saravali reference (saravali.github.io/astrology/bala_*.html)
+    and the PyJHora open-source implementation (github.com/naturalstupid/PyJHora, based on
+    P.V.R. Narasimha Rao's "Vedic Astrology: An Integrated Approach"). Real, sourced formulas
+    unless noted:
+    1. Sthana Bala = Uchcha + Saptavargaja + Ojayugmarasyamsa + Kendradi + Drekkana Bala (all 5 real).
+    2. Dig Bala: real distance/3 formula, but the "weakest point" reference uses an equal-house
+       bhava-madhya (Lagna degree + (house-1)*30 + 15) since this module's houses are whole-sign,
+       not Placidus cusps — an approximation, not the exact classical cusp-based version.
+    3. Kaala Bala = Nathonnata + Paksha + Tribhaga + Vaaradhipati + Hora + Ayana Bala.
+       Abdadhipati (year-lord, 15 virupas) and Masadhipati (month-lord, 30 virupas) are DELIBERATELY
+       OMITTED: both need a Hindu-calendar ahargana epoch this module doesn't implement, and
+       guessing epoch constants risked a confidently-wrong number, which is worse than a documented
+       gap. Nathonnata Bala's "midnight" is the midpoint of the nearest sunrise/sunset-derived night,
+       not a precise ahargana-based midnight. Yuddha (planetary war) redistribution is not computed
+       (rare edge case: two of the 5 non-luminaries within ~1 degree of each other).
+    4. Chesta Bala: Sun's = its own Ayana Bala, Moon's = its own Paksha Bala (both real, per BPHS).
+       For Mars/Mercury/Jupiter/Venus/Saturn: approximated from real instantaneous speed vs. mean
+       daily motion on a continuous 0-60 scale, anchored so Sama (mean speed) ~= 7.5 and Chara
+       (fast, ratio~1) ~= 45 to match the sourced classical anchor values — NOT the exact classical
+       discrete 8-tier Vakra/Anuvakra/Vikala/Mandatara/Manda/Sama/Chara/Atichara classification,
+       whose precise speed-ratio breakpoints were not confidently sourced this session.
+    5. Naisargika Bala: unchanged — already matched the classical fixed table (Sun 60 ... Saturn 8.57).
+    6. Drik Bala: real piecewise Sputa Drishti formula (special aspects: Mars 4th/8th, Jupiter
+       5th/9th, Saturn 3rd/10th full-strength zones), summed as (benefic aspects - malefic
+       aspects)/4 per the reference implementation. Moon classified benefic/malefic by paksha
+       (bright/dark half); Mercury is simplified to always-benefic (the classical rule also flips
+       it malefic when conjunct another malefic, not implemented here).
     """
     from app.modules.parashari.calculator import calculate_varga_chart
-    chart = calculate_varga_chart(dob, tob, lat, lon, tz, "D1", ayanamsa)
+    from app.modules.core_astronomy.advanced_astronomy import calculate_sun_moon_timings
 
-    # Classical Naisargika Bala in Virupas: Sun (60.0), Moon (51.43), Venus (42.86), Jupiter (34.29), Mercury (25.71), Mars (17.14), Saturn (8.57)
+    chart = calculate_varga_chart(dob, tob, lat, lon, tz, "D1", ayanamsa)
+    planets_by_id = {p["id"]: p for p in chart["planets"]}
+    d1_sign_of = {p["id"]: p["sign"]["number"] - 1 for p in chart["planets"]}
+    asc_deg = chart["ascendant"]["full_degree"]
+
     NAISARGIKA_BALA = {
         "SUN": 60.0, "MOON": 51.43, "VENUS": 42.86, "JUPITER": 34.29,
         "MERCURY": 25.71, "MARS": 17.14, "SATURN": 8.57
     }
-
-    # Directional optimal houses
-    DIG_BALA_HOUSES = {
-        "JUPITER": 1, "MERCURY": 1,
-        "MOON": 4, "VENUS": 4,
-        "SATURN": 7,
-        "SUN": 10, "MARS": 10
-    }
-
-    # Minimum Shadbala requirement in Rupas according to BPHS
     MIN_REQUIRED_RUPAS = {
         "SUN": 6.5, "MOON": 6.0, "MARS": 5.0, "MERCURY": 7.0,
         "JUPITER": 6.5, "VENUS": 5.5, "SATURN": 5.0
     }
+    DIG_BALA_STRONG_HOUSE = {"JUPITER": 1, "MERCURY": 1, "MOON": 4, "VENUS": 4, "SATURN": 7, "SUN": 10, "MARS": 10}
+    MEAN_DAILY_MOTION = {"MARS": 0.524, "MERCURY": 1.383, "JUPITER": 0.0831, "VENUS": 1.602, "SATURN": 0.0334}
+    SAPTAVARGA_LIST = ["D1", "D2", "D3", "D7", "D9", "D12", "D30"]
+    SAPTAVARGA_POINTS = {"GREAT_FRIEND": 22.5, "FRIEND": 15.0, "NEUTRAL": 7.5, "ENEMY": 3.75, "GREAT_ENEMY": 1.875}
+    SWE_PLANET_IDS = {"SUN": swe.SUN, "MOON": swe.MOON, "MARS": swe.MARS, "MERCURY": swe.MERCURY,
+                       "JUPITER": swe.JUPITER, "VENUS": swe.VENUS, "SATURN": swe.SATURN}
 
+    # ---------- Sthana Bala (5 real sub-components) ----------
+    def uchcha_bala(pid, full_lon):
+        debil_point = (DEEP_EXALTATION_DEGREE[pid] + 180.0) % 360.0
+        dist = abs((full_lon - debil_point + 180.0) % 360.0 - 180.0)
+        return round(dist / 3.0, 2)
+
+    def saptavargaja_bala(pid):
+        total = 0.0
+        p_lon = planets_by_id[pid]["longitude"]
+        for vg in SAPTAVARGA_LIST:
+            s_idx = compute_varga_sign(p_lon, vg)
+            deg_in = (p_lon % 30.0) if vg == "D1" else 0.0
+            dignity = compute_compound_dignity(pid, s_idx, deg_in, d1_sign_of, is_d1=(vg == "D1"), include_exaltation=False)
+            if dignity == "MOOLATRIKONA":
+                total += 45.0
+            elif dignity == "OWN":
+                total += 30.0
+            else:
+                total += SAPTAVARGA_POINTS.get(dignity, 7.5)
+        return round(total, 2)
+
+    def ojayugmarasyamsa_bala(pid, rasi_sign_idx, nav_sign_idx):
+        female = pid in ("MOON", "VENUS")
+        pts = 0.0
+        if female:
+            if rasi_sign_idx % 2 == 1:
+                pts += 15.0
+            if nav_sign_idx % 2 == 1:
+                pts += 15.0
+        else:
+            if rasi_sign_idx % 2 == 0:
+                pts += 15.0
+            if nav_sign_idx % 2 == 0:
+                pts += 15.0
+        return pts
+
+    def kendradi_bala(house_num):
+        if house_num in (1, 4, 7, 10):
+            return 60.0
+        if house_num in (2, 5, 8, 11):
+            return 30.0
+        return 15.0
+
+    DREKKANA_GROUP = {"SUN": 0, "MARS": 0, "JUPITER": 0, "MOON": 1, "VENUS": 1, "MERCURY": 2, "SATURN": 2}
+
+    def drekkana_bala(pid, deg_in_sign):
+        part = min(int(deg_in_sign // 10.0), 2)
+        return 15.0 if DREKKANA_GROUP.get(pid) == part else 0.0
+
+    # ---------- Dig Bala ----------
+    def dig_bala(pid, full_lon):
+        strong_house = DIG_BALA_STRONG_HOUSE[pid]
+        weak_house = ((strong_house - 1 + 6) % 12) + 1
+        weak_point = (asc_deg + (weak_house - 1) * 30.0 + 15.0) % 360.0
+        dist = abs((full_lon - weak_point + 180.0) % 360.0 - 180.0)
+        return round(dist / 3.0, 2)
+
+    # ---------- Kaala Bala ----------
+    sun_timings = calculate_sun_moon_timings(dob, lat, lon, tz)
+    jd_birth = calculate_julian_day(dob, tob, tz)
+    if sun_timings.get("sunrise") not in (None, "N/A") and sun_timings.get("sunset") not in (None, "N/A"):
+        jd_sunrise = calculate_julian_day(dob, sun_timings["sunrise"], tz)
+        jd_sunset = calculate_julian_day(dob, sun_timings["sunset"], tz)
+    else:
+        # Polar edge case fallback: assume a 06:00/18:00 day.
+        jd_sunrise = calculate_julian_day(dob, "06:00:00", tz)
+        jd_sunset = calculate_julian_day(dob, "18:00:00", tz)
+    day_length_days = max(jd_sunset - jd_sunrise, 1.0 / 1440.0)
+    night_length_days = max(1.0 - day_length_days, 1.0 / 1440.0)
+
+    # Nathonnata Bala: distance (in hours, scaled x5 to virupas) from the nearer of the
+    # two midnights (previous-night midpoint or next-night midpoint) bracketing this day.
+    night_before_mid = jd_sunrise - night_length_days / 2.0
+    night_after_mid = jd_sunset + night_length_days / 2.0
+    nearest_mid = night_before_mid if abs(jd_birth - night_before_mid) <= abs(jd_birth - night_after_mid) else night_after_mid
+    hrs_from_mid = min(abs(jd_birth - nearest_mid) * 24.0, 12.0)
+    nathonnata_raw = round(hrs_from_mid * 5.0, 2)
+    NATHONNATA = {"SUN": nathonnata_raw, "JUPITER": nathonnata_raw, "VENUS": nathonnata_raw, "MERCURY": 60.0}
+    for _pid in ("MOON", "MARS", "SATURN"):
+        NATHONNATA[_pid] = round(60.0 - nathonnata_raw, 2)
+
+    # Paksha Bala: real Sun-Moon elongation, symmetric fold around Purnima (full moon = 60).
+    sun_lon = planets_by_id["SUN"]["longitude"]
+    moon_lon = planets_by_id["MOON"]["longitude"]
+    raw_elong = (moon_lon - sun_lon) % 360.0
+    is_waxing = raw_elong <= 180.0
+    pb = raw_elong / 3.0
+    if pb > 60.0:
+        pb = 120.0 - pb
+    pb = round(pb, 2)
+    PAKSHA_BENEFIC = {"JUPITER", "VENUS", "MERCURY"}
+    PAKSHA = {}
+    for _pid in NAISARGIKA_BALA:
+        if _pid == "MOON":
+            PAKSHA[_pid] = round(pb * 2.0 if is_waxing else (60.0 - pb) * 2.0, 2)
+        elif _pid in PAKSHA_BENEFIC:
+            PAKSHA[_pid] = pb
+        else:
+            PAKSHA[_pid] = round(60.0 - pb, 2)
+
+    # Tribhaga Bala: day/night each split into thirds with a fixed segment-lord sequence;
+    # Jupiter always receives the full 60 virupas alongside whichever segment lord applies.
+    TRIBHAGA = {pid: 0.0 for pid in NAISARGIKA_BALA}
+    TRIBHAGA["JUPITER"] = 60.0
+    if jd_sunrise <= jd_birth < jd_sunset:
+        day_frac = (jd_birth - jd_sunrise) / day_length_days
+        seg = min(int(day_frac * 3.0), 2)
+        TRIBHAGA[["MERCURY", "SUN", "SATURN"][seg]] = 60.0
+    else:
+        night_start = jd_sunset if jd_birth >= jd_sunset else (jd_sunrise - night_length_days)
+        night_frac = max(min((jd_birth - night_start) / night_length_days, 1.0), 0.0)
+        seg = min(int(night_frac * 3.0), 2)
+        TRIBHAGA[["MOON", "VENUS", "MARS"][seg]] = 60.0
+
+    # Vaaradhipati Bala: 45 virupas to the sunrise-based weekday lord (mirrors the
+    # verified sunrise-based Vaar logic already used in the panchang module).
+    dt = datetime.strptime(dob, "%Y-%m-%d")
+    effective_dt = dt - timedelta(days=1) if jd_birth < jd_sunrise else dt
+    weekday_idx = effective_dt.weekday()  # 0=Monday ... 6=Sunday
+    WEEKDAY_LORD = ["MOON", "MARS", "MERCURY", "JUPITER", "VENUS", "SATURN", "SUN"]
+    vaara_lord = WEEKDAY_LORD[weekday_idx]
+    VAARADHIPATI = {pid: (45.0 if pid == vaara_lord else 0.0) for pid in NAISARGIKA_BALA}
+
+    # Hora Bala: 60 virupas to the ruling planet of the current classical planetary hour —
+    # Chaldean order (Saturn>Jupiter>Mars>Sun>Venus>Mercury>Moon), first hora after sunrise
+    # ruled by the day's own lord, advancing one planet per elapsed clock hour.
+    CHALDEAN_ORDER = ["SATURN", "JUPITER", "MARS", "SUN", "VENUS", "MERCURY", "MOON"]
+    hours_since_sunrise = (jd_birth - jd_sunrise) * 24.0
+    if hours_since_sunrise < 0:
+        hours_since_sunrise += 24.0
+    hora_steps = int(hours_since_sunrise) % 7
+    hora_lord = CHALDEAN_ORDER[(CHALDEAN_ORDER.index(vaara_lord) + hora_steps) % 7]
+    HORA = {pid: (60.0 if pid == hora_lord else 0.0) for pid in NAISARGIKA_BALA}
+
+    # Ayana Bala: real declination-based formula, (24 + declination) * 1.25, Sun doubled per BPHS.
+    jd_ut_tropical = calculate_julian_day(dob, tob, tz)
+    AYANA = {}
+    for pid, swe_id in SWE_PLANET_IDS.items():
+        eq_res, _ = swe.calc_ut(jd_ut_tropical, swe_id, swe.FLG_SWIEPH | swe.FLG_EQUATORIAL)
+        decl = eq_res[1]
+        val = round((24.0 + decl) * 1.25, 2)
+        if pid == "SUN":
+            val = round(val * 2.0, 2)
+        AYANA[pid] = max(0.0, val)
+
+    # ---------- Chesta Bala ----------
+    def chesta_bala(pid, speed, is_retro):
+        if pid == "SUN":
+            return AYANA["SUN"]  # BPHS: Sun's Chesta Bala equals its own Ayana Bala
+        if pid == "MOON":
+            return PAKSHA["MOON"]  # BPHS: Moon's Chesta Bala equals its own Paksha Bala
+        if is_retro:
+            return 60.0
+        mean = MEAN_DAILY_MOTION.get(pid, 1.0)
+        ratio = (abs(speed) / mean) if mean > 0 else 0.0
+        val = 7.5 + 37.5 * min(ratio, 1.4)
+        return round(min(val, 60.0), 2)
+
+    # ---------- Drik Bala (real piecewise Sputa Drishti, module-level sputa_drishti_raw) ----------
+    def classify_benefic(pid):
+        if pid == "MOON":
+            return is_waxing
+        return pid in ("JUPITER", "VENUS", "MERCURY")
+
+    def drik_bala(target_pid):
+        target_lon = planets_by_id[target_pid]["longitude"]
+        benefic_sum = 0.0
+        malefic_sum = 0.0
+        for src_pid in NAISARGIKA_BALA:
+            if src_pid == target_pid:
+                continue
+            src_lon = planets_by_id[src_pid]["longitude"]
+            raw = sputa_drishti_raw((target_lon - src_lon) % 360.0, src_pid)
+            if classify_benefic(src_pid):
+                benefic_sum += raw
+            else:
+                malefic_sum += raw
+        return round((benefic_sum - malefic_sum) / 4.0, 2)
+
+    # ---------- Assemble ----------
     shadbala_table = {}
-
     for p in chart["planets"]:
         pid = p["id"]
         if pid not in NAISARGIKA_BALA:
-            continue # Skip Rahu and Ketu in Shadbala
+            continue  # Rahu/Ketu are not part of classical Shadbala
 
         h = p["house"]
-        lon_deg = p["longitude"]
-        deg_in_sign = lon_deg % 30.0
-
-        # 1. Sthana Bala (Average range: 120 - 240 virupas)
-        # Higher in Kendras (1,4,7,10) and Trikonas (5,9)
-        kendra_bonus = 60.0 if h in [1, 4, 7, 10] else (45.0 if h in [5, 9] else (30.0 if h in [2, 11] else 15.0))
-        sthana_bala = round(120.0 + kendra_bonus + (deg_in_sign * 1.5), 2)
-
-        # 2. Dig Bala (Max 60 Virupas at optimal directional house)
-        opt_h = DIG_BALA_HOUSES.get(pid, 1)
-        h_diff = abs(h - opt_h)
-        if h_diff > 6:
-            h_diff = 12 - h_diff
-        dig_bala = round(60.0 - (h_diff * 10.0), 2)
-        if dig_bala < 0.0:
-            dig_bala = 0.0
-
-        # 3. Kaala Bala (Temporal strength ~ 120-200 virupas)
-        kaala_bala = round(130.0 + (h * 5.0), 2)
-
-        # 4. Chesta Bala (Motional strength: Retrograde = 60 virupas, direct = 30-50 virupas)
+        full_lon = p["longitude"]
+        deg_in_sign = full_lon % 30.0
+        rasi_sign_idx = p["sign"]["number"] - 1
+        nav_sign_idx = compute_d9_navamsha_sign(full_lon)
+        speed = p.get("speed", 0.0)
         is_ret = p.get("is_retrograde", False)
-        chesta_bala = 60.0 if is_ret else round(35.0 + ((deg_in_sign % 15.0) * 1.5), 2)
 
-        # 5. Naisargika Bala
+        ub = uchcha_bala(pid, full_lon)
+        svb = saptavargaja_bala(pid)
+        ob = ojayugmarasyamsa_bala(pid, rasi_sign_idx, nav_sign_idx)
+        kb = kendradi_bala(h)
+        drb = drekkana_bala(pid, deg_in_sign)
+        sthana_bala_total = round(ub + svb + ob + kb + drb, 2)
+
+        dig_bala_total = dig_bala(pid, full_lon)
+
+        kaala_bala_total = round(
+            NATHONNATA[pid] + PAKSHA[pid] + TRIBHAGA[pid] + VAARADHIPATI[pid] + HORA[pid] + AYANA[pid], 2
+        )
+
+        chesta_bala_total = chesta_bala(pid, speed, is_ret)
         naisargika = NAISARGIKA_BALA[pid]
+        drik_bala_total = drik_bala(pid)
 
-        # 6. Drik Bala (-30 to +30 virupas)
-        drik_bala = round(15.0 if h in [1, 5, 9, 10] else -10.0, 2)
-
-        total_virupas = round(sthana_bala + dig_bala + kaala_bala + chesta_bala + naisargika + drik_bala, 2)
+        total_virupas = round(
+            sthana_bala_total + dig_bala_total + kaala_bala_total + chesta_bala_total + naisargika + drik_bala_total, 2
+        )
         total_rupas = round(total_virupas / 60.0, 2)
         req_rupas = MIN_REQUIRED_RUPAS[pid]
         is_strong = total_rupas >= req_rupas
 
         shadbala_table[pid] = {
             "planet_name": p["name"],
-            "sthana_bala": sthana_bala,
-            "dig_bala": dig_bala,
-            "kaala_bala": kaala_bala,
-            "chesta_bala": chesta_bala,
+            "sthana_bala": sthana_bala_total,
+            "sthana_bala_breakdown": {
+                "uchcha_bala": ub, "saptavargaja_bala": svb, "ojayugmarasyamsa_bala": ob,
+                "kendradi_bala": kb, "drekkana_bala": drb
+            },
+            "dig_bala": dig_bala_total,
+            "kaala_bala": kaala_bala_total,
+            "kaala_bala_breakdown": {
+                "nathonnata_bala": NATHONNATA[pid], "paksha_bala": PAKSHA[pid], "tribhaga_bala": TRIBHAGA[pid],
+                "vaaradhipati_bala": VAARADHIPATI[pid], "hora_bala": HORA[pid], "ayana_bala": AYANA[pid]
+            },
+            "chesta_bala": chesta_bala_total,
             "naisargika_bala": naisargika,
-            "drik_bala": drik_bala,
+            "drik_bala": drik_bala_total,
             "total_shadbala_virupas": total_virupas,
             "total_shadbala_rupas": total_rupas,
             "minimum_required_rupas": req_rupas,
@@ -1224,16 +1622,30 @@ def calculate_bhavabala(
 ) -> Dict[str, Any]:
     """
     Module 3 — Endpoint 25: 12-House Strength Analysis (Bhavabala).
-    Classical BPHS composite house strength evaluated from:
-    1. Bhavadhipati Bala (Strength of house lord from Shadbala)
-    2. Bhava Digbala (Directional strength of the house)
-    3. Bhava Drishti Bala (Aspectual benefic/malefic gaze on house midpoint)
+    Classical BPHS composite house strength from three real components:
+    1. Bhavadhipati Bala: the house lord's own total Shadbala (from calculate_shadbala_details).
+    2. Bhava Digbala: Kendra/Panapara/Apoklima 60/30/15 virupas, the same well-sourced
+       grouping used for planetary Kendradi Bala (not the ad hoc 60/45/30 grouping this
+       endpoint used previously).
+    3. Bhava Drishti Bala: real Sputa Drishti aspect strength (benefic - malefic)/4 received
+       by the house's own bhava-madhya point (equal-house approximation, see Shadbala's
+       Dig Bala docstring note) from all 7 classical planets — not a crude occupant count.
     """
     shad = calculate_shadbala_details(dob, tob, lat, lon, tz, ayanamsa)
     shad_p = shad["shadbala"]
 
     from app.modules.parashari.calculator import calculate_varga_chart
     chart = calculate_varga_chart(dob, tob, lat, lon, tz, "D1", ayanamsa)
+    asc_deg = chart["ascendant"]["full_degree"]
+    planet_lons = {p["id"]: p["longitude"] for p in chart["planets"]}
+    sun_lon = planet_lons.get("SUN", 0.0)
+    moon_lon = planet_lons.get("MOON", 0.0)
+    is_waxing = ((moon_lon - sun_lon) % 360.0) <= 180.0
+
+    def classify_benefic(pid):
+        if pid == "MOON":
+            return is_waxing
+        return pid in ("JUPITER", "VENUS", "MERCURY")
 
     bhavabala_table = {}
     house_names = [
@@ -1258,12 +1670,22 @@ def calculate_bhavabala(
         # 1. Bhavadhipati Bala (Virupas of house lord)
         lord_shad = shad_p.get(h_lord, {}).get("total_shadbala_virupas", 350.0)
 
-        # 2. Bhava Digbala (Kendra houses 1, 4, 7, 10 receive 60 virupas; Trikonas receive 45 virupas)
-        bhav_digbala = 60.0 if h in [1, 4, 7, 10] else (45.0 if h in [5, 9] else 30.0)
+        # 2. Bhava Digbala (Kendra 60 / Panapara 30 / Apoklima 15 virupas)
+        bhav_digbala = 60.0 if h in (1, 4, 7, 10) else (30.0 if h in (2, 5, 8, 11) else 15.0)
 
-        # 3. Bhava Drishti Bala (Occupant / Drishti modifier)
-        occupants_count = len(h_obj["occupants"])
-        bhav_drishti = 30.0 + (occupants_count * 15.0)
+        # 3. Bhava Drishti Bala: real aspect strength at this house's bhava-madhya
+        bhava_madhya_deg = (asc_deg + (h - 1) * 30.0 + 15.0) % 360.0
+        benefic_sum = 0.0
+        malefic_sum = 0.0
+        for src_pid, src_lon in planet_lons.items():
+            if src_pid not in ("SUN", "MOON", "MARS", "MERCURY", "JUPITER", "VENUS", "SATURN"):
+                continue
+            raw = sputa_drishti_raw((bhava_madhya_deg - src_lon) % 360.0, src_pid)
+            if classify_benefic(src_pid):
+                benefic_sum += raw
+            else:
+                malefic_sum += raw
+        bhav_drishti = round((benefic_sum - malefic_sum) / 4.0, 2)
 
         total_bhavabala_virupas = round(lord_shad + bhav_digbala + bhav_drishti, 2)
         total_bhavabala_rupas = round(total_bhavabala_virupas / 60.0, 2)

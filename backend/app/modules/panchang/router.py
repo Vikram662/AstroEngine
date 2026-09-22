@@ -19,10 +19,13 @@ async def get_daily_panchang(
     """
     Module 2 — Endpoint 8:
     Daily Panchang: Tithi, Vaar, Nakshatra, Yoga, and Karana with progress metrics.
+    Not tied to anyone's birth -- pass the target calendar date via `date` (falls back
+    to `dob` if `date` is omitted, since `dob` is required by the shared schema).
     """
     selected_lang = (req.lang or "en").lower().strip()
+    target_date = req.date or req.dob
     panchang_data = calculate_daily_panchang(
-        dob=req.dob,
+        dob=target_date,
         tob=req.tob,
         lat=req.lat,
         lon=req.lon,
@@ -43,16 +46,18 @@ async def get_choghadiya(
     """
     Module 2 — Endpoint 10:
     Calculates 8 Day Choghadiya slots based on exact local sunrise and sunset timings.
+    Pass the target calendar date via `date` (falls back to `dob`).
     """
     selected_lang = (req.lang or "en").lower().strip()
+    target_date = req.date or req.dob
     sun_timings = calculate_sun_moon_timings(
-        dob=req.dob,
+        dob=target_date,
         lat=req.lat,
         lon=req.lon,
         tz=req.tz
     )
     choghadiya_data = calculate_choghadiya(
-        dob=req.dob,
+        dob=target_date,
         sunrise_time_str=sun_timings["sunrise"],
         sunset_time_str=sun_timings["sunset"],
         lang=selected_lang
@@ -68,12 +73,14 @@ async def get_advanced_muhurat(
     req: BirthDataRequest,
     key_hash: str = Depends(verify_api_key)
 ):
-    """Module 2 — Endpoint 9: Rahu Kaal, Yamaghanda, Gulika Kaal, Abhijit and Brahma Muhurat."""
+    """Module 2 — Endpoint 9: Rahu Kaal, Yamaghanda, Gulika Kaal, Abhijit and Brahma Muhurat.
+    Pass the target calendar date via `date` (falls back to `dob`)."""
     selected_lang = (req.lang or "en").lower().strip()
-    sun_timings = calculate_sun_moon_timings(dob=req.dob, lat=req.lat, lon=req.lon, tz=req.tz)
+    target_date = req.date or req.dob
+    sun_timings = calculate_sun_moon_timings(dob=target_date, lat=req.lat, lon=req.lon, tz=req.tz)
     from app.modules.panchang.calculator import calculate_advanced_muhurats
     adv_data = calculate_advanced_muhurats(
-        dob=req.dob,
+        dob=target_date,
         sunrise_time_str=sun_timings["sunrise"],
         sunset_time_str=sun_timings["sunset"],
         lang=selected_lang
@@ -85,11 +92,13 @@ async def get_hora_schedule(
     req: BirthDataRequest,
     key_hash: str = Depends(verify_api_key)
 ):
-    """Module 2 — Endpoint 11: 24-hr planetary Hora schedule from local sunrise."""
-    sun_timings = calculate_sun_moon_timings(dob=req.dob, lat=req.lat, lon=req.lon, tz=req.tz)
+    """Module 2 — Endpoint 11: 24-hr planetary Hora schedule from local sunrise.
+    Pass the target calendar date via `date` (falls back to `dob`)."""
+    target_date = req.date or req.dob
+    sun_timings = calculate_sun_moon_timings(dob=target_date, lat=req.lat, lon=req.lon, tz=req.tz)
     from app.modules.panchang.calculator import calculate_hora_schedule
     hora_data = calculate_hora_schedule(
-        dob=req.dob, 
+        dob=target_date,
         sunrise_time_str=sun_timings["sunrise"],
         sunset_time_str=sun_timings["sunset"]
     )
@@ -100,9 +109,11 @@ async def get_bhadra_status(
     req: BirthDataRequest,
     key_hash: str = Depends(verify_api_key)
 ):
-    """Module 2 — Endpoint 12: Bhadra presence, Vishti Karana timing, Mukh/Puchh, Swarga/Patala/Mrityu Loka."""
+    """Module 2 — Endpoint 12: Bhadra presence, Vishti Karana timing, Mukh/Puchh, Swarga/Patala/Mrityu Loka.
+    Pass the target calendar date via `date` (falls back to `dob`)."""
     from app.modules.panchang.calculator import calculate_bhadra_panchak
-    bp_data = calculate_bhadra_panchak(dob=req.dob, tob=req.tob, lat=req.lat, lon=req.lon, tz=req.tz)
+    target_date = req.date or req.dob
+    bp_data = calculate_bhadra_panchak(dob=target_date, tob=req.tob, lat=req.lat, lon=req.lon, tz=req.tz)
     return StandardResponse(status="success", language=req.lang or "en", data={"bhadra": bp_data["bhadra"]})
 
 @router.post("/panchak", response_model=StandardResponse)
@@ -110,9 +121,11 @@ async def get_panchak_status(
     req: BirthDataRequest,
     key_hash: str = Depends(verify_api_key)
 ):
-    """Module 2 — Endpoint 13: Panchak presence and classification (Roga, Agni, Nripa, Chora, Mrityu)."""
+    """Module 2 — Endpoint 13: Panchak presence and classification (Roga, Agni, Nripa, Chora, Mrityu).
+    Pass the target calendar date via `date` (falls back to `dob`)."""
     from app.modules.panchang.calculator import calculate_bhadra_panchak
-    bp_data = calculate_bhadra_panchak(dob=req.dob, tob=req.tob, lat=req.lat, lon=req.lon, tz=req.tz)
+    target_date = req.date or req.dob
+    bp_data = calculate_bhadra_panchak(dob=target_date, tob=req.tob, lat=req.lat, lon=req.lon, tz=req.tz)
     return StandardResponse(status="success", language=req.lang or "en", data={"panchak": bp_data["panchak"]})
 
 from fastapi import HTTPException
@@ -122,9 +135,11 @@ async def get_monthly_calendar(
     req: BirthDataRequest,
     key_hash: str = Depends(verify_api_key)
 ):
-    """Module 2 — Endpoint 14: Month-wide tithi transitions, ekadashi, pradosh, and sankranti."""
+    """Module 2 — Endpoint 14: Month-wide tithi transitions, ekadashi, pradosh, and sankranti.
+    Pass any date within the target month via `date` (falls back to `dob`)."""
     selected_lang = (req.lang or "en").lower().strip()
-    dt = req.dob.split("-")
+    target_date = req.date or req.dob
+    dt = target_date.split("-")
     year = int(dt[0])
     month = int(dt[1])
     data = calculate_monthly_calendar(year, month, req.lat, req.lon, req.tz, selected_lang)
@@ -135,9 +150,11 @@ async def get_marriage_muhurats(
     req: BirthDataRequest,
     key_hash: str = Depends(verify_api_key)
 ):
-    """Module 2 — Endpoint 15: Vivah muhurat, filtered by Guru/Shukra Asta and tribal doshas."""
+    """Module 2 — Endpoint 15: Vivah muhurat, filtered by Guru/Shukra Asta and tribal doshas.
+    Scans the 15 days starting from `date` (falls back to `dob`)."""
     selected_lang = (req.lang or "en").lower().strip()
-    data = calculate_muhurat_selection(req.dob, req.lat, req.lon, req.tz, "MARRIAGE", 15)
+    target_date = req.date or req.dob
+    data = calculate_muhurat_selection(target_date, req.lat, req.lon, req.tz, "MARRIAGE", 15)
     return StandardResponse(status="success", language=selected_lang, data=data)
 
 @router.post("/muhurat/griha-pravesh", response_model=StandardResponse)
@@ -145,9 +162,11 @@ async def get_griha_pravesh_muhurats(
     req: BirthDataRequest,
     key_hash: str = Depends(verify_api_key)
 ):
-    """Module 2 — Endpoint 16: Home-entry (Griha Pravesh) auspicious timings."""
+    """Module 2 — Endpoint 16: Home-entry (Griha Pravesh) auspicious timings.
+    Scans the 15 days starting from `date` (falls back to `dob`)."""
     selected_lang = (req.lang or "en").lower().strip()
-    data = calculate_muhurat_selection(req.dob, req.lat, req.lon, req.tz, "GRIHA_PRAVESH", 15)
+    target_date = req.date or req.dob
+    data = calculate_muhurat_selection(target_date, req.lat, req.lon, req.tz, "GRIHA_PRAVESH", 15)
     return StandardResponse(status="success", language=selected_lang, data=data)
 
 @router.post("/muhurat/property-vehicle", response_model=StandardResponse)
@@ -155,9 +174,11 @@ async def get_property_vehicle_muhurats(
     req: BirthDataRequest,
     key_hash: str = Depends(verify_api_key)
 ):
-    """Module 2 — Endpoint 17: Property purchase and vehicle delivery muhurats."""
+    """Module 2 — Endpoint 17: Property purchase and vehicle delivery muhurats.
+    Scans the 15 days starting from `date` (falls back to `dob`)."""
     selected_lang = (req.lang or "en").lower().strip()
-    data = calculate_muhurat_selection(req.dob, req.lat, req.lon, req.tz, "PROPERTY_VEHICLE", 15)
+    target_date = req.date or req.dob
+    data = calculate_muhurat_selection(target_date, req.lat, req.lon, req.tz, "PROPERTY_VEHICLE", 15)
     return StandardResponse(status="success", language=selected_lang, data=data)
 
 

@@ -6,7 +6,11 @@ from app.modules.western.calculator import (
     calculate_tropical_planets,
     calculate_aspects_matrix,
     calculate_big_three,
-    generate_western_wheel_svg
+    generate_western_wheel_svg,
+    calculate_daily_transits,
+    calculate_synastry_score,
+    calculate_western_solar_return,
+    get_tropical_ascendant_degree
 )
 
 router = APIRouter(prefix="/api/v1/western", tags=["Western Astrology"])
@@ -58,11 +62,14 @@ async def get_western_wheel_svg(
 ):
     """
     Module 11 — Endpoint 87:
-    Circular Western Natal Chart Wheel in Vector SVG format.
+    Circular Western Natal Chart Wheel in Vector SVG format — zodiac ring,
+    Ascendant marker, planets at their real longitudes, and aspect lines.
     """
     selected_lang = (req.lang or "en").lower().strip()
     planets = calculate_tropical_planets(req.dob, req.tob, req.tz, selected_lang)
-    svg_content = generate_western_wheel_svg(planets)
+    asc_degree = get_tropical_ascendant_degree(req.dob, req.tob, req.lat, req.lon, req.tz)
+    aspects = calculate_aspects_matrix(planets)
+    svg_content = generate_western_wheel_svg(planets, asc_degree=asc_degree, aspects=aspects)
     return Response(content=svg_content, media_type="image/svg+xml")
 
 @router.post("/synastry/score", response_model=StandardResponse)
@@ -73,15 +80,15 @@ async def get_synastry_score(
     key_hash: str = Depends(verify_api_key)
 ):
     """Module 11 — Endpoint 90: Two-chart Western synastry overlay, cross-aspects, and harmonic score."""
+    selected_lang = (req.lang or "en").lower().strip()
+    computed = calculate_synastry_score(req.dob, req.tob, req.tz, partner_dob, partner_tob, req.tz, selected_lang)
     return StandardResponse(
         status="success",
-        language=req.lang or "en",
+        language=selected_lang,
         data={
-            "synastry_harmony_score": 84.5,
-            "major_cross_aspects": [
-                {"aspect": "Sun Trine Moon", "orb": 1.2, "effect": "Deep psychological harmony and emotional resonance."},
-                {"aspect": "Venus Conjunct Mars", "orb": 0.8, "effect": "High romantic magnetism and physical attraction."}
-            ]
+            "synastry_harmony_score": computed["synastry_harmony_score"],
+            "total_cross_aspects_found": computed["total_cross_aspects_found"],
+            "major_cross_aspects": computed["major_cross_aspects"]
         }
     )
 
@@ -91,15 +98,12 @@ async def get_daily_transits(
     key_hash: str = Depends(verify_api_key)
 ):
     """Module 11 — Endpoint 91: Current celestial transits vs Natal positions."""
+    selected_lang = (req.lang or "en").lower().strip()
+    computed = calculate_daily_transits(req.dob, req.tob, req.tz, selected_lang)
     return StandardResponse(
         status="success",
-        language=req.lang or "en",
-        data={
-            "active_transits": [
-                {"transiting_planet": "Jupiter", "natal_planet": "Sun", "aspect": "Trine", "theme": "Career expansion and fortunate encounters."},
-                {"transiting_planet": "Saturn", "natal_planet": "Mercury", "aspect": "Sextile", "theme": "Mental discipline and structured agreements."}
-            ]
-        }
+        language=selected_lang,
+        data=computed
     )
 
 @router.post("/solar-return", response_model=StandardResponse)
@@ -109,14 +113,10 @@ async def get_western_solar_return(
     key_hash: str = Depends(verify_api_key)
 ):
     """Module 11 — Endpoint 92: Annual Western Tropical Solar Return chart."""
+    computed = calculate_western_solar_return(req.dob, req.tob, req.tz, req.lat, req.lon, return_year)
     return StandardResponse(
         status="success",
         language=req.lang or "en",
-        data={
-            "solar_return_year": return_year,
-            "exact_solar_moment": f"{return_year}-10-05T08:24:12Z",
-            "solar_ascendant": "Scorpio",
-            "annual_profection_house": 8
-        }
+        data=computed
     )
 

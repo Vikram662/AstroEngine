@@ -320,7 +320,7 @@ AstroEngine uses a **Dual-Key Response Architecture**:
 
 ### House Systems
 * `PLACIDUS` (Semi-arc division, KP Astrology standard)
-* `SRIPATI` (Classical Vedic Porphyry-variant)
+* `SRIPATI` (Classical Vedic — Porphyry cusps re-centered to house midpoints)
 * `EQUAL` (30-degree equal house from Ascendant)
 * `WHOLE_SIGN` (Entire sign of ascendant is House 1)
 

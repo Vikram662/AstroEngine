@@ -26,7 +26,10 @@ async def get_manglik_analysis(
 ):
     """
     Module 8 — Endpoint 61:
-    Manglik Dosha analysis from Lagna, Moon, Venus with 20+ classical cancellation checks.
+    Manglik Dosha analysis from Lagna, Moon, Venus with 12 classical cancellation checks
+    (own sign/exaltation/debilitation, Jupiter conjunction/5th/7th/9th aspect,
+    house+sign-specific exceptions for 2nd/4th/7th/8th/12th, 11th-from-Moon,
+    Leo/Cancer Lagna Yogakaraka).
     """
     selected_lang = (req.lang or "en").lower().strip()
     res = calculate_manglik_dosha(

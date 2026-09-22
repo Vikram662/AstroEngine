@@ -4,7 +4,88 @@ import datetime
 import math
 from typing import Dict, Any, List, Optional, Tuple
 
-# Comprehensive Indic to Romanized Transliteration Dictionary
+from reportlab.pdfgen import canvas as _rl_canvas
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.lib.pagesizes import A4
+
+FONTS_DIR = os.path.join(os.path.dirname(__file__), "fonts")
+
+# Real embedded Unicode fonts, one family per script. Noto Sans covers Latin/en;
+# each Indic script gets its own Noto Sans variant (all of which also cover
+# digits/punctuation, so mixed Hindi+numeral text renders fine on one font).
+_FONT_FAMILIES = {
+    "NotoSans": ("NotoSans-Regular.ttf", "NotoSans-Bold.ttf"),
+    "NotoSansDevanagari": ("NotoSansDevanagari-Regular.ttf", "NotoSansDevanagari-Bold.ttf"),
+    "NotoSansGujarati": ("NotoSansGujarati-Regular.ttf", "NotoSansGujarati-Bold.ttf"),
+    "NotoSansTamil": ("NotoSansTamil-Regular.ttf", "NotoSansTamil-Bold.ttf"),
+    "NotoSansTelugu": ("NotoSansTelugu-Regular.ttf", "NotoSansTelugu-Bold.ttf"),
+    "NotoSansBengali": ("NotoSansBengali-Regular.ttf", "NotoSansBengali-Bold.ttf"),
+}
+
+_LANG_TO_FAMILY = {
+    "en": "NotoSans",
+    "hi": "NotoSansDevanagari",
+    "mr": "NotoSansDevanagari",
+    "gu": "NotoSansGujarati",
+    "ta": "NotoSansTamil",
+    "te": "NotoSansTelugu",
+    "bn": "NotoSansBengali",
+}
+
+# Minimal, modern design tokens shared across every report. The brand/accent color
+# (per-customer, from branding.primary_color) is used sparingly -- thin rules, small
+# section marks -- rather than large solid fills, so reports stay legible and calm
+# instead of "loud". Everything else is neutral ink/gray on a white page.
+INK = (0.11, 0.13, 0.16)      # primary text
+SUBTLE = (0.38, 0.42, 0.47)   # secondary text (subtitles, descriptions)
+FAINT = (0.55, 0.58, 0.63)    # tertiary text (footer, meta labels)
+LINE = (0.88, 0.89, 0.91)     # hairline dividers / borders
+SURFACE = (0.985, 0.985, 0.99)  # near-white card background
+
+
+def _contrast_text_color(rgb: Tuple[float, float, float]) -> Tuple[float, float, float]:
+    """White or near-black text, whichever is legible on a fill of this color
+    (simple relative-luminance check) -- needed because brand colors range from
+    near-black defaults (e.g. #0f172a) to pale user-picked pastels."""
+    r, g, b = rgb
+    luminance = 0.299 * r + 0.587 * g + 0.114 * b
+    return (1, 1, 1) if luminance < 0.6 else INK
+
+
+_fonts_registered = False
+
+
+def _register_fonts() -> None:
+    global _fonts_registered
+    if _fonts_registered:
+        return
+    for family, (reg_file, bold_file) in _FONT_FAMILIES.items():
+        pdfmetrics.registerFont(TTFont(family, os.path.join(FONTS_DIR, reg_file)))
+        pdfmetrics.registerFont(TTFont(f"{family}-Bold", os.path.join(FONTS_DIR, bold_file)))
+    _fonts_registered = True
+
+
+_register_fonts()
+
+
+def _font_family_for_lang(lang: Optional[str]) -> str:
+    return _LANG_TO_FAMILY.get((lang or "en").lower().strip(), "NotoSans")
+
+
+def _clean_text(text: Any) -> str:
+    """Normalize a value for display. ReportLab handles PDF string encoding/escaping
+    internally (including parentheses/backslashes), so no manual escaping is needed."""
+    if text is None:
+        return ""
+    if isinstance(text, dict):
+        text = text.get("name") or text.get("id") or str(text)
+    return str(text)
+
+
+# Historical Indic-to-Latin transliteration map, retained only as a display fallback
+# for any legacy caller that still expects `_escape_pdf_text` to exist. The PDF engine
+# no longer strips Indic Unicode text since real script fonts are now embedded above.
 INDIC_TRANSLITERATION_MAP = {
     # Grahas (Planets)
     "सूर्य": "Surya (Sun)", "सूरज": "Surya (Sun)", "सೂರ್ಯ": "Surya (Sun)", "સૂર્ય": "Surya (Sun)",
@@ -81,117 +162,145 @@ INDIC_TRANSLITERATION_MAP = {
 }
 
 def _escape_pdf_text(text: Any) -> str:
-    """Escape parenthesis and backslashes for PDF string literals, converting non-ASCII to clean Latin Vedic terms."""
-    if text is None:
-        return ""
-    # If dict was passed accidentally, extract name or id
-    if isinstance(text, dict):
-        text = text.get("name") or text.get("id") or str(text)
-    
-    raw = str(text)
-    # Check for complete or substring matches in transliteration dictionary
-    for indic_w, roman_w in INDIC_TRANSLITERATION_MAP.items():
-        if indic_w in raw:
-            raw = raw.replace(indic_w, roman_w)
+    """Legacy name kept for compatibility; ReportLab now handles PDF string
+    encoding/escaping internally, so this is just a thin alias for _clean_text."""
+    return _clean_text(text)
 
-    raw = raw.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
-    
-    # Strip or replace remaining non-ASCII characters to prevent corrupting Type 1 Helvetica
-    cleaned = []
-    for c in raw:
-        code = ord(c)
-        if code < 128:
-            cleaned.append(c)
-        elif c in ['°', 'º']:
-            cleaned.append(" deg ")
-        elif c in ['’', '‘', '`', '´']:
-            cleaned.append("'")
-        elif c in ['“', '”', '"']:
-            cleaned.append('"')
-        elif c in ['—', '–']:
-            cleaned.append("-")
-        elif c in ['•', '·']:
-            cleaned.append("*")
-        elif c in ['…']:
-            cleaned.append("...")
-        elif c == '₹':
-            cleaned.append("INR ")
-        elif c in ['é', 'è', 'ê']:
-            cleaned.append("e")
-        elif c in ['á', 'à', 'â']:
-            cleaned.append("a")
-        elif c in ['í', 'ì', 'î']:
-            cleaned.append("i")
-        elif c in ['ó', 'ò', 'ô']:
-            cleaned.append("o")
-        elif c in ['ú', 'ù', 'û']:
-            cleaned.append("u")
-        elif 0x0900 <= code <= 0x0D7F:
-            # Skip any unmapped Indic Unicode codepoints instead of inserting '?'
-            pass
-        else:
-            # Safe ASCII fallback space instead of ugly '?'
-            cleaned.append(" ")
-    return "".join(cleaned)
+
+import re as _re
+
+_COLOR_RE = _re.compile(r'^([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+rg$')
+_RUN_START_RE = _re.compile(r'/F(\d)\s+([\d.]+)\s+Tf\s+(-?[\d.]+)\s+(-?[\d.]+)\s+Td\s+\(')
+
+
+def _iter_tj_runs(body: str):
+    """Yield (font_num, size, x, y, text) for each '/Fn size Tf x y Td (text) Tj' run
+    inside a BT...ET body. Anchors on the LAST ') Tj' before the next run (or end of
+    body) so text containing literal parentheses, e.g. '(House Lord (Bhavesh):)', is
+    captured whole instead of truncated at the first ')'."""
+    matches = list(_RUN_START_RE.finditer(body))
+    for i, m in enumerate(matches):
+        font_num, size, x, y = m.group(1), m.group(2), m.group(3), m.group(4)
+        text_start = m.end()
+        next_start = matches[i + 1].start() if i + 1 < len(matches) else len(body)
+        segment = body[text_start:next_start]
+        tj_idx = segment.rfind(") Tj")
+        text = segment[:tj_idx] if tj_idx != -1 else segment.rstrip()
+        yield font_num, size, x, y, text
+
+
+class _CmdList(list):
+    """Drop-in replacement for the old raw-string cmds list. Structured draw calls
+    (from PageBuilder's own helper methods) are stored as-is; legacy hand-rolled PDF
+    content-stream strings (from direct `.cmds.append(f"...")` call sites elsewhere in
+    this module) are parsed into the same structured tuples on the way in, so both
+    styles replay identically on the ReportLab canvas."""
+    def __init__(self, owner: "PageBuilder"):
+        super().__init__()
+        self._owner = owner
+        self._raw_color: Tuple[float, float, float] = (0.0, 0.0, 0.0)
+
+    def append(self, item):
+        if not isinstance(item, str):
+            super().append(item)
+            return
+
+        raw = item.strip()
+        m = _COLOR_RE.match(raw)
+        if m:
+            self._raw_color = tuple(float(v) for v in m.groups())
+            return
+
+        if raw.startswith("BT ") and raw.endswith(" ET"):
+            body = raw[3:-3]
+            for font_num, size, x, y, text in _iter_tj_runs(body):
+                bold = (font_num == "2")
+                super().append((
+                    "text", float(x), float(y), self._owner._font(bold),
+                    float(size), text, self._raw_color
+                ))
+            return
+        # Any other raw op (unused by current callers) is safely ignored rather
+        # than risking a malformed PDF content stream.
+
 
 class PageBuilder:
-    """Builds a single A4 vector page (595.28 x 841.89 points) with header, footer and drawing helpers."""
-    def __init__(self, page_num: int, total_pages: int, company_name: str, website: str, brand_color: Tuple[float, float, float]):
+    """Builds a single A4 page (595.28 x 841.89 pt) as a list of structured drawing
+    directives, replayed onto a shared ReportLab canvas by MinimalPDFWriter. Text is
+    rendered with a real embedded Unicode font selected from `lang`, so en/hi/gu/mr/
+    ta/te/bn all render correctly instead of falling back to base-14 Helvetica."""
+    def __init__(self, page_num: int, total_pages: int, company_name: str, website: str,
+                 brand_color: Tuple[float, float, float], lang: str = "en"):
         self.page_num = page_num
         self.total_pages = total_pages
         self.company_name = company_name
         self.website = website
         self.brand_color = brand_color  # (r, g, b)
-        self.cmds: List[str] = []
+        self.lang = lang
+        self.family = _font_family_for_lang(lang)
+        self.cmds: List[Any] = _CmdList(self)
         self._init_page()
+
+    def _font(self, bold: bool = False) -> str:
+        return f"{self.family}-Bold" if bold else self.family
+
+    def _text(self, x: float, y: float, size: float, text: Any, rgb: Tuple[float, float, float], bold: bool = False, align: str = "left"):
+        clean = _clean_text(text)
+        if not clean:
+            return
+        font = self._font(bold)
+        if align == "right":
+            x = x - pdfmetrics.stringWidth(clean, font, size)
+        elif align == "center":
+            x = x - pdfmetrics.stringWidth(clean, font, size) / 2.0
+        self.cmds.append(("text", float(x), float(y), font, float(size), clean, rgb))
+
+    def _rect(self, x: float, y: float, w: float, h: float,
+              fill_rgb: Optional[Tuple[float, float, float]] = None,
+              stroke_rgb: Optional[Tuple[float, float, float]] = None, line_w: float = 1.0):
+        self.cmds.append(("rect", float(x), float(y), float(w), float(h), fill_rgb, stroke_rgb, line_w))
+
+    def _line(self, x1: float, y1: float, x2: float, y2: float, rgb: Tuple[float, float, float], line_w: float = 1.0):
+        self.cmds.append(("line", float(x1), float(y1), float(x2), float(y2), rgb, line_w))
+
+    def _polygon(self, points: List[Tuple[float, float]], stroke_rgb: Tuple[float, float, float], line_w: float = 1.0):
+        self.cmds.append(("polygon", points, stroke_rgb, line_w))
 
     def _init_page(self):
         r, g, b = self.brand_color
-        # Top banner
-        self.cmds.append(f"{r:.3f} {g:.3f} {b:.3f} rg")
-        self.cmds.append("0 806 595.28 36 re f")
-        
-        # Header Company Name in White
-        self.cmds.append("1 1 1 rg")
-        self.cmds.append(f"BT /F2 14 Tf 30 818 Td ({_escape_pdf_text(self.company_name)}) Tj ET")
-
-        # Top Right small label
-        self.cmds.append("0.95 0.95 0.95 rg")
-        self.cmds.append(f"BT /F1 8.5 Tf 430 818 Td (Vedic Astrology Portal) Tj ET")
-
+        text_on_brand = _contrast_text_color(self.brand_color)
+        # Small filled logo-mark badge in the brand color (a filled square reads as
+        # "color" at any lightness, unlike a thin line, which is why a near-black
+        # brand color like #0f172a used to vanish against the neutral ink text).
+        initial = (self.company_name or "A").strip()[:1].upper() or "A"
+        self._rect(30, 800, 18, 18, fill_rgb=(r, g, b))
+        self._text(39, 806, 10, initial, text_on_brand, bold=True, align="center")
+        self._text(56, 815, 13, self.company_name, INK, bold=True)
+        self._text(595.28 - 30, 816, 7.5, "VEDIC ASTROLOGY PORTAL", FAINT, bold=False, align="right")
+        # Solid brand-color stripe under the header (filled bar, not a hairline)
+        self._rect(0, 803, 595.28, 3, fill_rgb=(r, g, b))
         # Bottom Footer line
-        self.cmds.append("0.85 0.85 0.85 RG 0.8 w")
-        self.cmds.append("30 45 m 565 45 l S")
-
+        self._line(30, 45, 565, 45, LINE, 0.75)
         # Bottom Footer text
-        self.cmds.append("0.45 0.45 0.45 rg")
-        self.cmds.append(f"BT /F1 8 Tf 30 32 Td ({_escape_pdf_text(self.company_name)} | {_escape_pdf_text(self.website)}) Tj ET")
-        page_str = f"Page {self.page_num} of {self.total_pages}"
-        self.cmds.append(f"BT /F2 8 Tf 505 32 Td ({page_str}) Tj ET")
+        self._text(30, 32, 8, f"{self.company_name}  ·  {self.website}", FAINT)
+        self._text(565.28, 32, 8, f"Page {self.page_num} of {self.total_pages}", FAINT, align="right")
 
     def add_page_title(self, title: str, subtitle: str = ""):
         r, g, b = self.brand_color
-        self.cmds.append(f"{r:.3f} {g:.3f} {b:.3f} rg")
-        self.cmds.append(f"BT /F2 16 Tf 30 772 Td ({_escape_pdf_text(title)}) Tj ET")
+        self._text(30, 772, 17, title, INK, bold=True)
         if subtitle:
-            self.cmds.append("0.35 0.35 0.35 rg")
-            self.cmds.append(f"BT /F1 9 Tf 30 757 Td ({_escape_pdf_text(subtitle)}) Tj ET")
-        # Divider rule
-        self.cmds.append("0.82 0.82 0.82 RG 1 w")
-        self.cmds.append("30 748 m 565 748 l S")
+            self._text(30, 757, 9, subtitle, SUBTLE)
+        # Bold accent divider -- the deliberate color touch on the page
+        self._rect(30, 747, 535, 2.5, fill_rgb=(r, g, b))
 
     def add_section_header(self, y: float, title: str):
         r, g, b = self.brand_color
-        # Mini accent bar
-        self.cmds.append(f"{r:.3f} {g:.3f} {b:.3f} rg")
-        self.cmds.append(f"30 {y-2} 4 14 re f")
-        self.cmds.append(f"BT /F2 11 Tf 40 {y} Td ({_escape_pdf_text(title)}) Tj ET")
+        # Filled accent mark -- small but solid, so it reads as color at any brightness
+        self._rect(30, y - 1, 3.5, 13, fill_rgb=(r, g, b))
+        self._text(42, y, 10.5, title.upper(), INK, bold=True)
 
-    def draw_card(self, x: float, y: float, w: float, h: float, bg_rgb: Tuple[float, float, float] = (0.97, 0.98, 0.99), border_rgb: Tuple[float, float, float] = (0.85, 0.87, 0.9)):
-        br, bg, bb = bg_rgb
-        dr, dg, db = border_rgb
-        self.cmds.append(f"{br:.3f} {bg:.3f} {bb:.3f} rg {x} {y} {w} {h} re f")
-        self.cmds.append(f"{dr:.3f} {dg:.3f} {db:.3f} RG 0.8 w {x} {y} {w} {h} re s")
+    def draw_card(self, x: float, y: float, w: float, h: float, bg_rgb: Tuple[float, float, float] = SURFACE, border_rgb: Tuple[float, float, float] = LINE):
+        self._rect(x, y, w, h, fill_rgb=bg_rgb, stroke_rgb=border_rgb, line_w=0.75)
 
     def draw_north_chart(self, cx: float, cy: float, sz: float, asc_sign: int, planets_in_houses: Dict[int, List[str]], title: str = "D1 Chart"):
         """
@@ -201,22 +310,21 @@ class PageBuilder:
         planets_in_houses: {1: ["Sun", "Mer"], 7: ["Jup"], ...}
         """
         r, g, b = self.brand_color
-        # Background box
-        self.cmds.append("1 0.99 0.97 rg")
-        self.cmds.append(f"{cx} {cy} {sz} {sz} re f")
-        self.cmds.append(f"{r:.3f} {g:.3f} {b:.3f} RG 1.5 w")
-        # Outer boundary
-        self.cmds.append(f"{cx} {cy} {sz} {sz} re s")
-        # Diagonals
-        self.cmds.append(f"{cx} {cy} m {cx + sz} {cy + sz} l S")
-        self.cmds.append(f"{cx} {cy + sz} m {cx + sz} {cy} l S")
+        # White background, thin neutral grid, single accent-colored outer border
+        self._rect(cx, cy, sz, sz, fill_rgb=(1, 1, 1), stroke_rgb=(r, g, b), line_w=1.75)
+        # Diagonals (neutral, not accent -- the grid is structure, not the highlight)
+        self._line(cx, cy, cx + sz, cy + sz, LINE, 0.9)
+        self._line(cx, cy + sz, cx + sz, cy, LINE, 0.9)
         # Inner diamond
         hx, hy = sz / 2.0, sz / 2.0
-        self.cmds.append(f"{cx + hx} {cy} m {cx + sz} {cy + hy} l {cx + hx} {cy + sz} l {cx} {cy + hy} l h S")
+        self._polygon([(cx + hx, cy), (cx + sz, cy + hy), (cx + hx, cy + sz), (cx, cy + hy)], LINE, 0.9)
 
-        # Center Title Badge
-        self.cmds.append("0.7 0.35 0.05 rg")
-        self.cmds.append(f"BT /F2 8.5 Tf {cx + hx - 14} {cy + hy - 3} Td ({_escape_pdf_text(title)}) Tj ET")
+        # Center Title Badge -- filled pill in the brand color, so the chart's focal
+        # point carries color even when the brand color itself is very dark
+        text_on_brand = _contrast_text_color(self.brand_color)
+        badge_w = pdfmetrics.stringWidth(title.upper(), self._font(True), 7.5) + 14
+        self._rect(cx + hx - badge_w / 2, cy + hy - 7, badge_w, 14, fill_rgb=(r, g, b))
+        self._text(cx + hx, cy + hy - 2.5, 7.5, title.upper(), text_on_brand, bold=True, align="center")
 
         # House relative coordinates for North Indian chart
         # House: (sign_offset_x, sign_offset_y, planet_x, planet_y)
@@ -239,161 +347,149 @@ class PageBuilder:
             sx, sy, px, py = house_coords[h]
             # Sign number in this house = ((asc_sign - 1 + (h - 1)) % 12) + 1
             h_sign_num = ((asc_sign - 1 + (h - 1)) % 12) + 1
-            
             # Print house sign number
-            self.cmds.append("0.55 0.45 0.3 rg")
-            self.cmds.append(f"BT /F2 7.5 Tf {cx + sx - 3} {cy + sy} Td ({h_sign_num}) Tj ET")
+            self._text(cx + sx - 3, cy + sy, 7.5, str(h_sign_num), FAINT, bold=True)
 
             # Print planets in this house
             plist = planets_in_houses.get(h, [])
             if plist:
-                self.cmds.append("0.1 0.2 0.4 rg")
                 p_text = " ".join(plist[:4])
-                self.cmds.append(f"BT /F2 7 Tf {cx + px - len(p_text)*1.8} {cy + py} Td ({_escape_pdf_text(p_text)}) Tj ET")
+                self._text(cx + px - len(p_text) * 1.8, cy + py, 7, p_text, INK, bold=True)
 
     def draw_table(self, x: float, y: float, headers: List[str], rows: List[List[str]], col_widths: List[float], row_h: float = 16):
         r, g, b = self.brand_color
         total_w = sum(col_widths)
-        # Header Row
-        self.cmds.append(f"{r:.3f} {g:.3f} {b:.3f} rg {x} {y} {total_w} {row_h} re f")
-        self.cmds.append("1 1 1 rg")
+        # Header Row: light neutral background + dark text, with a solid accent-colored
+        # underline as the color touch (replaces the old full brand-color fill).
+        self._rect(x, y, total_w, row_h, fill_rgb=(0.95, 0.95, 0.96))
+        self._rect(x, y - 1.5, total_w, 2, fill_rgb=(r, g, b))
         curr_x = x + 6
         for idx, h in enumerate(headers):
-            self.cmds.append(f"BT /F2 8.5 Tf {curr_x} {y + 4} Td ({_escape_pdf_text(h)}) Tj ET")
+            self._text(curr_x, y + 4, 8, h.upper(), INK, bold=True)
             curr_x += col_widths[idx]
 
         # Table Rows
         curr_y = y - row_h
         for r_idx, row in enumerate(rows):
-            # Alternating background
+            # Alternating background -- very subtle
             if r_idx % 2 == 1:
-                self.cmds.append(f"0.96 0.97 0.99 rg {x} {curr_y} {total_w} {row_h} re f")
-            self.cmds.append(f"0.88 0.88 0.88 RG 0.5 w {x} {curr_y} {total_w} {row_h} re s")
-            
+                self._rect(x, curr_y, total_w, row_h, fill_rgb=(0.98, 0.98, 0.985))
+            self._rect(x, curr_y, total_w, row_h, stroke_rgb=LINE, line_w=0.5)
+
             curr_x = x + 6
             for c_idx, cell in enumerate(row):
                 if c_idx < len(col_widths):
-                    font = "/F2" if c_idx == 0 else "/F1"
-                    self.cmds.append(f"0.15 0.18 0.22 rg BT {font} 8 Tf {curr_x} {curr_y + 4} Td ({_escape_pdf_text(cell)}) Tj ET")
+                    self._text(curr_x, curr_y + 4, 8, cell, INK if c_idx == 0 else SUBTLE, bold=(c_idx == 0))
                     curr_x += col_widths[c_idx]
             curr_y -= row_h
 
     def add_text_block(self, x: float, y: float, max_w: float, title: str, text: str, line_spacing: float = 13.0) -> float:
-        """Add a formatted descriptive card block with title and wrapped text."""
-        r, g, b = self.brand_color
+        """Add a formatted descriptive card block with title and wrapped text, using
+        real font metrics (pdfmetrics.stringWidth) for accurate word-wrap instead of a
+        fixed average-character-width guess -- important since Indic scripts have very
+        different average glyph widths than Latin."""
         if title:
-            self.cmds.append(f"{r:.3f} {g:.3f} {b:.3f} rg")
-            self.cmds.append(f"BT /F2 9.5 Tf {x} {y} Td ({_escape_pdf_text(title)}) Tj ET")
+            self._text(x, y, 9.5, title, INK, bold=True)
             curr_y = y - 14
         else:
             curr_y = y
 
-        # Calculate char wrap limit based on max_w (approx 5.5 points per char for 8.5pt font)
-        max_chars = max(40, int(max_w / 5.6)) if max_w else 80
-
-        # Wrap text safely
+        body_font = self._font(bold=False)
         words = str(text).split(" ")
-        curr_line = []
-        lines = []
+        lines: List[str] = []
+        curr_line = ""
         for w in words:
             if not w:
                 continue
-            curr_line.append(w)
-            if sum(len(x) + 1 for x in curr_line) > max_chars:
-                lines.append(" ".join(curr_line))
-                curr_line = []
+            candidate = f"{curr_line} {w}".strip()
+            if max_w and curr_line and pdfmetrics.stringWidth(candidate, body_font, 8.5) > max_w:
+                lines.append(curr_line)
+                curr_line = w
+            else:
+                curr_line = candidate
         if curr_line:
-            lines.append(" ".join(curr_line))
+            lines.append(curr_line)
 
-        self.cmds.append("0.2 0.22 0.25 rg")
         for line in lines:
-            self.cmds.append(f"BT /F1 8.5 Tf {x} {curr_y} Td ({_escape_pdf_text(line)}) Tj ET")
+            self._text(x, curr_y, 8.5, line, SUBTLE)
             curr_y -= line_spacing
         return curr_y
 
-    def get_stream(self) -> bytes:
-        return "\n".join(self.cmds).encode("utf-8")
+    def get_stream(self):
+        """Opaque per-page payload consumed by MinimalPDFWriter.assemble_pdf()."""
+        return self.cmds
 
 
 class MinimalPDFWriter:
     """
-    Pure Python standard-compliant PDF 1.4 vector generator.
-    Produces high-fidelity, printable, multi-page vector PDF documents without external dependencies.
-    Supports dynamic N-page construction with tailored layouts for each report category.
+    Replays PageBuilder drawing directives onto a real multi-page ReportLab PDF with
+    embedded Unicode fonts (Noto Sans + per-script Noto Sans variants for Devanagari/
+    Gujarati/Tamil/Telugu/Bengali), so every supported language renders with real
+    glyphs instead of the previous Helvetica-only, Indic-stripping fallback.
     """
     def __init__(self):
-        self.objects: List[bytes] = []
+        _register_fonts()
 
-    def _add_object(self, content: bytes) -> int:
-        self.objects.append(content)
-        return len(self.objects)
+    def assemble_pdf(self, page_streams: List[Any]) -> bytes:
+        buf = io.BytesIO()
+        c = _rl_canvas.Canvas(buf, pagesize=A4)
+        for page_cmds in page_streams:
+            for cmd in page_cmds:
+                op = cmd[0]
+                if op == "text":
+                    _, x, y, font, size, text, rgb = cmd
+                    c.setFont(font, size)
+                    c.setFillColorRGB(*rgb)
+                    c.drawString(x, y, text)
+                elif op == "rect":
+                    _, x, y, w, h, fill_rgb, stroke_rgb, line_w = cmd
+                    fill = 1 if fill_rgb else 0
+                    stroke = 1 if stroke_rgb else 0
+                    if not (fill or stroke):
+                        continue
+                    if fill:
+                        c.setFillColorRGB(*fill_rgb)
+                    if stroke:
+                        c.setStrokeColorRGB(*stroke_rgb)
+                        c.setLineWidth(line_w)
+                    c.rect(x, y, w, h, fill=fill, stroke=stroke)
+                elif op == "line":
+                    _, x1, y1, x2, y2, rgb, line_w = cmd
+                    c.setStrokeColorRGB(*rgb)
+                    c.setLineWidth(line_w)
+                    c.line(x1, y1, x2, y2)
+                elif op == "polygon":
+                    _, points, rgb, line_w = cmd
+                    c.setStrokeColorRGB(*rgb)
+                    c.setLineWidth(line_w)
+                    path = c.beginPath()
+                    path.moveTo(*points[0])
+                    for pt in points[1:]:
+                        path.lineTo(*pt)
+                    path.close()
+                    c.drawPath(path, stroke=1, fill=0)
+            c.showPage()
+        c.save()
+        return buf.getvalue()
 
-    def assemble_pdf(self, page_streams: List[bytes]) -> bytes:
-        total_pages = len(page_streams)
-        
-        # 1. Fonts
-        f1_id = self._add_object(b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>")
-        f2_id = self._add_object(b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>")
 
-        # 2. Add Content Streams
-        stream_ids = []
-        for s in page_streams:
-            s_obj = self._add_object(f"<< /Length {len(s)} >>\nstream\n".encode("utf-8") + s + b"\nendstream")
-            stream_ids.append(s_obj)
-
-        # 3. Add Page Objects
-        pages_parent_id = len(self.objects) + total_pages + 1
-        page_ids = []
-        for s_id in stream_ids:
-            p_obj = self._add_object(
-                f"<< /Type /Page /Parent {pages_parent_id} 0 R /MediaBox [0 0 595.28 841.89] "
-                f"/Contents {s_id} 0 R "
-                f"/Resources << /Font << /F1 {f1_id} 0 R /F2 {f2_id} 0 R >> >> >>".encode("utf-8")
-            )
-            page_ids.append(p_obj)
-
-        # 4. Pages Parent Object
-        kids_str = " ".join(f"{pid} 0 R" for pid in page_ids)
-        self._add_object(
-            f"<< /Type /Pages /Kids [{kids_str}] /Count {total_pages} >>".encode("utf-8")
-        )
-
-        # 5. Catalog
-        catalog_id = self._add_object(f"<< /Type /Catalog /Pages {pages_parent_id} 0 R >>".encode("utf-8"))
-
-        # 6. Build file buffer with XRef table
-        out = bytearray()
-        out.extend(b"%PDF-1.4\n%\xe2\xe3\xcf\xd3\n")
-        offsets = []
-        for i, obj in enumerate(self.objects):
-            offsets.append(len(out))
-            out.extend(f"{i + 1} 0 obj\n".encode("utf-8"))
-            out.extend(obj)
-            out.extend(b"\nendobj\n")
-
-        xref_offset = len(out)
-        out.extend(f"xref\n0 {len(self.objects) + 1}\n".encode("utf-8"))
-        out.extend(b"0000000000 65535 f \n")
-        for off in offsets:
-            out.extend(f"{off:010d} 00000 n \n".encode("utf-8"))
-
-        out.extend(
-            f"trailer\n<< /Size {len(self.objects) + 1} /Root {catalog_id} 0 R >>\n"
-            f"startxref\n{xref_offset}\n%%EOF\n".encode("utf-8")
-        )
-        return bytes(out)
+# Fallback when no branding.primary_color reaches the backend at all (the DB-backed
+# default from the Next.js branding form is a separate, near-black #0f172a slate --
+# this is only the last-resort default). Saffron is the traditional Vedic/spiritual
+# accent color, refined to a clean, modern tone rather than a muddy brown.
+_DEFAULT_BRAND_COLOR = (0.851, 0.467, 0.024)  # #D97706 -- saffron/amber
 
 
 def _parse_brand_color(hex_str: Optional[str]) -> Tuple[float, float, float]:
     if not hex_str or not hex_str.startswith("#") or len(hex_str) < 7:
-        return (0.706, 0.325, 0.035) # Gold Amber
+        return _DEFAULT_BRAND_COLOR
     try:
         r = int(hex_str[1:3], 16) / 255.0
         g = int(hex_str[3:5], 16) / 255.0
         b = int(hex_str[5:7], 16) / 255.0
         return (r, g, b)
     except Exception:
-        return (0.706, 0.325, 0.035)
+        return _DEFAULT_BRAND_COLOR
 
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -426,7 +522,7 @@ def build_basic_kundli_pdf(birth_data: Dict[str, Any], chart: Dict[str, Any], br
         d1_houses[h].append(abbr)
 
     # PAGE 1: Grand Front Cover Page
-    p1 = PageBuilder(1, total_pages, company, website, b_color)
+    p1 = PageBuilder(1, total_pages, company, website, b_color, lang=lang)
     p1.add_page_title("Vedic Horoscope & Kundli Life Blueprint", "Comprehensive 15-Page Astrological Analysis")
     p1.add_section_header(730, "1. NATIVITY & BIRTH PARTICULARS")
     p1.draw_card(30, 640, 535, 75)
@@ -458,7 +554,7 @@ def build_basic_kundli_pdf(birth_data: Dict[str, Any], chart: Dict[str, Any], br
     streams.append(p1.get_stream())
 
     # PAGE 2: Complete Planetary Ephemeris & Nakshatras Table
-    p2 = PageBuilder(2, total_pages, company, website, b_color)
+    p2 = PageBuilder(2, total_pages, company, website, b_color, lang=lang)
     p2.add_page_title("Planetary Longitudes & Nakshatra Padas", "Detailed astronomical planetary coordinates & stellar quarters")
     p2.add_section_header(725, "FULL PLANETARY EPHEMERIS (GRAHA SPHUTA)")
     e_headers = ["Graha", "Rashi", "Degree In Sign", "Absolute Longitude", "Motion", "Nakshatra", "Pada"]
@@ -516,7 +612,7 @@ def build_basic_kundli_pdf(birth_data: Dict[str, Any], chart: Dict[str, Any], br
     streams.append(p2.get_stream())
 
     # PAGE 3: Navamsha (D9) Chart & Soul Alignment
-    p3 = PageBuilder(3, total_pages, company, website, b_color)
+    p3 = PageBuilder(3, total_pages, company, website, b_color, lang=lang)
     p3.add_page_title("Navamsha D9 Chart — Dharma & Partnership", "Microscopic 9th divisional harmonic revealing inner potential and marriage")
     p3.add_section_header(725, "NAVAMSHA D9 VECTOR KUNDLI")
     
@@ -631,7 +727,7 @@ def build_basic_kundli_pdf(birth_data: Dict[str, Any], chart: Dict[str, Any], br
 
     for page_idx in range(6):
         p_num = 4 + page_idx
-        pb = PageBuilder(p_num, total_pages, company, website, b_color)
+        pb = PageBuilder(p_num, total_pages, company, website, b_color, lang=lang)
         h1_idx = page_idx * 2
         h2_idx = page_idx * 2 + 1
         pb.add_page_title(f"Comprehensive Houses Analysis: {h1_idx+1} & {h2_idx+1}", "Detailed evaluation of zodiac signs, governing lords, occupants and classical outcomes")
@@ -679,7 +775,7 @@ def build_basic_kundli_pdf(birth_data: Dict[str, Any], chart: Dict[str, Any], br
         streams.append(pb.get_stream())
 
     # PAGE 10: Vimshottari Mahadasha 120-Year Timeline
-    p10 = PageBuilder(10, total_pages, company, website, b_color)
+    p10 = PageBuilder(10, total_pages, company, website, b_color, lang=lang)
     p10.add_page_title("Vimshottari Dasha 120-Year Timeline", "Planetary rulers governing every major life epoch from birth to longevity")
     p10.add_section_header(725, "120-YEAR MAHADASHA TIMELINE TABLE")
     
@@ -710,7 +806,7 @@ def build_basic_kundli_pdf(birth_data: Dict[str, Any], chart: Dict[str, Any], br
     streams.append(p10.get_stream())
 
     # PAGE 11: Sarvashtakavarga & Bhinnashtakavarga Bindus
-    p11 = PageBuilder(11, total_pages, company, website, b_color)
+    p11 = PageBuilder(11, total_pages, company, website, b_color, lang=lang)
     p11.add_page_title("Ashtakavarga Power Analysis", "Benefic bindu distributions indicating high-prosperity and caution houses")
     p11.add_section_header(725, "SARVASHTAKAVARGA BINDU SCORES (12 HOUSES)")
     
@@ -729,7 +825,7 @@ def build_basic_kundli_pdf(birth_data: Dict[str, Any], chart: Dict[str, Any], br
     streams.append(p11.get_stream())
 
     # PAGE 12: Classical Parashari Yogas & Combinations
-    p12 = PageBuilder(12, total_pages, company, website, b_color)
+    p12 = PageBuilder(12, total_pages, company, website, b_color, lang=lang)
     p12.add_page_title("Classical Parashari Yogas Catalog", "Auspicious royal planetary combinations and fortunes formed in your chart")
     p12.add_section_header(725, "KEY YOGAS IDENTIFIED IN YOUR HOROSCOPE")
     
@@ -754,7 +850,7 @@ def build_basic_kundli_pdf(birth_data: Dict[str, Any], chart: Dict[str, Any], br
     streams.append(p12.get_stream())
 
     # PAGE 13: Dosha Audit (Manglik, Sade Sati, Kalsarpa)
-    p13 = PageBuilder(13, total_pages, company, website, b_color)
+    p13 = PageBuilder(13, total_pages, company, website, b_color, lang=lang)
     p13.add_page_title("Karmic Dosha & Transit Afflictions Audit", "Thorough examination of Manglik, Kaal Sarp, and Shani Sade Sati influences")
     p13.add_section_header(725, "1. MANGLIK (KUJA) DOSHA EXAMINATION")
     p13.draw_card(30, 630, 535, 75)
@@ -773,7 +869,7 @@ def build_basic_kundli_pdf(birth_data: Dict[str, Any], chart: Dict[str, Any], br
     streams.append(p13.get_stream())
 
     # PAGE 14: Vedic Remedies, Gemstones & Mantras
-    p14 = PageBuilder(14, total_pages, company, website, b_color)
+    p14 = PageBuilder(14, total_pages, company, website, b_color, lang=lang)
     p14.add_page_title("Vedic Remedial Suite & Sacred Upayas", "Holistic gemological, mantra, and lifestyle remedies tailored to your chart")
     p14.add_section_header(725, "1. GEMOLOGICAL ADVISORY (RATNA CHIKITSA)")
     p14.draw_card(30, 615, 535, 90)
@@ -792,7 +888,7 @@ def build_basic_kundli_pdf(birth_data: Dict[str, Any], chart: Dict[str, Any], br
     streams.append(p14.get_stream())
 
     # PAGE 15: Concluding Astrological Summary & Advisory Disclaimer
-    p15 = PageBuilder(15, total_pages, company, website, b_color)
+    p15 = PageBuilder(15, total_pages, company, website, b_color, lang=lang)
     p15.add_page_title("Executive Life Summary & Ethical Advisory", "Synthesized guidance for career, health, relationships and spiritual growth")
     p15.add_section_header(725, "CORE DESTINY BLUEPRINT")
     p15.draw_card(30, 580, 535, 125)
@@ -840,7 +936,7 @@ def build_brihat_kundli_pdf(birth_data: Dict[str, Any], chart: Dict[str, Any], b
         d1_houses[h].append(abbr)
 
     # 1. Front Cover & Index (Pages 1-2)
-    p1 = PageBuilder(1, total_pages, company, website, b_color)
+    p1 = PageBuilder(1, total_pages, company, website, b_color, lang=lang)
     p1.add_page_title("Maharishi Parashara Brihat Kundli Mahasagar", "Grand 60-Page Complete Astrological Life Encyclopedia")
     p1.add_section_header(725, "1. SACRED NATIVITY RECORD")
     p1.draw_card(30, 640, 535, 75)
@@ -870,7 +966,7 @@ def build_brihat_kundli_pdf(birth_data: Dict[str, Any], chart: Dict[str, Any], b
     streams.append(p1.get_stream())
 
     # Page 2: Table of Contents & Structure
-    p2 = PageBuilder(2, total_pages, company, website, b_color)
+    p2 = PageBuilder(2, total_pages, company, website, b_color, lang=lang)
     p2.add_page_title("Brihat Kundli Table of Contents", "Overview of the 60 chapters included in this comprehensive volume")
     p2.add_section_header(725, "MAJOR SECTIONS IN THIS 60-PAGE VOLUME")
     sec_rows = [
@@ -898,7 +994,7 @@ def build_brihat_kundli_pdf(birth_data: Dict[str, Any], chart: Dict[str, Any], b
     ]
     for idx, (title, sub, v1_name, v2_name) in enumerate(varga_defs):
         p_num = 3 + idx
-        pb = PageBuilder(p_num, total_pages, company, website, b_color)
+        pb = PageBuilder(p_num, total_pages, company, website, b_color, lang=lang)
         pb.add_page_title(title, sub)
         pb.add_section_header(725, f"DIVISIONAL CHARTS: {v1_name.upper()} & {v2_name.upper()}")
         pb.draw_north_chart(70, 500, 205, ((asc_sign + idx) % 12) + 1, d1_houses, v1_name)
@@ -919,7 +1015,7 @@ def build_brihat_kundli_pdf(birth_data: Dict[str, Any], chart: Dict[str, Any], b
     # Pages 11 to 22: 12 Bhavas Comprehensive Predictive Drill (1 Bhava per page!)
     for h in range(1, 13):
         p_num = 10 + h
-        pb = PageBuilder(p_num, total_pages, company, website, b_color)
+        pb = PageBuilder(p_num, total_pages, company, website, b_color, lang=lang)
         pb.add_page_title(f"Comprehensive Analysis: Bhava {h}", f"Exhaustive classical assessment of the {h}th house of your horoscope")
         pb.add_section_header(725, f"1. CORE ARCHETYPE OF THE {h}TH HOUSE")
         pb.draw_card(30, 615, 535, 95)
@@ -942,7 +1038,7 @@ def build_brihat_kundli_pdf(birth_data: Dict[str, Any], chart: Dict[str, Any], b
     planet_keys = ["SUN", "MOON", "MARS", "MERCURY", "JUPITER", "VENUS", "SATURN", "RAHU", "KETU"]
     for idx, p_key in enumerate(planet_keys):
         p_num = 23 + idx
-        pb = PageBuilder(p_num, total_pages, company, website, b_color)
+        pb = PageBuilder(p_num, total_pages, company, website, b_color, lang=lang)
         pb.add_page_title(f"Graha Vichar: {p_key.capitalize()}", f"Comprehensive deep dive into the nature, strength, and life influence of {p_key.capitalize()}")
         pb.add_section_header(725, f"1. {p_key.upper()} IN YOUR HOROSCOPE")
         pb.draw_card(30, 615, 535, 95)
@@ -966,7 +1062,7 @@ def build_brihat_kundli_pdf(birth_data: Dict[str, Any], chart: Dict[str, Any], b
 
     # Pages 32 to 34: Special Sensitive Points & Pushkar Navamshas
     for p_num in range(32, 35):
-        pb = PageBuilder(p_num, total_pages, company, website, b_color)
+        pb = PageBuilder(p_num, total_pages, company, website, b_color, lang=lang)
         pb.add_page_title(f"Special Sensitive Points — Part {p_num - 31}", "Pushkar Navamsha, Pushkar Bhaga, Gandanta and Mrityu Bhaga diagnostics")
         pb.add_section_header(725, "PUSHKAR & NOURISHING DEGREES AUDIT")
         pb.add_text_block(30, 705, 535, "Pushkar Navamsha Regenerative Grace",
@@ -983,7 +1079,7 @@ def build_brihat_kundli_pdf(birth_data: Dict[str, Any], chart: Dict[str, Any], b
     all_mds = dasha_res.get("mahadashas", [])
 
     # Overview page
-    p35 = PageBuilder(35, total_pages, company, website, b_color)
+    p35 = PageBuilder(35, total_pages, company, website, b_color, lang=lang)
     p35.add_page_title("Vimshottari Dasha 120-Year Grand Overview", "The divine mathematical clock governing all major life phases")
     p35.add_section_header(725, "COMPLETE 9-PLANET MAHADASHA CHRONOLOGY")
     md_rows = []
@@ -995,7 +1091,7 @@ def build_brihat_kundli_pdf(birth_data: Dict[str, Any], chart: Dict[str, Any], b
     # Pages 36 to 44: 9 Individual Mahadashas with 9 Antardashas each (9 Pages)
     for idx, md in enumerate(all_mds[:9]):
         p_num = 36 + idx
-        pb = PageBuilder(p_num, total_pages, company, website, b_color)
+        pb = PageBuilder(p_num, total_pages, company, website, b_color, lang=lang)
         m_name = md.get("planet_name", md.get("planet_id"))
         pb.add_page_title(f"Mahadasha: {m_name} ({md.get('duration_years',0):.1f} Years)", f"Complete sub-period breakdown of Antardashas for {m_name}")
         pb.add_section_header(725, f"ANTARDASHA DRILL FOR {m_name.upper()}")
@@ -1056,7 +1152,7 @@ def build_brihat_kundli_pdf(birth_data: Dict[str, Any], chart: Dict[str, Any], b
 
     for p_idx, (a_title, a_sub, a_core, a_strat) in enumerate(sav_house_themes):
         p_num = 45 + p_idx
-        pb = PageBuilder(p_num, total_pages, company, website, b_color)
+        pb = PageBuilder(p_num, total_pages, company, website, b_color, lang=lang)
         pb.add_page_title(f"Chapter {p_num - 44}: {a_title}", a_sub)
         
         pb.add_section_header(725, "1. MATHEMATICAL STRENGTH EVALUATION")
@@ -1152,7 +1248,7 @@ def build_brihat_kundli_pdf(birth_data: Dict[str, Any], chart: Dict[str, Any], b
 
     for y_idx, (y_title, y_desc, y_table) in enumerate(yoga_chapters):
         p_num = 53 + y_idx
-        pb = PageBuilder(p_num, total_pages, company, website, b_color)
+        pb = PageBuilder(p_num, total_pages, company, website, b_color, lang=lang)
         pb.add_page_title(y_title, f"Classical Parashari diagnostic and manifestation rules — Section {y_idx+1}")
         
         pb.add_section_header(725, "1. YOGA COMBINATIONS EVALUATION TABLE")
@@ -1169,7 +1265,7 @@ def build_brihat_kundli_pdf(birth_data: Dict[str, Any], chart: Dict[str, Any], b
         streams.append(pb.get_stream())
 
     # Pages 59 to 60: Grand Vedic Remedial Master Suite & Final Certification (2 Pages)
-    p59 = PageBuilder(59, total_pages, company, website, b_color)
+    p59 = PageBuilder(59, total_pages, company, website, b_color, lang=lang)
     p59.add_page_title("Grand Vedic Remedial Master Suite", "Prescriptive gemology, sacred stotras, rudraksha, and lifestyle remedies")
     p59.add_section_header(725, "1. GEMOLOGICAL ADVISORY (RATNA CHIKITSA)")
     p59.draw_card(30, 615, 535, 95)
@@ -1181,7 +1277,7 @@ def build_brihat_kundli_pdf(birth_data: Dict[str, Any], chart: Dict[str, Any], b
                        "Regularly chant the Gayatri Mantra, Vishnu Sahasranama, or Shiva Panchakshara Stotra to cleanse aura and sustain mental fortitude.")
     streams.append(p59.get_stream())
 
-    p60 = PageBuilder(60, total_pages, company, website, b_color)
+    p60 = PageBuilder(60, total_pages, company, website, b_color, lang=lang)
     p60.add_page_title("Grand Life Summary & Ethical Jyotish Certificate", "Concluding astrological synthesis and official certification")
     p60.add_section_header(725, "SYNTHESIZED DESTINY SUMMARY")
     p60.draw_card(30, 570, 535, 135)
@@ -1218,7 +1314,7 @@ def build_matching_pdf(birth_data: Dict[str, Any], branding: Dict[str, Any], lan
     g_lon = float(birth_data.get('girl_lon') or 77.2)
 
     # Page 1: Matchmaking Cover & Profiles
-    p1 = PageBuilder(1, total_pages, company, website, b_color)
+    p1 = PageBuilder(1, total_pages, company, website, b_color, lang=lang)
     p1.add_page_title("Vedic Kundli Milan & Compatibility Report", "Comprehensive 20-Page 36-Guna Ashtakoot & Marital Longevity Analysis")
     p1.add_section_header(725, "1. PROSPECTIVE BRIDE & GROOM PARTICULARS")
     p1.draw_card(30, 615, 260, 95)
@@ -1307,7 +1403,7 @@ def build_matching_pdf(birth_data: Dict[str, Any], branding: Dict[str, Any], lan
 
     for idx, (k_title, k_sub, k_score, k_eval, k_counsel) in enumerate(koota_deep):
         p_num = 2 + idx
-        pb = PageBuilder(p_num, total_pages, company, website, b_color)
+        pb = PageBuilder(p_num, total_pages, company, website, b_color, lang=lang)
         pb.add_page_title(f"Chapter {idx+1}: {k_title}", k_sub)
         
         pb.add_section_header(725, "1. ASHTAKOOT MATHEMATICAL SCORING")
@@ -1396,7 +1492,7 @@ def build_matching_pdf(birth_data: Dict[str, Any], branding: Dict[str, Any], lan
 
     for p_idx, (t_title, t_sub, t_core, t_strat, t_upay) in enumerate(matching_deep_topics):
         p_num = 10 + p_idx
-        pb = PageBuilder(p_num, total_pages, company, website, b_color)
+        pb = PageBuilder(p_num, total_pages, company, website, b_color, lang=lang)
         pb.add_page_title(t_title, t_sub)
         
         pb.add_section_header(725, "1. ASTROLOGICAL EVALUATION")
@@ -1428,7 +1524,7 @@ def build_lalkitab_pdf(birth_data: Dict[str, Any], chart: Dict[str, Any], brandi
     streams = []
 
     # Page 1: Lal Kitab Cover & Kalpurush Kundli
-    p1 = PageBuilder(1, total_pages, company, website, b_color)
+    p1 = PageBuilder(1, total_pages, company, website, b_color, lang=lang)
     p1.add_page_title("Lal Kitab Amrit Full Diagnostic Report", "Comprehensive 30-Page Farman Analysis, Karmic Debts (Rin) & Upay Remedies")
     p1.add_section_header(725, "1. NATIVITY & FIXED KALPURUSH KUNDLI")
     p1.draw_card(30, 615, 535, 95)
@@ -1487,7 +1583,7 @@ def build_lalkitab_pdf(birth_data: Dict[str, Any], chart: Dict[str, Any], brandi
 
     for h_idx, (h_title, h_farman, h_upay) in enumerate(lk_house_details):
         p_num = 2 + h_idx
-        pb = PageBuilder(p_num, total_pages, company, website, b_color)
+        pb = PageBuilder(p_num, total_pages, company, website, b_color, lang=lang)
         pb.add_page_title(f"Lal Kitab: {h_title}", f"Exhaustive Farman diagnostics and authentic remedies for Ghar {h_idx+1}")
         pb.add_section_header(725, "1. HOUSE OCCUPANTS & SLEEPING (SOYA) STATUS")
         pb.draw_card(30, 600, 535, 110)
@@ -1517,7 +1613,7 @@ def build_lalkitab_pdf(birth_data: Dict[str, Any], chart: Dict[str, Any], brandi
     ]
     for d_idx, (d_name, d_cause, d_rem) in enumerate(debts):
         p_num = 14 + d_idx
-        pb = PageBuilder(p_num, total_pages, company, website, b_color)
+        pb = PageBuilder(p_num, total_pages, company, website, b_color, lang=lang)
         pb.add_page_title(f"Lal Kitab Rin: {d_name}", "Ancestral karmic debts and classical alleviation procedures")
         pb.add_section_header(725, "DEBT DIAGNOSTIC CRITERIA")
         pb.draw_card(30, 615, 535, 95)
@@ -1598,7 +1694,7 @@ def build_lalkitab_pdf(birth_data: Dict[str, Any], chart: Dict[str, Any], brandi
 
     for p_idx, (c_title, c_sub, c_core, c_rules, c_upay) in enumerate(lk_advanced_chapters):
         p_num = 20 + p_idx
-        pb = PageBuilder(p_num, total_pages, company, website, b_color)
+        pb = PageBuilder(p_num, total_pages, company, website, b_color, lang=lang)
         pb.add_page_title(c_title, c_sub)
         
         pb.add_section_header(725, "1. LAL KITAB CLASSICAL FARMAN")
@@ -1632,7 +1728,7 @@ def build_varshphal_pdf(birth_data: Dict[str, Any], chart: Dict[str, Any], brand
     target_year = birth_data.get("target_year", 2026)
 
     # Page 1: Annual Solar Return Overview
-    p1 = PageBuilder(1, total_pages, company, website, b_color)
+    p1 = PageBuilder(1, total_pages, company, website, b_color, lang=lang)
     p1.add_page_title(f"Varshphal Annual Solar Return — Year {target_year}", "Comprehensive 20-Page Tajik Annual Horoscope & Monthly Forecast")
     p1.add_section_header(725, f"1. ANNUAL SOLAR RETURN CHART (TAJIK {target_year})")
     p1.draw_card(30, 615, 535, 95)
@@ -1702,7 +1798,7 @@ def build_varshphal_pdf(birth_data: Dict[str, Any], chart: Dict[str, Any], brand
 
     for m_idx, (m_name, m_title, m_pred, m_dates, m_upay) in enumerate(month_data):
         p_num = 2 + m_idx
-        pb = PageBuilder(p_num, total_pages, company, website, b_color)
+        pb = PageBuilder(p_num, total_pages, company, website, b_color, lang=lang)
         pb.add_page_title(f"Month {m_idx+1}: {m_name} {target_year} — {m_title}", f"Exhaustive Tajik solar progression and transit guidelines for {m_name}")
         
         pb.add_section_header(725, f"1. ASTROLOGICAL THEMES FOR {m_name.upper()} {target_year}")
@@ -1766,7 +1862,7 @@ def build_varshphal_pdf(birth_data: Dict[str, Any], chart: Dict[str, Any], brand
 
     for p_idx, (t_title, t_sub, t_core, t_strat, t_upay) in enumerate(annual_topics):
         p_num = 14 + p_idx
-        pb = PageBuilder(p_num, total_pages, company, website, b_color)
+        pb = PageBuilder(p_num, total_pages, company, website, b_color, lang=lang)
         pb.add_page_title(t_title, t_sub)
         
         pb.add_section_header(725, "1. TAJIK CLASSICAL ASSESSMENT")
@@ -1806,7 +1902,7 @@ def build_numerology_pdf(birth_data: Dict[str, Any], branding: Dict[str, Any], l
     bhagyank = core.get("bhagyank", {}).get("number", 3)
 
     # Page 1: Core Numbers & Lo Shu Grid
-    p1 = PageBuilder(1, total_pages, company, website, b_color)
+    p1 = PageBuilder(1, total_pages, company, website, b_color, lang=lang)
     p1.add_page_title("Complete Numerology Blueprint", "Comprehensive 12-Page Pythagorean & Chaldean Life Path Analysis")
     p1.add_section_header(725, "1. CORE NUMERICAL PROFILE")
     p1.draw_card(30, 615, 260, 95)
@@ -1899,7 +1995,7 @@ def build_numerology_pdf(birth_data: Dict[str, Any], branding: Dict[str, Any], l
 
     for idx, (n_title, n_sub, n_core, n_pros, n_cons) in enumerate(num_chapters):
         p_num = 2 + idx
-        pb = PageBuilder(p_num, total_pages, company, website, b_color)
+        pb = PageBuilder(p_num, total_pages, company, website, b_color, lang=lang)
         pb.add_page_title(f"Chapter {idx+1}: {n_title}", n_sub)
         
         pb.add_section_header(725, "1. VIBRATIONAL FREQUENCY ANALYSIS")

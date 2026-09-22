@@ -1,4 +1,5 @@
 import swisseph as swe
+from fractions import Fraction
 from typing import Dict, Any, List, Tuple
 from app.core.swisseph import (
     calculate_julian_day,
@@ -143,10 +144,17 @@ def _generate_kp_249_table() -> List[Dict[str, Any]]:
     27 Nakshatras * 9 Sub-lords = 243 intervals.
     Divided at the 12 zodiac sign boundaries (30°, 60°, ... 330°) where a sub-arc
     spans across two adjacent signs, producing exactly 249 unequal divisions.
+
+    All arithmetic uses exact Fraction degrees (every span is (years/120)*(360/27)
+    = years/9, a rational number) — floating point would drift by ~1e-13 over 243
+    cumulative additions, occasionally landing a sub-arc's end fractionally past a
+    sign boundary it should have exactly met, producing spurious near-zero-width
+    "split" entries and inflating the table past 249.
     """
     table = []
-    current_deg = 0.0
+    current_deg = Fraction(0)
     number = 1
+    THIRTY = Fraction(30)
 
     for nak_idx in range(27):
         star_lord = NAKSHATRA_LORD_SEQUENCE[nak_idx]
@@ -155,22 +163,22 @@ def _generate_kp_249_table() -> List[Dict[str, Any]]:
         for sub_i in range(9):
             c_item = VIMSHOTTARI_CYCLE[(start_cycle_idx + sub_i) % 9]
             sub_lord = c_item["planet"]
-            # Sub-division span in degrees = (years / 120) * (360 / 27)
-            sub_span_deg = (c_item["years"] / 120.0) * (360.0 / 27.0)
+            # Sub-division span in degrees = (years / 120) * (360 / 27) = years / 9
+            sub_span_deg = Fraction(int(c_item["years"]), 9)
             end_deg = current_deg + sub_span_deg
 
             # Check if this sub-division crosses a 30° sign boundary
-            sign_boundary = int(current_deg // 30.0 + 1) * 30.0
+            sign_boundary = (current_deg // THIRTY + 1) * THIRTY
 
-            if sign_boundary < end_deg and abs(sign_boundary - end_deg) > 1e-7:
+            if sign_boundary < end_deg:
                 # Split at sign boundary
                 # Part 1: current_deg to sign_boundary
-                sign_idx_1 = int(current_deg // 30.0)
+                sign_idx_1 = int(current_deg // THIRTY) % 12
                 sign_lord_1 = ZODIAC_SIGNS[sign_idx_1]["ruler"]
                 table.append({
                     "number": number,
-                    "start_deg": current_deg,
-                    "end_deg": sign_boundary,
+                    "start_deg": float(current_deg),
+                    "end_deg": float(sign_boundary),
                     "sign_lord": sign_lord_1,
                     "star_lord": star_lord,
                     "sub_lord": sub_lord
@@ -178,24 +186,24 @@ def _generate_kp_249_table() -> List[Dict[str, Any]]:
                 number += 1
 
                 # Part 2: sign_boundary to end_deg
-                sign_idx_2 = int(sign_boundary // 30.0) % 12
+                sign_idx_2 = int(sign_boundary // THIRTY) % 12
                 sign_lord_2 = ZODIAC_SIGNS[sign_idx_2]["ruler"]
                 table.append({
                     "number": number,
-                    "start_deg": sign_boundary,
-                    "end_deg": end_deg,
+                    "start_deg": float(sign_boundary),
+                    "end_deg": float(end_deg),
                     "sign_lord": sign_lord_2,
                     "star_lord": star_lord,
                     "sub_lord": sub_lord
                 })
                 number += 1
             else:
-                sign_idx = int(current_deg // 30.0) % 12
+                sign_idx = int(current_deg // THIRTY) % 12
                 sign_lord = ZODIAC_SIGNS[sign_idx]["ruler"]
                 table.append({
                     "number": number,
-                    "start_deg": current_deg,
-                    "end_deg": end_deg,
+                    "start_deg": float(current_deg),
+                    "end_deg": float(end_deg),
                     "sign_lord": sign_lord,
                     "star_lord": star_lord,
                     "sub_lord": sub_lord
