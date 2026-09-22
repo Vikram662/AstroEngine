@@ -1,7 +1,7 @@
 import os
 import sqlite3
 import datetime
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 
 STORAGE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "storage"))
 DB_PATH = os.path.join(STORAGE_DIR, "pdf_jobs.db")
@@ -130,6 +130,19 @@ class PersistentJobStore:
                     now
                 ))
                 conn.commit()
+
+    def get_all_jobs(self, limit: int = 100) -> List[Dict[str, Any]]:
+        with sqlite3.connect(DB_PATH) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM pdf_jobs ORDER BY created_at DESC LIMIT ?", (limit,))
+            rows = cursor.fetchall()
+            result = []
+            for r in rows:
+                d = dict(r)
+                d["refunded"] = bool(d.get("refunded", 0))
+                result.append(d)
+            return result
 
     def get(self, job_id: str, default=None):
         job = self.get_job(job_id)

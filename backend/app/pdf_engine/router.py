@@ -11,6 +11,7 @@ from app.pdf_engine.generator import (
     process_pdf_job_async,
     render_kundli_html
 )
+from app.pdf_engine.jobs_db import jobs_store
 
 router = APIRouter(prefix="/api/v1/pdf", tags=["White-Label PDF Reports"])
 
@@ -124,6 +125,15 @@ async def create_brihat_kundli_job(
         message="Brihat Kundli PDF generation job queued successfully."
     )
 
+@router.get("/jobs", response_model=StandardResponse)
+async def list_all_pdf_jobs(
+    limit: int = 50,
+    key_hash: str = Depends(verify_api_key)
+):
+    """List recent PDF generation jobs from persistent database."""
+    jobs = jobs_store.get_all_jobs(limit=limit)
+    return StandardResponse(status="success", language="en", data={"total": len(jobs), "jobs": jobs})
+
 @router.get("/status/{job_id}", response_model=StandardResponse)
 async def get_pdf_job_status(
     job_id: str,
@@ -134,6 +144,8 @@ async def get_pdf_job_status(
     Poll PDF Generation Job Status (PENDING / PROCESSING / COMPLETED / FAILED + R2 URL).
     """
     job = PDF_JOBS.get(job_id)
+    if not job:
+        job = jobs_store.get_job(job_id)
     if not job:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="PDF Job not found.")
     return StandardResponse(status="success", language=job.get("language", "en"), data=job)
@@ -146,6 +158,9 @@ async def download_pdf_file(job_id: str):
     """
     safe_job_id = os.path.basename(job_id)
     job = PDF_JOBS.get(safe_job_id)
+    if not job:
+        # Fallback to persistent SQLite DB
+        job = jobs_store.get_job(safe_job_id)
     if not job:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Report job not found.")
     

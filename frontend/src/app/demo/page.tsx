@@ -1120,7 +1120,7 @@ export default function LiveDemoApp() {
               status: jobData.status,
               reportType,
               fileUrl: jobData.file_url,
-              error: jobData.error
+              error: jobData.failure_reason || jobData.error
             }
           }));
           if (jobData.status === "COMPLETED" || jobData.status === "FAILED") {

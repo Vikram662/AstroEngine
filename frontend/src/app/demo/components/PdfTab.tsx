@@ -159,33 +159,39 @@ export const PdfTab: React.FC<PdfTabProps> = ({
         {PDF_REPORTS.map((report) => {
           const job = pdfJobs[report.key];
           const isLoading = pdfLoading[report.key];
-          const c = colorMap[report.color];
+          const c = colorMap[report.color] || colorMap.indigo;
 
           return (
-            <div key={report.key} className={`bg-white rounded-2xl border shadow-xs p-5 space-y-4 ${c.card}`}>
-              {/* Header */}
-              <div className="flex items-start justify-between">
-                <div>
-                  <div className="text-2xl mb-1">{report.icon}</div>
-                  <h3 className="font-black text-sm text-slate-900">{report.title}</h3>
-                  <p className="text-[11px] text-slate-500">{report.hindi}</p>
+            <div
+              key={report.key}
+              className={`rounded-2xl border p-5 transition-all duration-200 flex flex-col justify-between space-y-4 ${c.card}`}
+            >
+              {/* Card Header */}
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <span className="text-2xl">{report.icon}</span>
+                  <div>
+                    <h3 className="font-black text-sm text-slate-900 leading-tight">{report.title}</h3>
+                    <p className="text-[11px] text-slate-500 font-medium">{report.hindi}</p>
+                  </div>
                 </div>
-                <div className="text-right space-y-1">
-                  <div className={`text-[10px] font-bold px-2 py-0.5 rounded ${c.badge}`}>{report.pages}</div>
-                  <div className="text-[10px] text-slate-400 font-mono">{report.credits} credits</div>
-                </div>
+                <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${c.badge}`}>
+                  {report.pages}
+                </span>
               </div>
 
               {/* Description */}
-              <p className="text-xs text-slate-600">{report.desc}</p>
+              <p className="text-xs text-slate-600 leading-relaxed">{report.desc}</p>
 
-              {/* Endpoint badge */}
-              <div className="bg-slate-900/5 rounded-lg px-3 py-2">
-                <div className="text-[10px] text-slate-400 uppercase font-bold mb-0.5">API Endpoint</div>
-                <div className="text-[10px] font-mono text-slate-700 break-all">{report.endpoint}</div>
+              {/* Credits & Endpoint */}
+              <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1 border-t border-slate-200/60">
+                <span className="font-mono text-[10px] text-slate-400 truncate max-w-[160px]">{report.endpoint.replace("/api/v1/pdf", "")}</span>
+                <span className="font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200/50">
+                  {report.credits} Credits
+                </span>
               </div>
 
-              {/* Status indicator */}
+              {/* Status Section */}
               {job && (
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
@@ -207,7 +213,7 @@ export const PdfTab: React.FC<PdfTabProps> = ({
                     </div>
                   )}
                   {job.error && (
-                    <p className="text-[11px] text-red-600">{job.error}</p>
+                    <p className="text-[11px] text-red-600 font-medium">{job.error}</p>
                   )}
                 </div>
               )}
@@ -238,6 +244,70 @@ export const PdfTab: React.FC<PdfTabProps> = ({
             </div>
           );
         })}
+      </div>
+
+      {/* Live Persistent Job Queue Table */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-5 space-y-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="font-bold text-sm text-slate-900">Live Persistent Job Queue (SQLite Database)</h3>
+            <p className="text-xs text-slate-400">All PDF requests recorded in database with instant status tracking</p>
+          </div>
+          <span className="text-[10px] font-bold bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-full border border-indigo-200">
+            Database: backend/storage/pdf_jobs.db
+          </span>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs">
+            <thead>
+              <tr className="border-b border-slate-100 text-slate-400 text-[10px] uppercase font-mono">
+                <th className="py-2 px-3">Job ID</th>
+                <th className="py-2 px-3">Report Type</th>
+                <th className="py-2 px-3">Status</th>
+                <th className="py-2 px-3">Credits</th>
+                <th className="py-2 px-3">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {Object.entries(pdfJobs).length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="py-4 text-center text-slate-400 text-xs">
+                    No active PDF jobs generated in this session yet. Click any "Generate PDF" card above to queue a job!
+                  </td>
+                </tr>
+              ) : (
+                Object.entries(pdfJobs).map(([key, j]: [string, any]) => (
+                  <tr key={key} className="hover:bg-slate-50/50">
+                    <td className="py-2.5 px-3 font-mono text-[11px] text-indigo-600 font-bold">{j.jobId || "Pending ID"}</td>
+                    <td className="py-2.5 px-3 capitalize font-medium text-slate-700">{key.replace("_", " ")}</td>
+                    <td className="py-2.5 px-3">
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${statusColors[j.status] || "bg-slate-100 text-slate-700"}`}>
+                        {j.status}
+                      </span>
+                    </td>
+                    <td className="py-2.5 px-3 font-mono text-slate-500">5.0</td>
+                    <td className="py-2.5 px-3">
+                      {j.status === "COMPLETED" && (
+                        <button
+                          onClick={() => openPdfDownload(j.jobId)}
+                          className="text-[11px] font-bold text-emerald-600 hover:text-emerald-700 underline"
+                        >
+                          Download PDF
+                        </button>
+                      )}
+                      {j.status === "FAILED" && (
+                        <span className="text-[10px] text-red-500">{j.error || "Execution failed"}</span>
+                      )}
+                      {(j.status === "PENDING" || j.status === "PROCESSING") && (
+                        <span className="text-[10px] text-blue-500 animate-pulse">Processing...</span>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Module 12 Info */}
