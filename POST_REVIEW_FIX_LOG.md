@@ -435,3 +435,193 @@ implemented.
   fetched and cross-read against each other; PyJHora's actual code was trusted over
   Saravali's prose wherever the two seemed to disagree (e.g. Drik Bala's exact
   aggregation formula), since code is unambiguous and prose summaries can mistranscribe.
+
+---
+
+## Frontend Redesign Plan — public site → consumer Vedic-astrology design (PLAN ONLY, not started)
+
+**Status:** planning document only. No frontend or backend code has been touched for
+this item — written per request, to be reviewed and approved before any
+implementation begins.
+
+### Why
+The public marketing site (`frontend/src/app/page.tsx`, `Navbar.tsx`, `Footer.tsx`)
+currently reads as a generic "AI-generated developer SaaS" template: system font,
+zinc/slate/indigo palette, dot-grid hero, metric strip, three-icon feature grid,
+pricing cards — the standard shape every AI page-builder produces. The backend behind
+it is real and already verified (see sections above), but the storefront doesn't
+communicate that; it looks templated rather than like a product built by a specific
+Vedic astrology company. Goal: reskin the **public-facing pages only** into a warmer,
+more human, editorial design in the style of `https://vedicrishi.in/`, while keeping
+every other part of the app exactly as it is.
+
+### Explicit scope boundaries
+- **In scope:** everything an anonymous visitor sees before logging in —
+  `frontend/src/app/page.tsx` (home), `frontend/src/components/Navbar.tsx`,
+  `frontend/src/components/Footer.tsx`, `frontend/src/components/LivePlayground.tsx`,
+  `frontend/src/app/pricing/page.tsx`, `frontend/src/app/docs/page.tsx`,
+  `frontend/src/app/documentation/page.tsx`, `frontend/src/app/demo/page.tsx`,
+  `frontend/src/app/login/page.tsx`, `frontend/src/app/globals.css`, plus new
+  consumer-facing calculator/horoscope pages described below.
+- **Out of scope — do not touch:** `frontend/src/app/(dashboard)/*` (the logged-in
+  user/console panel), `frontend/src/app/(admin)/*` (the admin panel),
+  `DashboardSidebar.tsx`, `AdminSidebar.tsx`, and all backend code
+  (`backend/app/**`). Those stay exactly as they are today — this is a public-site
+  visual redesign, not a functional or backend change.
+- No backend logic changes are needed for this plan: every "free calculator" section
+  proposed below maps to an **already-implemented, already-verified** AstroEngine
+  endpoint (list below), so this is wiring + UI, not new astrology math.
+
+### Brand identity: follow the layout, don't copy the identity
+Clarified by the user after the first draft of this plan: vedicrishi.in is a
+**structural/UX reference only** — page anatomy, section order, information density,
+"feels alive not static" patterns (ticker, live chat widget, instant no-signup
+tools). It is **not** a source to copy colors, exact typography, or visual identity
+from. AstroEngine needs its own distinct look:
+- Do **not** reuse vedicrishi's literal `orange-500`/`orange-600` CTA color or its
+  exact "Noto Sans everywhere" typography choice as a copy — those belong to that
+  brand.
+- Pick an **original AstroEngine accent color** in the design-tokens step (Phase 1
+  below) — something distinct from both vedicrishi's orange and the current generic
+  indigo-on-zinc dev-tool look. Candidate directions to choose from at
+  implementation time (final pick is a design decision, not made here): a deep
+  saffron/marigold, a maroon-terracotta, or a jewel-tone indigo-plum — anything that
+  reads as "warm, human, Vedic" without being an orange clone of the reference site.
+  Neutrals (background/text) can still warm up (charcoal-brown text, cream section
+  bands instead of stark zinc) since that's a layout/mood pattern, not a copied
+  brand color.
+- Same rule for type: warmer, more editorial type pairing is fine (e.g. a serif or
+  slab-serif accent for headline emphasis words, matching the reference site's
+  *pattern* of mixing a serif accent into a sans headline) but pick AstroEngine's own
+  font choice rather than defaulting to Noto Sans because that's what vedicrishi
+  uses.
+- Component shapes (rounded-xl cards, soft shadows, ticker strip, dropdown mega-menu
+  nav, DOB-entry hero form, calculator-grid pattern) are layout/UX conventions, safe
+  to follow directly — these aren't "the design," they're the section anatomy the
+  user asked to replicate.
+
+### Design audit of vedicrishi.in (captured live via browser inspection, 2026-09-22)
+Recorded below for structural reference (spacing, component patterns, information
+architecture). Per the note above, the specific color/font values here are **not**
+to be reused as-is — see "Brand identity" above for what to do instead.
+Reference site is a consumer Vedic-astrology portal (Kundli, horoscope, matching,
+astrologer chat), not a developer tool — same underlying domain as AstroEngine but a
+completely different audience-facing skin.
+
+**Typography & color** (read from computed styles, not guessed):
+- Font: `"Noto Sans"` throughout (headings and body) — no serif/mono anywhere.
+- H1: ~64px, font-weight 800, near-black (`rgb(17,17,17)`). Body text a warm dark
+  charcoal-brown (`rgb(43,38,32)`), not pure black/gray — reads warmer than
+  zinc/slate.
+- Primary CTA buttons: solid orange (`rgb(249,115,22)` = Tailwind `orange-500`),
+  white text, bold, radius 10–12px (not pill, not sharp — soft rounded-xl).
+  Secondary/text links use `orange-600` (`rgb(234,88,12)`).
+  → maps directly onto Tailwind's existing `orange-500`/`orange-600` scale, no custom
+  palette needed.
+- Background: white page background with alternating soft off-white/cream section
+  bands and white cards on top (shadow, not border-only) — softer than AstroEngine's
+  current flat zinc-100/white alternation.
+- A gradient promo banner sits above the sticky nav (blue gradient, dismissible,
+  "NEW" pill + one-line offer + CTA) and a dark ticker strip below the nav shows
+  today's Tithi / Rahu Kaal / a "today's Panchang" link / today's transits — this is
+  the single biggest "feels alive, not static" element AstroEngine's current hero
+  lacks.
+
+**Section inventory, top to bottom** (this is the section list the user asked to
+replicate):
+1. **Promo banner** (dismissible gradient strip) + **sticky nav** with dropdown
+   menus (Astrology, Matching, Panchang, Chat, Reports, Calculators, Store, Blog) +
+   Login/Sign up buttons.
+2. **Info ticker** — today's Tithi, Rahu Kaal window, link to full Panchang, today's
+   transits — dark strip, always visible under the nav.
+3. **Hero, two-column**: left = big headline (plain + one italic serif-accented line)
+   + one-line subhead + an inline "enter your DOB → Read My Kundli" form (no
+   signup); right = a live "Chat with Astrologer" widget card — astrologer avatar,
+   a greeting bubble, 2–3 recommended questions as clickable chips, a free-text
+   input, "100% Private" badge.
+4. **"Free Astrology Analysers"** — a row of 5–6 simple pill/card links to no-signup
+   instant tools (Kundli, Numerology, Lal Kitab, Dhan Yoga, Name Correction, Tithi
+   Pravesh).
+5. **"Today's Panchang & Transit"** card — full tithi/nakshatra/yoga/karana/Rahu
+   Kaal/Abhijit Muhurat grid for today, plus one upcoming "planet enters sign" event
+   and a link to a full transit calendar.
+6. **"Vedic Calculators"** — a large grid (~24 cards) of free single-purpose
+   calculators, each just a title + one-sentence description (Ascendant, Moon Sign,
+   Nakshatra, Manglik, Sade Sati, Kaalsarpa, Pitra Dosha, Numerology, Yogini Dasha,
+   Gemstone/Rudraksha suggestion, Career/Love/Marriage/Child reports, etc.).
+7. **"Today's Horoscope"** — 12 zodiac-sign cards (date range + "today's reading"
+   link).
+8. **"Chat With Astrologers"** — astrologer profile cards (photo, name, specialty,
+   rating, price-per-question, "Start chat" button).
+9. **Footer** — 5-column link directory (Core Astrology / Calculators / Tools /
+   Premium reports / Ecosystem+API+Blog), app-store badges, a store CTA, legal
+   links.
+
+### Mapping: reference-site sections → AstroEngine's own (already-verified) endpoints
+No new astrology logic is required — the backend already covers nearly every tool in
+the reference site's calculator grid:
+
+| Reference-site feature | AstroEngine endpoint(s) already implemented |
+|---|---|
+| Free Kundli / birth chart | `parashari/chart/d1`, `core_astronomy/planets/positions` |
+| Manglik Dosha | `dosha_matching/manglik` |
+| Kaalsarpa Dosha | `dosha_matching/kalsarpa` |
+| Sade Sati Check | `dosha_matching/sade-sati/status`, `.../timeline` |
+| Pitra Dosha | `dosha_matching/pitra-dosha` |
+| Kundli Matching (Ashtakoot) | `dosha_matching/matchmaking/ashtakoot` (verified 8/8 correct, see above) |
+| Numerology (Life Path/Destiny) | `numerology/core-numbers`, `.../forecast` |
+| Name Correction Analyser | `numerology/name-correction`, `.../name-analysis` |
+| Lal Kitab Analysis | `lalkitab/chart/kundli`, `.../debts/rin`, `.../remedies/planet-wise` |
+| Dhan Yoga Analyser | `parashari/yogas/find` |
+| Yogini Dasha | `dasha/yogini/complete` |
+| Gemstone / Rudraksha Suggestion | `remedies/gemstones`, `remedies/rudraksha` |
+| Today's Panchang / Tithi / Rahu Kaal / Muhurat | `panchang/daily`, `.../choghadiya`, `.../hora` |
+| Today's / Weekly / Yearly Horoscope | `panchang/horoscope/daily`, `.../weekly`, `.../yearly` |
+| Chat with Astrologer | `ai_astrologer/ask`, `.../quick-insights`, `.../suggested-prompts` |
+| Tarot card of the day | `tarot/daily-card` (bonus — reference site doesn't even have this) |
+
+Where the reference site sells a paid human-astrologer chat, AstroEngine's own
+`ai_astrologer` module already does an AI equivalent — same UI slot, different
+backend, no new engineering beyond wiring the existing `/ask` endpoint into the chat
+widget.
+
+### Phased implementation steps (for when this plan is approved)
+1. **Design tokens** — define an **original** AstroEngine accent color (not
+   vedicrishi's orange — pick from the candidate directions in "Brand identity"
+   above, e.g. saffron/marigold or maroon-terracotta or indigo-plum), plus warm
+   charcoal-brown text instead of zinc/slate and softer off-white section bands,
+   larger card radii + shadow, in `globals.css`. Choose AstroEngine's own font
+   pairing (not a copy of "Noto Sans everywhere") via `next/font/google`. No
+   component logic changes in this step — tokens only, so the palette choice can be
+   reviewed before it ripples into every component.
+2. **Navbar + promo banner + info ticker** — rebuild `Navbar.tsx` with the
+   dropdown-menu structure (Astrology/Matching/Panchang/Chat/Reports/Calculators),
+   add the dismissible gradient promo strip and the live Tithi/Rahu-Kaal ticker
+   (sourced from `panchang/daily`, computed for "today" server-side or on mount).
+   Keep the existing "Console" / "Sign in" links, just restyled.
+3. **Hero rebuild** — two-column layout: DOB-entry "Read My Kundli" form on the
+   left wired to the D1 chart endpoints; the AI-astrologer chat widget on the right
+   wired to `ai_astrologer/ask` + `/suggested-prompts`.
+4. **Free calculators grid** — new route(s) under `frontend/src/app/calculators/`
+   (or a single dynamic `[tool]` route) rendering the ~24-card grid, each card
+   linking to a lightweight result page that posts to its mapped endpoint from the
+   table above.
+5. **Panchang/transit widget** — new component pulling `panchang/daily` +
+   `panchang/choghadiya`/`hora`, styled as the reference site's tithi/nakshatra/
+   yoga/karana/Rahu-Kaal/Muhurat grid.
+6. **Horoscope section** — 12 zodiac cards linking to `panchang/horoscope/daily`
+   result pages (weekly/yearly as secondary tabs).
+7. **Footer rebuild** — restructure `Footer.tsx` into the 5-column consumer link
+   directory, keep the existing dynamic company-info wiring (`/api/settings/public`)
+   for address/contact/social, drop the "ENTERPRISE"/API-console framing from this
+   footer only (that framing can stay inside the dashboard if wanted).
+8. **Pricing/docs pages** (`pricing/page.tsx`, `docs/page.tsx`,
+   `documentation/page.tsx`) — restyle to match the new palette/typography for
+   visual consistency; content/structure unchanged.
+9. **QA pass** — verify responsive behavior (mobile-first, the reference site is
+   clearly designed mobile-first), verify every calculator card's result actually
+   round-trips through its real backend endpoint (not a placeholder), verify
+   `(dashboard)` and `(admin)` routes are visually untouched.
+
+Each phase should land as its own reviewable change rather than one large rewrite,
+given the size of the surface area (9 phases, ~24 new calculator surfaces).
