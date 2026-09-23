@@ -1,12 +1,54 @@
 @import "tailwindcss";
 
+/*
+ * Public-site design tokens (frontend redesign Phase 1 — see
+ * POST_REVIEW_FIX_LOG.md "Frontend Redesign Plan"). The accent/dark-neutral
+ * values reuse #b45309 / #0f172a, the brand colors already established
+ * elsewhere in the product (backend/app/schemas/pdf.py BrandingConfig
+ * default, the Parashari D1/D9 chart SVGs, dashboard branding defaults) —
+ * not vedicrishi.in's orange-500, and not a color invented from scratch.
+ *
+ * Every name below (accent-*, ink-*, surface-*, line, font-brand,
+ * font-display) is new and unused anywhere else in the app today, so
+ * nothing renders differently yet — later phases opt individual
+ * public-page components into them. Tailwind's own defaults (zinc, slate,
+ * indigo, font-sans, border) are untouched, so the dashboard/admin panels
+ * are unaffected.
+ */
 :root {
-  --background: #fcfcfd;
-  --foreground: #09090b;
+  --accent: #b45309;
+  --accent-hover: #92400e;
+  --accent-soft: #fdf1de;
+  --accent-foreground: #ffffff;
+
+  --ink: #241a12;
+  --ink-soft: #5b4a3d;
+  --ink-muted: #8a7a6c;
+
+  --surface: #fdfaf5;
+  --surface-alt: #f7efe2;
   --card: #ffffff;
-  --border: #e4e4e7;
-  --muted: #f4f4f5;
-  --muted-foreground: #71717a;
+  --line: #ece1d1;
+}
+
+@theme inline {
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-foreground: var(--accent-foreground);
+
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-ink-muted: var(--ink-muted);
+
+  --color-surface: var(--surface);
+  --color-surface-alt: var(--surface-alt);
+  --color-card: var(--card);
+  --color-line: var(--line);
+
+  /* Figtree/Fraunces loaded via next/font/google in app/layout.tsx */
+  --font-brand: var(--font-figtree), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-display: var(--font-fraunces), Georgia, "Times New Roman", serif;
 }
 
 body {
@@ -17,9 +59,15 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Subtle dot grid for clean developer feel */
+/* Subtle dot grid for clean developer feel (existing dev-console pages) */
 .clean-grid {
   background-image: radial-gradient(#e4e4e7 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+/* Warm dot grid variant for the redesigned public pages */
+.warm-grid {
+  background-image: radial-gradient(var(--line) 1px, transparent 1px);
   background-size: 20px 20px;
 }
 
