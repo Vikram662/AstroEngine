@@ -1,5 +1,34 @@
 # Dedicated calculator pages + language-selection fixes
 
+## Update: bilingual locale routing (all 29 calculators + homepage) ✅
+A separate, later effort added real Hindi/English URL routing on top of everything
+below — Hindi stays at the bare URLs documented in this file (`/calculators/<slug>`),
+English is now also served at `/en/calculators/<slug>` for **all 29 calculators**
+(started as a 2-page proof on `lagna-kundli`/`moon-sign`, then mechanically repeated
+across the remaining 27 via a scripted move, so every page kept its exact existing
+logic/JSX — only the file location, function signature, and lang-seeding changed).
+Each migrated route moved from `src/app/calculators/<slug>/page.tsx` to
+`src/app/[locale]/calculators/<slug>/{page.tsx,<Slug>Client.tsx}` — `page.tsx` is now a
+thin Server Component with per-locale `generateMetadata()` (distinct `<title>`/meta
+description per language, hreflang `hi`/`en`/`x-default` alternates) and JSON-LD
+(`SoftwareApplication` + `BreadcrumbList`); the original client logic moved into
+`<Slug>Client.tsx` unchanged except accepting a `locale` prop that seeds the page's
+existing hi/en API-language toggle instead of hardcoding `"hi"`. `src/middleware.ts`
+(deprecated in this Next.js version, renamed `proxy.ts`) now rewrites bare Hindi
+requests to `/hi` internally and redirects stray `/hi/*` → bare; auth-gating logic is
+carried over verbatim and was re-verified unchanged. New `sitemap.ts`/`robots.ts`
+enumerate both language variants for every migrated path, and a Hindi/English switcher
+was added to `Navbar.tsx`. `CALCULATOR_TOOLS` entries in `calculatorsData.ts` gained an
+optional `seo: {hi, en}` field (title + description) for all 29.
+
+**Still deferred** (this pass was routing/SEO infrastructure only, not translation):
+`/pricing` and `/documentation` are not yet locale-routed, and the ~185 hardcoded
+strings in shared chrome (`Navbar.tsx`, `Footer.tsx`, `HeroSection.tsx`,
+`HoroscopeSection.tsx`, `PanchangWidget.tsx`, `BirthDataFields.tsx`) still render in
+Hindi regardless of `/en/*` — only each calculator's own result content changes
+language today (via its existing API-response toggle, now correctly defaulting to the
+URL's locale). Building a real translation dictionary for that chrome is the next step.
+
 ## Execution Status: Built, bugs found via live testing, fixed and re-verified ✅
 
 Part 1, the shared components, all 29 pages, and the link-rewiring pass below were all

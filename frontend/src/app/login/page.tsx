@@ -108,7 +108,7 @@ export default function LoginPage() {
             <div className="w-8 h-8 rounded bg-ink text-white flex items-center justify-center font-brand font-bold text-xs mb-3">
               AE
             </div>
-            <h1 className="text-2xl font-extrabold tracking-tight text-ink">
+            <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-ink">
               {isRegistering ? (
                 <>
                   Create <span className="font-display italic text-accent font-normal">Developer Account</span>

@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import axios from "axios";
 import { Play, Copy, Check, Terminal, Loader2, AlertCircle } from "lucide-react";
+import { useLocale } from "@/hooks/useLocale";
 
 type PlaygroundTab = "kundli" | "panchang" | "matching";
 
@@ -64,12 +65,13 @@ const TEMPLATES: Record<PlaygroundTab, { endpoint: string; json: string }> = {
 };
 
 export const LivePlayground = () => {
+  const locale = useLocale();
   const [activeTab, setActiveTab] = useState<PlaygroundTab>("kundli");
-  const [selectedLang, setSelectedLang] = useState<"hi" | "en">("en");
+  const [selectedLang, setSelectedLang] = useState<"hi" | "en">(locale);
   const [inputJson, setInputJson] = useState<string>(() => {
     try {
       const obj = JSON.parse(TEMPLATES["kundli"].json);
-      obj.lang = "en";
+      obj.lang = locale;
       return JSON.stringify(obj, null, 2);
     } catch {
       return TEMPLATES["kundli"].json;

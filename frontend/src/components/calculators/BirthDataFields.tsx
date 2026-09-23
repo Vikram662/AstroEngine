@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import axios from "axios";
 import { MapPin, Calendar, Clock, User, Loader2 } from "lucide-react";
+import { useDictionary } from "@/hooks/useDictionary";
 
 export interface BirthDataValue {
   name: string;
@@ -57,10 +58,11 @@ export const BirthDataFields: React.FC<Props> = ({
   requireGender = true,
   requireTime = true,
   requireCity = true,
-  dateLabel = "जन्म तिथि (Date of Birth)",
+  dateLabel,
   personLabel,
   idPrefix = "",
 }) => {
+  const t = useDictionary().birthDataFields;
   const [cityDropdown, setCityDropdown] = useState(false);
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searchingCity, setSearchingCity] = useState(false);
@@ -123,7 +125,7 @@ export const BirthDataFields: React.FC<Props> = ({
             <div className="sm:col-span-2">
               <label htmlFor={id("name")} className="block text-xs font-semibold text-ink-soft mb-1.5 flex items-center gap-1.5">
                 <User className="w-3.5 h-3.5 text-accent" />
-                <span>पूरा नाम (Full Name)</span>
+                <span>{t.fullName}</span>
               </label>
               <input
                 id={id("name")}
@@ -131,7 +133,7 @@ export const BirthDataFields: React.FC<Props> = ({
                 required
                 value={value.name}
                 onChange={(e) => onChange({ ...value, name: e.target.value })}
-                placeholder="उदा. राहुल शर्मा"
+                placeholder={t.namePlaceholder}
                 className="w-full px-3.5 py-2.5 rounded-xl border border-line bg-surface text-ink text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition"
               />
             </div>
@@ -139,7 +141,7 @@ export const BirthDataFields: React.FC<Props> = ({
           {requireGender && (
             <div>
               <label htmlFor={id("gender")} className="block text-xs font-semibold text-ink-soft mb-1.5">
-                लिंग (Gender)
+                {t.gender}
               </label>
               <select
                 id={id("gender")}
@@ -147,8 +149,8 @@ export const BirthDataFields: React.FC<Props> = ({
                 onChange={(e) => onChange({ ...value, gender: e.target.value as "male" | "female" })}
                 className="w-full px-3 py-2.5 rounded-xl border border-line bg-surface text-ink text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition"
               >
-                <option value="male">पुरुष (Male)</option>
-                <option value="female">महिला (Female)</option>
+                <option value="male">{t.male}</option>
+                <option value="female">{t.female}</option>
               </select>
             </div>
           )}
@@ -159,7 +161,7 @@ export const BirthDataFields: React.FC<Props> = ({
         <div>
           <label htmlFor={id("dob")} className="block text-xs font-semibold text-ink-soft mb-1.5 flex items-center gap-1.5">
             <Calendar className="w-3.5 h-3.5 text-accent" />
-            <span>{dateLabel}</span>
+            <span>{dateLabel || t.dob}</span>
           </label>
           <input
             id={id("dob")}
@@ -174,7 +176,7 @@ export const BirthDataFields: React.FC<Props> = ({
           <div>
             <label htmlFor={id("tob")} className="block text-xs font-semibold text-ink-soft mb-1.5 flex items-center gap-1.5">
               <Clock className="w-3.5 h-3.5 text-accent" />
-              <span>जन्म समय (Time of Birth - 24hr)</span>
+              <span>{t.tob}</span>
             </label>
             <input
               id={id("tob")}
@@ -193,11 +195,11 @@ export const BirthDataFields: React.FC<Props> = ({
           <label htmlFor={id("city")} className="block text-xs font-semibold text-ink-soft mb-1.5 flex items-center justify-between">
             <span className="flex items-center gap-1.5">
               <MapPin className="w-3.5 h-3.5 text-accent" />
-              <span>स्थान (City / Location)</span>
+              <span>{t.city}</span>
             </span>
             {searchingCity && (
               <span className="text-[10px] text-accent flex items-center gap-1">
-                <Loader2 className="w-3 h-3 animate-spin" /> खोज जारी...
+                <Loader2 className="w-3 h-3 animate-spin" /> {t.searching}
               </span>
             )}
           </label>
@@ -210,7 +212,7 @@ export const BirthDataFields: React.FC<Props> = ({
             onFocus={() => {
               if (searchResults.length > 0) setCityDropdown(true);
             }}
-            placeholder="शहर का नाम लिखें (उदा. नई दिल्ली, मुंबई, जयपुर)..."
+            placeholder={t.cityPlaceholder}
             className="w-full px-3.5 py-2.5 rounded-xl border border-line bg-surface text-ink text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition"
           />
 

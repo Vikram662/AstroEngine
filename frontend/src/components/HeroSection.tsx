@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import Link from "next/link";
+import { useLocale } from "@/hooks/useLocale";
 import { 
   Sparkles, 
   MapPin, 
@@ -75,7 +76,8 @@ interface ChatMessage {
 
 export const HeroSection: React.FC = () => {
   // ── Form State ──
-  const [formData, setFormData] = useState<BirthData>(DEFAULT_BIRTH_DATA);
+  const locale = useLocale();
+  const [formData, setFormData] = useState<BirthData>(() => ({ ...DEFAULT_BIRTH_DATA, lang: locale }));
   const [cityInput, setCityInput] = useState<string>(DEFAULT_BIRTH_DATA.cityName);
   const [cityDropdown, setCityDropdown] = useState<boolean>(false);
   const [searchResults, setSearchResults] = useState<any[]>([]);

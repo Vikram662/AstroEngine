@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
 import { Figtree, Fraunces } from "next/font/google";
 import "./globals.css";
+import { JsonLd } from "@/components/seo/JsonLd";
+import { buildOrganizationSchema } from "@/lib/schema";
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"),
   title: "AstroEngine — High-Performance B2B Astrology API Suite",
   description: "Enterprise multi-language Vedic and Western Astrology REST APIs, white-label PDF engine, and developer console.",
 };
@@ -33,8 +36,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`h-full antialiased font-sans ${figtree.variable} ${fraunces.variable}`}>
+    <html lang="hi" className={`h-full antialiased font-sans ${figtree.variable} ${fraunces.variable}`}>
       <body className="min-h-full flex flex-col bg-white text-slate-900">
+        <JsonLd data={buildOrganizationSchema()} />
         {children}
         <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload" />
       </body>

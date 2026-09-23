@@ -2,8 +2,11 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import axios from "axios";
 import { ArrowRight, ChevronDown, Sparkles, X } from "lucide-react";
+import { useLocale } from "@/hooks/useLocale";
+import { isMigratedPath, getHindiPath } from "@/lib/locale";
 
 const PROMO_DISMISSED_KEY = "astroengine_promo_dismissed_v1";
 
@@ -156,12 +159,45 @@ const InfoTicker = () => {
   );
 };
 
+const LanguageSwitcher = () => {
+  const pathname = usePathname();
+  const locale = useLocale();
+  const barePathname = locale === "en" ? getHindiPath(pathname) : pathname;
+
+  if (!isMigratedPath(barePathname)) return null;
+
+  const englishHref = barePathname === "/" ? "/en" : `/en${barePathname}`;
+
+  return (
+    <div className="hidden sm:flex items-center rounded-md bg-surface-alt p-0.5 border border-line text-[11px] font-medium">
+      <Link
+        href={barePathname}
+        className={`px-2 py-1 rounded transition ${
+          locale === "hi" ? "bg-accent text-white shadow-xs" : "text-ink-muted hover:text-ink"
+        }`}
+      >
+        हिं
+      </Link>
+      <Link
+        href={englishHref}
+        className={`px-2 py-1 rounded transition ${
+          locale === "en" ? "bg-accent text-white shadow-xs" : "text-ink-muted hover:text-ink"
+        }`}
+      >
+        EN
+      </Link>
+    </div>
+  );
+};
+
 export const Navbar = () => {
   const [logoUrl, setLogoUrl] = useState<string>("");
   const [companyName, setCompanyName] = useState<string>("AstroEngine");
   const [promoDismissed, setPromoDismissed] = useState(true); // default hidden until we know it wasn't dismissed
   const [openGroup, setOpenGroup] = useState<string | null>(null);
   const navRef = useRef<HTMLDivElement>(null);
+  const locale = useLocale();
+  const homeHref = locale === "en" ? "/en" : "/";
 
   useEffect(() => {
     axios.get("/api/settings/public")
@@ -225,7 +261,7 @@ export const Navbar = () => {
 
       <header className="w-full bg-surface/90 backdrop-blur border-b border-line">
         <div ref={navRef} className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2.5">
+          <Link href={homeHref} className="flex items-center gap-2.5">
             {logoUrl ? (
               <img
                 src={logoUrl}
@@ -300,6 +336,7 @@ export const Navbar = () => {
           </nav>
 
           <div className="flex items-center gap-3">
+            <LanguageSwitcher />
             <Link
               href="/demo"
               className="hidden lg:flex items-center gap-1 text-xs font-semibold text-accent hover:text-accent-hover transition"
