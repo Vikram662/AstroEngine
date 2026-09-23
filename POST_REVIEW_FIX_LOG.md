@@ -438,11 +438,13 @@ implemented.
 
 ---
 
-## Frontend Redesign Plan — public site → consumer Vedic-astrology design (PLAN ONLY, not started)
+## Frontend Redesign Plan — public site → consumer Vedic-astrology design (IN PROGRESS — Phases 1–2 done, 3–9 not started)
 
-**Status:** planning document only. No frontend or backend code has been touched for
-this item — written per request, to be reviewed and approved before any
-implementation begins.
+**Status:** in progress. Phases 1 and 2 below are implemented and verified against
+a locally running backend, not just written — see "Progress log" immediately below
+the phase list. Phases 3–9 (hero rebuild, calculators grid, Panchang/transit widget,
+horoscope section, footer rebuild, pricing/docs restyle, QA pass) have not been
+started.
 
 ### Why
 The public marketing site (`frontend/src/app/page.tsx`, `Navbar.tsx`, `Footer.tsx`)
@@ -586,7 +588,7 @@ backend, no new engineering beyond wiring the existing `/ask` endpoint into the 
 widget.
 
 ### Phased implementation steps (for when this plan is approved)
-1. **Design tokens** — define an **original** AstroEngine accent color (not
+1. ✅ **Done — Design tokens** — define an **original** AstroEngine accent color (not
    vedicrishi's orange — pick from the candidate directions in "Brand identity"
    above, e.g. saffron/marigold or maroon-terracotta or indigo-plum), plus warm
    charcoal-brown text instead of zinc/slate and softer off-white section bands,
@@ -594,7 +596,7 @@ widget.
    pairing (not a copy of "Noto Sans everywhere") via `next/font/google`. No
    component logic changes in this step — tokens only, so the palette choice can be
    reviewed before it ripples into every component.
-2. **Navbar + promo banner + info ticker** — rebuild `Navbar.tsx` with the
+2. ✅ **Done — Navbar + promo banner + info ticker** — rebuild `Navbar.tsx` with the
    dropdown-menu structure (Astrology/Matching/Panchang/Chat/Reports/Calculators),
    add the dismissible gradient promo strip and the live Tithi/Rahu-Kaal ticker
    (sourced from `panchang/daily`, computed for "today" server-side or on mount).
@@ -622,6 +624,34 @@ widget.
    clearly designed mobile-first), verify every calculator card's result actually
    round-trips through its real backend endpoint (not a placeholder), verify
    `(dashboard)` and `(admin)` routes are visually untouched.
+
+### Progress log
+
+**Phase 1 (`globals.css`, `layout.tsx`) — commit `945bcee`.** Added
+accent/ink/surface/line color tokens reusing `#b45309`, the brand color already
+established elsewhere in the product (`backend/app/schemas/pdf.py`
+`BrandingConfig` default, the Parashari D1/D9 chart SVGs) rather than an
+invented color, plus a Figtree/Fraunces font pairing via `next/font/google`.
+All new token/utility names are additive and unused by any existing component
+(verified via a throwaway test route rendering `bg-accent`/`text-ink`/
+`border-line`/`font-brand`/`font-display` and checking computed styles, then
+deleted), so Tailwind's defaults — and the dashboard/admin panels that depend
+on them — are untouched.
+
+**Phase 2 (`Navbar.tsx`, `demo/page.tsx`, new `api/panchang/today/route.ts`)
+— commit `24d89a6`.** Dropdown groups (Astrology/Matching/Panchang/Chat/
+Reports/Calculators) link into the demo page's real, already-working tabs via
+a new `?tab=` deep-link (e.g. `/demo?tab=matching`) rather than pages that
+don't exist until later phases. Promo banner dismissal persists via
+localStorage, defaulting hidden until the client confirms it wasn't dismissed
+(avoids an SSR/CSR hydration mismatch). The info ticker calls a new
+`GET /api/panchang/today` (server-side, fixed New Delhi reference location —
+Panchang isn't tied to a visitor's birth data — so the backend API key never
+reaches the browser). Verified end-to-end against a locally running backend
+(`ENVIRONMENT=development`, `NEXT_APP_URL` set per the S12 workaround above):
+dropdowns open/close/deep-link correctly, the ticker showed real live data
+(e.g. "Tuesday · Shukla Dwadashi · Shravana · Rahu Kaal 12:13 PM–1:44 PM" on
+2026-09-23), dismissal survives a reload, nav doesn't wrap at 1440px.
 
 Each phase should land as its own reviewable change rather than one large rewrite,
 given the size of the surface area (9 phases, ~24 new calculator surfaces).
