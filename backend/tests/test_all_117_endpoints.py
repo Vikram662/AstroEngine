@@ -51,4 +51,4 @@ def test_all_117_endpoints_live():
                 res = client.post(path, json=body, headers=headers)
                 assert res.status_code in [200, 202, 501]
 
-    assert tested_count == 117
+    assert tested_count == 137

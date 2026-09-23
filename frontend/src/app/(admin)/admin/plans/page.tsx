@@ -108,7 +108,7 @@ export default function AdminPlansPage() {
   const [rateLimitPerMin, setRateLimitPerMin] = useState("60");
   const [overageCost, setOverageCost] = useState("0.15");
   const [featuresText, setFeaturesText] = useState(
-    "Access to all 117 API Endpoints\nParashari D1 & D9 Charts\nPanchang & Muhurat Calculations\nCommunity Support"
+    "Access to all 135 API Endpoints\nParashari D1 & D9 Charts\nPanchang & Muhurat Calculations\nCommunity Support"
   );
   const [isPopular, setIsPopular] = useState(false);
   const [allowedModules, setAllowedModules] = useState<string[]>([]);

@@ -67,7 +67,7 @@ export default function HomePage() {
           
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-100 border border-zinc-200 text-xs font-mono text-zinc-700 mb-6">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
-            <span>Swiss Ephemeris Native C Core • 117 Production APIs</span>
+            <span>Swiss Ephemeris Native C Core • 135 Production APIs</span>
           </div>
 
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight text-zinc-900 max-w-3xl mx-auto leading-tight">
@@ -120,7 +120,7 @@ export default function HomePage() {
               <div className="text-xs text-zinc-500 mt-0.5">Average P95 Latency</div>
             </div>
             <div>
-              <div className="text-2xl font-bold font-mono text-zinc-900">117</div>
+              <div className="text-2xl font-bold font-mono text-zinc-900">135</div>
               <div className="text-xs text-zinc-500 mt-0.5">Production Endpoints</div>
             </div>
             <div>

@@ -72,7 +72,7 @@ async function main() {
       includedQuota: 35000,
       rateLimitPerMin: 60,
       overageCost: 0.02,
-      features: ["All 117 Endpoints Active", "Kundli & Panchang Calculations", "Community Support"],
+      features: ["All 135 Endpoints Active", "Kundli & Panchang Calculations", "Community Support"],
       isPopular: false
     },
     {

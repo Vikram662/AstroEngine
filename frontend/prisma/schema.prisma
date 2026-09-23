@@ -239,7 +239,7 @@ model SubscriptionPlan {
   includedQuota   Int
   rateLimitPerMin Int
   overageCost     Float
-  features        Json     // List of features [ "All 117 Endpoints", ... ]
+  features        Json     // List of features [ "All 135 Endpoints", ... ]
   isPopular       Boolean  @default(false)
   isActive        Boolean  @default(true)
   createdAt       DateTime @default(now())

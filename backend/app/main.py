@@ -115,7 +115,7 @@ def get_dynamic_plans_markdown() -> str:
     return (
         "| Subscription Plan | Monthly Price | Monthly Included Quota | Rate Limit (RPM) | Overage Cost / Call | Key Features |\n"
         "| :--- | :--- | :--- | :--- | :--- | :--- |\n"
-        "| **Starter Tier** | **₹4,999 / mo** | **35,000 calls** | 60 req / min | ₹0.02 / call | All 117 Endpoints, Full Kundli & Panchang, Community Support |\n"
+        "| **Starter Tier** | **₹4,999 / mo** | **35,000 calls** | 60 req / min | ₹0.02 / call | All 135 Endpoints, Full Kundli & Panchang, Community Support |\n"
         "| **Pro Tier** | **₹14,999 / mo** | **300,000 calls** | 300 req / min | ₹0.015 / call | Full D1–D60 Divisional Charts, High Throughput, 99.9% SLA & Priority Support |\n"
         "| **Enterprise Tier** | **₹39,999 / mo** | **1,500,000 calls** | 1,200 req / min | ₹0.01 / call | White-label PDF Engine, Dedicated Cache, Custom Branding & 24/7 SLA |"
     )

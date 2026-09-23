@@ -57,7 +57,7 @@ export default function ApiKeysPage() {
       <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
         <h1 className="text-2xl font-bold tracking-tight text-slate-900">API Key Credentials</h1>
         <p className="text-slate-600 text-xs sm:text-sm mt-1">
-          Authenticate requests to all 117 AstroEngine endpoints via the <code className="bg-slate-100 text-slate-900 px-1.5 py-0.5 rounded font-mono font-bold border border-slate-200">x-api-key</code> header.
+          Authenticate requests to all 135 AstroEngine endpoints via the <code className="bg-slate-100 text-slate-900 px-1.5 py-0.5 rounded font-mono font-bold border border-slate-200">x-api-key</code> header.
         </p>
       </div>
 

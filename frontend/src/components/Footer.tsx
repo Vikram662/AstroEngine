@@ -95,7 +95,7 @@ export const Footer = () => {
               </li>
               <li>
                 <Link href="/docs" className="hover:text-slate-900 transition">
-                  All 117 Endpoints
+                  All 135 Endpoints
                 </Link>
               </li>
               <li>

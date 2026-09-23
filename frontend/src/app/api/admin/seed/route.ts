@@ -155,7 +155,7 @@ export async function POST(req: NextRequest) {
         features: [
           "1,500,000 Requests / Month",
           "1,200 RPM High-Volume Burst Capacity",
-          "ALL 117 Production Calculation APIs Unlocked",
+          "ALL 135 Production Calculation APIs Unlocked",
           "Full Automated 20+ Page PDF Report Engine",
           "Whitelabel Branding, Custom Logo & Watermark",
           "Multi-User Team Sub-Accounts & API Keys",

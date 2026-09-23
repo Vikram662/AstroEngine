@@ -2,7 +2,7 @@
   "info": {
     "name": "AstroEngine B2B API Suite",
     "_postman_id": "7f8b9e1a-4c2d-4e9f-8a1b-3c5d7e9f0a2b",
-    "description": "High-Performance B2B Vedic + Western Astrology Engine (117+ Endpoints) powered by pyswisseph C-bindings.",
+    "description": "High-Performance B2B Vedic + Western Astrology Engine (135+ Endpoints) powered by pyswisseph C-bindings.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
