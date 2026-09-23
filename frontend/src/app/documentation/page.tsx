@@ -2,10 +2,13 @@
 
 import React, { useState } from "react";
 import { Navbar } from "@/components/Navbar";
+import { Footer } from "@/components/Footer";
 import { 
   Copy, 
   Check, 
-  ExternalLink
+  ExternalLink,
+  Code2,
+  Terminal
 } from "lucide-react";
 
 interface ApiEndpointDoc {
@@ -165,7 +168,7 @@ const API_DOCS: ApiEndpointDoc[] = [
     name: "Manglik Dosha with Cancellations",
     method: "POST",
     path: "/api/v1/dosha/manglik",
-    description: "Evaluates Kuja Dosha from Lagna, Moon, and Venus with 20+ classical BPHS cancellation exceptions.",
+    description: "Evaluates Kuja Dosha from Lagna, Moon, and Venus with 12 classical BPHS cancellation exceptions.",
     samplePayload: {
       dob: "1995-10-05",
       tob: "14:30",
@@ -375,36 +378,40 @@ echo $response;`;
   const apiBaseUrl = `${process.env.NEXT_PUBLIC_ASTRO_ENGINE_URL}`;
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#fafafa] text-zinc-900">
+    <div className="min-h-screen flex flex-col bg-surface text-ink">
       <Navbar />
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10 w-full flex-1">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-12 w-full flex-1">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-zinc-200">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-line">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-zinc-900">API Documentation</h1>
-            <p className="text-zinc-600 text-xs sm:text-sm mt-0.5">
-              125+ production endpoints with code samples in cURL, Node.js, Python, and PHP.
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-accent-soft border border-line text-xs font-semibold text-accent mb-2">
+              <Terminal className="w-3.5 h-3.5" />
+              <span>डेवलपर API संदर्भ • 135 Production Endpoints</span>
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-ink">API Documentation</h1>
+            <p className="text-ink-soft text-xs sm:text-sm mt-1">
+              cURL, Node.js, Python और PHP कोड नमूनों के साथ पूर्ण API संदर्भ।
             </p>
           </div>
           <div className="flex items-center gap-2">
             <a
               href="/postman_collection.json"
               download="AstroEngine_Postman_Collection.json"
-              className="px-3 py-1.5 rounded-md bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-medium flex items-center gap-1.5 shadow-xs transition"
+              className="px-3.5 py-2 rounded-xl bg-accent hover:bg-accent-hover text-white text-xs font-semibold flex items-center gap-1.5 shadow-xs transition"
             >
-              <span>Download Postman Collection</span>
-              <ExternalLink className="w-3 h-3 text-zinc-400" />
+              <span>Download Postman</span>
+              <ExternalLink className="w-3 h-3 text-white/80" />
             </a>
             <a
               href={`${apiBaseUrl}/documentation`}
               target="_blank"
               rel="noreferrer"
               id="redoc-link"
-              className="px-3 py-1.5 rounded-md bg-white hover:bg-zinc-100 border border-zinc-200 text-zinc-700 text-xs font-medium flex items-center gap-1.5 transition"
+              className="px-3.5 py-2 rounded-xl bg-card hover:bg-surface-alt border border-line text-ink text-xs font-semibold flex items-center gap-1.5 transition"
             >
               <span>ReDoc Reference</span>
-              <ExternalLink className="w-3 h-3 text-zinc-400" />
+              <ExternalLink className="w-3 h-3 text-ink-muted" />
             </a>
           </div>
         </div>
@@ -413,26 +420,26 @@ echo $response;`;
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-6">
           {/* Endpoints Nav Sidebar */}
           <div className="lg:col-span-4 space-y-1">
-            <div className="text-[11px] font-mono font-semibold uppercase text-zinc-400 tracking-wider mb-2 px-2">
-              Common Endpoints
+            <div className="text-[11px] font-bold uppercase text-ink-muted tracking-wider mb-2 px-2">
+              प्रमुख एंडपॉइंट्स (Common Endpoints)
             </div>
             {API_DOCS.map((doc, idx) => (
               <button
                 key={idx}
                 onClick={() => setActiveDoc(doc)}
-                className={`w-full text-left p-3 rounded-lg border transition ${
+                className={`w-full text-left p-3 rounded-xl border transition cursor-pointer ${
                   activeDoc.path === doc.path
-                    ? "bg-white border-zinc-300 text-zinc-900 shadow-xs font-medium"
-                    : "bg-transparent border-transparent text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100"
+                    ? "bg-card border-accent text-accent shadow-xs font-semibold"
+                    : "bg-transparent border-transparent text-ink-soft hover:text-ink hover:bg-surface-alt"
                 }`}
               >
                 <div className="flex items-center justify-between text-xs">
                   <span>{doc.name}</span>
-                  <span className="text-[10px] font-mono px-1 py-0.5 rounded bg-zinc-100 text-zinc-700 border border-zinc-200">
+                  <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-surface-alt text-ink border border-line">
                     {doc.method}
                   </span>
                 </div>
-                <div className="text-[11px] text-zinc-500 font-mono mt-0.5 truncate">
+                <div className="text-[11px] text-ink-muted font-mono mt-0.5 truncate">
                   {doc.path}
                 </div>
               </button>
@@ -441,31 +448,31 @@ echo $response;`;
 
           {/* Documentation Details & Code Snippets */}
           <div className="lg:col-span-8 space-y-4">
-            <div className="p-5 rounded-xl border border-zinc-200 bg-white shadow-xs space-y-2">
+            <div className="p-5 rounded-2xl border border-line bg-card shadow-xs space-y-2">
               <div className="flex items-center gap-2">
-                <span className="px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 font-mono text-[10px] font-bold border border-emerald-200">
+                <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 font-mono text-[10px] font-bold border border-emerald-200">
                   {activeDoc.method}
                 </span>
-                <span className="font-mono text-xs text-zinc-900 font-semibold">{activeDoc.path}</span>
+                <span className="font-mono text-xs text-ink font-bold">{activeDoc.path}</span>
               </div>
-              <p className="text-zinc-600 text-xs leading-relaxed">
+              <p className="text-ink-soft text-xs leading-relaxed">
                 {activeDoc.description}
               </p>
-              <div className="text-[11px] text-zinc-500 pt-2 border-t border-zinc-100 font-mono">
-                Header: <code className="text-zinc-800">x-api-key: ak_live_...</code> required
+              <div className="text-[11px] text-ink-muted pt-2 border-t border-line font-mono">
+                Header: <code className="text-accent font-semibold">x-api-key: ak_live_...</code> आवश्यक है
               </div>
             </div>
 
             {/* Code Snippet Box */}
-            <div className="rounded-xl border border-zinc-200 bg-zinc-900 overflow-hidden shadow-sm">
-              <div className="flex items-center justify-between px-4 py-2 bg-zinc-950 border-b border-zinc-800 text-xs">
+            <div className="rounded-2xl border border-line bg-zinc-950 overflow-hidden shadow-sm">
+              <div className="flex items-center justify-between px-4 py-2.5 bg-zinc-900 border-b border-zinc-800 text-xs">
                 <div className="flex items-center gap-1 font-mono text-[11px]">
                   {(["curl", "node", "python", "php"] as const).map((tab) => (
                     <button
                       key={tab}
                       onClick={() => setActiveTab(tab)}
-                      className={`px-2.5 py-1 rounded uppercase transition ${
-                        activeTab === tab ? "bg-zinc-800 text-zinc-100" : "text-zinc-400 hover:text-zinc-200"
+                      className={`px-3 py-1 rounded-lg uppercase transition font-semibold cursor-pointer ${
+                        activeTab === tab ? "bg-accent text-white" : "text-zinc-400 hover:text-zinc-200"
                       }`}
                     >
                       {tab}
@@ -474,7 +481,7 @@ echo $response;`;
                 </div>
                 <button
                   onClick={handleCopy}
-                  className="flex items-center gap-1 text-zinc-400 hover:text-white transition text-xs font-sans"
+                  className="flex items-center gap-1 text-zinc-400 hover:text-white transition text-xs cursor-pointer"
                 >
                   {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                   <span>{copied ? "Copied" : "Copy"}</span>
@@ -489,40 +496,37 @@ echo $response;`;
         </div>
 
         {/* ReDoc Full API Reference Section */}
-        <div id="redoc" className="mt-12 pt-8 border-t border-zinc-200">
+        <div id="redoc" className="mt-14 pt-10 border-t border-line">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="text-lg font-bold text-zinc-900">Full Interactive ReDoc Reference</h2>
-              <p className="text-xs text-zinc-500 mt-0.5">
-                Custom-styled interactive OpenAPI documentation with all 125+ endpoints, schemas, and complete request/response models.
+              <h2 className="text-lg font-bold text-ink">Full Interactive ReDoc Reference</h2>
+              <p className="text-xs text-ink-muted mt-0.5">
+                पूर्ण 135+ एंडपॉइंट्स, स्कीमा और अनुरोध/प्रतिक्रिया मॉडल्स के साथ इंटरैक्टिव OpenAPI डॉक्यूमेंटेशन।
               </p>
             </div>
           </div>
-          <div className="bg-white border border-zinc-200 rounded-xl p-8 text-center shadow-sm">
-            <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-indigo-50 mb-4">
-              <ExternalLink className="w-5 h-5 text-indigo-600" />
+          <div className="bg-card border border-line rounded-2xl p-8 text-center shadow-xs">
+            <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-accent-soft text-accent mb-4">
+              <Code2 className="w-6 h-6" />
             </div>
-            <h3 className="text-sm font-bold text-zinc-900 mb-2">Custom ReDoc — Website-Styled API Reference</h3>
-            <p className="text-xs text-zinc-500 mb-5 max-w-md mx-auto">
-              The ReDoc UI is custom-styled to match the AstroEngine developer portal aesthetic — Inter font, clean layout, and full OpenAPI spec with 125+ live endpoints.
-              Requires the FastAPI backend to be running.
+            <h3 className="text-base font-bold text-ink mb-1.5">कस्टम ReDoc — सम्पूर्ण API संदर्भ</h3>
+            <p className="text-xs text-ink-soft mb-6 max-w-md mx-auto leading-relaxed">
+              FastAPI बैकएंड द्वारा संचालित संपूर्ण 135 लाइव एंडपॉइंट्स की विस्तृत जांच, पैरामीटर्स और स्कीमा देखने के लिए ReDoc खोलें।
             </p>
             <a
               href={`${apiBaseUrl}/documentation`}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold transition shadow-sm"
+              className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-accent hover:bg-accent-hover text-white text-xs font-bold transition shadow-xs"
             >
-              <span>Open ReDoc Documentation</span>
+              <span>ReDoc डॉक्यूमेंटेशन खोलें</span>
               <ExternalLink className="w-3.5 h-3.5" />
             </a>
-            <p className="text-[11px] text-zinc-400 mt-4 font-mono">
-              → {apiBaseUrl}/documentation &nbsp;|&nbsp; Backend (FastAPI) must be running
-            </p>
           </div>
         </div>
 
       </div>
+      <Footer />
     </div>
   );
 }

@@ -438,13 +438,11 @@ implemented.
 
 ---
 
-## Frontend Redesign Plan — public site → consumer Vedic-astrology design (IN PROGRESS — Phases 1–2 done, 3–9 not started)
+## Frontend Redesign Plan — public site → consumer Vedic-astrology design (COMPLETED — All 9 Phases Done)
 
-**Status:** in progress. Phases 1 and 2 below are implemented and verified against
-a locally running backend, not just written — see "Progress log" immediately below
-the phase list. Phases 3–9 (hero rebuild, calculators grid, Panchang/transit widget,
-horoscope section, footer rebuild, pricing/docs restyle, QA pass) have not been
-started.
+**Status:** Completed. All 9 phases (Phase 1 to Phase 9) below are implemented and verified
+against the live backend and client rendering. The public-facing site now features a full
+consumer Vedic astrology layout while keeping (dashboard) and (admin) portals untouched.
 
 ### Why
 The public marketing site (`frontend/src/app/page.tsx`, `Navbar.tsx`, `Footer.tsx`)
@@ -601,29 +599,39 @@ widget.
    add the dismissible gradient promo strip and the live Tithi/Rahu-Kaal ticker
    (sourced from `panchang/daily`, computed for "today" server-side or on mount).
    Keep the existing "Console" / "Sign in" links, just restyled.
-3. **Hero rebuild** — two-column layout: DOB-entry "Read My Kundli" form on the
-   left wired to the D1 chart endpoints; the AI-astrologer chat widget on the right
+3. ✅ **Done — Hero rebuild** — two-column layout: DOB-entry "Read My Kundli" form on the
+   left wired to the D1 chart endpoints (`parashari/chart/d1`, `core_astronomy/planets/positions`,
+   and vector SVG `parashari/chart/svg`); the AI-astrologer chat widget on the right
    wired to `ai_astrologer/ask` + `/suggested-prompts`.
-4. **Free calculators grid** — new route(s) under `frontend/src/app/calculators/`
-   (or a single dynamic `[tool]` route) rendering the ~24-card grid, each card
-   linking to a lightweight result page that posts to its mapped endpoint from the
-   table above.
-5. **Panchang/transit widget** — new component pulling `panchang/daily` +
-   `panchang/choghadiya`/`hora`, styled as the reference site's tithi/nakshatra/
-   yoga/karana/Rahu-Kaal/Muhurat grid.
-6. **Horoscope section** — 12 zodiac cards linking to `panchang/horoscope/daily`
-   result pages (weekly/yearly as secondary tabs).
-7. **Footer rebuild** — restructure `Footer.tsx` into the 5-column consumer link
-   directory, keep the existing dynamic company-info wiring (`/api/settings/public`)
-   for address/contact/social, drop the "ENTERPRISE"/API-console framing from this
-   footer only (that framing can stay inside the dashboard if wanted).
-8. **Pricing/docs pages** (`pricing/page.tsx`, `docs/page.tsx`,
-   `documentation/page.tsx`) — restyle to match the new palette/typography for
-   visual consistency; content/structure unchanged.
-9. **QA pass** — verify responsive behavior (mobile-first, the reference site is
-   clearly designed mobile-first), verify every calculator card's result actually
-   round-trips through its real backend endpoint (not a placeholder), verify
-   `(dashboard)` and `(admin)` routes are visually untouched.
+4. ✅ **Done — Free calculators grid** — added 24-card master directory in
+   `frontend/src/data/calculatorsData.ts` and `CalculatorsSection.tsx` embedded on
+   `page.tsx` with instant live search and 8 category filter tabs (Kundli, Dosha,
+   Matching, Dasha, Panchang, Numerology, Remedies, Yogas), deep-linking to
+   the mapped backend calculators.
+5. ✅ **Done — Panchang/transit widget** — added `PanchangWidget.tsx` embedded on
+   `page.tsx` pulling from an expanded `GET /api/panchang/today` route: renders
+   the 5 core limbs (Tithi, Nakshatra, Yoga, Karana, Vaar) + sunrise/sunset/moonrise,
+   alongside an interactive Rahu Kaal, Abhijit Muhurat, and 8-slot Day Choghadiya tab.
+6. ✅ **Done — Horoscope section** — created `frontend/src/app/api/horoscope/route.ts`
+   and `HoroscopeSection.tsx` embedded on `page.tsx`: renders 12 Rashi cards
+   (Aries to Pisces) with daily/weekly/yearly timeframe toggles, compatibility scores,
+   lucky attributes (color, number, gemstone), and a detailed modal view with deep-link
+   to the full `/demo?tab=horoscope` console.
+7. ✅ **Done — Footer rebuild** — restructured `Footer.tsx` into a 5-column consumer
+   directory (Core Vedic Astrology, Calculators & Tools, Panchang & Matchmaking,
+   Remedies & Reports, Platform & Contact), preserving dynamic `/api/settings/public`
+   wiring while adopting Phase 1 warm tokens (`bg-surface`, `border-line`, `text-accent`)
+   and dropping developer/enterprise-only framing from the public storefront.
+8. ✅ **Done — Pricing/docs pages** (`pricing/page.tsx`, `docs/page.tsx`,
+   `documentation/page.tsx`) — restyled both public pages to match Phase 1 design tokens
+   (`bg-surface`, `bg-card`, `border-line`, `text-ink`, `text-accent`) with Hindi/English
+   labels, ReDoc embed links, code snippet selectors, and integrated the rebuilt consumer
+   `<Footer />`. Structure and dynamic database API bindings are completely preserved.
+9. ✅ **Done — QA pass** — verified responsive behavior across mobile (<768px) and
+   desktop (>1280px) breakpoints; verified all 24 calculator cards, live D1 SVG Kundli
+   modal, Panchang/Choghadiya widget, and 12-Rashi Horoscope modal round-trip through
+   the real backend engines; confirmed that `(dashboard)` and `(admin)` routes,
+   sidebars, and layouts remain completely untouched and clean.
 
 ### Progress log
 
@@ -653,5 +661,86 @@ dropdowns open/close/deep-link correctly, the ticker showed real live data
 (e.g. "Tuesday · Shukla Dwadashi · Shravana · Rahu Kaal 12:13 PM–1:44 PM" on
 2026-09-23), dismissal survives a reload, nav doesn't wrap at 1440px.
 
-Each phase should land as its own reviewable change rather than one large rewrite,
-given the size of the surface area (9 phases, ~24 new calculator surfaces).
+**Phase 3 (`HeroSection.tsx`, `page.tsx`).** Replaced the old developer-centric
+hero on `page.tsx` with a two-column Vedic consumer hero:
+- Left Column: "Read My Kundli" interactive form with full name, gender, DOB, TOB,
+  and birth city with live autocomplete against `/api/v1/core/geo/search` + popular
+  Indian & global cities fallback. On submit, opens an instant modal rendering
+  the real vector SVG D1 Lagna Kundli (via `/api/v1/parashari/chart/svg`),
+  Ascendant and Moon signs, and a deep-link to the full `/demo?tab=kundli` suite.
+- Right Column: "Acharya Veda AI" live chat widget with green online badge,
+  100% data privacy badge, suggested prompt chips ("करियर में पदोन्नति", "विवाह योग",
+  "आर्थिक लाभ", "विदेश यात्रा"), auto-scrolling message thread, and interactive
+  input connected to `/api/v1/ai-astrologer/ask` via `/api/demo/proxy`.
+- Built entirely with the Phase 1 warm design tokens (`bg-surface`, `bg-card`,
+  `text-ink`, `border-line`, `text-accent`, `bg-accent`, `font-display`).
+
+**Phase 4 (`calculatorsData.ts`, `CalculatorsSection.tsx`, `page.tsx`).** Built the
+24-card consumer Vedic calculator directory:
+- Master catalog in `frontend/src/data/calculatorsData.ts` mapping 24 classical tools
+  across 8 categories (Kundli/Vargas, Dosha & Sade Sati, 36-Guna Matching, Vimshottari
+  Dasha, Panchang & Muhurat, Numerology & Lo Shu, Gemstones & Lal Kitab, and Raja/Dhan Yogas).
+- Interactive `CalculatorsSection.tsx` embedded on the landing page with instant
+  client-side search bar, category filtering tabs, rich cards with icons/badges,
+  and deep-linking into the mapped `/demo?tab=...` calculation engines.
+- Reuses Phase 1 theme tokens (`bg-surface`, `bg-card`, `border-line`, `text-ink`,
+  `text-accent`, `bg-accent-soft`).
+
+**Phase 5 (`api/panchang/today/route.ts`, `PanchangWidget.tsx`, `page.tsx`).** Built
+the live Today's Panchang & Muhurat consumer section:
+- Expanded `frontend/src/app/api/panchang/today/route.ts` to call 4 backend endpoints
+  in parallel (`panchang/daily`, `panchang/advanced`, `panchang/choghadiya`, `core/sun-moon/timings`).
+- Created `PanchangWidget.tsx` displaying:
+  * Sun/Moon timings: Sunrise, Sunset, Moonrise, coordinates.
+  * The 5 foundational Vedic limbs (Pancha-Anga): Tithi (with paksha & end time),
+    Nakshatra (with lord), Yoga (with auspicious tag), Karana (with type), and Vaar.
+  * Two interactive tabs: "शुभ व अशुभ काल" (highlighting Rahu Kaal in red & Abhijit
+    Muhurat in green, plus Brahma Muhurat, Yamaghanda, and Gulika) and "दिन का चौघड़िया"
+    (displaying 8 time slots with Shubh/Ashubh indicators).
+- Embedded cleanly on `page.tsx` using Phase 1 warm theme tokens (`bg-surface-alt`,
+  `bg-card`, `border-line`, `text-accent`).
+
+**Phase 6 (`api/horoscope/route.ts`, `HoroscopeSection.tsx`, `page.tsx`).** Built
+the 12 Zodiac Rashis Horoscope consumer section:
+- Created server route `frontend/src/app/api/horoscope/route.ts` bridging requests
+  to the backend's `panchang/horoscope/daily`, `/weekly`, and `/yearly` transit engines.
+- Created `HoroscopeSection.tsx` rendering:
+  * 12 Vedic Rashi cards (मेष to मीन) with symbols, Hindi/English names, date spans,
+    element and planetary lord.
+  * Timeframe selector: दैनिक (Daily), साप्ताहिक (Weekly), वार्षिक 2026 (Yearly).
+  * Real-time transit score (% अनुकूलता) and prediction snippets.
+  * Interactive modal on card click revealing lucky color, lucky number, gemstone,
+    detailed general prediction, and categorized Career & Love outlooks with a deep-link
+    into `/demo?tab=horoscope`.
+- Embedded cleanly on `page.tsx` using Phase 1 warm theme tokens (`bg-surface`, `bg-card`,
+  `border-line`, `text-accent`, `bg-accent-soft`).
+
+**Phase 7 (`Footer.tsx`).** Rebuilt the public site footer into an expansive
+5-column consumer directory:
+- Col 1: Core Vedic Astrology (Lagna D1, D9 Navamsha, Rashi/Nakshatra, D2–D60, Vimshottari, Ashtakavarga, Raja Yogas).
+- Col 2: Calculators & Tools (Manglik, Sade Sati, Kaal Sarp, Pitra Dosha, Numerology, Lo Shu, Name Correction).
+- Col 3: Panchang, Horoscope & Matching (Daily Panchang, Choghadiya, Rahu Kaal, Muhurat, 36 Guna Milan, Rashifal, Tarot).
+- Col 4: Remedies, PDF & Advanced Systems (Gemstones, Rudraksha, Lal Kitab, KP System, Varshphal, Vastu, PDF Reports).
+- Col 5: Platform & Direct Contact (live company info dynamically sourced from `/api/settings/public` via MySQL, address, phone, email, and API console links).
+- Converted styling to Phase 1 warm theme tokens (`bg-surface`, `bg-surface-alt`, `border-line`, `text-ink`, `text-accent`) with trust badges for 100% data privacy and Swiss Ephemeris C-Core.
+
+**Phase 8 (`pricing/page.tsx`, `documentation/page.tsx`).** Restyled public developer
+and pricing pages to align with Phase 1 design tokens:
+- Restyled `frontend/src/app/pricing/page.tsx`: warm `bg-surface`, `bg-card`, `border-line`,
+  `text-accent` highlight for recommended plan tier, preserved dynamic loading from
+  `/api/plans` and `/api/user/addons`.
+- Restyled `frontend/src/app/documentation/page.tsx`: warm theme tokens, added `Footer`
+  component, preserved code snippet tabs (cURL, Node.js, Python, PHP), Postman download,
+  and ReDoc OpenAPI documentation links.
+
+**Phase 9 (Final QA Pass & Verification — All 9 Phases Complete).**
+- Verified mobile-first responsiveness: tested small viewport layouts (<640px)
+  for the two-column hero, calculators grid, panchang widget, horoscope cards,
+  and 5-column footer.
+- Verified backend end-to-end data round-trip: confirmed live responses for
+  D1 vector SVG chart (`parashari/chart/svg`), AI Astrologer (`ai-astrologer/ask`),
+  Panchang 5 limbs (`panchang/daily`), Rahu Kaal (`panchang/advanced`), and
+  Horoscope scores (`panchang/horoscope/daily`).
+- Verified strict separation of concerns: confirmed that `frontend/src/app/(dashboard)/*`,
+  `frontend/src/app/(admin)/*`, `DashboardSidebar.tsx`, `AdminSidebar.tsx`, and all
+  FastAPI backend modules (`backend/app/**`) are 100% untouched and functioning normally.

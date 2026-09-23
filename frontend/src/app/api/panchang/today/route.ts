@@ -22,22 +22,35 @@ export async function GET() {
     };
     const headers = { "x-api-key": INTERNAL_API_KEY, "Content-Type": "application/json" };
 
-    const [dailyRes, advancedRes] = await Promise.all([
+    const [dailyRes, advancedRes, choghadiyaRes, sunMoonRes] = await Promise.all([
       axios.post(`${BACKEND_URL}/api/v1/panchang/daily`, body, { headers, timeout: 8000 }),
-      axios.post(`${BACKEND_URL}/api/v1/panchang/advanced`, body, { headers, timeout: 8000 })
+      axios.post(`${BACKEND_URL}/api/v1/panchang/advanced`, body, { headers, timeout: 8000 }),
+      axios.post(`${BACKEND_URL}/api/v1/panchang/choghadiya`, body, { headers, timeout: 8000 }),
+      axios.post(`${BACKEND_URL}/api/v1/core/sun-moon/timings`, body, { headers, timeout: 8000 })
     ]);
 
     const daily = dailyRes.data?.data || {};
     const advanced = advancedRes.data?.data || {};
+    const choghadiya = choghadiyaRes.data?.data || {};
+    const sunMoon = sunMoonRes.data?.data || {};
 
     return NextResponse.json({
       status: "success",
       date: today,
+      location: "New Delhi, India",
       vaar: daily.vaar?.name || null,
-      tithi: daily.tithi?.name || null,
-      paksha: daily.tithi?.paksha || null,
-      nakshatra: daily.nakshatra?.name || null,
-      rahu_kaal: advanced.rahu_kaal || null
+      tithi: daily.tithi || null,
+      nakshatra: daily.nakshatra || null,
+      yoga: daily.yoga || null,
+      karana: daily.karana || null,
+      rahu_kaal: advanced.rahu_kaal || null,
+      yamaghanda: advanced.yamaghanda || null,
+      gulika: advanced.gulika || null,
+      abhijit: advanced.abhijit_muhurat || null,
+      brahma_muhurat: advanced.brahma_muhurat || null,
+      choghadiya: choghadiya.slots || choghadiya.day_choghadiya || [],
+      night_choghadiya: choghadiya.night_choghadiya || [],
+      sun_moon: sunMoon
     });
   } catch (error: unknown) {
     const err = error as { message?: string };

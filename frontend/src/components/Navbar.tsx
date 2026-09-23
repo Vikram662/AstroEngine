@@ -65,9 +65,8 @@ const NAV_GROUPS: NavGroup[] = [
 
 interface TodayPanchang {
   vaar: string | null;
-  tithi: string | null;
-  paksha: string | null;
-  nakshatra: string | null;
+  tithi: { name: string; paksha?: string; end_time?: string } | null;
+  nakshatra: { name: string; lord?: string; end_time?: string } | null;
   rahu_kaal: { start: string; end: string } | null;
 }
 
@@ -132,16 +131,16 @@ const InfoTicker = () => {
             <span className="text-white/50">Today:</span> {data.vaar}
           </span>
         )}
-        {data.tithi && (
+        {data.tithi?.name && (
           <span>
-            {/* data.tithi already reads e.g. "Shukla Dwadashi" — the paksha is
+            {/* data.tithi.name already reads e.g. "Shukla Dwadashi" — the paksha is
                 baked into the name, so it isn't repeated here. */}
-            <span className="text-white/50">Tithi:</span> {data.tithi}
+            <span className="text-white/50">Tithi:</span> {data.tithi.name}
           </span>
         )}
-        {data.nakshatra && (
+        {data.nakshatra?.name && (
           <span className="hidden sm:inline">
-            <span className="text-white/50">Nakshatra:</span> {data.nakshatra}
+            <span className="text-white/50">Nakshatra:</span> {data.nakshatra.name}
           </span>
         )}
         {data.rahu_kaal && (

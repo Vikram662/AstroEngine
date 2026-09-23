@@ -6,6 +6,10 @@ import axios from "axios";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { LivePlayground } from "@/components/LivePlayground";
+import { HeroSection } from "@/components/HeroSection";
+import { CalculatorsSection } from "@/components/CalculatorsSection";
+import { PanchangWidget } from "@/components/PanchangWidget";
+import { HoroscopeSection } from "@/components/HoroscopeSection";
 import { 
   Download, 
   ArrowRight, 
@@ -61,80 +65,17 @@ export default function HomePage() {
     <div className="min-h-screen flex flex-col bg-[#fafafa] text-zinc-900 selection:bg-zinc-200 selection:text-zinc-900">
       <Navbar />
 
-      {/* Hero Section */}
-      <section className="relative pt-16 pb-20 md:pt-24 md:pb-24 border-b border-zinc-200 bg-white clean-grid">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
-          
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-100 border border-zinc-200 text-xs font-mono text-zinc-700 mb-6">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
-            <span>Swiss Ephemeris Native C Core • 135 Production APIs</span>
-          </div>
+      {/* Consumer Vedic Hero Section (Phase 3) */}
+      <HeroSection />
 
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight text-zinc-900 max-w-3xl mx-auto leading-tight">
-            Deterministic, Sub-50ms Vedic Astrology API
-          </h1>
+      {/* Free 24 Vedic Calculators Grid (Phase 4) */}
+      <CalculatorsSection />
 
-          <p className="mt-5 text-base sm:text-lg text-zinc-600 max-w-2xl mx-auto leading-relaxed">
-            High-precision planetary math, 120-year Vimshottari dasha trees, and white-label PDF generation for modern engineering teams.
-          </p>
+      {/* Today's Panchang & Muhurat Widget (Phase 5) */}
+      <PanchangWidget />
 
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-            <Link
-              href="/demo"
-              className="px-5 py-2.5 rounded-md bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs transition flex items-center gap-2 shadow-md shadow-indigo-500/20"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-indigo-200" />
-              <span>Launch Live Astro App Demo</span>
-            </Link>
-
-            <Link
-              href="/#playground"
-              className="px-4 py-2.5 rounded-md bg-zinc-900 hover:bg-zinc-800 text-white font-medium text-xs transition flex items-center gap-2 shadow-sm"
-            >
-              <Terminal className="w-3.5 h-3.5" />
-              <span>API Playground</span>
-            </Link>
-            
-            <a
-              href="https://cdn.astroengine.io/sample_brihat_kundli.pdf"
-              target="_blank"
-              rel="noreferrer"
-              className="px-4 py-2.5 rounded-md bg-white hover:bg-zinc-50 border border-zinc-300 text-zinc-800 font-medium text-xs transition flex items-center gap-2 shadow-xs"
-            >
-              <Download className="w-3.5 h-3.5 text-zinc-500" />
-              <span>Sample PDF</span>
-            </a>
-
-            <Link
-              href="/docs"
-              className="px-4 py-2.5 rounded-md text-zinc-600 hover:text-zinc-900 text-xs font-medium transition"
-            >
-              API Reference →
-            </Link>
-          </div>
-
-          {/* Precision Metrics Bar */}
-          <div className="mt-14 pt-8 border-t border-zinc-100 grid grid-cols-2 sm:grid-cols-4 gap-6 text-left max-w-3xl mx-auto">
-            <div>
-              <div className="text-2xl font-bold font-mono text-zinc-900">&lt; 15 ms</div>
-              <div className="text-xs text-zinc-500 mt-0.5">Average P95 Latency</div>
-            </div>
-            <div>
-              <div className="text-2xl font-bold font-mono text-zinc-900">135</div>
-              <div className="text-xs text-zinc-500 mt-0.5">Production Endpoints</div>
-            </div>
-            <div>
-              <div className="text-2xl font-bold font-mono text-zinc-900">6 Languages</div>
-              <div className="text-xs text-zinc-500 mt-0.5">Dual-Key i18n JSON</div>
-            </div>
-            <div>
-              <div className="text-2xl font-bold font-mono text-zinc-900">100% C-Core</div>
-              <div className="text-xs text-zinc-500 mt-0.5">Swiss Ephemeris Precision</div>
-            </div>
-          </div>
-
-        </div>
-      </section>
+      {/* 12 Zodiac Rashis Horoscope Section (Phase 6) */}
+      <HoroscopeSection />
 
       {/* Live Interactive Playground Section */}
       <LivePlayground />

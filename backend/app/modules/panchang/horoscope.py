@@ -84,7 +84,7 @@ def calculate_daily_horoscope(
         from app.locales.content_translator import generate_horoscope_text, get_sign_i18n, get_planet_i18n
         pred_dict = generate_horoscope_text(
             rashi_name_en=r["name_en"],
-            rashi_idx=idx + 1,
+            rashi_idx=idx,
             lord_en=r["lord"],
             lucky_color=r["lucky_color_hi"] if lang == "hi" else r["lucky_color"],
             lucky_num=r["lucky_number"],
@@ -101,7 +101,7 @@ def calculate_daily_horoscope(
 
         results.append({
             "rashi_id": r["id"],
-            "name": get_sign_i18n(idx + 1, lang),
+            "name": get_sign_i18n(idx, lang),
             "name_en": r["name_en"],
             "name_hi": r["name_hi"],
             "symbol": r["symbol"],
