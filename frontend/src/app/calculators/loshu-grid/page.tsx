@@ -46,11 +46,40 @@ export default function LoshuGridPage() {
     }
   };
 
-  const grid = data?.grid || data?.loshu_grid || {};
-  const planes = data?.planes || [];
+  const GRID_LAYOUT = [
+    [4, 9, 2],
+    [3, 5, 7],
+    [8, 1, 6],
+  ];
+  const gridMatrix: number[][] | null = data?.grid_matrix || null;
+  const legacyGrid = data?.grid || data?.loshu_grid || {};
+  const planesObj = data?.planes;
+  const missingNumbers: number[] = data?.missing_numbers || [];
 
-  const getCellDigits = (num: number) => {
-    const val = grid[String(num)] ?? grid[num];
+  const PLANE_LABELS: Record<string, string> = {
+    mental_plane_4_9_2: "मानसिक तल (4-9-2)",
+    emotional_plane_3_5_7: "भावनात्मक तल (3-5-7)",
+    practical_plane_8_1_6: "व्यावहारिक तल (8-1-6)",
+    thought_plane_4_3_8: "विचार तल (4-3-8)",
+    will_plane_9_5_1: "इच्छाशक्ति तल (9-5-1)",
+    action_plane_2_7_6: "कर्म तल (2-7-6)",
+  };
+  const planes = planesObj && !Array.isArray(planesObj)
+    ? Object.entries(planesObj).map(([key, isComplete]) => ({
+        name: PLANE_LABELS[key] || key,
+        is_complete: Boolean(isComplete),
+      }))
+    : Array.isArray(planesObj)
+    ? planesObj
+    : [];
+
+  const getCellDigits = (num: number, rIdx: number, cIdx: number) => {
+    if (gridMatrix) {
+      const val = gridMatrix[rIdx]?.[cIdx];
+      if (!val) return "-";
+      return String(num).repeat(val);
+    }
+    const val = legacyGrid[String(num)] ?? legacyGrid[num];
     if (val === undefined || val === null || val === 0) return "-";
     if (typeof val === "number") return String(num).repeat(val);
     return String(val);
@@ -140,13 +169,9 @@ export default function LoshuGridPage() {
             <div className="space-y-6">
               <ResultSection title="3x3 लो शू मैजिक ग्रिड">
                 <div className="w-64 mx-auto grid grid-cols-3 gap-2 p-3 bg-surface-alt rounded-2xl border border-line">
-                  {[
-                    [4, 9, 2],
-                    [3, 5, 7],
-                    [8, 1, 6],
-                  ].map((row, rIdx) =>
-                    row.map((num) => {
-                      const displayVal = getCellDigits(num);
+                  {GRID_LAYOUT.map((row, rIdx) =>
+                    row.map((num, cIdx) => {
+                      const displayVal = getCellDigits(num, rIdx, cIdx);
                       const hasVal = displayVal !== "-";
                       return (
                         <div
@@ -166,8 +191,14 @@ export default function LoshuGridPage() {
                 </div>
               </ResultSection>
 
+              {missingNumbers.length > 0 && (
+                <ResultSection title="अनुपस्थित अंक (Missing Numbers)">
+                  <ResultRow label="ग्रिड में गायब अंक" value={missingNumbers.join(", ")} accent />
+                </ResultSection>
+              )}
+
               {Array.isArray(planes) && planes.length > 0 && (
-                <ResultSection title="8 योग प्लेन्स का विश्लेषण (Planes of Lo Shu)">
+                <ResultSection title="6 योग प्लेन्स का विश्लेषण (Planes of Lo Shu)">
                   <div className="divide-y divide-line/60">
                     {planes.map((p: any, idx: number) => (
                       <div key={idx} className="py-2.5 flex items-center justify-between text-xs">

@@ -47,8 +47,17 @@ export default function YoginiDashaPage() {
     }
   };
 
-  const currentYogini = data?.current || data?.current_yogini;
-  const cycleList = data?.cycles || data?.yoginis || data?.dashas || [];
+  const cycleList = data?.periods || data?.cycles || data?.yoginis || data?.dashas || [];
+  const currentYogini =
+    data?.current ||
+    data?.current_yogini ||
+    (() => {
+      const today = new Date();
+      return cycleList.find((y: any) => {
+        if (!y.start_date || !y.end_date) return false;
+        return today >= new Date(y.start_date) && today <= new Date(y.end_date);
+      });
+    })();
 
   return (
     <CalculatorPageShell
@@ -128,7 +137,7 @@ export default function YoginiDashaPage() {
                         {currentYogini.name || currentYogini.yogini || "सिद्धा"}
                       </div>
                       <div className="text-xs text-ink-muted mt-0.5">
-                        स्वामी: {currentYogini.lord || currentYogini.planet || "-"}
+                        स्वामी: {currentYogini.ruling_planet || currentYogini.lord || currentYogini.planet || "-"}
                       </div>
                     </div>
                     {currentYogini.end_date && (
@@ -161,8 +170,10 @@ export default function YoginiDashaPage() {
                             <td className="py-2.5 px-3 font-bold text-ink">
                               {y.name || y.yogini}
                             </td>
-                            <td className="py-2.5 px-3">{y.lord || y.planet}</td>
-                            <td className="py-2.5 px-3 font-semibold">{y.duration_years || y.years || idx + 1} वर्ष</td>
+                            <td className="py-2.5 px-3">{y.ruling_planet || y.lord || y.planet}</td>
+                            <td className="py-2.5 px-3 font-semibold">
+                              {Number(y.actual_duration_years ?? y.full_duration_years ?? y.duration_years ?? y.years ?? 0).toFixed(2)} वर्ष
+                            </td>
                             <td className="py-2.5 px-3 font-mono">
                               {y.start_date || y.from || "-"} से {y.end_date || y.to || "-"}
                             </td>

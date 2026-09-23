@@ -48,7 +48,7 @@ export default function CharDashaPage() {
   };
 
   const karakas = data?.karakas || [];
-  const charDashaList = data?.char_dasha || data?.periods || data?.dashas || [];
+  const charDashaList = data?.char_dasha_timeline || data?.char_dasha || data?.periods || data?.dashas || [];
 
   return (
     <CalculatorPageShell
@@ -148,6 +148,7 @@ export default function CharDashaPage() {
                       <thead className="text-[11px] uppercase bg-surface-alt/80 text-ink-soft">
                         <tr>
                           <th className="py-2.5 px-3">दशा राशि</th>
+                          <th className="py-2.5 px-3">स्वामी</th>
                           <th className="py-2.5 px-3">अवधि (वर्ष)</th>
                           <th className="py-2.5 px-3">आरंभ काल</th>
                           <th className="py-2.5 px-3">समाप्ति काल</th>
@@ -159,6 +160,7 @@ export default function CharDashaPage() {
                             <td className="py-2.5 px-3 font-bold text-ink">
                               {d.sign || d.rashi || d.name}
                             </td>
+                            <td className="py-2.5 px-3">{d.ruler || d.lord || "-"}</td>
                             <td className="py-2.5 px-3 font-semibold">{d.duration_years || d.years || "-"} वर्ष</td>
                             <td className="py-2.5 px-3 font-mono">{d.start_date || d.from || "-"}</td>
                             <td className="py-2.5 px-3 font-mono">{d.end_date || d.to || "-"}</td>

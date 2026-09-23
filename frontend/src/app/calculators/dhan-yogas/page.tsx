@@ -126,10 +126,13 @@ export default function DhanYogasPage() {
                       <p className="text-xs text-ink-soft leading-relaxed mb-2">
                         {y.description || y.meaning}
                       </p>
-                      {y.planets_involved && (
+                      {(y.planets || y.planets_involved) && (
                         <div className="text-[11px] text-ink-muted">
                           <span className="font-semibold text-ink">संबंधित ग्रह:</span>{" "}
-                          {Array.isArray(y.planets_involved) ? y.planets_involved.join(", ") : String(y.planets_involved)}
+                          {Array.isArray(y.planets || y.planets_involved)
+                            ? (y.planets || y.planets_involved).join(", ")
+                            : String(y.planets || y.planets_involved)}
+                          {y.house ? ` (भाव ${y.house})` : ""}
                         </div>
                       )}
                     </div>

@@ -52,7 +52,8 @@ export default function MarriageMuhuratPage() {
   };
 
   const muhurats = data?.muhurats || data?.dates || [];
-  const status = data?.status || data?.is_favorable;
+  const status =
+    data?.status ?? data?.is_favorable ?? (data ? muhurats.length > 0 : undefined);
 
   return (
     <CalculatorPageShell
@@ -167,17 +168,37 @@ export default function MarriageMuhuratPage() {
               </ResultSection>
 
               {Array.isArray(muhurats) && muhurats.length > 0 && (
-                <ResultSection title="उपलब्ध शुभ विवाह लग्न मुहूर्त">
+                <ResultSection title={`उपलब्ध शुभ विवाह लग्न मुहूर्त (${muhurats.length})`}>
                   <div className="divide-y divide-line/60">
                     {muhurats.map((m: any, idx: number) => (
-                      <div key={idx} className="py-2.5 flex items-center justify-between text-xs">
-                        <div>
-                          <div className="font-bold text-ink">{m.lagna || m.name || `मुहूर्त ${idx + 1}`}</div>
-                          {m.nakshatra && <div className="text-[11px] text-ink-muted">नक्षत्र: {m.nakshatra}</div>}
+                      <div key={idx} className="py-3">
+                        <div className="flex items-center justify-between gap-2 mb-1">
+                          <div className="font-bold text-ink text-sm">
+                            {m.date || m.lagna || m.name || `मुहूर्त ${idx + 1}`}
+                            {m.day && <span className="text-ink-muted font-normal"> ({m.day})</span>}
+                          </div>
+                          {m.quality && <ResultBadge tone="good">{m.quality}</ResultBadge>}
                         </div>
-                        <div className="font-bold font-mono text-sm text-accent">
-                          {m.start || m.time || m.from} - {m.end || m.to}
-                        </div>
+                        {(m.tithi || m.nakshatra) && (
+                          <div className="text-[11px] text-ink-muted mb-1">
+                            {m.tithi && <span>तिथि: {m.tithi}</span>}
+                            {m.tithi && m.nakshatra && <span> · </span>}
+                            {m.nakshatra && <span>नक्षत्र: {m.nakshatra}</span>}
+                          </div>
+                        )}
+                        {(m.recommended_window || m.start || m.time || m.from) && (
+                          <div className="font-mono text-xs text-accent">
+                            {m.recommended_window || `${m.start || m.time || m.from} - ${m.end || m.to}`}
+                          </div>
+                        )}
+                        {m.abhijit_muhurat && (
+                          <div className="text-[11px] text-ink-muted mt-0.5">अभिजीत मुहूर्त: {m.abhijit_muhurat}</div>
+                        )}
+                        {Array.isArray(m.avoid_periods) && m.avoid_periods.length > 0 && (
+                          <div className="text-[11px] text-rose-700 mt-0.5">
+                            वर्जित काल: {m.avoid_periods.join("; ")}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>

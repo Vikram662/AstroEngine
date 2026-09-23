@@ -48,7 +48,7 @@ export default function PlanetaryPositionsPage() {
   };
 
   const planets = data?.planets || [];
-  const ayanamsa = data?.ayanamsa_value || data?.ayanamsa;
+  const ayanamsa = data?.ayanamsa_degree ?? data?.ayanamsa_value ?? data?.ayanamsa;
 
   return (
     <CalculatorPageShell

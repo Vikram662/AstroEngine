@@ -127,7 +127,7 @@ export default function LalKitabDebtsPage() {
                         }`}
                       >
                         <div className="flex items-center justify-between mb-1.5">
-                          <span className="font-bold text-sm text-ink">{d.debt_name || d.name}</span>
+                          <span className="font-bold text-sm text-ink">{d.debt || d.debt_name || d.name}</span>
                           {isActive ? (
                             <ResultBadge tone="bad">सक्रिय ऋण</ResultBadge>
                           ) : (

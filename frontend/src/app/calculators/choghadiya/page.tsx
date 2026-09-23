@@ -59,7 +59,7 @@ export default function ChoghadiyaPage() {
     if (t.includes("amrit") || t.includes("अमृत") || t.includes("shubh") || t.includes("शुभ") || t.includes("labh") || t.includes("लाभ")) {
       return "good";
     }
-    if (t.includes("char") || t.includes("चर")) {
+    if (t.includes("char") || t.includes("chal") || t.includes("चर") || t.includes("चल")) {
       return "neutral";
     }
     return "bad";
@@ -157,7 +157,7 @@ export default function ChoghadiyaPage() {
                           return (
                             <tr key={idx} className="hover:bg-surface-alt/40 transition">
                               <td className="py-2.5 px-3 font-bold text-ink">{name}</td>
-                              <td className="py-2.5 px-3 font-mono">{c.start || c.from} - {c.end || c.to}</td>
+                              <td className="py-2.5 px-3 font-mono">{c.start_time || c.start || c.from} - {c.end_time || c.end || c.to}</td>
                               <td className="py-2.5 px-3">
                                 <ResultBadge tone={getTone(name)}>{c.nature || c.type || name}</ResultBadge>
                               </td>
@@ -187,7 +187,7 @@ export default function ChoghadiyaPage() {
                           return (
                             <tr key={idx} className="hover:bg-surface-alt/40 transition">
                               <td className="py-2.5 px-3 font-bold text-ink">{name}</td>
-                              <td className="py-2.5 px-3 font-mono">{c.start || c.from} - {c.end || c.to}</td>
+                              <td className="py-2.5 px-3 font-mono">{c.start_time || c.start || c.from} - {c.end_time || c.end || c.to}</td>
                               <td className="py-2.5 px-3">
                                 <ResultBadge tone={getTone(name)}>{c.nature || c.type || name}</ResultBadge>
                               </td>

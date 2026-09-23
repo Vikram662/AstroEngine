@@ -49,8 +49,8 @@ export default function ManglikDoshaPage() {
 
   const isManglik = data?.is_manglik || data?.is_present || false;
   const isCancelled = data?.is_cancelled || false;
-  const exceptions = data?.exceptions_applied || data?.cancellations || [];
-  const marsHouses = data?.mars_house_details || data?.houses_affected || [];
+  const exceptions = data?.cancellation_reasons || data?.exceptions_applied || data?.cancellations || [];
+  const marsHouseFromLagna = data?.mars_placements?.house_from_lagna ?? data?.mars_house;
 
   return (
     <CalculatorPageShell
@@ -145,8 +145,14 @@ export default function ManglikDoshaPage() {
                 </div>
 
                 <ResultRow
-                  label="मंगल भाव (Mars House)"
-                  value={data.mars_house ? `${data.mars_house}वां भाव` : "1, 4, 7, 8, 12 से बाहर"}
+                  label="मंगल भाव, लग्न से (Mars House from Lagna)"
+                  value={
+                    marsHouseFromLagna !== undefined && [1, 4, 7, 8, 12].includes(Number(marsHouseFromLagna))
+                      ? `${marsHouseFromLagna}वां भाव`
+                      : marsHouseFromLagna !== undefined
+                      ? `${marsHouseFromLagna}वां भाव (1, 4, 7, 8, 12 से बाहर)`
+                      : "1, 4, 7, 8, 12 से बाहर"
+                  }
                   accent
                 />
                 {data.percentage !== undefined && (

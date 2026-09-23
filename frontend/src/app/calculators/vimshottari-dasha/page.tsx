@@ -43,14 +43,22 @@ export default function VimshottariDashaPage() {
         }),
       ]);
 
-      if (resCurrent?.data?.data) {
-        setCurrentDasha(resCurrent.data.data);
-      } else if (resCurrent?.data) {
-        setCurrentDasha(resCurrent.data);
+      const currentPayload = resCurrent?.data?.data || resCurrent?.data;
+      if (currentPayload?.running_dasha) {
+        setCurrentDasha(currentPayload.running_dasha);
+      } else {
+        setCurrentDasha(currentPayload || null);
       }
 
       const list = resMaha.data?.data?.mahadashas || resMaha.data?.mahadashas || resMaha.data?.data || [];
-      setMahadashas(Array.isArray(list) ? list : []);
+      const today = new Date();
+      const withCurrentFlag = (Array.isArray(list) ? list : []).map((m: any) => {
+        const start = m.start_date ? new Date(m.start_date) : null;
+        const end = m.end_date ? new Date(m.end_date) : null;
+        const isCurrent = start && end ? today >= start && today <= end : false;
+        return { ...m, is_current: isCurrent };
+      });
+      setMahadashas(withCurrentFlag);
     } catch (err: any) {
       setError(err?.response?.data?.message || err?.message || "विंशोत्तरी दशा गणना विफल रही।");
     } finally {
@@ -131,28 +139,28 @@ export default function VimshottariDashaPage() {
                 <div>
                   <div className="text-xs text-ink-soft">वर्तमान महादशा स्वामी</div>
                   <div className="text-xl font-bold text-accent">
-                    {currentDasha.mahadasha || currentDasha.major_lord || "सूर्य"}
+                    {currentDasha.mahadasha?.planet_name || currentDasha.mahadasha || "-"}
                   </div>
                 </div>
                 {currentDasha.antardasha && (
                   <div>
                     <div className="text-xs text-ink-soft">वर्तमान अंतर्दशा</div>
                     <div className="text-base font-bold text-ink">
-                      {currentDasha.antardasha}
+                      {currentDasha.antardasha?.antardasha_name || currentDasha.antardasha}
                     </div>
                   </div>
                 )}
-                {currentDasha.pratyantardasha && (
+                {currentDasha.pratyantar_dasha && (
                   <div>
                     <div className="text-xs text-ink-soft">प्रत्यंतर दशा</div>
                     <div className="text-sm font-semibold text-ink-soft">
-                      {currentDasha.pratyantardasha}
+                      {currentDasha.pratyantar_dasha?.pratyantar_name}
                     </div>
                   </div>
                 )}
               </div>
-              {currentDasha.end_date && (
-                <ResultRow label="वर्तमान अवधि समाप्ति" value={currentDasha.end_date} />
+              {currentDasha.mahadasha?.end_date && (
+                <ResultRow label="महादशा अवधि समाप्ति" value={currentDasha.mahadasha.end_date} />
               )}
             </ResultSection>
           )}
@@ -173,7 +181,7 @@ export default function VimshottariDashaPage() {
                     {mahadashas.map((m: any, idx: number) => (
                       <tr key={idx} className="hover:bg-surface-alt/40 transition">
                         <td className="py-2.5 px-3 font-bold text-ink flex items-center gap-2">
-                          <span>{m.planet || m.lord || m.name}</span>
+                          <span>{m.planet_name || m.planet || m.lord || m.name}</span>
                           {m.is_current && <ResultBadge tone="accent">वर्तमान</ResultBadge>}
                         </td>
                         <td className="py-2.5 px-3 font-semibold">{m.duration_years || m.years || "-"} वर्ष</td>

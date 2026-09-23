@@ -14,6 +14,7 @@ export default function NavamshaD9Page() {
   const [error, setError] = useState<string | null>(null);
   const [chartData, setChartData] = useState<any>(null);
   const [svgChart, setSvgChart] = useState<string>("");
+  const [d1Signs, setD1Signs] = useState<Record<string, string>>({});
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,7 +31,7 @@ export default function NavamshaD9Page() {
     };
 
     try {
-      const [resData, resSvg] = await Promise.all([
+      const [resData, resSvg, resD1] = await Promise.all([
         axios.post("/api/demo/proxy", {
           endpoint: "/api/v1/parashari/chart/d9",
           payload,
@@ -46,6 +47,11 @@ export default function NavamshaD9Page() {
           },
           { responseType: "text" }
         ),
+        axios.post("/api/demo/proxy", {
+          endpoint: "/api/v1/parashari/chart/d1",
+          payload,
+          method: "POST",
+        }),
       ]);
 
       if (resData.data?.data) {
@@ -57,6 +63,13 @@ export default function NavamshaD9Page() {
       if (resSvg.data && typeof resSvg.data === "string" && resSvg.data.includes("<svg")) {
         setSvgChart(resSvg.data);
       }
+
+      const d1Planets = resD1.data?.data?.planets || resD1.data?.planets || [];
+      const signMap: Record<string, string> = {};
+      d1Planets.forEach((p: any) => {
+        if (p?.id && p?.sign?.id) signMap[p.id] = p.sign.id;
+      });
+      setD1Signs(signMap);
     } catch (err: any) {
       setError(err?.response?.data?.message || err?.message || "नवांश गणना विफल रही।");
     } finally {
@@ -174,7 +187,8 @@ export default function NavamshaD9Page() {
                       </thead>
                       <tbody className="divide-y divide-line/60">
                         {planets.map((p: any, idx: number) => {
-                          const isVargottama = p.is_vargottama || p.vargottama;
+                          const isVargottama =
+                            p.is_vargottama || p.vargottama || (p.id && d1Signs[p.id] && d1Signs[p.id] === p.sign?.id);
                           return (
                             <tr key={idx} className="hover:bg-surface-alt/40 transition">
                               <td className="py-2.5 px-3 font-bold text-ink">{p.name || p.planet}</td>

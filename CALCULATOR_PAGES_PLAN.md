@@ -67,6 +67,83 @@ page's rendering code assumed:
   the real payload; dashakoot-porutham's per-row list also read `p.significance` instead
   of the real `p.aspect`.
 
+### 4. The remaining 16 pages — live-tested and fixed in a follow-up pass
+The 16 pages the earlier pass flagged as "not yet live-tested" were each checked by
+curling the real backend endpoint and diffing the actual JSON shape against what the
+page's rendering code assumed, then spot-verified live in the browser (backend +
+frontend both running, `tsc --noEmit` clean throughout). Bugs found and fixed:
+- **`kaalsarp-dosha`** — `isPresent` read `data.is_present`/`data.has_kalsarpa`, neither
+  of which exist; the real field is `is_kaal_sarp`. The page **always showed "no dosha"
+  regardless of the real chart**. Verified live with a chart that actually has the dosha
+  (DOB 1985-03-20): now correctly shows "कालसर्प दोष उपस्थित है" (type Ghatak). Also added
+  a derived `ketu_house` (always exactly opposite `rahu_house`, which the API doesn't
+  return directly).
+- **`marriage-muhurat`** — `status` read fields that don't exist, so the green "शुभ
+  मुहूर्त उपलब्ध" banner **always showed regardless of whether any dates were found**.
+  Each muhurat row fell back to a meaningless "मुहूर्त 1/2/3..." placeholder (real field
+  is `date`/`day`, not `lagna`/`name`) with a blank time range (real field is a formatted
+  `recommended_window` string, not `start`/`end`). Rewrote the whole list to use the real
+  shape (`date`, `day`, `tithi`, `nakshatra`, `quality`, `recommended_window`,
+  `abhijit_muhurat`, `avoid_periods`) and derive `status` from whether any muhurats came
+  back. Verified live: 8 real dates now render with full detail.
+- **`loshu-grid`** — `getCellDigits` read from `data.grid`/`data.loshu_grid`, neither of
+  which exist; the real field is a positional `grid_matrix` 3x3 array (confirmed against
+  `backend/app/modules/numerology/calculator.py:252-256`). **The grid always rendered
+  empty.** Separately, `planes` is a plain object (`{mental_plane_4_9_2: bool, ...}`),
+  not an array, so `Array.isArray(planes)` was always false and the whole planes section
+  never rendered. Fixed both, added a missing-numbers row. Verified live and
+  cross-checked digit-for-digit against a direct curl.
+- **`vimshottari-dasha`** — `/dasha/vimshottari/current`'s real response nests
+  everything under `running_dasha` (`running_dasha.mahadasha.planet_name`,
+  `.antardasha.antardasha_name`, `.pratyantar_dasha.pratyantar_name`); the page read
+  top-level fields that don't exist, so the current-dasha panel **always showed the
+  hardcoded "सूर्य" fallback** and antardasha/pratyantardasha never rendered. The full
+  mahadasha table read `m.planet`/`m.lord`/`m.name` — none exist (`planet_name` is real)
+  — so every row's planet-name cell was blank. `is_current` doesn't exist in the API
+  either; now derived client-side from today's date against each period's start/end.
+  Verified live: current dasha correctly shows राहु → चंद्रमा → राहु chain matching a
+  direct curl to `/dasha/vimshottari/current`.
+- **`yogini-dasha`** — table read `data.cycles`/`yoginis`/`dashas`; real field is
+  `periods` — table always empty. Row mapping read `y.lord`/`y.planet` (real:
+  `ruling_planet`) and `y.duration_years` (real: `actual_duration_years`), which fell
+  back to `idx + 1` — **every row showed a fake sequential duration** ("1 वर्ष, 2 वर्ष...")
+  instead of the real value. No "current yogini" field exists in the API at all; now
+  derived client-side the same way as vimshottari.
+- **`char-dasha`** — table read `data.char_dasha`/`periods`/`dashas`; real field is
+  `char_dasha_timeline` — table always empty.
+- **`manglik-dosha`** — "Mars house" read `data.mars_house` (doesn't exist), always
+  falling back to "1, 4, 7, 8, 12 से बाहर" **regardless of the real placement**; fixed to
+  `mars_placements.house_from_lagna`. Cancellation reasons read `exceptions_applied`/
+  `cancellations` (real: `cancellation_reasons`) — that section never showed.
+- **`pitra-dosha`** — factor list read `data.factors` (real: `reasons`) — never showed
+  even when real reasons existed.
+- **`dhan-yogas`** — related-planets line read `y.planets_involved` (real: `planets`) —
+  never showed.
+- **`navamsha-d9`** — the API returns no vargottama flag at all, so `p.is_vargottama`/
+  `p.vargottama` were always undefined and the "वर्गोत्तम" badge never appeared even for
+  a genuinely vargottama planet. Now fetches the D1 chart alongside D9 (a 3rd parallel
+  call) and derives vargottama by comparing D1 vs D9 sign per planet. Verified live:
+  चंद्रमा and शनि both correctly flagged वर्गोत्तम for a chart where D1 and D9 signs match.
+- **`gemstone-suggestion`** — "वर्जित रत्न" (restricted stones) section read
+  `data.restrictions`/`forbidden_gemstones`, neither of which exist; real data is a
+  nested `maraka_caution.{maraka_lords, warning}` — section never showed. Stone card
+  headers were hardcoded Hindi labels that didn't always match which lordship the field
+  actually represents; now use the API's own `type` string per card.
+- **`lal-kitab-debts`** — each debt card's title read `d.debt_name`/`d.name` (real:
+  `debt`) — every card header was blank.
+- **`planetary-positions`** — ayanamsa read `data.ayanamsa_value`/`ayanamsa` (real:
+  `ayanamsa_degree`) — never displayed.
+- **`choghadiya`** — time column read `c.start`/`c.end` (real: `start_time`/`end_time`)
+  — always blank. Separately, the good/neutral/bad tone heuristic checked for `"char"`
+  but the API returns `"CHAL"` (different transliteration), so the neutral चल period
+  incorrectly rendered red/bad; fixed the substring check.
+- **`rudraksha-mapping`, `core-numerology`** — checked against real response shapes,
+  no bugs found.
+
+Local dev setup for this pass: `frontend/.env.local` and `.claude/launch.json` had to be
+recreated (both gitignored, didn't survive to this checkout) using the same values
+documented in the section below. Backend run the same way as before.
+
 ### 3. Verified live in the browser (backend + frontend both actually running)
 Navbar (all dropdown items), Footer (all columns), zero remaining `/demo?tab=`
 navigations (only the 2 intentionally-kept bare links remain, confirmed by grep), the
@@ -77,13 +154,9 @@ Group B — all 3 matching pages; Group C — `name-correction`; Group D — `da
 Group E — `tarot-reading`, `vastu-shastra`; Group F — `pdf-reports` (both the basic flow
 and the matching/varshphal conditional-fields flow, including a full PDF job completing).
 
-**Not yet live-tested** (no crash-pattern found by grep, but each hits a different
-backend endpoint with its own response shape, so a subtler field-name mismatch like the
-ones above can't be fully ruled out without actually clicking through them):
-`planetary-positions`, `navamsha-d9`, `char-dasha`, `vimshottari-dasha`, `yogini-dasha`,
-`manglik-dosha`, `kaalsarp-dosha`, `pitra-dosha`, `dhan-yogas`, `gemstone-suggestion`,
-`rudraksha-mapping`, `lal-kitab-debts`, `core-numerology`, `loshu-grid`, `choghadiya`,
-`marriage-muhurat`.
+**Update:** all 16 of the above were live-tested and fixed in a follow-up pass — see
+section 4 below for the full list of bugs found and fixed (several were serious:
+always-wrong status flags, permanently-empty tables, blank cells).
 
 ### Local dev setup notes (for whoever resumes testing)
 - `frontend/.env.local` was created (gitignored) with `ASTRO_BACKEND_URL` and

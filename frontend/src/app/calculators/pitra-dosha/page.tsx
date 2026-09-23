@@ -158,10 +158,10 @@ export default function PitraDoshaPage() {
                 )}
               </ResultSection>
 
-              {data.factors && data.factors.length > 0 && (
+              {(data.reasons || data.factors) && (data.reasons || data.factors).length > 0 && (
                 <ResultSection title="दोष कारक ग्रह योग">
                   <ul className="space-y-2 text-xs">
-                    {data.factors.map((f: any, idx: number) => (
+                    {(data.reasons || data.factors).map((f: any, idx: number) => (
                       <li key={idx} className="p-3 bg-surface-alt rounded-lg border border-line text-ink">
                         {typeof f === "string" ? f : f.description || f.rule}
                       </li>

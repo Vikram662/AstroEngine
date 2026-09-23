@@ -49,8 +49,9 @@ export default function GemstoneSuggestionPage() {
 
   const lifeStone = data?.life_stone || data?.lifeStone;
   const luckyStone = data?.lucky_stone || data?.luckyStone;
-  const bhagyaStone = data?.bhagya_stone || data?.fortune_stone || data?.benefic_stone;
-  const restrictions = data?.restrictions || data?.forbidden_gemstones || [];
+  const bhagyaStone = data?.benefic_stone || data?.bhagya_stone || data?.fortune_stone;
+  const restrictions = data?.restrictions || data?.forbidden_gemstones || data?.maraka_caution?.maraka_lords || [];
+  const marakaWarning = data?.maraka_caution?.warning;
 
   return (
     <CalculatorPageShell
@@ -124,21 +125,21 @@ export default function GemstoneSuggestionPage() {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 {lifeStone && (
                   <div className="p-4 bg-card rounded-2xl border border-line shadow-sm text-center">
-                    <div className="text-[11px] uppercase font-bold text-accent mb-1">जीवन रत्न (Life Stone)</div>
+                    <div className="text-[11px] uppercase font-bold text-accent mb-1">{lifeStone.type || "जीवन रत्न (Life Stone)"}</div>
                     <div className="text-lg font-extrabold text-ink">{lifeStone.gemstone || lifeStone.name || lifeStone}</div>
                     <div className="text-xs text-ink-muted mt-1">{lifeStone.planet || "लग्नेश हेतु"}</div>
                   </div>
                 )}
                 {luckyStone && (
                   <div className="p-4 bg-card rounded-2xl border border-line shadow-sm text-center">
-                    <div className="text-[11px] uppercase font-bold text-emerald-600 mb-1">शुभ रत्न (Lucky Stone)</div>
+                    <div className="text-[11px] uppercase font-bold text-emerald-600 mb-1">{luckyStone.type || "शुभ रत्न (Lucky Stone)"}</div>
                     <div className="text-lg font-extrabold text-ink">{luckyStone.gemstone || luckyStone.name || luckyStone}</div>
                     <div className="text-xs text-ink-muted mt-1">{luckyStone.planet || "पंचमेश हेतु"}</div>
                   </div>
                 )}
                 {bhagyaStone && (
                   <div className="p-4 bg-card rounded-2xl border border-line shadow-sm text-center">
-                    <div className="text-[11px] uppercase font-bold text-indigo-600 mb-1">भाग्य रत्न (Fortune Stone)</div>
+                    <div className="text-[11px] uppercase font-bold text-indigo-600 mb-1">{bhagyaStone.type || "भाग्य रत्न (Fortune Stone)"}</div>
                     <div className="text-lg font-extrabold text-ink">{bhagyaStone.gemstone || bhagyaStone.name || bhagyaStone}</div>
                     <div className="text-xs text-ink-muted mt-1">{bhagyaStone.planet || "नवमेश हेतु"}</div>
                   </div>
@@ -148,12 +149,13 @@ export default function GemstoneSuggestionPage() {
               {restrictions.length > 0 && (
                 <ResultSection title="वर्जित रत्न (Strictly Avoid)">
                   <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-900 text-xs">
-                    <div className="font-bold mb-1">मारक / बाधक ग्रह वर्जना:</div>
+                    <div className="font-bold mb-1">मारक ग्रह वर्जना (Maraka Lords):</div>
                     <ul className="list-disc list-inside space-y-1">
                       {restrictions.map((r: any, idx: number) => (
                         <li key={idx}>{typeof r === "string" ? r : r.gemstone || r.name}</li>
                       ))}
                     </ul>
+                    {marakaWarning && <p className="mt-2 text-[11px] leading-relaxed">{marakaWarning}</p>}
                   </div>
                 </ResultSection>
               )}

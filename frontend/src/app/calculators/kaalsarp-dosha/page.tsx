@@ -47,8 +47,9 @@ export default function KaalsarpDoshaPage() {
     }
   };
 
-  const isPresent = data?.is_present || data?.has_kalsarpa || false;
-  const yogaType = data?.kalsarpa_type || data?.type || "अनंत कालसर्प";
+  const isPresent = data?.is_kaal_sarp || data?.is_present || data?.has_kalsarpa || false;
+  const yogaType = data?.type || data?.kalsarpa_type || "अनंत कालसर्प";
+  const ketuHouse = data?.ketu_house ?? (data?.rahu_house ? ((data.rahu_house + 5) % 12) + 1 : undefined);
 
   return (
     <CalculatorPageShell
@@ -156,8 +157,8 @@ export default function KaalsarpDoshaPage() {
                 {data.rahu_house && (
                   <ResultRow label="राहु भाव" value={`${data.rahu_house}वां भाव`} />
                 )}
-                {data.ketu_house && (
-                  <ResultRow label="केतु भाव" value={`${data.ketu_house}वां भाव`} />
+                {ketuHouse && (
+                  <ResultRow label="केतु भाव" value={`${ketuHouse}वां भाव`} />
                 )}
               </ResultSection>
 

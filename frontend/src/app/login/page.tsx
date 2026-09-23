@@ -99,34 +99,42 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#fafafa] text-zinc-900">
+    <div className="min-h-screen flex flex-col bg-surface text-ink">
       <Navbar />
 
       <div className="flex-1 flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-white p-8 rounded-2xl border border-slate-200 shadow-sm space-y-6">
+        <div className="max-w-md w-full bg-card p-8 rounded-2xl border border-line shadow-sm space-y-6">
           <div>
-            <div className="w-8 h-8 rounded bg-slate-900 text-white flex items-center justify-center font-bold text-xs mb-3 font-mono">
+            <div className="w-8 h-8 rounded bg-ink text-white flex items-center justify-center font-brand font-bold text-xs mb-3">
               AE
             </div>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-              {isRegistering ? "Create Developer Account" : "Sign in to AstroEngine"}
+            <h1 className="text-2xl font-extrabold tracking-tight text-ink">
+              {isRegistering ? (
+                <>
+                  Create <span className="font-display italic text-accent font-normal">Developer Account</span>
+                </>
+              ) : (
+                <>
+                  Sign in to <span className="font-display italic text-accent font-normal">AstroEngine</span>
+                </>
+              )}
             </h1>
-            <p className="text-xs text-slate-500 mt-1">
-              {isRegistering 
+            <p className="text-sm text-ink-soft mt-1">
+              {isRegistering
                 ? "Verify your email with a 6-digit OTP to get ₹100 free test credits."
                 : "Enter your account email and password to access the console."}
             </p>
           </div>
 
           {error && (
-            <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-start gap-2">
+            <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-sm flex items-start gap-2">
               <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0 mt-0.5" />
               <span>{error}</span>
             </div>
           )}
 
           {successMsg && (
-            <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-start gap-2">
+            <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm flex items-start gap-2">
               <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
               <span>{successMsg}</span>
             </div>
@@ -134,34 +142,34 @@ export default function LoginPage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+              <label className="block text-xs font-bold text-ink-soft uppercase tracking-wider mb-1">
                 Email Address
               </label>
               <div className="relative">
-                <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                <Mail className="w-4 h-4 text-ink-muted absolute left-3 top-2.5" />
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="developer@company.com"
-                  className="w-full bg-slate-50 border border-slate-300 rounded-lg pl-9 pr-3 py-2 text-xs text-slate-900 focus:outline-none focus:bg-white focus:border-slate-900"
+                  className="w-full bg-surface-alt border border-line rounded-lg pl-9 pr-3 py-2.5 text-sm text-ink focus:outline-none focus:bg-card focus:border-accent"
                   required
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+              <label className="block text-xs font-bold text-ink-soft uppercase tracking-wider mb-1">
                 Password
               </label>
               <div className="relative">
-                <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                <Lock className="w-4 h-4 text-ink-muted absolute left-3 top-2.5" />
                 <input
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••••••"
-                  className="w-full bg-slate-50 border border-slate-300 rounded-lg pl-9 pr-3 py-2 text-xs text-slate-900 focus:outline-none focus:bg-white focus:border-slate-900"
+                  className="w-full bg-surface-alt border border-line rounded-lg pl-9 pr-3 py-2.5 text-sm text-ink focus:outline-none focus:bg-card focus:border-accent"
                   required
                 />
               </div>
@@ -169,33 +177,33 @@ export default function LoginPage() {
 
             {/* OTP Input Block (Shown during registration once OTP is requested) */}
             {isRegistering && otpSent && (
-              <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+              <div className="p-3.5 bg-surface-alt border border-line rounded-xl space-y-2">
                 <div className="flex items-center justify-between">
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                  <label className="block text-xs font-bold text-ink-soft uppercase tracking-wider">
                     Email Verification Code (OTP)
                   </label>
                   <button
                     type="button"
                     onClick={handleSendOtp}
                     disabled={sendingOtp}
-                    className="text-[11px] font-semibold text-indigo-600 hover:underline disabled:opacity-50"
+                    className="text-xs font-semibold text-accent hover:underline disabled:opacity-50"
                   >
                     {sendingOtp ? "Resending..." : "Resend Code"}
                   </button>
                 </div>
                 <div className="relative">
-                  <KeyRound className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                  <KeyRound className="w-4 h-4 text-ink-muted absolute left-3 top-2.5" />
                   <input
                     type="text"
                     maxLength={6}
                     value={otp}
                     onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
                     placeholder="Enter 6-digit OTP"
-                    className="w-full bg-white border border-slate-300 rounded-lg pl-9 pr-3 py-2 text-sm tracking-widest font-mono text-slate-900 focus:outline-none focus:border-slate-900"
+                    className="w-full bg-card border border-line rounded-lg pl-9 pr-3 py-2.5 text-base tracking-widest font-mono text-ink focus:outline-none focus:border-accent"
                     required
                   />
                 </div>
-                <p className="text-[10px] text-slate-500">
+                <p className="text-xs text-ink-muted">
                   Please enter the 6 digits received at {email}. Valid for 10 minutes.
                 </p>
               </div>
@@ -204,7 +212,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading || sendingOtp}
-              className="w-full py-2.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs shadow flex items-center justify-center gap-2 transition disabled:opacity-50"
+              className="w-full py-3 rounded-lg bg-accent hover:bg-accent-hover text-white font-bold text-sm shadow-md shadow-accent/20 flex items-center justify-center gap-2 transition disabled:opacity-50"
             >
               {loading || sendingOtp ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -222,14 +230,14 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <div className="flex items-center justify-center text-xs text-slate-500 pt-2 border-t border-slate-100">
+          <div className="flex items-center justify-center text-sm text-ink-muted pt-2 border-t border-line">
             {isRegistering ? (
               <div>
                 Already have an account?{" "}
                 <button
                   type="button"
                   onClick={() => switchMode(false)}
-                  className="font-bold text-slate-900 hover:underline"
+                  className="font-bold text-accent hover:underline"
                 >
                   Sign in
                 </button>
@@ -240,7 +248,7 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => switchMode(true)}
-                  className="font-bold text-slate-900 hover:underline"
+                  className="font-bold text-accent hover:underline"
                 >
                   Sign up with Email OTP
                 </button>
