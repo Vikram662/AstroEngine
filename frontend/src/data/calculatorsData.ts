@@ -3,11 +3,11 @@ export interface CalculatorTool {
   title: string;
   hindiTitle: string;
   description: string;
-  category: "kundli" | "dosha" | "matching" | "panchang" | "dasha" | "numerology" | "remedies" | "advanced";
+  category: "kundli" | "dosha" | "matching" | "panchang" | "dasha" | "numerology" | "remedies" | "advanced" | "western" | "kp" | "tarot" | "vastu" | "reports";
   categoryLabel: string;
   icon: string;
   badge?: string;
-  tabTarget: string; // deep-links into /demo?tab=...
+  href: string; // dedicated standalone page, e.g. /calculators/lagna-kundli
   popular?: boolean;
 }
 
@@ -22,7 +22,7 @@ export const CALCULATOR_TOOLS: CalculatorTool[] = [
     categoryLabel: "कुंडली एवं ग्रह",
     icon: "🪐",
     badge: "Free",
-    tabTarget: "kundli",
+    href: "/calculators/lagna-kundli",
     popular: true
   },
   {
@@ -34,7 +34,7 @@ export const CALCULATOR_TOOLS: CalculatorTool[] = [
     categoryLabel: "कुंडली एवं ग्रह",
     icon: "✨",
     badge: "16 Vargas",
-    tabTarget: "kundli",
+    href: "/calculators/navamsha-d9",
     popular: true
   },
   {
@@ -45,7 +45,7 @@ export const CALCULATOR_TOOLS: CalculatorTool[] = [
     category: "kundli",
     categoryLabel: "कुंडली एवं ग्रह",
     icon: "🌙",
-    tabTarget: "planets"
+    href: "/calculators/moon-sign"
   },
   {
     id: "planetary-positions",
@@ -55,7 +55,7 @@ export const CALCULATOR_TOOLS: CalculatorTool[] = [
     category: "kundli",
     categoryLabel: "कुंडली एवं ग्रह",
     icon: "🔭",
-    tabTarget: "planets"
+    href: "/calculators/planetary-positions"
   },
 
   // ── Dosha & Transits ──
@@ -68,7 +68,7 @@ export const CALCULATOR_TOOLS: CalculatorTool[] = [
     categoryLabel: "दोष एवं गोचर",
     icon: "🔥",
     badge: "12 Exceptions",
-    tabTarget: "dosha",
+    href: "/calculators/manglik-dosha",
     popular: true
   },
   {
@@ -80,7 +80,7 @@ export const CALCULATOR_TOOLS: CalculatorTool[] = [
     categoryLabel: "दोष एवं गोचर",
     icon: "🪐",
     badge: "Lifetime Dates",
-    tabTarget: "dosha",
+    href: "/calculators/sade-sati",
     popular: true
   },
   {
@@ -91,7 +91,7 @@ export const CALCULATOR_TOOLS: CalculatorTool[] = [
     category: "dosha",
     categoryLabel: "दोष एवं गोचर",
     icon: "🐍",
-    tabTarget: "dosha"
+    href: "/calculators/kaalsarp-dosha"
   },
   {
     id: "pitra-dosha",
@@ -101,7 +101,7 @@ export const CALCULATOR_TOOLS: CalculatorTool[] = [
     category: "dosha",
     categoryLabel: "दोष एवं गोचर",
     icon: "☀️",
-    tabTarget: "dosha"
+    href: "/calculators/pitra-dosha"
   },
 
   // ── Matchmaking ──
@@ -114,7 +114,7 @@ export const CALCULATOR_TOOLS: CalculatorTool[] = [
     categoryLabel: "कुंडली मिलान",
     icon: "💍",
     badge: "36 Gunas",
-    tabTarget: "matching",
+    href: "/calculators/kundli-matching",
     popular: true
   },
   {
@@ -125,7 +125,7 @@ export const CALCULATOR_TOOLS: CalculatorTool[] = [
     category: "matching",
     categoryLabel: "कुंडली मिलान",
     icon: "🧬",
-    tabTarget: "matching"
+    href: "/calculators/nadi-exceptions"
   },
   {
     id: "dashakoot-porutham",
@@ -135,7 +135,7 @@ export const CALCULATOR_TOOLS: CalculatorTool[] = [
     category: "matching",
     categoryLabel: "कुंडली मिलान",
     icon: "🪷",
-    tabTarget: "matching"
+    href: "/calculators/dashakoot-porutham"
   },
 
   // ── Dasha Systems ──
@@ -148,7 +148,7 @@ export const CALCULATOR_TOOLS: CalculatorTool[] = [
     categoryLabel: "दशा एवं काल",
     icon: "⏳",
     badge: "5 Levels",
-    tabTarget: "dasha",
+    href: "/calculators/vimshottari-dasha",
     popular: true
   },
   {
@@ -159,7 +159,7 @@ export const CALCULATOR_TOOLS: CalculatorTool[] = [
     category: "dasha",
     categoryLabel: "दशा एवं काल",
     icon: "☸️",
-    tabTarget: "dasha"
+    href: "/calculators/yogini-dasha"
   },
   {
     id: "char-dasha",
@@ -169,7 +169,7 @@ export const CALCULATOR_TOOLS: CalculatorTool[] = [
     category: "dasha",
     categoryLabel: "दशा एवं काल",
     icon: "🧭",
-    tabTarget: "tajik"
+    href: "/calculators/char-dasha"
   },
 
   // ── Panchang & Muhurat ──
@@ -182,7 +182,7 @@ export const CALCULATOR_TOOLS: CalculatorTool[] = [
     categoryLabel: "पंचांग व मुहूर्त",
     icon: "📜",
     badge: "Live Daily",
-    tabTarget: "panchang",
+    href: "/calculators/daily-panchang",
     popular: true
   },
   {
@@ -193,7 +193,7 @@ export const CALCULATOR_TOOLS: CalculatorTool[] = [
     category: "panchang",
     categoryLabel: "पंचांग व मुहूर्त",
     icon: "⏱️",
-    tabTarget: "panchang"
+    href: "/calculators/choghadiya"
   },
   {
     id: "marriage-muhurat",
@@ -203,7 +203,7 @@ export const CALCULATOR_TOOLS: CalculatorTool[] = [
     category: "panchang",
     categoryLabel: "पंचांग व मुहूर्त",
     icon: "👰",
-    tabTarget: "panchang"
+    href: "/calculators/marriage-muhurat"
   },
 
   // ── Numerology ──
@@ -215,7 +215,7 @@ export const CALCULATOR_TOOLS: CalculatorTool[] = [
     category: "numerology",
     categoryLabel: "अंकशास्त्र",
     icon: "🔢",
-    tabTarget: "numerology",
+    href: "/calculators/core-numerology",
     popular: true
   },
   {
@@ -226,7 +226,7 @@ export const CALCULATOR_TOOLS: CalculatorTool[] = [
     category: "numerology",
     categoryLabel: "अंकशास्त्र",
     icon: "🧮",
-    tabTarget: "numerology"
+    href: "/calculators/loshu-grid"
   },
   {
     id: "name-correction",
@@ -236,7 +236,7 @@ export const CALCULATOR_TOOLS: CalculatorTool[] = [
     category: "numerology",
     categoryLabel: "अंकशास्त्र",
     icon: "✍️",
-    tabTarget: "numerology"
+    href: "/calculators/name-correction"
   },
 
   // ── Remedies & Lal Kitab ──
@@ -249,7 +249,7 @@ export const CALCULATOR_TOOLS: CalculatorTool[] = [
     categoryLabel: "उपाय एवं लाल किताब",
     icon: "💎",
     badge: "Precise Rules",
-    tabTarget: "remedies",
+    href: "/calculators/gemstone-suggestion",
     popular: true
   },
   {
@@ -260,7 +260,7 @@ export const CALCULATOR_TOOLS: CalculatorTool[] = [
     category: "remedies",
     categoryLabel: "उपाय एवं लाल किताब",
     icon: "📿",
-    tabTarget: "remedies"
+    href: "/calculators/rudraksha-mapping"
   },
   {
     id: "lal-kitab-debts",
@@ -270,7 +270,7 @@ export const CALCULATOR_TOOLS: CalculatorTool[] = [
     category: "remedies",
     categoryLabel: "उपाय एवं लाल किताब",
     icon: "📕",
-    tabTarget: "lalkitab"
+    href: "/calculators/lal-kitab-debts"
   },
   {
     id: "dhan-yogas",
@@ -281,7 +281,59 @@ export const CALCULATOR_TOOLS: CalculatorTool[] = [
     categoryLabel: "विशेष योग",
     icon: "👑",
     badge: "10 Yogas",
-    tabTarget: "yogas",
+    href: "/calculators/dhan-yogas",
     popular: true
+  },
+
+  // ── Western, KP, Tarot, Vastu & Reports ──
+  {
+    id: "western-astrology",
+    title: "Western Tropical Big-Three",
+    hindiTitle: "पाश्चात्य ज्योतिष (सूर्य-चंद्र-लग्न)",
+    description: "उष्णकटिबंधीय (Tropical) राशि पद्धति अनुसार सूर्य, चंद्र एवं लग्न राशि की गणना।",
+    category: "western",
+    categoryLabel: "पाश्चात्य ज्योतिष",
+    icon: "♈",
+    href: "/calculators/western-astrology"
+  },
+  {
+    id: "kp-system",
+    title: "KP Sub-Lord Table",
+    hindiTitle: "केपी पद्धति (सब-लॉर्ड)",
+    description: "कृष्णमूर्ति पद्धति अनुसार ग्रहों एवं भाव कस्प के नक्षत्र, सब व सब-सब स्वामी।",
+    category: "kp",
+    categoryLabel: "केपी पद्धति",
+    icon: "🎯",
+    href: "/calculators/kp-system"
+  },
+  {
+    id: "tarot-reading",
+    title: "Tarot Card Reading",
+    hindiTitle: "टैरो कार्ड परामर्श",
+    description: "दैनिक कार्ड, 3-कार्ड स्प्रेड एवं सेल्टिक क्रॉस से अपने प्रश्न का उत्तर पाएं।",
+    category: "tarot",
+    categoryLabel: "टैरो",
+    icon: "🔮",
+    href: "/calculators/tarot-reading"
+  },
+  {
+    id: "vastu-shastra",
+    title: "Vastu Shastra Evaluator",
+    hindiTitle: "16-जोन वास्तु विश्लेषण",
+    description: "भवन दिशा एवं कमरों की स्थिति अनुसार 16 वास्तु ज़ोन का संपूर्ण मूल्यांकन।",
+    category: "vastu",
+    categoryLabel: "वास्तु शास्त्र",
+    icon: "🏠",
+    href: "/calculators/vastu-shastra"
+  },
+  {
+    id: "pdf-reports",
+    title: "PDF Kundli Reports",
+    hindiTitle: "वृहत् कुंडली PDF रिपोर्ट",
+    description: "20-80 पृष्ठीय विस्तृत कुंडली, मिलान, वर्षफल एवं लाल किताब PDF रिपोर्ट बनाएं।",
+    category: "reports",
+    categoryLabel: "PDF रिपोर्ट्स",
+    icon: "📄",
+    href: "/calculators/pdf-reports"
   }
 ];

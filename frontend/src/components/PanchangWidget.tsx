@@ -225,7 +225,7 @@ export const PanchangWidget: React.FC = () => {
                   वार: <strong className="text-ink">{data?.vaar || "मंगलवार"}</strong> • संवत् 2083
                 </span>
                 <Link
-                  href="/demo?tab=panchang"
+                  href="/calculators/daily-panchang"
                   className="font-bold text-accent hover:text-accent-hover flex items-center gap-1 transition"
                 >
                   <span>विस्तृत मासिक पंचांग देखें</span>
@@ -360,12 +360,12 @@ export const PanchangWidget: React.FC = () => {
               {/* Bottom Quick Action */}
               <div className="pt-2">
                 <Link
-                  href="/demo?tab=panchang"
+                  href="/calculators/daily-panchang"
                   className="w-full py-2.5 px-4 rounded-xl bg-accent hover:bg-accent-hover text-white font-bold text-xs transition flex items-center justify-center gap-1.5 shadow-2xs"
                 >
                   <Compass className="w-3.5 h-3.5" />
-                  <span>संपूर्ण 24-घंटे होरा एवं पंचांग कंसोल</span>
-                  <ExternalLink className="w-3.5 h-3.5 ml-1" />
+                  <span>संपूर्ण दैनिक पंचांग कैलकुलेटर</span>
+                  <ChevronRight className="w-3.5 h-3.5 ml-1" />
                 </Link>
               </div>
 

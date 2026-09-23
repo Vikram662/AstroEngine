@@ -92,7 +92,7 @@ export const CalculatorsSection: React.FC = () => {
           {filteredTools.map(tool => (
             <Link
               key={tool.id}
-              href={`/demo?tab=${tool.tabTarget}`}
+              href={tool.href}
               className="group relative bg-card rounded-2xl p-5 border border-line hover:border-accent/40 hover:shadow-md transition-all duration-200 flex flex-col justify-between"
             >
               <div>

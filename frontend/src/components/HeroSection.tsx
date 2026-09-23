@@ -243,7 +243,7 @@ export const HeroSection: React.FC = () => {
       });
 
       const responseData = res.data?.data;
-      const botText = responseData?.response_text || responseData?.summary || "आपकी जन्मकुंडली के विश्लेषण के अनुसार यह योग अनुकूल है। विस्तृत जानकारी के लिए पूर्ण परामर्श देखें।";
+      const botText = responseData?.prediction_answer || "आपकी जन्मकुंडली के विश्लेषण के अनुसार यह योग अनुकूल है। विस्तृत जानकारी के लिए पूर्ण परामर्श देखें।";
 
       const botMsg: ChatMessage = {
         id: (Date.now() + 1).toString(),
@@ -461,7 +461,7 @@ export const HeroSection: React.FC = () => {
           </div>
 
           {/* ── RIGHT COLUMN: AI Astrologer Chat Widget (5 cols) ── */}
-          <div className="lg:col-span-5 bg-card rounded-2xl border border-line shadow-sm flex flex-col h-[520px]">
+          <div id="ai-chat" className="lg:col-span-5 bg-card rounded-2xl border border-line shadow-sm flex flex-col h-[520px] scroll-mt-24">
             
             {/* Widget Header */}
             <div className="p-4 border-b border-line bg-surface-alt/70 rounded-t-2xl flex items-center justify-between">
@@ -650,17 +650,17 @@ export const HeroSection: React.FC = () => {
                     )}
                   </div>
 
-                  {/* Deep link into full Demo App */}
+                  {/* Deep link into full Calculator */}
                   <div className="bg-accent-soft p-4 rounded-2xl border border-accent/30 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
                     <div>
                       <h4 className="font-bold text-sm text-ink">संपूर्ण 16 वर्गीय कुंडलियां एवं विंशोत्तरी दशा देखें</h4>
                       <p className="text-xs text-ink-soft mt-0.5">D9 नवांश, महादशा क्रम, अष्टकवर्ग, योग एवं उपाय</p>
                     </div>
                     <Link
-                      href="/demo?tab=kundli"
+                      href="/calculators/lagna-kundli"
                       className="px-4 py-2 rounded-xl bg-accent hover:bg-accent-hover text-white font-bold text-xs transition flex items-center gap-1.5 shrink-0 shadow-xs"
                     >
-                      <span>पूर्ण कुंडली ऐप खोलें</span>
+                      <span>पूर्ण कुंडली पेज खोलें</span>
                       <ExternalLink className="w-3.5 h-3.5" />
                     </Link>
                   </div>

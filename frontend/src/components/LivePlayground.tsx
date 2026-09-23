@@ -65,17 +65,41 @@ const TEMPLATES: Record<PlaygroundTab, { endpoint: string; json: string }> = {
 
 export const LivePlayground = () => {
   const [activeTab, setActiveTab] = useState<PlaygroundTab>("kundli");
-  const [inputJson, setInputJson] = useState<string>(TEMPLATES["kundli"].json);
+  const [selectedLang, setSelectedLang] = useState<"hi" | "en">("en");
+  const [inputJson, setInputJson] = useState<string>(() => {
+    try {
+      const obj = JSON.parse(TEMPLATES["kundli"].json);
+      obj.lang = "en";
+      return JSON.stringify(obj, null, 2);
+    } catch {
+      return TEMPLATES["kundli"].json;
+    }
+  });
   const [responseJson, setResponseJson] = useState<unknown>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [latencyMs, setLatencyMs] = useState<number | null>(null);
 
+  const updateJsonLang = (jsonStr: string, lang: "hi" | "en") => {
+    try {
+      const obj = JSON.parse(jsonStr);
+      obj.lang = lang;
+      return JSON.stringify(obj, null, 2);
+    } catch {
+      return jsonStr;
+    }
+  };
+
   const handleTabChange = (tab: PlaygroundTab) => {
     setActiveTab(tab);
-    setInputJson(TEMPLATES[tab].json);
+    setInputJson(updateJsonLang(TEMPLATES[tab].json, selectedLang));
     setError(null);
+  };
+
+  const handleLangChange = (lang: "hi" | "en") => {
+    setSelectedLang(lang);
+    setInputJson(prev => updateJsonLang(prev, lang));
   };
 
   const handleExecute = async () => {
@@ -84,6 +108,7 @@ export const LivePlayground = () => {
     const start = performance.now();
     try {
       const parsedPayload = JSON.parse(inputJson);
+      parsedPayload.lang = selectedLang;
       const res = await axios.post("/api/playground", {
         endpoint: TEMPLATES[activeTab].endpoint,
         payload: parsedPayload
@@ -128,37 +153,64 @@ export const LivePlayground = () => {
             </p>
           </div>
 
-          <div className="flex items-center gap-1 bg-zinc-100 p-1 rounded-lg border border-zinc-200 self-start">
-            <button
-              onClick={() => handleTabChange("kundli")}
-              className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${
-                activeTab === "kundli"
-                  ? "bg-white text-zinc-900 shadow-sm border border-zinc-200/80"
-                  : "text-zinc-600 hover:text-zinc-900"
-              }`}
-            >
-              Lagna Kundli (D1)
-            </button>
-            <button
-              onClick={() => handleTabChange("panchang")}
-              className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${
-                activeTab === "panchang"
-                  ? "bg-white text-zinc-900 shadow-sm border border-zinc-200/80"
-                  : "text-zinc-600 hover:text-zinc-900"
-              }`}
-            >
-              Daily Panchang
-            </button>
-            <button
-              onClick={() => handleTabChange("matching")}
-              className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${
-                activeTab === "matching"
-                  ? "bg-white text-zinc-900 shadow-sm border border-zinc-200/80"
-                  : "text-zinc-600 hover:text-zinc-900"
-              }`}
-            >
-              36-Guna Milan
-            </button>
+          <div className="flex flex-wrap items-center gap-2 self-start">
+            <div className="flex items-center gap-1 bg-zinc-100 p-1 rounded-lg border border-zinc-200">
+              <button
+                type="button"
+                onClick={() => handleLangChange("hi")}
+                className={`px-2.5 py-1 text-xs font-medium rounded transition ${
+                  selectedLang === "hi"
+                    ? "bg-amber-600 text-white shadow-sm"
+                    : "text-zinc-600 hover:text-zinc-900"
+                }`}
+              >
+                हिन्दी
+              </button>
+              <button
+                type="button"
+                onClick={() => handleLangChange("en")}
+                className={`px-2.5 py-1 text-xs font-medium rounded transition ${
+                  selectedLang === "en"
+                    ? "bg-amber-600 text-white shadow-sm"
+                    : "text-zinc-600 hover:text-zinc-900"
+                }`}
+              >
+                English
+              </button>
+            </div>
+
+            <div className="flex items-center gap-1 bg-zinc-100 p-1 rounded-lg border border-zinc-200">
+              <button
+                onClick={() => handleTabChange("kundli")}
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${
+                  activeTab === "kundli"
+                    ? "bg-white text-zinc-900 shadow-sm border border-zinc-200/80"
+                    : "text-zinc-600 hover:text-zinc-900"
+                }`}
+              >
+                Lagna Kundli (D1)
+              </button>
+              <button
+                onClick={() => handleTabChange("panchang")}
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${
+                  activeTab === "panchang"
+                    ? "bg-white text-zinc-900 shadow-sm border border-zinc-200/80"
+                    : "text-zinc-600 hover:text-zinc-900"
+                }`}
+              >
+                Daily Panchang
+              </button>
+              <button
+                onClick={() => handleTabChange("matching")}
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${
+                  activeTab === "matching"
+                    ? "bg-white text-zinc-900 shadow-sm border border-zinc-200/80"
+                    : "text-zinc-600 hover:text-zinc-900"
+                }`}
+              >
+                36-Guna Milan
+              </button>
+            </div>
           </div>
         </div>
 

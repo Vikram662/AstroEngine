@@ -206,20 +206,7 @@ export const HoroscopeSection: React.FC = () => {
           })}
         </div>
 
-        {/* Bottom Direct CTA */}
-        <div className="mt-12 p-6 rounded-2xl bg-surface-alt border border-line flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div>
-            <h4 className="font-bold text-sm sm:text-base text-ink">अपनी व्यक्तिगत जन्मकुंडली का दैनिक गोचर देखना चाहते हैं?</h4>
-            <p className="text-xs text-ink-soft mt-0.5">अपनी जन्मतिथि व समय दर्ज करके अपनी निजी चंद्र राशि के अनुसार सटीक फलादेश प्राप्त करें।</p>
-          </div>
-          <Link
-            href="/demo?tab=horoscope"
-            className="px-5 py-2.5 rounded-xl bg-accent hover:bg-accent-hover text-white font-bold text-xs transition flex items-center gap-1.5 shrink-0 shadow-xs"
-          >
-            <span>विस्तृत राशिफल कंसोल खोलें</span>
-            <ExternalLink className="w-3.5 h-3.5" />
-          </Link>
-        </div>
+
 
       </div>
 
@@ -311,16 +298,7 @@ export const HoroscopeSection: React.FC = () => {
                 </div>
               </div>
 
-              {/* Deep Link CTA */}
-              <div className="pt-2">
-                <Link
-                  href="/demo?tab=horoscope"
-                  className="w-full py-3 px-4 rounded-xl bg-accent hover:bg-accent-hover text-white font-bold text-xs transition flex items-center justify-center gap-1.5 shadow-xs"
-                >
-                  <span>लाइव वैदिक राशिफल ऐप में विस्तृत विवरण देखें</span>
-                  <ExternalLink className="w-3.5 h-3.5" />
-                </Link>
-              </div>
+
 
             </div>
 

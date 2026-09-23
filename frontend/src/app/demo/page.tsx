@@ -1032,17 +1032,19 @@ export default function LiveDemoApp() {
   const handleDrawTarot = async (mode = tarotSpreadMode, customQ = tarotQuestion) => {
     setTarotLoading(true);
     try {
+      const lang = profile.lang || "hi";
       if (mode === "daily") {
-        const res = await callProxy("/api/v1/tarot/daily-card", { question: customQ });
+        const res = await callProxy("/api/v1/tarot/daily-card", { question: customQ, lang });
         if (res?.data) setTarotDailyResult(res.data);
       } else if (mode === "celtic_cross") {
-        const res = await callProxy("/api/v1/tarot/spread/celtic-cross", { question: customQ });
+        const res = await callProxy("/api/v1/tarot/spread/celtic-cross", { question: customQ, lang });
         if (res?.data) setTarotCelticResult(res.data);
       } else {
         const subMode = mode === "3_card_mind" ? "mind_body_spirit" : "time";
         const res = await callProxy("/api/v1/tarot/spread/3-card", {
           question: customQ,
-          spread_mode: subMode
+          spread_mode: subMode,
+          lang
         });
         if (res?.data) setTarot3CardResult(res.data);
       }
@@ -1060,7 +1062,8 @@ export default function LiveDemoApp() {
       const payload = {
         property_type: vastuPropertyType,
         facing_direction: customFacing,
-        rooms: customRooms
+        rooms: customRooms,
+        lang: profile.lang || "hi"
       };
       const res = await callProxy("/api/v1/vastu/evaluate", payload);
       if (res?.data) {

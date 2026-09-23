@@ -56,37 +56,37 @@ export const Footer = () => {
             </div>
             <ul className="space-y-2 text-xs">
               <li>
-                <Link href="/demo?tab=kundli" className="hover:text-accent transition">
+                <Link href="/calculators/lagna-kundli" className="hover:text-accent transition">
                   जन्म लग्न पत्रिका (D1 Chart)
                 </Link>
               </li>
               <li>
-                <Link href="/demo?tab=kundli" className="hover:text-accent transition">
+                <Link href="/calculators/navamsha-d9" className="hover:text-accent transition">
                   नवांश कुंडली (D9 Navamsha)
                 </Link>
               </li>
               <li>
-                <Link href="/demo?tab=planets" className="hover:text-accent transition">
+                <Link href="/calculators/moon-sign" className="hover:text-accent transition">
                   चंद्र राशि एवं 27 नक्षत्र
                 </Link>
               </li>
               <li>
-                <Link href="/demo?tab=kundli" className="hover:text-accent transition">
-                  16 षोडशवर्ग कुंडलियां (D2–D60)
+                <Link href="/calculators/planetary-positions" className="hover:text-accent transition">
+                  ग्रह स्पष्ट एवं वक्री स्थिति
                 </Link>
               </li>
               <li>
-                <Link href="/demo?tab=dasha" className="hover:text-accent transition">
+                <Link href="/calculators/vimshottari-dasha" className="hover:text-accent transition">
                   120-वर्षीय विंशोत्तरी महादशा
                 </Link>
               </li>
               <li>
-                <Link href="/demo?tab=yogas" className="hover:text-accent transition">
-                  सर्वअष्टकवर्ग (337 Bindus)
+                <Link href="/calculators/char-dasha" className="hover:text-accent transition">
+                  जैमिनी चर दशा क्रम
                 </Link>
               </li>
               <li>
-                <Link href="/demo?tab=yogas" className="hover:text-accent transition">
+                <Link href="/calculators/dhan-yogas" className="hover:text-accent transition">
                   राजयोग एवं धन योग स्कैनर
                 </Link>
               </li>
@@ -101,37 +101,37 @@ export const Footer = () => {
             </div>
             <ul className="space-y-2 text-xs">
               <li>
-                <Link href="/demo?tab=dosha" className="hover:text-accent transition">
+                <Link href="/calculators/manglik-dosha" className="hover:text-accent transition">
                   मांगलिक दोष (12 अपवाद)
                 </Link>
               </li>
               <li>
-                <Link href="/demo?tab=dosha" className="hover:text-accent transition">
+                <Link href="/calculators/sade-sati" className="hover:text-accent transition">
                   शनि साढ़े साती चक्र व तारीखें
                 </Link>
               </li>
               <li>
-                <Link href="/demo?tab=dosha" className="hover:text-accent transition">
+                <Link href="/calculators/kaalsarp-dosha" className="hover:text-accent transition">
                   कालसर्प दोष एवं 12 प्रकार
                 </Link>
               </li>
               <li>
-                <Link href="/demo?tab=dosha" className="hover:text-accent transition">
+                <Link href="/calculators/pitra-dosha" className="hover:text-accent transition">
                   पितृ दोष व शांति उपाय
                 </Link>
               </li>
               <li>
-                <Link href="/demo?tab=numerology" className="hover:text-accent transition">
+                <Link href="/calculators/core-numerology" className="hover:text-accent transition">
                   मूलांक व भाग्यांक अंकशास्त्र
                 </Link>
               </li>
               <li>
-                <Link href="/demo?tab=numerology" className="hover:text-accent transition">
+                <Link href="/calculators/loshu-grid" className="hover:text-accent transition">
                   3×3 लो शू ग्रिड (Lo Shu Grid)
                 </Link>
               </li>
               <li>
-                <Link href="/demo?tab=numerology" className="hover:text-accent transition">
+                <Link href="/calculators/name-correction" className="hover:text-accent transition">
                   नाम संशोधन अंक प्रणाली
                 </Link>
               </li>
@@ -146,37 +146,37 @@ export const Footer = () => {
             </div>
             <ul className="space-y-2 text-xs">
               <li>
-                <Link href="/demo?tab=panchang" className="hover:text-accent transition">
+                <Link href="/calculators/daily-panchang" className="hover:text-accent transition">
                   आज का दैनिक पंचांग
                 </Link>
               </li>
               <li>
-                <Link href="/demo?tab=panchang" className="hover:text-accent transition">
+                <Link href="/calculators/choghadiya" className="hover:text-accent transition">
                   दिन व रात का चौघड़िया
                 </Link>
               </li>
               <li>
-                <Link href="/demo?tab=panchang" className="hover:text-accent transition">
-                  राहु काल व अभिजित मुहूर्त
+                <Link href="/calculators/marriage-muhurat" className="hover:text-accent transition">
+                  विवाह शुभ मुहूर्त
                 </Link>
               </li>
               <li>
-                <Link href="/demo?tab=panchang" className="hover:text-accent transition">
-                  विवाह व गृह प्रवेश मुहूर्त
-                </Link>
-              </li>
-              <li>
-                <Link href="/demo?tab=matching" className="hover:text-accent transition">
+                <Link href="/calculators/kundli-matching" className="hover:text-accent transition">
                   अष्टकूट 36 गुण मिलान
                 </Link>
               </li>
               <li>
-                <Link href="/demo?tab=horoscope" className="hover:text-accent transition">
-                  दैनिक व साप्ताहिक राशिफल
+                <Link href="/calculators/nadi-exceptions" className="hover:text-accent transition">
+                  नाड़ी दोष निरस्तीकरण अपवाद
                 </Link>
               </li>
               <li>
-                <Link href="/demo?tab=tarot" className="hover:text-accent transition">
+                <Link href="/calculators/dashakoot-porutham" className="hover:text-accent transition">
+                  दक्षिण भारतीय 10 पोरुथम
+                </Link>
+              </li>
+              <li>
+                <Link href="/calculators/tarot-reading" className="hover:text-accent transition">
                   टैरो कार्ड परामर्श (Tarot Reading)
                 </Link>
               </li>
@@ -191,37 +191,37 @@ export const Footer = () => {
             </div>
             <ul className="space-y-2 text-xs">
               <li>
-                <Link href="/demo?tab=remedies" className="hover:text-accent transition">
+                <Link href="/calculators/gemstone-suggestion" className="hover:text-accent transition">
                   शुभ रत्न परामर्श (Gemstones)
                 </Link>
               </li>
               <li>
-                <Link href="/demo?tab=remedies" className="hover:text-accent transition">
+                <Link href="/calculators/rudraksha-mapping" className="hover:text-accent transition">
                   1 से 14 मुखी रुद्राक्ष सुझाव
                 </Link>
               </li>
               <li>
-                <Link href="/demo?tab=lalkitab" className="hover:text-accent transition">
+                <Link href="/calculators/lal-kitab-debts" className="hover:text-accent transition">
                   लाल किताब 6 ऋण व उपाय
                 </Link>
               </li>
               <li>
-                <Link href="/demo?tab=kp" className="hover:text-accent transition">
+                <Link href="/calculators/kp-system" className="hover:text-accent transition">
                   केपी पद्धति (KP Sub-Lord)
                 </Link>
               </li>
               <li>
-                <Link href="/demo?tab=tajik" className="hover:text-accent transition">
-                  वर्षफल व मुन्था (Varshphal)
+                <Link href="/calculators/western-astrology" className="hover:text-accent transition">
+                  पाश्चात्य बिग-थ्री (Western)
                 </Link>
               </li>
               <li>
-                <Link href="/demo?tab=vastu" className="hover:text-accent transition">
+                <Link href="/calculators/vastu-shastra" className="hover:text-accent transition">
                   16-जोन वास्तु शास्त्र विश्लेषण
                 </Link>
               </li>
               <li>
-                <Link href="/demo?tab=pdf" className="hover:text-accent transition">
+                <Link href="/calculators/pdf-reports" className="hover:text-accent transition">
                   20-80 पृष्ठीय वृहत् कुंडली PDF
                 </Link>
               </li>
