@@ -59,6 +59,15 @@ import { TarotTab } from "./components/TarotTab";
 import { VastuTab } from "./components/VastuTab";
 import { DEMO_TRANSLATIONS, SupportedLang } from "./i18n";
 
+// Kept in sync with the `id` of every entry in the two tab-definition arrays
+// further down this file — used to validate the ?tab= deep link from the
+// marketing-nav dropdown.
+const VALID_DEMO_TABS = new Set([
+  "overview", "ai_astrologer", "kundli", "planets", "dasha", "yogas", "dosha",
+  "matching", "numerology", "western", "remedies", "kp", "lalkitab", "tajik",
+  "pdf", "panchang", "horoscope", "tarot", "vastu"
+]);
+
 interface BirthProfile {
   name: string;
   dob: string;
@@ -897,6 +906,16 @@ export default function LiveDemoApp() {
   // Initial calculation on mount
   useEffect(() => {
     calculateAllData(DEFAULT_PROFILE);
+  }, []);
+
+  // Deep-link support for the marketing-nav dropdown (e.g. /demo?tab=matching).
+  // Reads window.location directly (rather than useSearchParams) so this page
+  // doesn't need a Suspense boundary just for an optional initial tab.
+  useEffect(() => {
+    const requested = new URLSearchParams(window.location.search).get("tab");
+    if (requested && VALID_DEMO_TABS.has(requested)) {
+      setActiveTab(requested);
+    }
   }, []);
 
   // Matchmaking execution (Ashtakoot + South Indian Dashakoota + Papasamya + Exceptions)
