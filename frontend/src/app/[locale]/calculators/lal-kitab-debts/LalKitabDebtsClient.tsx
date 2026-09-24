@@ -30,7 +30,7 @@ export default function LalKitabDebtsClient({ locale }: { locale: Locale }) {
     };
 
     try {
-      const res = await axios.post("/api/demo/proxy", {
+      const res = await axios.post("/api/proxy", {
         endpoint: "/api/v1/lalkitab/chart/kundli",
         payload,
         method: "POST",

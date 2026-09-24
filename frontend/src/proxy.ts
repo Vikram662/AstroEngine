@@ -10,15 +10,23 @@ export async function proxy(request: NextRequest) {
   //    protected routes) ──
   // A literal /hi/... URL should never be indexable (it'd duplicate the bare
   // Hindi page), so bounce it to the bare equivalent.
-  if (pathname === "/hi" || pathname.startsWith("/hi/")) {
+  // Note: Only redirect actual external browser requests, NOT internal rewrites!
+  if ((pathname === "/hi" || pathname.startsWith("/hi/")) && !request.headers.get("x-locale-rewrite")) {
     const bare = pathname === "/hi" ? "/" : pathname.slice("/hi".length);
     return NextResponse.redirect(new URL(bare, request.url));
   }
   // A bare path that has a migrated app/[locale] route gets internally rewritten
   // to /hi/... so it resolves there — the browser URL stays bare.
   if (isMigratedPath(pathname)) {
-    const rewritten = pathname === "/" ? "/hi" : `/hi${pathname}`;
-    return NextResponse.rewrite(new URL(rewritten, request.url));
+    const nextUrl = request.nextUrl.clone();
+    nextUrl.pathname = pathname === "/" ? "/hi" : `/hi${pathname}`;
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set("x-locale-rewrite", "1");
+    return NextResponse.rewrite(nextUrl, {
+      request: {
+        headers: requestHeaders,
+      },
+    });
   }
 
   // ── Auth / route protection (unchanged from the previous middleware.ts) ──
@@ -100,6 +108,8 @@ export const config = {
     "/",
     "/hi",
     "/hi/:path*",
+    "/en",
+    "/en/:path*",
     "/calculators/:path*",
   ],
 };

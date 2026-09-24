@@ -5,17 +5,17 @@ import axios from "axios";
 import { CalculatorPageShell } from "@/components/calculators/CalculatorPageShell";
 import type { Locale } from "@/lib/locale";
 import { BirthDataFields, DEFAULT_BIRTH_DATA, BirthDataValue } from "@/components/calculators/BirthDataFields";
-import { ResultSection, ResultRow, ResultBadge, SubmitButton, ErrorNote } from "@/components/calculators/ResultRows";
+import { SubmitButton, ErrorNote } from "@/components/calculators/ResultRows";
 import { FileText, Download, Loader2, CheckCircle2 } from "lucide-react";
 
 const REPORT_TYPES = [
-  { id: "kundli/basic", label: "Basic Kundli (12 Pages)", desc: "लग्न, नवांश, ग्रह स्पष्ट एवं विंशोत्तरी महादशा" },
-  { id: "kundli/brihat", label: "Brihat Horoscope (65+ Pages)", desc: "षोडशवर्ग, अष्टकवर्ग, संपूर्ण दशाएं एवं विस्तृत योग विश्लेषण" },
-  { id: "matching/report", label: "Matchmaking Dossier (25 Pages)", desc: "36 गुण मिलान, नाड़ी दोष, मांगलिक एवं ग्रह अनुकूलता" },
-  { id: "varshphal/annual", label: "Tajik Varshphal (30 Pages)", desc: "वार्षिक मुन्था, वर्षेश, पात्यायिनी दशा एवं 12 मासिक भविष्यफल" },
-  { id: "lalkitab/full", label: "Lal Kitab Full Report (40 Pages)", desc: "कुदरती ऋण, ग्रह फल, 28-साला चक्र एवं वार्षिक लाल किताब टोटके" },
-  { id: "dosha/sade-sati", label: "Shani Sade Sati Dossier (18 Pages)", desc: "शनि की साढ़े साती, ढैया एवं जीवनपर्यंत गोचर शांति उपाय" },
-  { id: "numerology/report", label: "Numerology & Lo Shu (20 Pages)", desc: "मूलांक, भाग्यांक, नामांक एवं लो शू ग्रिड अनुकूलता" },
+  { id: "kundli/basic", en: "Basic Kundli (12 pages)", hi: "मूल कुंडली (12 पृष्ठ)" },
+  { id: "kundli/brihat", en: "Brihat Horoscope (65+ pages)", hi: "वृहत् कुंडली (65+ पृष्ठ)" },
+  { id: "matching/report", en: "Matchmaking Dossier (25 pages)", hi: "कुंडली मिलान रिपोर्ट (25 पृष्ठ)" },
+  { id: "varshphal/annual", en: "Tajik Varshphal (30 pages)", hi: "ताजिक वर्षफल (30 पृष्ठ)" },
+  { id: "lalkitab/full", en: "Lal Kitab Full Report (40 pages)", hi: "लाल किताब संपूर्ण रिपोर्ट (40 पृष्ठ)" },
+  { id: "dosha/sade-sati", en: "Shani Sade Sati Dossier (18 pages)", hi: "शनि साढ़े साती रिपोर्ट (18 पृष्ठ)" },
+  { id: "numerology/report", en: "Numerology & Lo Shu (20 pages)", hi: "अंकशास्त्र एवं लो शू (20 पृष्ठ)" },
 ];
 
 export default function PdfReportsClient({ locale }: { locale: Locale }) {
@@ -27,7 +27,7 @@ export default function PdfReportsClient({ locale }: { locale: Locale }) {
   });
   const [targetYear, setTargetYear] = useState(String(new Date().getFullYear()));
   const [reportType, setReportType] = useState("kundli/basic");
-  const [lang, setLang] = useState<"hi" | "en">(locale);
+  const isEnglish = locale === "en";
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [jobStatus, setJobStatus] = useState<string>("");
@@ -40,7 +40,7 @@ export default function PdfReportsClient({ locale }: { locale: Locale }) {
     for (let i = 0; i < 60; i++) {
       await new Promise((r) => setTimeout(r, 3000));
       try {
-        const res = await axios.get(`/api/demo/proxy?endpoint=/api/v1/pdf/status/${jId}`);
+        const res = await axios.get(`/api/proxy?endpoint=/api/v1/pdf/status/${jId}`);
         const status = res.data?.data?.status || res.data?.status;
         setJobStatus(status);
         if (status === "COMPLETED" || status === "FAILED") {
@@ -52,7 +52,7 @@ export default function PdfReportsClient({ locale }: { locale: Locale }) {
       }
     }
     setJobStatus("FAILED");
-    setError("रिपोर्ट तैयार होने में सामान्य से अधिक समय लग रहा है।");
+    setError(isEnglish ? "The report is taking longer than expected." : "रिपोर्ट तैयार होने में सामान्य से अधिक समय लग रहा है।");
     setLoading(false);
   };
 
@@ -69,7 +69,10 @@ export default function PdfReportsClient({ locale }: { locale: Locale }) {
       lat: form.lat,
       lon: form.lon,
       tz: form.tz,
-      lang,
+      // The long-form renderer currently has one complete editorial language pack.
+      // Keep the document consistently English instead of mixing English prose with
+      // localized planet/sign labels. The surrounding page remains route-localized.
+      lang: "en",
       branding: {
         company_name: "AstroEngine Astrological Platform",
       },
@@ -88,7 +91,7 @@ export default function PdfReportsClient({ locale }: { locale: Locale }) {
     }
 
     try {
-      const res = await axios.post("/api/demo/proxy", {
+      const res = await axios.post("/api/proxy", {
         endpoint: `/api/v1/pdf/${reportType}`,
         payload,
         method: "POST",
@@ -100,17 +103,19 @@ export default function PdfReportsClient({ locale }: { locale: Locale }) {
         setJobStatus("PROCESSING");
         pollStatus(returnedId);
       } else {
-        throw new Error("PDF इंजन से job_id प्राप्त नहीं हुआ।");
+        throw new Error(isEnglish ? "The PDF engine did not return a job ID." : "PDF इंजन से job_id प्राप्त नहीं हुआ।");
       }
-    } catch (err: any) {
-      setError(err?.response?.data?.message || err?.message || "PDF रिपोर्ट जनरेशन प्रारंभ नहीं हो सका।");
+    } catch (err: unknown) {
+      const apiMessage = axios.isAxiosError(err) ? err.response?.data?.message : undefined;
+      const errorMessage = err instanceof Error ? err.message : undefined;
+      setError(apiMessage || errorMessage || (isEnglish ? "PDF generation could not be started." : "PDF रिपोर्ट जनरेशन प्रारंभ नहीं हो सका।"));
       setLoading(false);
     }
   };
 
   const handleDownload = () => {
     if (jobId) {
-      window.open(`/api/demo/proxy?dl=pdf&job_id=${jobId}`, "_blank");
+      window.open(`/api/proxy?dl=pdf&job_id=${jobId}`, "_blank");
     }
   };
 
@@ -127,34 +132,13 @@ export default function PdfReportsClient({ locale }: { locale: Locale }) {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         <div className="lg:col-span-6 bg-card p-6 rounded-2xl border border-line h-fit">
           <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="flex items-center justify-between pb-3 border-b border-line">
-              <span className="text-xs font-bold text-ink">भाषा / Language</span>
-              <div className="flex rounded-lg bg-surface-alt p-1 border border-line text-xs">
-                <button
-                  type="button"
-                  onClick={() => setLang("hi")}
-                  className={`px-3 py-1 rounded font-medium transition ${
-                    lang === "hi" ? "bg-accent text-white shadow" : "text-ink-soft hover:text-ink"
-                  }`}
-                >
-                  हिन्दी
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setLang("en")}
-                  className={`px-3 py-1 rounded font-medium transition ${
-                    lang === "en" ? "bg-accent text-white shadow" : "text-ink-soft hover:text-ink"
-                  }`}
-                >
-                  English
-                </button>
-              </div>
+            <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-xs leading-5 text-blue-900">
+              {isEnglish ? "PDF reports are generated in consistent English to prevent mixed-language tables and overlapping Indic text." : "PDF रिपोर्ट एकसमान English में बनती है, ताकि Hindi-English मिश्रण और अक्षरों का overlap न हो।"}
             </div>
-
             <div>
               <label htmlFor="report_sel" className="block text-xs font-semibold text-ink-soft mb-1.5 flex items-center gap-1.5">
                 <FileText className="w-3.5 h-3.5 text-accent" />
-                <span>रिपोर्ट प्रकार (Report Type)</span>
+                <span>{isEnglish ? "Report type" : "रिपोर्ट प्रकार"}</span>
               </label>
               <select
                 id="report_sel"
@@ -164,14 +148,14 @@ export default function PdfReportsClient({ locale }: { locale: Locale }) {
               >
                 {REPORT_TYPES.map((r) => (
                   <option key={r.id} value={r.id}>
-                    {r.label}
+                    {isEnglish ? r.en : r.hi}
                   </option>
                 ))}
               </select>
             </div>
 
             <div className="p-4 rounded-xl bg-surface border border-line">
-              <BirthDataFields value={form} onChange={setForm} personLabel={isMatching ? "वर विवरण (Groom Details)" : undefined} idPrefix="p1_" />
+              <BirthDataFields value={form} onChange={setForm} personLabel={isMatching ? (isEnglish ? "Groom details" : "वर विवरण") : undefined} idPrefix="p1_" />
             </div>
 
             {isMatching && (
@@ -179,7 +163,7 @@ export default function PdfReportsClient({ locale }: { locale: Locale }) {
                 <BirthDataFields
                   value={girlForm}
                   onChange={setGirlForm}
-                  personLabel="कन्या विवरण (Bride Details)"
+                  personLabel={isEnglish ? "Bride details" : "कन्या विवरण"}
                   idPrefix="p2_"
                 />
               </div>
@@ -188,7 +172,7 @@ export default function PdfReportsClient({ locale }: { locale: Locale }) {
             {isVarshphal && (
               <div>
                 <label htmlFor="target_year" className="block text-xs font-semibold text-ink-soft mb-1.5">
-                  लक्षित वर्ष (Target Year for Varshphal)
+                  {isEnglish ? "Target year for Varshphal" : "वर्षफल का लक्षित वर्ष"}
                 </label>
                 <input
                   id="target_year"
@@ -206,10 +190,10 @@ export default function PdfReportsClient({ locale }: { locale: Locale }) {
             <SubmitButton loading={loading}>
               {loading ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin" /> PDF संकलित हो रही है...
+                  <Loader2 className="w-4 h-4 animate-spin" /> {isEnglish ? "Compiling PDF..." : "PDF संकलित हो रही है..."}
                 </>
               ) : (
-                "PDF रिपोर्ट बनाएं"
+                isEnglish ? "Generate PDF report" : "PDF रिपोर्ट बनाएं"
               )}
             </SubmitButton>
           </form>
@@ -221,16 +205,16 @@ export default function PdfReportsClient({ locale }: { locale: Locale }) {
           {!jobStatus && !loading && !error && (
             <div className="bg-card rounded-2xl border border-line p-10 text-center text-ink-muted">
               <div className="text-4xl mb-3">📄</div>
-              <p className="text-sm">अपनी पसंद की विस्तृत वैदिक रिपोर्ट चुनें और प्रिंट-क्वालिटी हाई-रेज़ोल्यूशन PDF तैयार करें।</p>
+              <p className="text-sm">{isEnglish ? "Choose a detailed Vedic report and create a print-ready, high-resolution PDF." : "अपनी पसंद की विस्तृत वैदिक रिपोर्ट चुनें और प्रिंट-क्वालिटी PDF तैयार करें।"}</p>
             </div>
           )}
 
           {loading && (
             <div className="bg-card rounded-2xl border border-line p-12 text-center text-ink-soft flex flex-col items-center justify-center">
               <Loader2 className="w-10 h-10 text-accent animate-spin mb-4" />
-              <div className="text-base font-bold text-ink">PDF रेंडरिंग एवं संकलन जारी...</div>
+              <div className="text-base font-bold text-ink">{isEnglish ? "Rendering and compiling your PDF..." : "PDF रेंडरिंग एवं संकलन जारी..."}</div>
               <p className="text-xs text-ink-muted mt-2 max-w-sm">
-                स्थिति: {jobStatus === "PENDING" ? "प्रतीक्षा सूची में..." : "चार्ट, दशा चक्र एवं फलादेश पृष्ठ तैयार हो रहे हैं..."}
+                {isEnglish ? "Status: " : "स्थिति: "}{jobStatus === "PENDING" ? (isEnglish ? "Queued..." : "प्रतीक्षा सूची में...") : (isEnglish ? "Preparing charts, dashas, and interpretation pages..." : "चार्ट, दशा चक्र एवं फलादेश पृष्ठ तैयार हो रहे हैं...")}
               </p>
             </div>
           )}
@@ -241,9 +225,9 @@ export default function PdfReportsClient({ locale }: { locale: Locale }) {
                 <CheckCircle2 className="w-7 h-7" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-ink">आपकी PDF रिपोर्ट तैयार है!</h3>
+                <h3 className="text-lg font-bold text-ink">{isEnglish ? "Your PDF report is ready" : "आपकी PDF रिपोर्ट तैयार है!"}</h3>
                 <p className="text-xs text-ink-muted mt-1">
-                  दस्तावेज़ सफलतापूर्वक उत्पन्न हो गया है। नीचे दिए गए बटन से सीधे डाउनलोड करें।
+                  {isEnglish ? "The document was generated successfully. Download it below." : "दस्तावेज़ सफलतापूर्वक बन गया है। नीचे दिए गए बटन से डाउनलोड करें।"}
                 </p>
               </div>
               <button
@@ -251,7 +235,7 @@ export default function PdfReportsClient({ locale }: { locale: Locale }) {
                 onClick={handleDownload}
                 className="w-full py-3.5 px-6 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm transition shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2 cursor-pointer"
               >
-                <Download className="w-4 h-4" /> PDF रिपोर्ट डाउनलोड करें
+                <Download className="w-4 h-4" /> {isEnglish ? "Download PDF report" : "PDF रिपोर्ट डाउनलोड करें"}
               </button>
             </div>
           )}

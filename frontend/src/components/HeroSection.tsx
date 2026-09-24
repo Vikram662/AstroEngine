@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import Link from "next/link";
 import { useLocale } from "@/hooks/useLocale";
+import { getDictionary } from "@/dictionaries/dictionary";
 import { 
   Sparkles, 
   MapPin, 
@@ -15,11 +16,10 @@ import {
   ShieldCheck, 
   ChevronRight, 
   Bot, 
-  RotateCcw,
-  CheckCircle2,
-  X,
-  ExternalLink,
-  Flame
+  CheckCircle2, 
+  X, 
+  ExternalLink, 
+  Flame 
 } from "lucide-react";
 
 interface BirthData {
@@ -34,36 +34,57 @@ interface BirthData {
   lang: "hi" | "en";
 }
 
-const DEFAULT_BIRTH_DATA: BirthData = {
-  name: "राहुल शर्मा",
-  dob: "1998-05-15",
-  tob: "11:30",
-  cityName: "नई दिल्ली, भारत",
-  lat: 28.6139,
-  lon: 77.2090,
-  tz: 5.5,
-  gender: "male",
-  lang: "hi"
+const DEFAULT_BIRTH_DATA: Record<"hi" | "en", BirthData> = {
+  hi: {
+    name: "राहुल शर्मा",
+    dob: "1998-05-15",
+    tob: "11:30",
+    cityName: "नई दिल्ली, भारत",
+    lat: 28.6139,
+    lon: 77.2090,
+    tz: 5.5,
+    gender: "male",
+    lang: "hi"
+  },
+  en: {
+    name: "Rahul Sharma",
+    dob: "1998-05-15",
+    tob: "11:30",
+    cityName: "New Delhi, India",
+    lat: 28.6139,
+    lon: 77.2090,
+    tz: 5.5,
+    gender: "male",
+    lang: "en"
+  }
 };
 
 const POPULAR_CITIES = [
-  { name: "नई दिल्ली, भारत", lat: 28.6139, lon: 77.2090, tz: 5.5 },
-  { name: "मुंबई, भारत", lat: 19.0760, lon: 72.8777, tz: 5.5 },
-  { name: "बेंगलुरु, भारत", lat: 12.9716, lon: 77.5946, tz: 5.5 },
-  { name: "अहमदाबाद, भारत", lat: 23.0225, lon: 72.5714, tz: 5.5 },
-  { name: "जयपुर, भारत", lat: 26.9124, lon: 75.7873, tz: 5.5 },
-  { name: "वाराणसी, भारत", lat: 25.3176, lon: 82.9739, tz: 5.5 },
-  { name: "कोलकाता, भारत", lat: 22.5726, lon: 88.3639, tz: 5.5 },
-  { name: "लंदन, यूके", lat: 51.5074, lon: -0.1278, tz: 1.0 },
-  { name: "न्यूयॉर्क, यूएसए", lat: 40.7128, lon: -74.0060, tz: -4.0 }
+  { name: "नई दिल्ली, भारत", enName: "New Delhi, India", lat: 28.6139, lon: 77.2090, tz: 5.5 },
+  { name: "मुंबई, भारत", enName: "Mumbai, India", lat: 19.0760, lon: 72.8777, tz: 5.5 },
+  { name: "बेंगलुरु, भारत", enName: "Bengaluru, India", lat: 12.9716, lon: 77.5946, tz: 5.5 },
+  { name: "अहमदाबाद, भारत", enName: "Ahmedabad, India", lat: 23.0225, lon: 72.5714, tz: 5.5 },
+  { name: "जयपुर, भारत", enName: "Jaipur, India", lat: 26.9124, lon: 75.7873, tz: 5.5 },
+  { name: "वाराणसी, भारत", enName: "Varanasi, India", lat: 25.3176, lon: 82.9739, tz: 5.5 },
+  { name: "कोलकाता, भारत", enName: "Kolkata, India", lat: 22.5726, lon: 88.3639, tz: 5.5 },
+  { name: "लंदन, यूके", enName: "London, UK", lat: 51.5074, lon: -0.1278, tz: 1.0 },
+  { name: "न्यूयॉर्क, यूएसए", enName: "New York, USA", lat: 40.7128, lon: -74.0060, tz: -4.0 }
 ];
 
-const SUGGESTED_CHIPS = [
-  { q: "मेरी नौकरी में पदोन्नति कब होगी?", icon: "💼", cat: "career" },
-  { q: "विवाह के योग कब बन रहे हैं?", icon: "💍", cat: "marriage" },
-  { q: "आर्थिक लाभ और धन वृद्धि के योग?", icon: "💰", cat: "wealth" },
-  { q: "क्या विदेश यात्रा या पीआर के योग हैं?", icon: "✈️", cat: "foreign" }
-];
+const SUGGESTED_CHIPS = {
+  hi: [
+    { q: "मेरी नौकरी में पदोन्नति कब होगी?", icon: "💼", cat: "career" },
+    { q: "विवाह के योग कब बन रहे हैं?", icon: "💍", cat: "marriage" },
+    { q: "आर्थिक लाभ और धन वृद्धि के योग?", icon: "💰", cat: "wealth" },
+    { q: "क्या विदेश यात्रा या पीआर के योग हैं?", icon: "✈️", cat: "foreign" }
+  ],
+  en: [
+    { q: "When will I get a promotion in my job?", icon: "💼", cat: "career" },
+    { q: "When are the prospects for marriage favorable?", icon: "💍", cat: "marriage" },
+    { q: "Chances of financial growth & wealth gain?", icon: "💰", cat: "wealth" },
+    { q: "Are there opportunities for foreign travel / PR?", icon: "✈️", cat: "foreign" }
+  ]
+};
 
 interface ChatMessage {
   id: string;
@@ -75,10 +96,15 @@ interface ChatMessage {
 }
 
 export const HeroSection: React.FC = () => {
-  // ── Form State ──
   const locale = useLocale();
-  const [formData, setFormData] = useState<BirthData>(() => ({ ...DEFAULT_BIRTH_DATA, lang: locale }));
-  const [cityInput, setCityInput] = useState<string>(DEFAULT_BIRTH_DATA.cityName);
+  const [activeLang, setActiveLang] = useState<"hi" | "en">(locale);
+  const dict = getDictionary(activeLang);
+  const tHero = dict.hero;
+  const tFields = dict.birthDataFields;
+
+  // ── Form State ──
+  const [formData, setFormData] = useState<BirthData>(() => DEFAULT_BIRTH_DATA[locale] || DEFAULT_BIRTH_DATA.hi);
+  const [cityInput, setCityInput] = useState<string>(formData.cityName);
   const [cityDropdown, setCityDropdown] = useState<boolean>(false);
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searchingCity, setSearchingCity] = useState<boolean>(false);
@@ -94,12 +120,41 @@ export const HeroSection: React.FC = () => {
     {
       id: "init-1",
       sender: "bot",
-      text: "नमस्ते! मैं **आचार्य वेद AI** हूँ। आपकी जन्म कुंडली, वर्तमान महादशा और गोचर ग्रहों के आधार पर आपके किसी भी प्रश्न का सटीक उत्तर दे सकता हूँ। नीचे दिए गए किसी विषय पर क्लिक करें या अपना प्रश्न लिखें।",
-      timestamp: "अभी",
+      text: activeLang === "en" 
+        ? "Hello! I am **Acharya Ved AI**. Based on your Vedic horoscope, current Mahadasha, and planetary transits, I can provide precise astrological guidance. Click a topic below or type your question."
+        : "नमस्ते! मैं **आचार्य वेद AI** हूँ। आपकी जन्म कुंडली, वर्तमान महादशा और गोचर ग्रहों के आधार पर आपके किसी भी प्रश्न का सटीक उत्तर दे सकता हूँ। नीचे दिए गए किसी विषय पर क्लिक करें या अपना प्रश्न लिखें।",
+      timestamp: activeLang === "en" ? "Now" : "अभी",
       isInitial: true
     }
   ]);
   const chatScrollRef = useRef<HTMLDivElement>(null);
+
+  // Switch form data language
+  const handleLangChange = (newLang: "hi" | "en") => {
+    setActiveLang(newLang);
+    setFormData(prev => ({
+      ...prev,
+      lang: newLang,
+      name: prev.name === "Rahul Sharma" && newLang === "hi" ? "राहुल शर्मा" : prev.name === "राहुल शर्मा" && newLang === "en" ? "Rahul Sharma" : prev.name
+    }));
+    // If chat message is only initial, update it to chosen language
+    setChatMessages(prev => {
+      if (prev.length === 1 && prev[0].isInitial) {
+        return [
+          {
+            id: "init-1",
+            sender: "bot",
+            text: newLang === "en" 
+              ? "Hello! I am **Acharya Ved AI**. Based on your Vedic horoscope, current Mahadasha, and planetary transits, I can provide precise astrological guidance. Click a topic below or type your question."
+              : "नमस्ते! मैं **आचार्य वेद AI** हूँ। आपकी जन्म कुंडली, वर्तमान महादशा और गोचर ग्रहों के आधार पर आपके किसी भी प्रश्न का सटीक उत्तर दे सकता हूँ। नीचे दिए गए किसी विषय पर क्लिक करें या अपना प्रश्न लिखें।",
+            timestamp: newLang === "en" ? "Now" : "अभी",
+            isInitial: true
+          }
+        ];
+      }
+      return prev;
+    });
+  };
 
   // Auto-scroll chat on new message
   useEffect(() => {
@@ -118,7 +173,7 @@ export const HeroSection: React.FC = () => {
     }
     setSearchingCity(true);
     try {
-      const res = await axios.post("/api/demo/proxy", {
+      const res = await axios.post("/api/proxy", {
         endpoint: "/api/v1/core/geo/search",
         queryParams: { q: val.trim() },
         method: "GET"
@@ -127,16 +182,29 @@ export const HeroSection: React.FC = () => {
         setSearchResults(res.data.data.results);
         setCityDropdown(true);
       } else {
-        // Fallback filter
         const qL = val.toLowerCase();
-        const matches = POPULAR_CITIES.filter(c => c.name.toLowerCase().includes(qL));
-        setSearchResults(matches.map(c => ({ city: c.name, lat: c.lat, lon: c.lon, tz: c.tz })));
+        const matches = POPULAR_CITIES.filter(c => 
+          c.name.toLowerCase().includes(qL) || c.enName.toLowerCase().includes(qL)
+        );
+        setSearchResults(matches.map(c => ({ 
+          city: activeLang === "en" ? c.enName : c.name, 
+          lat: c.lat, 
+          lon: c.lon, 
+          tz: c.tz 
+        })));
         setCityDropdown(matches.length > 0);
       }
     } catch {
       const qL = val.toLowerCase();
-      const matches = POPULAR_CITIES.filter(c => c.name.toLowerCase().includes(qL));
-      setSearchResults(matches.map(c => ({ city: c.name, lat: c.lat, lon: c.lon, tz: c.tz })));
+      const matches = POPULAR_CITIES.filter(c => 
+        c.name.toLowerCase().includes(qL) || c.enName.toLowerCase().includes(qL)
+      );
+      setSearchResults(matches.map(c => ({ 
+        city: activeLang === "en" ? c.enName : c.name, 
+        lat: c.lat, 
+        lon: c.lon, 
+        tz: c.tz 
+      })));
       setCityDropdown(matches.length > 0);
     } finally {
       setSearchingCity(false);
@@ -174,20 +242,19 @@ export const HeroSection: React.FC = () => {
     };
 
     try {
-      // 1. Fetch D1 planetary & lagna positions
       const [d1Res, svgRes, planetsRes] = await Promise.all([
-        axios.post("/api/demo/proxy", {
+        axios.post("/api/proxy", {
           endpoint: "/api/v1/parashari/chart/d1",
           payload,
           method: "POST"
         }),
-        axios.post("/api/demo/proxy", {
+        axios.post("/api/proxy", {
           endpoint: "/api/v1/parashari/chart/svg",
           payload,
           queryParams: { varga: "D1", chart_style: "NORTH_INDIAN" },
           method: "POST"
         }, { responseType: "text" }),
-        axios.post("/api/demo/proxy", {
+        axios.post("/api/proxy", {
           endpoint: "/api/v1/core/planets/positions",
           payload,
           method: "POST"
@@ -238,14 +305,18 @@ export const HeroSection: React.FC = () => {
         lang: formData.lang
       };
 
-      const res = await axios.post("/api/demo/proxy", {
+      const res = await axios.post("/api/proxy", {
         endpoint: "/api/v1/ai-astrologer/ask",
         payload,
         method: "POST"
       });
 
       const responseData = res.data?.data;
-      const botText = responseData?.prediction_answer || "आपकी जन्मकुंडली के विश्लेषण के अनुसार यह योग अनुकूल है। विस्तृत जानकारी के लिए पूर्ण परामर्श देखें।";
+      const botText = responseData?.prediction_answer || (
+        activeLang === "en"
+          ? "According to your Vedic birth chart and planetary transits, this alignment is favorable. Refer to full consultation for deep remedies."
+          : "आपकी जन्मकुंडली के विश्लेषण के अनुसार यह योग अनुकूल है। विस्तृत जानकारी के लिए पूर्ण परामर्श देखें।"
+      );
 
       const botMsg: ChatMessage = {
         id: (Date.now() + 1).toString(),
@@ -260,14 +331,18 @@ export const HeroSection: React.FC = () => {
       const errorMsg: ChatMessage = {
         id: (Date.now() + 1).toString(),
         sender: "bot",
-        text: "क्षमा करें, सर्वर से विश्लेषण प्राप्त करने में अस्थायी त्रुटि हुई। कृपया पुनः प्रयास करें।",
-        timestamp: "अभी"
+        text: activeLang === "en" 
+          ? "Sorry, there was a temporary issue analyzing your chart. Please try again."
+          : "क्षमा करें, सर्वर से विश्लेषण प्राप्त करने में अस्थायी त्रुटि हुई। कृपया पुनः प्रयास करें।",
+        timestamp: activeLang === "en" ? "Now" : "अभी"
       };
       setChatMessages(prev => [...prev, errorMsg]);
     } finally {
       setChatLoading(false);
     }
   };
+
+  const chips = SUGGESTED_CHIPS[activeLang] || SUGGESTED_CHIPS.hi;
 
   return (
     <section className="relative overflow-hidden bg-surface py-12 lg:py-16 border-b border-line">
@@ -281,13 +356,13 @@ export const HeroSection: React.FC = () => {
         <div className="text-center max-w-3xl mx-auto mb-10">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent-soft border border-line text-ink-soft text-xs font-medium mb-3">
             <Flame className="w-3.5 h-3.5 text-accent animate-pulse" />
-            <span>वैदिक ज्योतिष शास्त्र एवं आधुनिक AI इंजन • 100% सटीक गणना</span>
+            <span>{tHero.badge}</span>
           </div>
           <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-ink tracking-tight leading-tight">
-            अपनी जन्म कुंडली जानें, <span className="font-display italic text-accent font-normal">सटीक भविष्यवाणियों</span> के साथ
+            {tHero.heading1} <span className="font-display italic text-accent font-normal">{tHero.headingAccent}</span> {tHero.heading2}
           </h1>
           <p className="mt-3 text-sm sm:text-base text-ink-soft max-w-2xl mx-auto">
-            पराशरी सिद्धांत, 120 वर्षीय विंशोत्तरी दशा एवं AI वैदिक आचार्य द्वारा अपने जीवन के महत्वपूर्ण प्रश्नों के तुरंत उत्तर पाएं।
+            {tHero.subheading}
           </p>
         </div>
 
@@ -298,23 +373,23 @@ export const HeroSection: React.FC = () => {
           <div className="lg:col-span-7 bg-card rounded-2xl p-6 sm:p-8 border border-line shadow-sm">
             <div className="flex items-center justify-between border-b border-line pb-4 mb-6">
               <div>
-                <span className="text-xs font-bold uppercase tracking-wider text-accent">निःशुल्क जन्म पत्रिका</span>
+                <span className="text-xs font-bold uppercase tracking-wider text-accent">{tHero.formBadge}</span>
                 <h2 className="text-xl sm:text-2xl font-bold text-ink flex items-center gap-2 mt-0.5">
-                  <span>अपनी कुंडली बनाएं (Read My Kundli)</span>
+                  <span>{tHero.formTitle}</span>
                 </h2>
               </div>
               <div className="flex items-center gap-2 bg-surface-alt p-1 rounded-lg border border-line text-xs">
                 <button
                   type="button"
-                  onClick={() => setFormData(p => ({ ...p, lang: "hi" }))}
-                  className={`px-2.5 py-1 rounded-md font-semibold transition ${formData.lang === "hi" ? "bg-accent text-white shadow-xs" : "text-ink-muted hover:text-ink"}`}
+                  onClick={() => handleLangChange("hi")}
+                  className={`px-2.5 py-1 rounded-md font-semibold transition ${activeLang === "hi" ? "bg-accent text-white shadow-xs" : "text-ink-muted hover:text-ink"}`}
                 >
                   हिन्दी
                 </button>
                 <button
                   type="button"
-                  onClick={() => setFormData(p => ({ ...p, lang: "en" }))}
-                  className={`px-2.5 py-1 rounded-md font-semibold transition ${formData.lang === "en" ? "bg-accent text-white shadow-xs" : "text-ink-muted hover:text-ink"}`}
+                  onClick={() => handleLangChange("en")}
+                  className={`px-2.5 py-1 rounded-md font-semibold transition ${activeLang === "en" ? "bg-accent text-white shadow-xs" : "text-ink-muted hover:text-ink"}`}
                 >
                   English
                 </button>
@@ -327,28 +402,28 @@ export const HeroSection: React.FC = () => {
                 <div className="sm:col-span-2">
                   <label className="block text-xs font-semibold text-ink-soft mb-1.5 flex items-center gap-1.5">
                     <User className="w-3.5 h-3.5 text-accent" />
-                    <span>पूरा नाम (Full Name)</span>
+                    <span>{tFields.fullName}</span>
                   </label>
                   <input
                     type="text"
                     required
                     value={formData.name}
                     onChange={e => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="उदा. राहुल शर्मा"
+                    placeholder={tFields.namePlaceholder}
                     className="w-full px-3.5 py-2.5 rounded-xl border border-line bg-surface text-ink text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition"
                   />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-ink-soft mb-1.5">
-                    लिंग (Gender)
+                    {tFields.gender}
                   </label>
                   <select
                     value={formData.gender}
                     onChange={e => setFormData({ ...formData, gender: e.target.value as any })}
                     className="w-full px-3 py-2.5 rounded-xl border border-line bg-surface text-ink text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition"
                   >
-                    <option value="male">पुरुष (Male)</option>
-                    <option value="female">महिला (Female)</option>
+                    <option value="male">{tFields.male}</option>
+                    <option value="female">{tFields.female}</option>
                   </select>
                 </div>
               </div>
@@ -358,7 +433,7 @@ export const HeroSection: React.FC = () => {
                 <div>
                   <label className="block text-xs font-semibold text-ink-soft mb-1.5 flex items-center gap-1.5">
                     <Calendar className="w-3.5 h-3.5 text-accent" />
-                    <span>जन्म तिथि (Date of Birth)</span>
+                    <span>{tFields.dob}</span>
                   </label>
                   <input
                     type="date"
@@ -371,7 +446,7 @@ export const HeroSection: React.FC = () => {
                 <div>
                   <label className="block text-xs font-semibold text-ink-soft mb-1.5 flex items-center gap-1.5">
                     <Clock className="w-3.5 h-3.5 text-accent" />
-                    <span>जन्म समय (Time of Birth - 24hr)</span>
+                    <span>{tFields.tob}</span>
                   </label>
                   <input
                     type="time"
@@ -388,11 +463,11 @@ export const HeroSection: React.FC = () => {
                 <label className="block text-xs font-semibold text-ink-soft mb-1.5 flex items-center justify-between">
                   <span className="flex items-center gap-1.5">
                     <MapPin className="w-3.5 h-3.5 text-accent" />
-                    <span>जन्म स्थान (Birth City / Location)</span>
+                    <span>{tFields.city}</span>
                   </span>
                   {searchingCity && (
                     <span className="text-[10px] text-accent flex items-center gap-1">
-                      <Loader2 className="w-3 h-3 animate-spin" /> खोज जारी...
+                      <Loader2 className="w-3 h-3 animate-spin" /> {tFields.searching}
                     </span>
                   )}
                 </label>
@@ -402,7 +477,7 @@ export const HeroSection: React.FC = () => {
                   value={cityInput}
                   onChange={e => handleCitySearch(e.target.value)}
                   onFocus={() => { if (searchResults.length > 0) setCityDropdown(true); }}
-                  placeholder="शहर का नाम लिखें (उदा. नई दिल्ली, मुंबई, जयपुर)..."
+                  placeholder={tFields.cityPlaceholder}
                   className="w-full px-3.5 py-2.5 rounded-xl border border-line bg-surface text-ink text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition"
                 />
 
@@ -438,12 +513,12 @@ export const HeroSection: React.FC = () => {
                   {kundliLoading ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>कुंडली तैयार हो रही है...</span>
+                      <span>{tHero.submitting}</span>
                     </>
                   ) : (
                     <>
                       <Sparkles className="w-4 h-4" />
-                      <span>तुरंत निःशुल्क कुंडली देखें (View Kundli Now)</span>
+                      <span>{tHero.submitButton}</span>
                       <ChevronRight className="w-4 h-4 ml-1" />
                     </>
                   )}
@@ -451,11 +526,11 @@ export const HeroSection: React.FC = () => {
                 <div className="flex items-center justify-center gap-4 mt-3 text-[11px] text-ink-muted">
                   <span className="flex items-center gap-1">
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>बिना लॉगिन instant परिणाम</span>
+                    <span>{tHero.freeInstant}</span>
                   </span>
                   <span className="flex items-center gap-1">
                     <ShieldCheck className="w-3.5 h-3.5 text-accent" />
-                    <span>100% डेटा गोपनीयता</span>
+                    <span>{tHero.privacyGuaranteed}</span>
                   </span>
                 </div>
               </div>
@@ -476,20 +551,20 @@ export const HeroSection: React.FC = () => {
                 </div>
                 <div>
                   <div className="flex items-center gap-1.5">
-                    <h3 className="font-bold text-sm text-ink leading-tight">आचार्य वेद AI</h3>
+                    <h3 className="font-bold text-sm text-ink leading-tight">{tHero.aiHeaderTitle}</h3>
                     <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-100 text-emerald-800">
-                      LIVE ONLINE
+                      {tHero.aiLiveBadge}
                     </span>
                   </div>
                   <p className="text-[11px] text-ink-muted leading-tight">
-                    वैदिक AI ज्योतिषी • D1 + गोचर + दशा
+                    {tHero.aiHeaderSubtitle}
                   </p>
                 </div>
               </div>
 
               <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-card border border-line text-[10px] text-ink-soft">
                 <ShieldCheck className="w-3 h-3 text-accent" />
-                <span>100% Private</span>
+                <span>{tHero.aiPrivate}</span>
               </div>
             </div>
 
@@ -527,7 +602,7 @@ export const HeroSection: React.FC = () => {
                   </div>
                   <div className="bg-card border border-line rounded-2xl px-3 py-2 flex items-center gap-1.5">
                     <Loader2 className="w-3.5 h-3.5 animate-spin text-accent" />
-                    <span>ग्रहों का गणित और समाधान तैयार हो रहा है...</span>
+                    <span>{tHero.calculatingAi}</span>
                   </div>
                 </div>
               )}
@@ -536,7 +611,7 @@ export const HeroSection: React.FC = () => {
             {/* Suggested Chips */}
             <div className="px-4 py-2.5 border-t border-line/60 bg-surface-alt/40">
               <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
-                {SUGGESTED_CHIPS.map((chip, i) => (
+                {chips.map((chip, i) => (
                   <button
                     key={i}
                     type="button"
@@ -564,7 +639,7 @@ export const HeroSection: React.FC = () => {
                   type="text"
                   value={chatInput}
                   onChange={e => setChatInput(e.target.value)}
-                  placeholder="अपना प्रश्न पूछें (उदा. क्या यह वर्ष नौकरी के लिए शुभ है?)..."
+                  placeholder={tHero.aiInputPlaceholder}
                   className="flex-1 px-3 py-2 rounded-xl border border-line bg-surface text-ink text-xs focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent"
                 />
                 <button
@@ -591,9 +666,9 @@ export const HeroSection: React.FC = () => {
             {/* Modal Header */}
             <div className="p-4 sm:p-5 border-b border-line bg-surface-alt flex items-center justify-between">
               <div>
-                <span className="text-[11px] font-bold uppercase tracking-wider text-accent">वैदिक जन्म पत्रिका (D1 Lagna Chart)</span>
+                <span className="text-[11px] font-bold uppercase tracking-wider text-accent">{tHero.modalTitle}</span>
                 <h3 className="text-lg sm:text-xl font-bold text-ink">
-                  {formData.name} की जन्म कुंडली
+                  {formData.name} {tHero.modalKundliOf}
                 </h3>
               </div>
               <button
@@ -609,31 +684,31 @@ export const HeroSection: React.FC = () => {
               {kundliLoading ? (
                 <div className="py-16 text-center space-y-3">
                   <Loader2 className="w-8 h-8 animate-spin text-accent mx-auto" />
-                  <p className="text-sm font-semibold text-ink">स्विस एफिमेरिस द्वारा उच्च-सटीक लग्न एवं ग्रह गणना जारी है...</p>
-                  <p className="text-xs text-ink-muted">स्थान: {formData.cityName} • अक्षांश: {formData.lat}°</p>
+                  <p className="text-sm font-semibold text-ink">{tHero.modalCalculating}</p>
+                  <p className="text-xs text-ink-muted">{tHero.modalLocation}: {formData.cityName} • {tHero.modalLatitude}: {formData.lat}°</p>
                 </div>
               ) : (
                 <>
                   {/* Birth Metadata Bar */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-surface p-3.5 rounded-xl border border-line text-xs">
                     <div>
-                      <span className="text-ink-muted block text-[10px]">जन्म तिथि व समय</span>
+                      <span className="text-ink-muted block text-[10px]">{tHero.modalDobTob}</span>
                       <span className="font-semibold text-ink">{formData.dob}, {formData.tob}</span>
                     </div>
                     <div>
-                      <span className="text-ink-muted block text-[10px]">स्थान</span>
+                      <span className="text-ink-muted block text-[10px]">{tHero.modalPlace}</span>
                       <span className="font-semibold text-ink truncate block">{formData.cityName}</span>
                     </div>
                     <div>
-                      <span className="text-ink-muted block text-[10px]">लग्न (Ascendant)</span>
+                      <span className="text-ink-muted block text-[10px]">{tHero.modalLagna}</span>
                       <span className="font-bold text-accent">
-                        {kundliResult?.d1?.ascendant?.sign?.name || "मेष (Aries)"}
+                        {kundliResult?.d1?.ascendant?.sign?.name || (activeLang === "en" ? "Aries" : "मेष")}
                       </span>
                     </div>
                     <div>
-                      <span className="text-ink-muted block text-[10px]">चंद्र राशि (Moon Sign)</span>
+                      <span className="text-ink-muted block text-[10px]">{tHero.modalMoonSign}</span>
                       <span className="font-bold text-accent">
-                        {kundliResult?.planets?.find((p: any) => p.id === "MOON")?.sign?.name || "वृषभ (Taurus)"}
+                        {kundliResult?.planets?.find((p: any) => p.id === "MOON")?.sign?.name || (activeLang === "en" ? "Taurus" : "वृषभ")}
                       </span>
                     </div>
                   </div>
@@ -647,7 +722,7 @@ export const HeroSection: React.FC = () => {
                       />
                     ) : (
                       <div className="h-64 flex items-center justify-center text-xs text-ink-muted">
-                        चार्ट रेंडर हो रहा है...
+                        {tHero.modalChartRendering}
                       </div>
                     )}
                   </div>
@@ -655,14 +730,14 @@ export const HeroSection: React.FC = () => {
                   {/* Deep link into full Calculator */}
                   <div className="bg-accent-soft p-4 rounded-2xl border border-accent/30 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
                     <div>
-                      <h4 className="font-bold text-sm text-ink">संपूर्ण 16 वर्गीय कुंडलियां एवं विंशोत्तरी दशा देखें</h4>
-                      <p className="text-xs text-ink-soft mt-0.5">D9 नवांश, महादशा क्रम, अष्टकवर्ग, योग एवं उपाय</p>
+                      <h4 className="font-bold text-sm text-ink">{tHero.modalBannerTitle}</h4>
+                      <p className="text-xs text-ink-soft mt-0.5">{tHero.modalBannerSubtitle}</p>
                     </div>
                     <Link
-                      href="/calculators/lagna-kundli"
+                      href={activeLang === "en" ? "/en/calculators/lagna-kundli" : "/calculators/lagna-kundli"}
                       className="px-4 py-2 rounded-xl bg-accent hover:bg-accent-hover text-white font-bold text-xs transition flex items-center gap-1.5 shrink-0 shadow-xs"
                     >
-                      <span>पूर्ण कुंडली पेज खोलें</span>
+                      <span>{tHero.modalOpenFullKundli}</span>
                       <ExternalLink className="w-3.5 h-3.5" />
                     </Link>
                   </div>

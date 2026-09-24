@@ -30,7 +30,7 @@ export default function CoreNumerologyClient({ locale }: { locale: Locale }) {
     };
 
     try {
-      const res = await axios.post("/api/demo/proxy", {
+      const res = await axios.post("/api/proxy", {
         endpoint: "/api/v1/numerology/core-numbers",
         payload,
         queryParams: name ? { name } : null,
@@ -93,7 +93,7 @@ export default function CoreNumerologyClient({ locale }: { locale: Locale }) {
             <div>
               <label htmlFor="user_name" className="block text-xs font-semibold text-ink-soft mb-1.5 flex items-center gap-1.5">
                 <User className="w-3.5 h-3.5 text-accent" />
-                <span>पूरा नाम (Full Name)</span>
+                <span>{lang === "en" ? "Full Name" : "पूरा नाम"}</span>
               </label>
               <input
                 id="user_name"
@@ -101,7 +101,7 @@ export default function CoreNumerologyClient({ locale }: { locale: Locale }) {
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="उदा. आदित्य शर्मा"
+                placeholder={lang === "en" ? "e.g. Aditya Sharma" : "उदा. आदित्य शर्मा"}
                 className="w-full px-3.5 py-2.5 rounded-xl border border-line bg-surface text-ink text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition"
               />
             </div>
@@ -109,7 +109,7 @@ export default function CoreNumerologyClient({ locale }: { locale: Locale }) {
             <div>
               <label htmlFor="user_dob" className="block text-xs font-semibold text-ink-soft mb-1.5 flex items-center gap-1.5">
                 <Calendar className="w-3.5 h-3.5 text-accent" />
-                <span>जन्म तिथि (Date of Birth)</span>
+                <span>{lang === "en" ? "Date of Birth" : "जन्म तिथि"}</span>
               </label>
               <input
                 id="user_dob"

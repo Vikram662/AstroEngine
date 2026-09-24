@@ -51,7 +51,7 @@ export default function NadiExceptionsClient({ locale }: { locale: Locale }) {
     };
 
     try {
-      const res = await axios.post("/api/demo/proxy", {
+      const res = await axios.post("/api/proxy", {
         endpoint: "/api/v1/dosha-matching/matchmaking/exceptions",
         payload,
         method: "POST",

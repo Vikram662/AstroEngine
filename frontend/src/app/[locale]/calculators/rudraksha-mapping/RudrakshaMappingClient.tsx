@@ -30,7 +30,7 @@ export default function RudrakshaMappingClient({ locale }: { locale: Locale }) {
     };
 
     try {
-      const res = await axios.post("/api/demo/proxy", {
+      const res = await axios.post("/api/proxy", {
         endpoint: "/api/v1/remedies/rudraksha",
         payload,
         method: "POST",

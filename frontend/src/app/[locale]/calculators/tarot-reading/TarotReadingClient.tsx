@@ -34,7 +34,7 @@ export default function TarotReadingClient({ locale }: { locale: Locale }) {
     }
 
     try {
-      const res = await axios.post("/api/demo/proxy", {
+      const res = await axios.post("/api/proxy", {
         endpoint,
         payload,
         method: "POST",

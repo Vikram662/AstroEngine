@@ -33,13 +33,13 @@ export default function NavamshaD9Client({ locale }: { locale: Locale }) {
 
     try {
       const [resData, resSvg, resD1] = await Promise.all([
-        axios.post("/api/demo/proxy", {
+        axios.post("/api/proxy", {
           endpoint: "/api/v1/parashari/chart/d9",
           payload,
           method: "POST",
         }),
         axios.post(
-          "/api/demo/proxy",
+          "/api/proxy",
           {
             endpoint: "/api/v1/parashari/chart/svg",
             payload,
@@ -48,7 +48,7 @@ export default function NavamshaD9Client({ locale }: { locale: Locale }) {
           },
           { responseType: "text" }
         ),
-        axios.post("/api/demo/proxy", {
+        axios.post("/api/proxy", {
           endpoint: "/api/v1/parashari/chart/d1",
           payload,
           method: "POST",

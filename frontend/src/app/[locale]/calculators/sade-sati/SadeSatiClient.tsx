@@ -32,12 +32,12 @@ export default function SadeSatiClient({ locale }: { locale: Locale }) {
 
     try {
       const [resStatus, resTimeline] = await Promise.all([
-        axios.post("/api/demo/proxy", {
+        axios.post("/api/proxy", {
           endpoint: "/api/v1/dosha-matching/sade-sati/status",
           payload,
           method: "POST",
         }),
-        axios.post("/api/demo/proxy", {
+        axios.post("/api/proxy", {
           endpoint: "/api/v1/dosha-matching/sade-sati/timeline",
           payload,
           method: "POST",

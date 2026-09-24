@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import axios from "axios";
+import axios, { type AxiosRequestConfig } from "axios";
 
 const BACKEND_URL = (process.env.ASTRO_BACKEND_URL || "http://127.0.0.1:8000").replace(/\/$/, "");
 const INTERNAL_API_KEY = process.env.ASTRO_INTERNAL_API_KEY;
@@ -7,7 +7,7 @@ const INTERNAL_API_KEY = process.env.ASTRO_INTERNAL_API_KEY;
 // Rate limiting map: IP -> timestamp array
 const ipHits = new Map<string, number[]>();
 const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
-const MAX_REQUESTS_PER_WINDOW = 3000; // 3000 req/min (Enterprise-level throughput for Live Demo App)
+const MAX_REQUESTS_PER_WINDOW = 3000; // 3000 req/min for calculator traffic
 
 function isRateLimited(ip: string): boolean {
   const now = Date.now();
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
         {
           status: "error",
           code: "RATE_LIMIT_EXCEEDED",
-          message: "Demo App rate limit exceeded. Please wait a moment before trying again."
+          message: "Calculator rate limit exceeded. Please wait a moment before trying again."
         },
         { status: 429 }
       );
@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
 
     // Forward request to FastAPI backend securely using INTERNAL_API_KEY
     // The browser never receives this key
-    const axiosConfig: any = {
+    const axiosConfig: AxiosRequestConfig = {
       method: method.toUpperCase(),
       url: targetUrl.toString(),
       headers: {
@@ -102,11 +102,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(response.data, { status: response.status });
   } catch (err: unknown) {
-    const error = err as any;
-    const status = error.response?.status || 500;
-    const data = error.response?.data || {
+    const status = axios.isAxiosError(err) ? (err.response?.status || 500) : 500;
+    const data = (axios.isAxiosError(err) && err.response?.data) || {
       status: "error",
-      message: error.message || "Failed to execute astrology engine calculation."
+      message: err instanceof Error ? err.message : "Failed to execute astrology engine calculation."
     };
 
     return NextResponse.json(data, { status });
@@ -158,10 +157,10 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ status: "error", message: "Missing required params." }, { status: 400 });
   } catch (err: unknown) {
-    const error = err as any;
+    const status = axios.isAxiosError(err) ? (err.response?.status || 500) : 500;
     return NextResponse.json({
       status: "error",
-      message: error.message || "Proxy GET failed."
-    }, { status: error.response?.status || 500 });
+      message: err instanceof Error ? err.message : "Proxy GET failed."
+    }, { status });
   }
 }

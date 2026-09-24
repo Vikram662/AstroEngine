@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import { MapPin, Calendar, Clock, User, Loader2 } from "lucide-react";
 import { useDictionary } from "@/hooks/useDictionary";
@@ -27,6 +27,23 @@ export const DEFAULT_BIRTH_DATA: BirthDataValue = {
   tz: 5.5,
 };
 
+const PROFILE_STORAGE_KEY = "astroengine.birth-profile.v1";
+
+const isBirthDataValue = (candidate: unknown): candidate is BirthDataValue => {
+  if (!candidate || typeof candidate !== "object") return false;
+  const value = candidate as Partial<BirthDataValue>;
+  return (
+    typeof value.name === "string" &&
+    (value.gender === "male" || value.gender === "female") &&
+    typeof value.dob === "string" &&
+    typeof value.tob === "string" &&
+    typeof value.cityName === "string" &&
+    Number.isFinite(value.lat) &&
+    Number.isFinite(value.lon) &&
+    Number.isFinite(value.tz)
+  );
+};
+
 const POPULAR_CITIES = [
   { name: "नई दिल्ली, भारत", lat: 28.6139, lon: 77.209, tz: 5.5 },
   { name: "मुंबई, भारत", lat: 19.076, lon: 72.8777, tz: 5.5 },
@@ -38,6 +55,14 @@ const POPULAR_CITIES = [
   { name: "लंदन, यूके", lat: 51.5074, lon: -0.1278, tz: 1.0 },
   { name: "न्यूयॉर्क, यूएसए", lat: 40.7128, lon: -74.006, tz: -4.0 },
 ];
+
+interface CityResult {
+  city?: string;
+  name?: string;
+  lat: number | string;
+  lon: number | string;
+  tz?: number | string;
+}
 
 interface Props {
   value: BirthDataValue;
@@ -64,8 +89,45 @@ export const BirthDataFields: React.FC<Props> = ({
 }) => {
   const t = useDictionary().birthDataFields;
   const [cityDropdown, setCityDropdown] = useState(false);
-  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searchResults, setSearchResults] = useState<CityResult[]>([]);
   const [searchingCity, setSearchingCity] = useState(false);
+  const profileReady = useRef(false);
+  const skipNextPersist = useRef(true);
+  // Secondary people (bride/partner) must not overwrite the visitor's primary
+  // profile. Every normal calculator uses the empty/default prefix.
+  const sharesPrimaryProfile = idPrefix === "" || idPrefix === "p1_";
+
+  useEffect(() => {
+    if (!sharesPrimaryProfile) return;
+    try {
+      const saved = window.localStorage.getItem(PROFILE_STORAGE_KEY);
+      if (saved) {
+        const parsed: unknown = JSON.parse(saved);
+        if (isBirthDataValue(parsed)) onChange(parsed);
+      }
+    } catch {
+      // Storage may be unavailable in private browsing; the form still works.
+    } finally {
+      profileReady.current = true;
+    }
+    // Hydrate once per mounted form. onChange is intentionally not a dependency.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sharesPrimaryProfile]);
+
+  useEffect(() => {
+    if (!sharesPrimaryProfile || !profileReady.current) return;
+    // The mount-time value is the page default. Do not let it overwrite a saved
+    // profile before the hydration state update has rendered.
+    if (skipNextPersist.current) {
+      skipNextPersist.current = false;
+      return;
+    }
+    try {
+      window.localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(value));
+    } catch {
+      // Keep calculator submission usable even when storage is blocked/full.
+    }
+  }, [sharesPrimaryProfile, value]);
 
   const handleCitySearch = async (val: string) => {
     onChange({ ...value, cityName: val });
@@ -76,7 +138,7 @@ export const BirthDataFields: React.FC<Props> = ({
     }
     setSearchingCity(true);
     try {
-      const res = await axios.post("/api/demo/proxy", {
+      const res = await axios.post("/api/proxy", {
         endpoint: "/api/v1/core/geo/search",
         queryParams: { q: val.trim() },
         method: "GET",
@@ -100,10 +162,10 @@ export const BirthDataFields: React.FC<Props> = ({
     }
   };
 
-  const selectCity = (c: any) => {
+  const selectCity = (c: CityResult) => {
     onChange({
       ...value,
-      cityName: c.city || c.name,
+      cityName: c.city || c.name || value.cityName,
       lat: Number(c.lat),
       lon: Number(c.lon),
       tz: Number(c.tz ?? 5.5),

@@ -2,23 +2,38 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { CALCULATOR_TOOLS, CalculatorTool } from "@/data/calculatorsData";
+import { CALCULATOR_TOOLS } from "@/data/calculatorsData";
+import { useLocale } from "@/hooks/useLocale";
+import { getDictionary } from "@/dictionaries/dictionary";
+import { isMigratedPath } from "@/lib/locale";
 import { 
   Sparkles, 
   ArrowUpRight, 
-  Filter, 
   Search, 
-  Flame, 
   ChevronRight,
   Compass
 } from "lucide-react";
 
 export const CalculatorsSection: React.FC = () => {
+  const locale = useLocale();
+  const dict = getDictionary(locale);
+  const t = dict.calculators;
+
   const [activeCategory, setActiveCategory] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState<string>("");
 
-  const categories = [
-    { id: "all", label: "सभी 24 कैलकुलेटर (All Tools)" },
+  const categories = locale === "en" ? [
+    { id: "all", label: "All 24 Tools" },
+    { id: "kundli", label: "Kundli & Planets" },
+    { id: "dosha", label: "Dosha & Transit" },
+    { id: "matching", label: "Matchmaking" },
+    { id: "dasha", label: "Dasha & Timelines" },
+    { id: "panchang", label: "Panchang & Muhurat" },
+    { id: "numerology", label: "Numerology" },
+    { id: "remedies", label: "Remedies & Lal Kitab" },
+    { id: "advanced", label: "Special Yogas" },
+  ] : [
+    { id: "all", label: "सभी 24 कैलकुलेटर" },
     { id: "kundli", label: "कुंडली एवं ग्रह" },
     { id: "dosha", label: "दोष एवं गोचर" },
     { id: "matching", label: "कुंडली मिलान" },
@@ -38,6 +53,13 @@ export const CalculatorsSection: React.FC = () => {
     return matchesCategory && matchesSearch;
   });
 
+  const getToolHref = (href: string) => {
+    if (locale === "en" && isMigratedPath(href)) {
+      return `/en${href}`;
+    }
+    return href;
+  };
+
   return (
     <section id="calculators" className="py-16 sm:py-20 bg-surface border-b border-line scroll-mt-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -47,13 +69,13 @@ export const CalculatorsSection: React.FC = () => {
           <div>
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-accent-soft border border-line text-accent text-xs font-semibold mb-3">
               <Compass className="w-3.5 h-3.5" />
-              <span>वैदिक एवं पराशरी कैलकुलेटर संकलन</span>
+              <span>{t.sectionBadge}</span>
             </div>
             <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-ink tracking-tight">
-              निःशुल्क वैदिक कैलकुलेटर <span className="font-display italic text-accent font-normal">(Free Vedic Tools)</span>
+              {t.sectionTitle}
             </h2>
             <p className="mt-2 text-xs sm:text-sm text-ink-soft max-w-2xl leading-relaxed">
-              दैनिक जीवन, करियर, विवाह, शुभ मुहूर्त और भाग्योदय के लिए 24 शास्त्रीय ज्योतिषीय टूल्स — तुरंत सटीक परिणाम पाएं।
+              {t.sectionSubtitle}
             </p>
           </div>
 
@@ -64,7 +86,7 @@ export const CalculatorsSection: React.FC = () => {
               type="text"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              placeholder="कैलकुलेटर खोजें (उदा. मांगलिक, दशा)..."
+              placeholder={t.searchPlaceholder}
               className="w-full pl-9 pr-3.5 py-2.5 rounded-xl border border-line bg-card text-ink text-xs focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition"
             />
           </div>
@@ -92,7 +114,7 @@ export const CalculatorsSection: React.FC = () => {
           {filteredTools.map(tool => (
             <Link
               key={tool.id}
-              href={tool.href}
+              href={getToolHref(tool.href)}
               className="group relative bg-card rounded-2xl p-5 border border-line hover:border-accent/40 hover:shadow-md transition-all duration-200 flex flex-col justify-between"
             >
               <div>
@@ -113,16 +135,10 @@ export const CalculatorsSection: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Card Titles */}
-                <span className="text-[10px] font-bold uppercase tracking-wider text-accent block mb-1">
-                  {tool.categoryLabel}
-                </span>
+                {/* Card Titles: Clean single language */}
                 <h3 className="font-bold text-sm sm:text-base text-ink group-hover:text-accent transition-colors leading-snug">
-                  {tool.hindiTitle}
+                  {locale === "en" ? tool.title : tool.hindiTitle}
                 </h3>
-                <span className="text-[11px] font-medium text-ink-muted block mt-0.5">
-                  {tool.title}
-                </span>
 
                 {/* Description */}
                 <p className="mt-2.5 text-xs text-ink-soft leading-relaxed line-clamp-2">
@@ -132,7 +148,7 @@ export const CalculatorsSection: React.FC = () => {
 
               {/* Card Footer CTA */}
               <div className="mt-4 pt-3 border-t border-line/60 flex items-center justify-between text-[11px] font-semibold text-accent group-hover:text-accent-hover transition-colors">
-                <span>गणना करें (Calculate)</span>
+                <span>{t.calculateCta}</span>
                 <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
               </div>
             </Link>
@@ -142,13 +158,13 @@ export const CalculatorsSection: React.FC = () => {
         {/* Empty state when search produces no results */}
         {filteredTools.length === 0 && (
           <div className="text-center py-16 bg-card rounded-2xl border border-line">
-            <p className="text-sm font-semibold text-ink">कोई कैलकुलेटर नहीं मिला</p>
-            <p className="text-xs text-ink-muted mt-1">कृपया कोई दूसरा शब्द खोजें या सभी टूल्स देखें।</p>
+            <p className="text-sm font-semibold text-ink">{t.notFound}</p>
+            <p className="text-xs text-ink-muted mt-1">{t.notFoundDesc}</p>
             <button
               onClick={() => { setSearchQuery(""); setActiveCategory("all"); }}
               className="mt-4 px-4 py-2 rounded-xl bg-accent text-white text-xs font-semibold"
             >
-              सभी 24 टूल्स देखें
+              {t.viewAll}
             </button>
           </div>
         )}
@@ -160,15 +176,15 @@ export const CalculatorsSection: React.FC = () => {
               <Sparkles className="w-5 h-5" />
             </div>
             <div>
-              <h4 className="font-bold text-sm text-ink">क्या आप सभी 135+ ज्योतिषीय गणनाओं का लाइव इंटरफ़ेस देखना चाहते हैं?</h4>
-              <p className="text-xs text-ink-soft">D1 से D60 षोडशवर्ग, 5-स्तरीय विंशोत्तरी दशा एवं अष्टकवर्ग का पूरा सूट उपलब्ध है।</p>
+              <h4 className="font-bold text-sm text-ink">{t.bottomBannerTitle}</h4>
+              <p className="text-xs text-ink-soft">{t.bottomBannerSubtitle}</p>
             </div>
           </div>
           <Link
-            href="/demo"
+            href={locale === "en" ? "/en/calculators/lagna-kundli" : "/calculators/lagna-kundli"}
             className="px-5 py-2.5 rounded-xl bg-accent hover:bg-accent-hover text-white font-bold text-xs transition flex items-center gap-1.5 shrink-0 shadow-xs"
           >
-            <span>लाइव डेमो कंसोल खोलें</span>
+            <span>{locale === "en" ? "Start with your birth chart" : "अपनी जन्म कुंडली से शुरू करें"}</span>
             <ChevronRight className="w-4 h-4" />
           </Link>
         </div>

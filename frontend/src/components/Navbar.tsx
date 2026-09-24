@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import axios from "axios";
-import { ArrowRight, ChevronDown, Sparkles, X } from "lucide-react";
+import { ChevronDown, Sparkles, X } from "lucide-react";
 import { useLocale } from "@/hooks/useLocale";
 import { isMigratedPath, getHindiPath } from "@/lib/locale";
 
@@ -151,7 +151,7 @@ const InfoTicker = () => {
             <span className="text-white/50">Rahu Kaal:</span> {formatHM(data.rahu_kaal.start)}–{formatHM(data.rahu_kaal.end)}
           </span>
         )}
-        <Link href="/demo?tab=panchang" className="ml-auto shrink-0 text-accent-soft hover:text-white transition font-medium">
+        <Link href="/calculators/daily-panchang" className="ml-auto shrink-0 text-accent-soft hover:text-white transition font-medium">
           Full Panchang →
         </Link>
       </div>
@@ -276,9 +276,6 @@ export const Navbar = () => {
             <span className="font-brand font-semibold text-sm tracking-tight text-ink">
               {companyName}
             </span>
-            <span className="text-[11px] font-mono text-ink-muted bg-surface-alt px-1.5 py-0.5 rounded border border-line">
-              API v1
-            </span>
           </Link>
 
           <nav className="hidden md:flex items-center gap-1 text-xs font-medium text-ink-soft font-brand">
@@ -299,21 +296,27 @@ export const Navbar = () => {
                     </button>
                     {openGroup === group.label && (
                       <div className="absolute left-0 top-full mt-1 w-64 bg-card border border-line rounded-lg shadow-lg py-1.5 z-50">
-                        {group.items.map((item) => (
-                          <Link
-                            key={item.href}
-                            href={item.href}
-                            onClick={() => setOpenGroup(null)}
-                            className="block px-3.5 py-2 text-xs text-ink-soft hover:text-ink hover:bg-surface-alt transition"
-                          >
-                            {item.label}
-                          </Link>
-                        ))}
+                        {group.items.map((item) => {
+                          const targetHref = locale === "en" && isMigratedPath(item.href) ? `/en${item.href}` : item.href;
+                          return (
+                            <Link
+                              key={item.href}
+                              href={targetHref}
+                              onClick={() => setOpenGroup(null)}
+                              className="block px-3.5 py-2 text-xs text-ink-soft hover:text-ink hover:bg-surface-alt transition"
+                            >
+                              {item.label}
+                            </Link>
+                          );
+                        })}
                       </div>
                     )}
                   </>
                 ) : (
-                  <Link href={group.href!} className="block px-3 py-2 rounded-md hover:text-ink hover:bg-surface-alt transition">
+                  <Link 
+                    href={locale === "en" && isMigratedPath(group.href!) ? `/en${group.href}` : group.href!} 
+                    className="block px-3 py-2 rounded-md hover:text-ink hover:bg-surface-alt transition"
+                  >
                     {group.label}
                   </Link>
                 )}
@@ -325,37 +328,22 @@ export const Navbar = () => {
             <Link href="/pricing" className="px-3 py-2 rounded-md hover:text-ink hover:bg-surface-alt transition">
               Pricing
             </Link>
-            <a
-              href={`${process.env.NEXT_PUBLIC_ASTRO_ENGINE_URL}/documentation`}
-              target="_blank"
-              rel="noreferrer"
-              className="px-3 py-2 rounded-md hover:text-ink hover:bg-surface-alt transition"
-            >
-              API Reference
-            </a>
           </nav>
 
           <div className="flex items-center gap-3">
             <LanguageSwitcher />
             <Link
-              href="/demo"
+              href={locale === "en" ? "/en/#calculators" : "/#calculators"}
               className="hidden lg:flex items-center gap-1 text-xs font-semibold text-accent hover:text-accent-hover transition"
             >
               <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse"></span>
-              Live App Demo
+              Calculators
             </Link>
             <Link
               href="/login"
               className="text-xs px-3 py-1.5 rounded-md text-ink-soft hover:text-ink hover:bg-surface-alt transition font-medium"
             >
               Sign in
-            </Link>
-            <Link
-              href="/dashboard"
-              className="text-xs px-3.5 py-1.5 rounded-md bg-ink hover:bg-black text-white font-medium transition flex items-center gap-1.5 shadow-sm"
-            >
-              <span>Console</span>
-              <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
         </div>

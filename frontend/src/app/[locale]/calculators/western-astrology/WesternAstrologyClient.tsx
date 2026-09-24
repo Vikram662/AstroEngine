@@ -32,13 +32,13 @@ export default function WesternAstrologyClient({ locale }: { locale: Locale }) {
 
     try {
       const [resData, resSvg] = await Promise.all([
-        axios.post("/api/demo/proxy", {
+        axios.post("/api/proxy", {
           endpoint: "/api/v1/western/big-three",
           payload,
           method: "POST",
         }),
         axios.post(
-          "/api/demo/proxy",
+          "/api/proxy",
           {
             endpoint: "/api/v1/western/chart/wheel-svg",
             payload,

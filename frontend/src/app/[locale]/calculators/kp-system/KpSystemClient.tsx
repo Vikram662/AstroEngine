@@ -32,12 +32,12 @@ export default function KpSystemClient({ locale }: { locale: Locale }) {
 
     try {
       const [resPlanets, resCusps] = await Promise.all([
-        axios.post("/api/demo/proxy", {
+        axios.post("/api/proxy", {
           endpoint: "/api/v1/kp/planets",
           payload,
           method: "POST",
         }),
-        axios.post("/api/demo/proxy", {
+        axios.post("/api/proxy", {
           endpoint: "/api/v1/kp/cusps",
           payload,
           method: "POST",

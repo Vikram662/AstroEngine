@@ -19,6 +19,9 @@ import {
   Compass
 } from "lucide-react";
 
+import { useLocale } from "@/hooks/useLocale";
+import { getDictionary } from "@/dictionaries/dictionary";
+
 function formatHM(hms?: string): string {
   if (!hms) return "--:--";
   const [h, m] = hms.split(":");
@@ -32,6 +35,9 @@ export const PanchangWidget: React.FC = () => {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [activeTab, setActiveTab] = useState<"muhurat" | "choghadiya">("muhurat");
+  const locale = useLocale();
+  const dict = getDictionary(locale);
+  const t = dict.panchang;
 
   useEffect(() => {
     axios.get("/api/panchang/today")
@@ -44,7 +50,7 @@ export const PanchangWidget: React.FC = () => {
       .finally(() => setLoading(false));
   }, []);
 
-  const todayDateStr = new Date().toLocaleDateString("hi-IN", {
+  const todayDateStr = new Date().toLocaleDateString(locale === "en" ? "en-US" : "hi-IN", {
     weekday: "long",
     year: "numeric",
     month: "long",
@@ -60,13 +66,13 @@ export const PanchangWidget: React.FC = () => {
           <div>
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-accent-soft border border-line text-accent text-xs font-semibold mb-3">
               <Sun className="w-3.5 h-3.5 text-accent animate-spin-slow" />
-              <span>प्रत्यक्ष वैदिक दैनिक पंचांग • नई दिल्ली संदर्भ</span>
+              <span>{t.badge}</span>
             </div>
             <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-ink tracking-tight">
-              आज का पंचांग एवं शुभ मुहूर्त <span className="font-display italic text-accent font-normal">(Today&apos;s Panchang)</span>
+              {t.title}
             </h2>
             <p className="mt-2 text-xs sm:text-sm text-ink-soft max-w-2xl leading-relaxed">
-              सूर्य-चंद्र गति पर आधारित तिथि, नक्षत्र, योग, करण, राहुकाल और दिन-रात का चौघड़िया — किसी भी शुभ कार्य से पूर्व अवश्य देखें।
+              {t.subtitle}
             </p>
           </div>
 
@@ -79,7 +85,7 @@ export const PanchangWidget: React.FC = () => {
         {loading ? (
           <div className="py-20 text-center bg-card rounded-3xl border border-line">
             <Loader2 className="w-8 h-8 animate-spin text-accent mx-auto mb-3" />
-            <p className="text-sm font-semibold text-ink">आज का वैदिक पंचांग लोड हो रहा है...</p>
+            <p className="text-sm font-semibold text-ink">{t.loading}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
@@ -94,7 +100,7 @@ export const PanchangWidget: React.FC = () => {
                     <Sun className="w-4 h-4" />
                   </div>
                   <div>
-                    <span className="text-[10px] text-ink-muted uppercase block font-semibold">सूर्योदय (Sunrise)</span>
+                    <span className="text-[10px] text-ink-muted uppercase block font-semibold">{t.sunrise}</span>
                     <span className="text-xs sm:text-sm font-bold text-ink">
                       {data?.sun_moon?.sunrise || "06:11 AM"}
                     </span>
@@ -106,7 +112,7 @@ export const PanchangWidget: React.FC = () => {
                     <Sun className="w-4 h-4" />
                   </div>
                   <div>
-                    <span className="text-[10px] text-ink-muted uppercase block font-semibold">सूर्यास्त (Sunset)</span>
+                    <span className="text-[10px] text-ink-muted uppercase block font-semibold">{t.sunset}</span>
                     <span className="text-xs sm:text-sm font-bold text-ink">
                       {data?.sun_moon?.sunset || "06:17 PM"}
                     </span>
@@ -118,7 +124,7 @@ export const PanchangWidget: React.FC = () => {
                     <Moon className="w-4 h-4" />
                   </div>
                   <div>
-                    <span className="text-[10px] text-ink-muted uppercase block font-semibold">चन्द्रोदय (Moonrise)</span>
+                    <span className="text-[10px] text-ink-muted uppercase block font-semibold">{t.moonrise}</span>
                     <span className="text-xs sm:text-sm font-bold text-ink">
                       {data?.sun_moon?.moonrise || "03:45 PM"}
                     </span>
@@ -130,9 +136,9 @@ export const PanchangWidget: React.FC = () => {
                     <MapPin className="w-4 h-4 text-accent" />
                   </div>
                   <div>
-                    <span className="text-[10px] text-ink-muted uppercase block font-semibold">स्थान</span>
+                    <span className="text-[10px] text-ink-muted uppercase block font-semibold">{t.location}</span>
                     <span className="text-xs font-bold text-ink truncate block">
-                      नई दिल्ली (28.61° N)
+                      {t.delhiLocation}
                     </span>
                   </div>
                 </div>
@@ -144,76 +150,76 @@ export const PanchangWidget: React.FC = () => {
                 {/* Tithi */}
                 <div className="bg-card rounded-2xl p-5 border border-line shadow-xs">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-accent block mb-1">
-                    प्रथम अंग • तिथि (Tithi)
+                    {t.tithiTitle}
                   </span>
                   <div className="flex items-baseline justify-between">
                     <h3 className="text-base font-bold text-ink">
-                      {data?.tithi?.name || "द्वादशी"}
+                      {data?.tithi?.name || (locale === "en" ? "Dwadashi" : "द्वादशी")}
                     </h3>
                     <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-surface-alt text-ink-soft">
-                      {data?.tithi?.paksha || "शुक्ल पक्ष"}
+                      {data?.tithi?.paksha || (locale === "en" ? "Shukla Paksha" : "शुक्ल पक्ष")}
                     </span>
                   </div>
                   <div className="mt-2.5 pt-2 border-t border-line/60 flex items-center justify-between text-[11px] text-ink-muted">
-                    <span>समाप्ति समय:</span>
-                    <span className="font-semibold text-ink">{data?.tithi?.end_time || "रात 11:24 तक"}</span>
+                    <span>{t.endTime}:</span>
+                    <span className="font-semibold text-ink">{data?.tithi?.end_time || "11:24 PM"}</span>
                   </div>
                 </div>
 
                 {/* Nakshatra */}
                 <div className="bg-card rounded-2xl p-5 border border-line shadow-xs">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-accent block mb-1">
-                    द्वितीय अंग • नक्षत्र (Nakshatra)
+                    {t.nakshatraTitle}
                   </span>
                   <div className="flex items-baseline justify-between">
                     <h3 className="text-base font-bold text-ink">
-                      {data?.nakshatra?.name || "श्रवण"}
+                      {data?.nakshatra?.name || (locale === "en" ? "Shravana" : "श्रवण")}
                     </h3>
                     <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-surface-alt text-ink-soft">
-                      स्वामी: {data?.nakshatra?.lord || "चंद्र"}
+                      {t.lord}: {data?.nakshatra?.lord || (locale === "en" ? "Moon" : "चंद्र")}
                     </span>
                   </div>
                   <div className="mt-2.5 pt-2 border-t border-line/60 flex items-center justify-between text-[11px] text-ink-muted">
-                    <span>समाप्ति समय:</span>
-                    <span className="font-semibold text-ink">{data?.nakshatra?.end_time || "शाम 07:12 तक"}</span>
+                    <span>{t.endTime}:</span>
+                    <span className="font-semibold text-ink">{data?.nakshatra?.end_time || "07:12 PM"}</span>
                   </div>
                 </div>
 
                 {/* Yoga */}
                 <div className="bg-card rounded-2xl p-5 border border-line shadow-xs">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-accent block mb-1">
-                    तृतीय अंग • योग (Yoga)
+                    {t.yogaTitle}
                   </span>
                   <div className="flex items-baseline justify-between">
                     <h3 className="text-base font-bold text-ink">
-                      {data?.yoga?.name || "सु pointकर्मा / धृति"}
+                      {data?.yoga?.name || (locale === "en" ? "Sukarma" : "सुकर्मा")}
                     </h3>
                     <span className="text-xs font-semibold text-emerald-600">
-                      {data?.yoga?.is_auspicious ? "शुभ योग" : "सामान्य"}
+                      {data?.yoga?.is_auspicious ? t.auspiciousYoga : t.normal}
                     </span>
                   </div>
                   <div className="mt-2.5 pt-2 border-t border-line/60 flex items-center justify-between text-[11px] text-ink-muted">
-                    <span>दैनिक योग:</span>
-                    <span className="font-semibold text-ink">{data?.yoga?.end_time || "दोपहर 01:40 तक"}</span>
+                    <span>{t.dailyYoga}:</span>
+                    <span className="font-semibold text-ink">{data?.yoga?.end_time || "01:40 PM"}</span>
                   </div>
                 </div>
 
                 {/* Karana */}
                 <div className="bg-card rounded-2xl p-5 border border-line shadow-xs">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-accent block mb-1">
-                    चतुर्थ अंग • करण (Karana)
+                    {t.karanaTitle}
                   </span>
                   <div className="flex items-baseline justify-between">
                     <h3 className="text-base font-bold text-ink">
-                      {data?.karana?.name || "बव / बालव"}
+                      {data?.karana?.name || (locale === "en" ? "Bava" : "बव")}
                     </h3>
                     <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-surface-alt text-ink-soft">
-                      {data?.karana?.type || "चर करण"}
+                      {data?.karana?.type || (locale === "en" ? "Chara" : "चर")}
                     </span>
                   </div>
                   <div className="mt-2.5 pt-2 border-t border-line/60 flex items-center justify-between text-[11px] text-ink-muted">
-                    <span>करण स्थिति:</span>
-                    <span className="font-semibold text-ink">{data?.karana?.end_time || "दोपहर 12:05 तक"}</span>
+                    <span>{t.karanaState}:</span>
+                    <span className="font-semibold text-ink">{data?.karana?.end_time || "12:05 PM"}</span>
                   </div>
                 </div>
 
@@ -222,13 +228,13 @@ export const PanchangWidget: React.FC = () => {
               {/* Bottom Live Link */}
               <div className="p-4 rounded-xl bg-card border border-line flex items-center justify-between text-xs">
                 <span className="text-ink-soft">
-                  वार: <strong className="text-ink">{data?.vaar || "मंगलवार"}</strong> • संवत् 2083
+                  {t.var}: <strong className="text-ink">{data?.vaar || (locale === "en" ? "Tuesday" : "मंगलवार")}</strong> • {t.samvat}
                 </span>
                 <Link
-                  href="/calculators/daily-panchang"
+                  href={locale === "en" ? "/en/calculators/daily-panchang" : "/calculators/daily-panchang"}
                   className="font-bold text-accent hover:text-accent-hover flex items-center gap-1 transition"
                 >
-                  <span>विस्तृत मासिक पंचांग देखें</span>
+                  <span>{t.viewFullPanchang}</span>
                   <ChevronRight className="w-3.5 h-3.5" />
                 </Link>
               </div>
@@ -247,7 +253,7 @@ export const PanchangWidget: React.FC = () => {
                     activeTab === "muhurat" ? "bg-accent text-white shadow-2xs" : "text-ink-soft hover:text-ink"
                   }`}
                 >
-                  शुभ व अशुभ काल
+                  {t.tabMuhurat}
                 </button>
                 <button
                   type="button"
@@ -256,7 +262,7 @@ export const PanchangWidget: React.FC = () => {
                     activeTab === "choghadiya" ? "bg-accent text-white shadow-2xs" : "text-ink-soft hover:text-ink"
                   }`}
                 >
-                  दिन का चौघड़िया
+                  {t.tabChoghadiya}
                 </button>
               </div>
 
@@ -267,17 +273,17 @@ export const PanchangWidget: React.FC = () => {
                     <div className="flex items-center justify-between text-rose-900 font-bold mb-1">
                       <span className="flex items-center gap-1.5">
                         <AlertTriangle className="w-4 h-4 text-rose-600" />
-                        <span>राहु काल (अशुभ समय - वर्जित)</span>
+                        <span>{t.rahuKaal}</span>
                       </span>
                       <span className="px-2 py-0.5 rounded-full bg-rose-200/80 text-[10px] text-rose-800">
-                        अशुभ
+                        {t.inauspicious}
                       </span>
                     </div>
                     <p className="text-rose-700 font-semibold text-sm mt-1">
                       {data?.rahu_kaal ? `${data.rahu_kaal.start} – ${data.rahu_kaal.end}` : "12:13 PM – 01:44 PM"}
                     </p>
                     <p className="text-[11px] text-rose-600/80 mt-1">
-                      इस काल में कोई भी नया कार्य, लेन-देन अथवा यात्रा आरंभ न करें।
+                      {t.rahuDesc}
                     </p>
                   </div>
 
@@ -286,36 +292,36 @@ export const PanchangWidget: React.FC = () => {
                     <div className="flex items-center justify-between text-emerald-900 font-bold mb-1">
                       <span className="flex items-center gap-1.5">
                         <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                        <span>अभिजित मुहूर्त (सर्वश्रेष्ठ समय)</span>
+                        <span>{t.abhijit}</span>
                       </span>
                       <span className="px-2 py-0.5 rounded-full bg-emerald-200/80 text-[10px] text-emerald-800">
-                        सर्वार्थ सिद्धि
+                        {t.sarvarthSiddhi}
                       </span>
                     </div>
                     <p className="text-emerald-700 font-semibold text-sm mt-1">
                       {data?.abhijit ? `${data.abhijit.start} – ${data.abhijit.end}` : "11:50 AM – 12:38 PM"}
                     </p>
                     <p className="text-[11px] text-emerald-600/80 mt-1">
-                      विजय मुहूर्त: किसी भी महत्वपूर्ण शुभ कार्य के लिए श्रेष्ठ।
+                      {t.abhijitDesc}
                     </p>
                   </div>
 
                   {/* Other Timings */}
                   <div className="space-y-2 pt-2 border-t border-line/60 text-xs">
                     <div className="flex items-center justify-between py-1">
-                      <span className="text-ink-soft">ब्रह्म मुहूर्त:</span>
+                      <span className="text-ink-soft">{t.brahmaMuhurat}:</span>
                       <span className="font-semibold text-ink">
                         {data?.brahma_muhurat ? `${data.brahma_muhurat.start} – ${data.brahma_muhurat.end}` : "04:35 AM – 05:23 AM"}
                       </span>
                     </div>
                     <div className="flex items-center justify-between py-1">
-                      <span className="text-ink-soft">यमगण्ड काल:</span>
+                      <span className="text-ink-soft">{t.yamaganda}:</span>
                       <span className="font-semibold text-ink">
                         {data?.yamaghanda ? `${data.yamaghanda.start} – ${data.yamaghanda.end}` : "09:12 AM – 10:43 AM"}
                       </span>
                     </div>
                     <div className="flex items-center justify-between py-1">
-                      <span className="text-ink-soft">गुलिक काल:</span>
+                      <span className="text-ink-soft">{t.gulika}:</span>
                       <span className="font-semibold text-ink">
                         {data?.gulika ? `${data.gulika.start} – ${data.gulika.end}` : "01:44 PM – 03:15 PM"}
                       </span>
@@ -326,14 +332,14 @@ export const PanchangWidget: React.FC = () => {
                 /* Choghadiya List */
                 <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
                   {(data?.choghadiya && data.choghadiya.length > 0 ? data.choghadiya : [
-                    { name: "CHAL", nature: "शुभ", start_time: "06:11:00", end_time: "07:42:00" },
-                    { name: "LABH", nature: "शुभ", start_time: "07:42:00", end_time: "09:12:00" },
-                    { name: "AMRIT", nature: "श्रेष्ठ", start_time: "09:12:00", end_time: "10:43:00" },
-                    { name: "KAAL", nature: "अशुभ", start_time: "10:43:00", end_time: "12:13:00" },
-                    { name: "SHUBH", nature: "शुभ", start_time: "12:13:00", end_time: "13:44:00" },
-                    { name: "ROG", nature: "अशुभ", start_time: "13:44:00", end_time: "15:15:00" },
-                    { name: "UDWEG", nature: "अशुभ", start_time: "15:15:00", end_time: "16:46:00" },
-                    { name: "CHAL", nature: "शुभ", start_time: "16:46:00", end_time: "18:17:00" },
+                    { name: "CHAL", nature: locale === "en" ? "Auspicious" : "शुभ", start_time: "06:11:00", end_time: "07:42:00" },
+                    { name: "LABH", nature: locale === "en" ? "Auspicious" : "शुभ", start_time: "07:42:00", end_time: "09:12:00" },
+                    { name: "AMRIT", nature: locale === "en" ? "Best" : "श्रेष्ठ", start_time: "09:12:00", end_time: "10:43:00" },
+                    { name: "KAAL", nature: locale === "en" ? "Inauspicious" : "अशुभ", start_time: "10:43:00", end_time: "12:13:00" },
+                    { name: "SHUBH", nature: locale === "en" ? "Auspicious" : "शुभ", start_time: "12:13:00", end_time: "13:44:00" },
+                    { name: "ROG", nature: locale === "en" ? "Inauspicious" : "अशुभ", start_time: "13:44:00", end_time: "15:15:00" },
+                    { name: "UDWEG", nature: locale === "en" ? "Inauspicious" : "अशुभ", start_time: "15:15:00", end_time: "16:46:00" },
+                    { name: "CHAL", nature: locale === "en" ? "Auspicious" : "शुभ", start_time: "16:46:00", end_time: "18:17:00" },
                   ]).map((slot: any, idx: number) => {
                     const isAuspicious = ["AMRIT", "SHUBH", "LABH", "CHAL"].includes(slot.name);
                     return (
@@ -348,7 +354,7 @@ export const PanchangWidget: React.FC = () => {
                         <div className="flex items-center gap-2">
                           <span className={`w-2 h-2 rounded-full ${isAuspicious ? "bg-emerald-600" : "bg-rose-500"}`} />
                           <span className="font-bold text-ink">{slot.name}</span>
-                          <span className="text-[10px] text-ink-muted">({slot.nature || (isAuspicious ? "शुभ" : "अशुभ")})</span>
+                          <span className="text-[10px] text-ink-muted">({slot.nature || (isAuspicious ? (locale === "en" ? "Auspicious" : "शुभ") : (locale === "en" ? "Inauspicious" : "अशुभ"))})</span>
                         </div>
                         <span className="font-semibold text-xs text-ink">{formatHM(slot.start_time)}–{formatHM(slot.end_time)}</span>
                       </div>
@@ -360,11 +366,11 @@ export const PanchangWidget: React.FC = () => {
               {/* Bottom Quick Action */}
               <div className="pt-2">
                 <Link
-                  href="/calculators/daily-panchang"
+                  href={locale === "en" ? "/en/calculators/daily-panchang" : "/calculators/daily-panchang"}
                   className="w-full py-2.5 px-4 rounded-xl bg-accent hover:bg-accent-hover text-white font-bold text-xs transition flex items-center justify-center gap-1.5 shadow-2xs"
                 >
                   <Compass className="w-3.5 h-3.5" />
-                  <span>संपूर्ण दैनिक पंचांग कैलकुलेटर</span>
+                  <span>{t.panchangCalcBtn}</span>
                   <ChevronRight className="w-3.5 h-3.5 ml-1" />
                 </Link>
               </div>

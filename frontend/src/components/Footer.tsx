@@ -17,9 +17,18 @@ import {
   Sun,
   FileText
 } from "lucide-react";
+import { useLocale } from "@/hooks/useLocale";
+import { getDictionary } from "@/dictionaries/dictionary";
 
 export const Footer = () => {
   const [info, setInfo] = useState<Record<string, string>>({});
+  const locale = useLocale();
+  const dict = getDictionary(locale);
+  const t = dict.footer;
+
+  const getHref = (path: string) => {
+    return locale === "en" ? `/en${path}` : path;
+  };
 
   useEffect(() => {
     axios.get("/api/settings/public")
@@ -33,7 +42,9 @@ export const Footer = () => {
 
   const companyName = info["COMPANY_NAME"] || "AstroEngine Technologies";
   const logoUrl = info["COMPANY_LOGO_URL"];
-  const tagline = info["COMPANY_TAGLINE"] || "वैदिक ज्योतिष एवं आधुनिक AI कुंडली प्लेटफॉर्म";
+  const tagline = locale === "en" 
+    ? (info["COMPANY_TAGLINE_EN"] || "Vedic Astrology & Modern AI Kundli Platform")
+    : (info["COMPANY_TAGLINE"] || "वैदिक ज्योतिष एवं आधुनिक AI कुंडली प्लेटफॉर्म");
   const phone = info["COMPANY_PHONE"] || "+91 22 4910 8800";
   const email = info["COMPANY_EMAIL"] || "contact@astroengine.io";
   const address = info["COMPANY_ADDRESS_LINE1"] || "Level 4, Tech Park, Bandra Kurla Complex";
@@ -52,42 +63,42 @@ export const Footer = () => {
           <div className="space-y-3.5">
             <div className="font-bold text-xs uppercase tracking-wider text-ink flex items-center gap-1.5">
               <Compass className="w-3.5 h-3.5 text-accent" />
-              <span>वैदिक ज्योतिष (Core)</span>
+              <span>{t.col1Title}</span>
             </div>
             <ul className="space-y-2 text-xs">
               <li>
-                <Link href="/calculators/lagna-kundli" className="hover:text-accent transition">
-                  जन्म लग्न पत्रिका (D1 Chart)
+                <Link href={getHref("/calculators/lagna-kundli")} className="hover:text-accent transition">
+                  {t.tools.lagna}
                 </Link>
               </li>
               <li>
-                <Link href="/calculators/navamsha-d9" className="hover:text-accent transition">
-                  नवांश कुंडली (D9 Navamsha)
+                <Link href={getHref("/calculators/navamsha-d9")} className="hover:text-accent transition">
+                  {t.tools.navamsha}
                 </Link>
               </li>
               <li>
-                <Link href="/calculators/moon-sign" className="hover:text-accent transition">
-                  चंद्र राशि एवं 27 नक्षत्र
+                <Link href={getHref("/calculators/moon-sign")} className="hover:text-accent transition">
+                  {t.tools.moonSign}
                 </Link>
               </li>
               <li>
-                <Link href="/calculators/planetary-positions" className="hover:text-accent transition">
-                  ग्रह स्पष्ट एवं वक्री स्थिति
+                <Link href={getHref("/calculators/planetary-positions")} className="hover:text-accent transition">
+                  {t.tools.planets}
                 </Link>
               </li>
               <li>
-                <Link href="/calculators/vimshottari-dasha" className="hover:text-accent transition">
-                  120-वर्षीय विंशोत्तरी महादशा
+                <Link href={getHref("/calculators/vimshottari-dasha")} className="hover:text-accent transition">
+                  {t.tools.vimshottari}
                 </Link>
               </li>
               <li>
-                <Link href="/calculators/char-dasha" className="hover:text-accent transition">
-                  जैमिनी चर दशा क्रम
+                <Link href={getHref("/calculators/char-dasha")} className="hover:text-accent transition">
+                  {t.tools.charDasha}
                 </Link>
               </li>
               <li>
-                <Link href="/calculators/dhan-yogas" className="hover:text-accent transition">
-                  राजयोग एवं धन योग स्कैनर
+                <Link href={getHref("/calculators/dhan-yogas")} className="hover:text-accent transition">
+                  {t.tools.dhanYogas}
                 </Link>
               </li>
             </ul>
@@ -97,42 +108,42 @@ export const Footer = () => {
           <div className="space-y-3.5">
             <div className="font-bold text-xs uppercase tracking-wider text-ink flex items-center gap-1.5">
               <Flame className="w-3.5 h-3.5 text-accent" />
-              <span>कैलकुलेटर एवं टूल्स</span>
+              <span>{t.col2Title}</span>
             </div>
             <ul className="space-y-2 text-xs">
               <li>
-                <Link href="/calculators/manglik-dosha" className="hover:text-accent transition">
-                  मांगलिक दोष (12 अपवाद)
+                <Link href={getHref("/calculators/manglik-dosha")} className="hover:text-accent transition">
+                  {t.tools.manglik}
                 </Link>
               </li>
               <li>
-                <Link href="/calculators/sade-sati" className="hover:text-accent transition">
-                  शनि साढ़े साती चक्र व तारीखें
+                <Link href={getHref("/calculators/sade-sati")} className="hover:text-accent transition">
+                  {t.tools.sadeSati}
                 </Link>
               </li>
               <li>
-                <Link href="/calculators/kaalsarp-dosha" className="hover:text-accent transition">
-                  कालसर्प दोष एवं 12 प्रकार
+                <Link href={getHref("/calculators/kaalsarp-dosha")} className="hover:text-accent transition">
+                  {t.tools.kaalsarp}
                 </Link>
               </li>
               <li>
-                <Link href="/calculators/pitra-dosha" className="hover:text-accent transition">
-                  पितृ दोष व शांति उपाय
+                <Link href={getHref("/calculators/pitra-dosha")} className="hover:text-accent transition">
+                  {t.tools.pitra}
                 </Link>
               </li>
               <li>
-                <Link href="/calculators/core-numerology" className="hover:text-accent transition">
-                  मूलांक व भाग्यांक अंकशास्त्र
+                <Link href={getHref("/calculators/core-numerology")} className="hover:text-accent transition">
+                  {t.tools.numerology}
                 </Link>
               </li>
               <li>
-                <Link href="/calculators/loshu-grid" className="hover:text-accent transition">
-                  3×3 लो शू ग्रिड (Lo Shu Grid)
+                <Link href={getHref("/calculators/loshu-grid")} className="hover:text-accent transition">
+                  {t.tools.loshu}
                 </Link>
               </li>
               <li>
-                <Link href="/calculators/name-correction" className="hover:text-accent transition">
-                  नाम संशोधन अंक प्रणाली
+                <Link href={getHref("/calculators/name-correction")} className="hover:text-accent transition">
+                  {t.tools.nameCorrection}
                 </Link>
               </li>
             </ul>
@@ -142,42 +153,42 @@ export const Footer = () => {
           <div className="space-y-3.5">
             <div className="font-bold text-xs uppercase tracking-wider text-ink flex items-center gap-1.5">
               <HeartHandshake className="w-3.5 h-3.5 text-accent" />
-              <span>पंचांग, मिलान व राशिफल</span>
+              <span>{t.col3Title}</span>
             </div>
             <ul className="space-y-2 text-xs">
               <li>
-                <Link href="/calculators/daily-panchang" className="hover:text-accent transition">
-                  आज का दैनिक पंचांग
+                <Link href={getHref("/calculators/daily-panchang")} className="hover:text-accent transition">
+                  {t.tools.panchang}
                 </Link>
               </li>
               <li>
-                <Link href="/calculators/choghadiya" className="hover:text-accent transition">
-                  दिन व रात का चौघड़िया
+                <Link href={getHref("/calculators/choghadiya")} className="hover:text-accent transition">
+                  {t.tools.choghadiya}
                 </Link>
               </li>
               <li>
-                <Link href="/calculators/marriage-muhurat" className="hover:text-accent transition">
-                  विवाह शुभ मुहूर्त
+                <Link href={getHref("/calculators/marriage-muhurat")} className="hover:text-accent transition">
+                  {t.tools.marriageMuhurat}
                 </Link>
               </li>
               <li>
-                <Link href="/calculators/kundli-matching" className="hover:text-accent transition">
-                  अष्टकूट 36 गुण मिलान
+                <Link href={getHref("/calculators/kundli-matching")} className="hover:text-accent transition">
+                  {t.tools.matching}
                 </Link>
               </li>
               <li>
-                <Link href="/calculators/nadi-exceptions" className="hover:text-accent transition">
-                  नाड़ी दोष निरस्तीकरण अपवाद
+                <Link href={getHref("/calculators/nadi-exceptions")} className="hover:text-accent transition">
+                  {t.tools.nadiExceptions}
                 </Link>
               </li>
               <li>
-                <Link href="/calculators/dashakoot-porutham" className="hover:text-accent transition">
-                  दक्षिण भारतीय 10 पोरुथम
+                <Link href={getHref("/calculators/dashakoot-porutham")} className="hover:text-accent transition">
+                  {t.tools.dashakoot}
                 </Link>
               </li>
               <li>
-                <Link href="/calculators/tarot-reading" className="hover:text-accent transition">
-                  टैरो कार्ड परामर्श (Tarot Reading)
+                <Link href={getHref("/calculators/tarot-reading")} className="hover:text-accent transition">
+                  {t.tools.tarot}
                 </Link>
               </li>
             </ul>
@@ -187,42 +198,42 @@ export const Footer = () => {
           <div className="space-y-3.5">
             <div className="font-bold text-xs uppercase tracking-wider text-ink flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5 text-accent" />
-              <span>उपाय, लाल किताब व रिपोर्ट्स</span>
+              <span>{t.col4Title}</span>
             </div>
             <ul className="space-y-2 text-xs">
               <li>
-                <Link href="/calculators/gemstone-suggestion" className="hover:text-accent transition">
-                  शुभ रत्न परामर्श (Gemstones)
+                <Link href={getHref("/calculators/gemstone-suggestion")} className="hover:text-accent transition">
+                  {t.tools.gemstones}
                 </Link>
               </li>
               <li>
-                <Link href="/calculators/rudraksha-mapping" className="hover:text-accent transition">
-                  1 से 14 मुखी रुद्राक्ष सुझाव
+                <Link href={getHref("/calculators/rudraksha-mapping")} className="hover:text-accent transition">
+                  {t.tools.rudraksha}
                 </Link>
               </li>
               <li>
-                <Link href="/calculators/lal-kitab-debts" className="hover:text-accent transition">
-                  लाल किताब 6 ऋण व उपाय
+                <Link href={getHref("/calculators/lal-kitab-debts")} className="hover:text-accent transition">
+                  {t.tools.lalKitab}
                 </Link>
               </li>
               <li>
-                <Link href="/calculators/kp-system" className="hover:text-accent transition">
-                  केपी पद्धति (KP Sub-Lord)
+                <Link href={getHref("/calculators/kp-system")} className="hover:text-accent transition">
+                  {t.tools.kpSystem}
                 </Link>
               </li>
               <li>
-                <Link href="/calculators/western-astrology" className="hover:text-accent transition">
-                  पाश्चात्य बिग-थ्री (Western)
+                <Link href={getHref("/calculators/western-astrology")} className="hover:text-accent transition">
+                  {t.tools.western}
                 </Link>
               </li>
               <li>
-                <Link href="/calculators/vastu-shastra" className="hover:text-accent transition">
-                  16-जोन वास्तु शास्त्र विश्लेषण
+                <Link href={getHref("/calculators/vastu-shastra")} className="hover:text-accent transition">
+                  {t.tools.vastu}
                 </Link>
               </li>
               <li>
-                <Link href="/calculators/pdf-reports" className="hover:text-accent transition">
-                  20-80 पृष्ठीय वृहत् कुंडली PDF
+                <Link href={getHref("/calculators/pdf-reports")} className="hover:text-accent transition">
+                  {t.tools.pdfReports}
                 </Link>
               </li>
             </ul>
@@ -232,38 +243,38 @@ export const Footer = () => {
           <div className="space-y-3.5">
             <div className="font-bold text-xs uppercase tracking-wider text-ink flex items-center gap-1.5">
               <FileText className="w-3.5 h-3.5 text-accent" />
-              <span>प्लेटफॉर्म एवं संपर्क</span>
+              <span>{t.col5Title}</span>
             </div>
             
             <p className="text-[11px] text-ink-muted leading-relaxed">
-              {tagline}। आधुनिक इंजीनियरिंग एवं प्रामाणिक पराशरी गणना का संगम।
+              {tagline}। {t.taglineDesc}
             </p>
 
             <ul className="space-y-2 text-xs pt-1">
               <li>
-                <Link href="/demo" className="text-accent font-semibold hover:text-accent-hover transition flex items-center gap-1">
-                  <span>लाइव वैदिक ऐप डेमो</span>
+                <Link href={locale === "en" ? "/en/#calculators" : "/#calculators"} className="text-accent font-semibold hover:text-accent-hover transition flex items-center gap-1">
+                  <span>{locale === "en" ? "Browse calculators" : "कैलकुलेटर देखें"}</span>
                   <ChevronRight className="w-3 h-3" />
                 </Link>
               </li>
               <li>
                 <Link href="/#playground" className="hover:text-ink transition">
-                  डेवलपर API प्लेग्राउंड
+                  {t.apiPlayground}
                 </Link>
               </li>
               <li>
                 <Link href="/pricing" className="hover:text-ink transition">
-                  मूल्य निर्धारण (Pricing)
+                  {t.pricing}
                 </Link>
               </li>
               <li>
                 <Link href="/docs" className="hover:text-ink transition">
-                  135 API डॉक्यूमेंटेशन
+                  {t.apiDocs}
                 </Link>
               </li>
               <li>
                 <Link href="/dashboard" className="hover:text-ink transition">
-                  API कंसोल डैशबोर्ड
+                  {t.dashboard}
                 </Link>
               </li>
             </ul>
@@ -292,17 +303,17 @@ export const Footer = () => {
       <div className="border-t border-line bg-surface-alt/80 py-5">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] text-ink-muted">
           <div>
-            &copy; {new Date().getFullYear()} {companyName}. सर्वाधिकार सुरक्षित (All rights reserved).
+            &copy; {new Date().getFullYear()} {companyName}. {t.rightsReserved}.
           </div>
           <div className="flex items-center gap-5">
             <span className="flex items-center gap-1.5 text-ink-soft">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-              <span>100% डेटा गोपनीयता एवं सुरक्षा</span>
+              <span>{t.dataPrivacy}</span>
             </span>
             <span className="text-line">•</span>
             <span className="flex items-center gap-1 text-ink-soft">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" />
-              <span>स्विस एफिमेरिस C-कोर सक्रिय</span>
+              <span>{t.swissEph}</span>
             </span>
           </div>
         </div>

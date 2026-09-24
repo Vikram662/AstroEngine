@@ -20,14 +20,24 @@ const DEFAULT_GIRL_DATA: BirthDataValue = {
 };
 
 export default function KundliMatchingClient({ locale }: { locale: Locale }) {
-  const [boyForm, setBoyForm] = useState<BirthDataValue>({
+  const [boyForm, setBoyForm] = useState<BirthDataValue>(() => ({
     ...DEFAULT_BIRTH_DATA,
-    name: "वर",
+    name: locale === "en" ? "Groom" : "वर",
     gender: "male",
     dob: "1994-08-12",
     tob: "10:15",
-  });
-  const [girlForm, setGirlForm] = useState<BirthDataValue>(DEFAULT_GIRL_DATA);
+    cityName: locale === "en" ? "New Delhi, India" : "नई दिल्ली, भारत",
+  }));
+  const [girlForm, setGirlForm] = useState<BirthDataValue>(() => ({
+    name: locale === "en" ? "Bride" : "कन्या",
+    gender: "female",
+    dob: "1996-03-24",
+    tob: "18:45",
+    cityName: locale === "en" ? "Mumbai, India" : "मुंबई, भारत",
+    lat: 19.076,
+    lon: 72.8777,
+    tz: 5.5,
+  }));
   const [lang, setLang] = useState<"hi" | "en">(locale);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -53,7 +63,7 @@ export default function KundliMatchingClient({ locale }: { locale: Locale }) {
     };
 
     try {
-      const res = await axios.post("/api/demo/proxy", {
+      const res = await axios.post("/api/proxy", {
         endpoint: "/api/v1/dosha-matching/matchmaking/ashtakoot",
         payload,
         method: "POST",
@@ -93,48 +103,30 @@ export default function KundliMatchingClient({ locale }: { locale: Locale }) {
         max: val.max,
       }));
 
+  const description =
+    locale === "en"
+      ? "Precise 8/8 Ashtakoot matching — Varna, Vashya, Tara, Yoni, Graha Maitri, Gana, Bhakoot and Nadi dosha."
+      : "वर्ण, वश्य, तारा, योनि, ग्रह मैत्री, गण, भकूट एवं नाड़ी दोष का 8/8 सटीक मिलान।";
+
   return (
     <CalculatorPageShell
       slug="kundli-matching"
       category="matching"
       title="36 Guna Ashtakoot Milan"
       hindiTitle="अष्टकूट 36 गुण मिलान"
-      description="वर्ण, वश्य, तारा, योनि, ग्रह मैत्री, गण, भकूट एवं नाड़ी दोष का 8/8 सटीक मिलान।"
+      description={description}
       icon="💍"
       locale={locale}
     >
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         <div className="lg:col-span-6 bg-card p-6 rounded-2xl border border-line h-fit">
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="flex items-center justify-between pb-3 border-b border-line">
-              <span className="text-xs font-bold text-ink">भाषा / Language</span>
-              <div className="flex rounded-lg bg-surface-alt p-1 border border-line text-xs">
-                <button
-                  type="button"
-                  onClick={() => setLang("hi")}
-                  className={`px-3 py-1 rounded font-medium transition ${
-                    lang === "hi" ? "bg-accent text-white shadow" : "text-ink-soft hover:text-ink"
-                  }`}
-                >
-                  हिन्दी
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setLang("en")}
-                  className={`px-3 py-1 rounded font-medium transition ${
-                    lang === "en" ? "bg-accent text-white shadow" : "text-ink-soft hover:text-ink"
-                  }`}
-                >
-                  English
-                </button>
-              </div>
-            </div>
 
             <div className="p-4 rounded-xl bg-surface border border-line">
               <BirthDataFields
                 value={boyForm}
                 onChange={setBoyForm}
-                personLabel="वर विवरण (Groom Details)"
+                personLabel={lang === "en" ? "Groom Details" : "वर विवरण"}
                 idPrefix="boy_"
               />
             </div>
@@ -143,7 +135,7 @@ export default function KundliMatchingClient({ locale }: { locale: Locale }) {
               <BirthDataFields
                 value={girlForm}
                 onChange={setGirlForm}
-                personLabel="कन्या विवरण (Bride Details)"
+                personLabel={lang === "en" ? "Bride Details" : "कन्या विवरण"}
                 idPrefix="girl_"
               />
             </div>
@@ -151,10 +143,10 @@ export default function KundliMatchingClient({ locale }: { locale: Locale }) {
             <SubmitButton loading={loading}>
               {loading ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin" /> 36 गुणों का मिलान जारी...
+                  <Loader2 className="w-4 h-4 animate-spin" /> {lang === "en" ? "Matching 36 Gunas..." : "36 गुणों का मिलान जारी..."}
                 </>
               ) : (
-                "36 गुण मिलान करें"
+                lang === "en" ? "Check Compatibility" : "36 गुण मिलान करें"
               )}
             </SubmitButton>
           </form>
@@ -166,20 +158,28 @@ export default function KundliMatchingClient({ locale }: { locale: Locale }) {
           {!data && !loading && !error && (
             <div className="bg-card rounded-2xl border border-line p-10 text-center text-ink-muted">
               <div className="text-4xl mb-3">💍</div>
-              <p className="text-sm">वर एवं कन्या का जन्म विवरण भरें और 8 कूटों में से प्राप्त अंकों का संपूर्ण विवरण देखें।</p>
+              <p className="text-sm">
+                {lang === "en"
+                  ? "Enter birth details for Groom and Bride and click 'Check Compatibility'."
+                  : "वर एवं कन्या का जन्म विवरण भरें और 8 कूटों में से प्राप्त अंकों का संपूर्ण विवरण देखें।"}
+              </p>
             </div>
           )}
 
           {loading && (
             <div className="bg-card rounded-2xl border border-line p-12 text-center text-ink-soft flex flex-col items-center justify-center">
               <Loader2 className="w-8 h-8 text-accent animate-spin mb-3" />
-              <p className="text-sm">वर्ण, वश्य, तारा, योनि, मैत्री, गण, भकूट एवं नाड़ी का परीक्षण हो रहा है...</p>
+              <p className="text-sm">
+                {lang === "en"
+                  ? "Evaluating Varna, Vashya, Tara, Yoni, Maitri, Gana, Bhakoot and Nadi..."
+                  : "वर्ण, वश्य, तारा, योनि, मैत्री, गण, भकूट एवं नाड़ी का परीक्षण हो रहा है..."}
+              </p>
             </div>
           )}
 
           {data && (
             <div className="space-y-6">
-              <ResultSection title="मिलान परिणाम (Guna Milan Summary)">
+              <ResultSection title={lang === "en" ? "Compatibility Summary" : "मिलान परिणाम"}>
                 <div
                   className={`p-6 rounded-xl border text-center mb-4 ${
                     totalScore >= 18
@@ -188,40 +188,40 @@ export default function KundliMatchingClient({ locale }: { locale: Locale }) {
                   }`}
                 >
                   <div className="text-xs uppercase font-bold tracking-wider mb-1">
-                    कुल प्राप्त अंक (Total Score)
+                    {lang === "en" ? "Total Obtained Score" : "कुल प्राप्त अंक"}
                   </div>
                   <div className="text-4xl font-extrabold">
                     {totalScore} / {maxScore}
                   </div>
                   <div className="text-sm font-semibold mt-2">
                     {totalScore >= 24
-                      ? "अति उत्तम मिलान (Excellent Match)"
+                      ? (lang === "en" ? "Excellent Match" : "अति उत्तम मिलान")
                       : totalScore >= 18
-                      ? "संतोषजनक एवं शुभ मिलान (Acceptable Match)"
-                      : "कम अंक / विवाह अनुकूल नहीं (Below Average)"}
+                      ? (lang === "en" ? "Acceptable Match" : "संतोषजनक एवं शुभ मिलान")
+                      : (lang === "en" ? "Below Average Match" : "कम अंक / विवाह अनुकूल नहीं")}
                   </div>
                 </div>
 
                 {kootas?.nadi?.has_dosha !== undefined && (
                   <ResultRow
-                    label="नाड़ी दोष"
+                    label={lang === "en" ? "Nadi Dosha" : "नाड़ी दोष"}
                     value={
                       kootas.nadi.has_dosha ? (
-                        <ResultBadge tone="bad">उपस्थित</ResultBadge>
+                        <ResultBadge tone="bad">{lang === "en" ? "Present" : "उपस्थित"}</ResultBadge>
                       ) : (
-                        <ResultBadge tone="good">दोष नहीं</ResultBadge>
+                        <ResultBadge tone="good">{lang === "en" ? "No Dosha" : "दोष नहीं"}</ResultBadge>
                       )
                     }
                   />
                 )}
                 {kootas?.bhakoot?.has_dosha !== undefined && (
                   <ResultRow
-                    label="भकूट दोष"
+                    label={lang === "en" ? "Bhakoot Dosha" : "भकूट दोष"}
                     value={
                       kootas.bhakoot.has_dosha ? (
-                        <ResultBadge tone="bad">उपस्थित</ResultBadge>
+                        <ResultBadge tone="bad">{lang === "en" ? "Present" : "उपस्थित"}</ResultBadge>
                       ) : (
-                        <ResultBadge tone="good">दोष नहीं</ResultBadge>
+                        <ResultBadge tone="good">{lang === "en" ? "No Dosha" : "दोष नहीं"}</ResultBadge>
                       )
                     }
                   />
@@ -229,7 +229,7 @@ export default function KundliMatchingClient({ locale }: { locale: Locale }) {
               </ResultSection>
 
               {Array.isArray(gunas) && gunas.length > 0 && (
-                <ResultSection title="8 कूटों का विस्तृत विभाजन (8 Koot Breakdown)">
+                <ResultSection title={lang === "en" ? "8 Koot Breakdown" : "8 कूटों का विस्तृत विभाजन"}>
                   <div className="divide-y divide-line/60">
                     {gunas.map((g: any, idx: number) => (
                       <div key={idx} className="py-2.5 flex items-center justify-between text-xs">

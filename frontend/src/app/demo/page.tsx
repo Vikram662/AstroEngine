@@ -377,7 +377,7 @@ export default function LiveDemoApp() {
         tz: currentP.tz,
         lang: currentP.lang
       };
-      const svgRes = await axios.post("/api/demo/proxy", {
+      const svgRes = await axios.post("/api/proxy", {
         endpoint: "/api/v1/parashari/chart/svg",
         payload,
         queryParams: { varga: vargaId, chart_style: targetStyle },
@@ -551,7 +551,7 @@ export default function LiveDemoApp() {
 
   // Helper to call backend via secure proxy
   const callProxy = async (endpoint: string, payload: any = {}, queryParams: any = null, method: string = "POST") => {
-    const res = await axios.post("/api/demo/proxy", {
+    const res = await axios.post("/api/proxy", {
       endpoint,
       payload,
       queryParams,
@@ -591,7 +591,7 @@ export default function LiveDemoApp() {
 
       // 4. Vector SVG Kundli Charts (D1 and D9 - Module 3)
       try {
-        const svgRes = await axios.post("/api/demo/proxy", {
+        const svgRes = await axios.post("/api/proxy", {
           endpoint: "/api/v1/parashari/chart/svg",
           payload,
           queryParams: { varga: "D1", chart_style: "NORTH_INDIAN" },
@@ -604,7 +604,7 @@ export default function LiveDemoApp() {
       } catch (e) { }
 
       try {
-        const svgD9Res = await axios.post("/api/demo/proxy", {
+        const svgD9Res = await axios.post("/api/proxy", {
           endpoint: "/api/v1/parashari/chart/svg",
           payload,
           queryParams: { varga: "D9", chart_style: "NORTH_INDIAN" },
@@ -714,7 +714,7 @@ export default function LiveDemoApp() {
       if (westRes?.data) setWesternData(westRes.data);
 
       try {
-        const westSvgRes = await axios.post("/api/demo/proxy", {
+        const westSvgRes = await axios.post("/api/proxy", {
           endpoint: "/api/v1/western/chart/wheel-svg",
           payload,
           method: "POST"
@@ -732,7 +732,7 @@ export default function LiveDemoApp() {
       if (kpCuspRes?.data?.cusps) setKpCusps(kpCuspRes.data.cusps);
 
       try {
-        const kpSvgRes = await axios.post("/api/demo/proxy", {
+        const kpSvgRes = await axios.post("/api/proxy", {
           endpoint: "/api/v1/kp/chart/svg",
           payload,
           method: "POST"
@@ -752,7 +752,7 @@ export default function LiveDemoApp() {
       if (lalRes?.data) setLalKitabData(lalRes.data);
 
       try {
-        const lkSvgRes = await axios.post("/api/demo/proxy", {
+        const lkSvgRes = await axios.post("/api/proxy", {
           endpoint: "/api/v1/lalkitab/chart/svg",
           payload,
           method: "POST"
@@ -1204,7 +1204,7 @@ export default function LiveDemoApp() {
   };
 
   const openPdfDownload = (jobId: string) => {
-    if (jobId) window.open(`/api/demo/proxy?dl=pdf&job_id=${jobId}`, "_blank");
+    if (jobId) window.open(`/api/proxy?dl=pdf&job_id=${jobId}`, "_blank");
   };
 
 

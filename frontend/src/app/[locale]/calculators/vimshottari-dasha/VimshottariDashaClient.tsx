@@ -32,12 +32,12 @@ export default function VimshottariDashaClient({ locale }: { locale: Locale }) {
 
     try {
       const [resCurrent, resMaha] = await Promise.all([
-        axios.post("/api/demo/proxy", {
+        axios.post("/api/proxy", {
           endpoint: "/api/v1/dasha/vimshottari/current",
           payload,
           method: "POST",
         }).catch(() => null),
-        axios.post("/api/demo/proxy", {
+        axios.post("/api/proxy", {
           endpoint: "/api/v1/dasha/vimshottari/mahadasha",
           payload,
           method: "POST",

@@ -21,7 +21,7 @@ export default function NameCorrectionClient({ locale }: { locale: Locale }) {
     setError(null);
 
     try {
-      const res = await axios.post("/api/demo/proxy", {
+      const res = await axios.post("/api/proxy", {
         endpoint: "/api/v1/numerology/name-correction",
         payload: {
           dob: "2000-01-01",

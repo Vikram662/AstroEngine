@@ -29,7 +29,7 @@ export default function LoshuGridClient({ locale }: { locale: Locale }) {
     };
 
     try {
-      const res = await axios.post("/api/demo/proxy", {
+      const res = await axios.post("/api/proxy", {
         endpoint: "/api/v1/numerology/loshu-grid",
         payload,
         method: "POST",
@@ -126,7 +126,7 @@ export default function LoshuGridClient({ locale }: { locale: Locale }) {
             <div>
               <label htmlFor="grid_dob" className="block text-xs font-semibold text-ink-soft mb-1.5 flex items-center gap-1.5">
                 <Calendar className="w-3.5 h-3.5 text-accent" />
-                <span>जन्म तिथि (Date of Birth)</span>
+                <span>{lang === "en" ? "Date of Birth" : "जन्म तिथि"}</span>
               </label>
               <input
                 id="grid_dob"

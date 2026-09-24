@@ -30,7 +30,7 @@ export default function YoginiDashaClient({ locale }: { locale: Locale }) {
     };
 
     try {
-      const res = await axios.post("/api/demo/proxy", {
+      const res = await axios.post("/api/proxy", {
         endpoint: "/api/v1/dasha/yogini/complete",
         payload,
         method: "POST",
