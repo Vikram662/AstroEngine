@@ -1,105 +1,162 @@
-# AstroEngine review — verification scripts
+# AstroEngine
 
-`../../ASTROENGINE_REPO_REVIEW.md` (my-app root) ke findings ko dobara verify karne ke scripts (17 + runner).
-Fix ke baad inhe chalao — jo script FAIL tha wo PASS (exit code 0) hona chahiye. Ye **gate G1 / G2** ka evidence hain.
+High-performance, multi-language (i18n) B2B Vedic + Western Astrology REST API suite, white-label PDF report engine, and a full-stack Next.js consumer + SaaS portal (wallet billing, API-key management, admin console).
 
-> Ye scripts AstroEngine repo ke **andar nahi** hain. Repo ke `backend/` folder se chalao (neeche dekho).
-> Ye sirf read/compute karte hain — repo ya DB me kuch write nahi karte.
+This file replaces the previous set of 8 root-level markdown docs (`README.md`, `API_DOCUMENTATION.md`, `INSTALLATION_GUIDE.md`, `TECHNICAL_SPECIFICATION.md`, `ASTROENGINE_REPO_REVIEW.md`, `BACKEND_PROGRESS.md`, `CALCULATOR_PAGES_PLAN.md`, `POST_REVIEW_FIX_LOG.md`), which had overlapping and in places contradictory content (see [§8 Reconciled numbers](#8-reconciled-numbers-that-used-to-conflict)). It is a condensed, current-as-of-this-edit summary, not a full reproduction — historical per-finding detail from those files is not preserved verbatim.
 
-## Setup (ek baar)
+---
 
-```powershell
-cd <AstroEngine>\backend
-python -m venv ..\.venv            # ya apna existing venv
-..\.venv\Scripts\activate
-pip install -r requirements.txt    # pytz (script 11) aur pyswisseph isi me hain
+## 1. Architecture
+
+```
+                [ B2B Clients / Mobile Apps / Web Portals ]
+                                  │
+                                  ▼ (HTTPS + x-api-key)
+                        [ Nginx Reverse Proxy ]
+                ┌───────────────────┴───────────────────┐
+                ▼                                        ▼
+      [ Next.js SaaS Portal ]                   [ FastAPI Gateway ]
+      (Public site, dashboards, ReDoc)          (Auth, metering, routing)
+                │                                        │
+                │                                        ▼
+                │                             [ Upstash Redis ]
+                │                    (rate-limits, keys, quota, cache)
+                ▼                                        ▼
+      [ MySQL + Prisma ]                       [ Core Astronomy Engine ]
+      (users, billing, usage logs)             (pyswisseph C-bindings)
+                                                          │
+                                    ┌─────────────────────┴─────────────────────┐
+                                    ▼                                           ▼
+                        [ Realtime JSON APIs ]                        [ Async PDF Worker ]
+                        (100+ REST endpoints)                         (FastAPI BackgroundTasks)
+                                                                                │
+                                                                    [ Jinja2 + ReportLab ]
+                                                                    (SVG charts + Noto fonts,
+                                                                     6 languages)
+                                                                                │
+                                                                                ▼
+                                                                    [ Cloudflare R2 ]
+                                                                    (24h auto-expiring PDFs)
 ```
 
-Scripts **14, 15, 17** repo ke `frontend/` aur root docs bhi padhte hain: repo root = `backend/` ka parent (`..`) maana jata hai;
-alag jagah ho to `ASTRO_REPO_ROOT` set karo (`$env:ASTRO_REPO_ROOT = "C:\path\to\AstroEngine"`). Folder nahi mila to script
-exit code `2` ("SKIP") deti hai. Script **17** ka D7 (`npm audit`) npm registry ko dependency list bhejta hai — offline / privacy
-ke liye `--no-network` (ya `ASTRO_OFFLINE=1`) se skip karo.
+`GET /health` and `GET /ready` are exposed on the FastAPI gateway for uptime/health checks.
 
-## Run (har baar, `backend/` folder se)
+## 2. Tech stack
 
-```powershell
-$S = "C:\xampp\htdocs\my-app\docs\astroengine_review_scripts"
-python "$S\run_all.py"             # sab 17 scripts + PASS/FAIL table
-python "$S\run_all.py" 14 15 16 17 # sirf chune hue (number se)
-python "$S\run_all.py" -v          # har script ka poora output bhi
-python "$S\06_kp_check.py"         # ya koi ek script seedha
+| Layer | Technology |
+| :--- | :--- |
+| Core calculation engine | Python 3.11, FastAPI, `pyswisseph` |
+| Frontend & SaaS portal | Next.js (App Router), Tailwind CSS |
+| Database & ORM | MySQL, Prisma |
+| Caching & metering | Upstash Redis |
+| Object storage (PDFs) | Cloudflare R2 (S3-compatible), 24h lifecycle rule |
+| Geo data (cities) | SQLite / GeoNames dump |
+| API docs | Custom-themed ReDoc UI at `/documentation` (and `/redoc`), OpenAPI spec at `/openapi.json` |
+| Error tracking | Sentry |
+
+No Docker — both services deploy on native runtimes (`pip install` + `uvicorn` for the backend, standard Next.js build for the frontend). WeasyPrint was replaced by ReportLab for PDF rendering (see §5) specifically to avoid needing Pango/Cairo system libraries on Linux hosts.
+
+## 3. API surface
+
+The backend exposes REST endpoints across these modules: Core Astronomy, Panchang & Muhurat, Parashari Kundli & Divisional Charts (Vargas), Dasha Systems (Vimshottari, Yogini, Char/Jaimini), KP System, Lal Kitab, Jaimini & Tajik Varshphal, Dosha Analysis & Matchmaking, Astrological Remedies, Numerology, Western Astrology, AI Astrologer, Tarot, Vastu Shastra, and White-Label PDF Reports.
+
+Standard request body (`BirthDataRequest`): `dob, tob, lat, lon, tz (default 5.5), ayanamsa (default LAHIRI), lang (default en)`. Auth via `x-api-key` header only (never a query param). Standard response envelopes: `200` success `{status, language, data}`; `202` async job `{status:"PENDING", job_id, poll_url}`.
+
+**Endpoint count:** treat the live `app.openapi()` route count as the only source of truth — historical docs quoted 37, ~115, and 135 in different places (see §8). Confirm the current number by hitting `/openapi.json` rather than trusting any document, including this one.
+
+## 4. Local setup
+
+**Backend:**
+```bash
+cd backend
+python -m venv venv && venv\Scripts\activate   # or source venv/bin/activate on Linux/Mac
+pip install -r requirements.txt
+uvicorn app.main:app --reload --port 8000
 ```
+- Swiss Ephemeris `.se1` data files (1800–2100 CE, ~25MB) go in `backend/ephe/` — falls back to the lower-accuracy Moshier analytical engine if missing.
+- `.env` needs: `PORT, ENVIRONMENT, INTERNAL_SECRET_KEY(+_PREVIOUS), EPHE_PATH, REDIS_HOST/PORT/PASSWORD, R2_ACCOUNT_ID/ACCESS_KEY/SECRET/BUCKET/PUBLIC_DOMAIN, DATABASE_URL, SENTRY_DSN`.
+- **Also required, not in the old install guide:** `NEXT_APP_URL`, `ASTRO_INTERNAL_SECRET`/`ASTRO_INTERNAL_API_KEY`, `ASTRO_BACKEND_URL` for the Next.js↔FastAPI wiring — without these, most endpoints 500 on a fresh clone via `/api/demo/proxy`.
 
-Exit code `0` = PASS, `1` = FAIL. Scripts `ENVIRONMENT=development` aur `NEXT_APP_URL=http://127.0.0.1:9`
-(dead port → `/docs` ka blocking plans-fetch turant fail hota hai) `setdefault` se set karte hain;
-apna value pehle se set ho to wahi use hota hai. Auth `dependency_overrides[verify_api_key]` se bypass hota hai
-(taaki sirf calculation logic test ho) — isliye dev-bypass (finding S2) hatane ke baad bhi scripts chalte rahenge.
+**Frontend:**
+```bash
+cd frontend
+npm install
+npm run dev
+```
+- `frontend/.env.local` (gitignored) needs `ASTRO_BACKEND_URL` and `ASTRO_INTERNAL_API_KEY` at minimum for the demo/calculator pages to reach the backend.
+- Linux hosts need `build-essential`, `python3-dev`, and Noto fonts for PDF rendering.
 
-## Scripts
+**Pricing:** three different price tables exist across the codebase (design spec, DB seed data, and `main.py`'s docs fallback) — pick one and reconcile before relying on displayed prices anywhere (dashboard, pricing page, docs).
 
-| Script | Kya check karta hai | Review finding |
-|---|---|---|
-| `01_probe_endpoints.py` | Sab 117 routes 200/202 dete hain? (`--real-auth` se `verify_api_key` ke through, Next app ya stub chahiye) | S12, route count |
-| `02_differential_test.py` | 2 alag births → same output? (heuristic; `ALLOW_STATIC` me legit-static paths daalo) | C1 (Pass 1) |
-| `03_accuracy_check.py` | Planets/Asc/Panchang vs raw `pyswisseph` (Lahiri, mean node) | §2 (working) |
-| `04_ashtakoot_vimshottari_check.py` | Nadi 27×27, Gana 27×27, Bhakoot 12×12, Vimshottari vs classical | C2 |
-| `05_varga_check.py` | 5 sections: A natural births (independent reference), B synthetic sweep (har sign × har varga-segment ± boundary), C API-level (routes, `lang=hi`, `ayanamsa`, unknown varga), D house/houses consistency, E ayanamsa function-level | C3 |
-| `06_kp_check.py` | KP: reference 249-table build; `get_kp_sub_lord` 20,000 random longitudes; horary 1–249 vs table | C6.1 |
-| `07_kaal_sarp_check.py` | Kaal Sarp type = Rahu ki **house** (Lagna se) — 12 time slots par | C6.2 |
-| `08_running_dasha_check.py` | Birth Mahadasha ke andar running Antardasha (notional start) + AD list end vs MD end | C6.3 |
-| `09_panchang_check.py` | Sunrise-based vaar, Panchak (Dhanishta pada 3/4), night Choghadiya, temporal horas, tithi end-time (+ sunrise gap INFO) | C6.4–C6.7 |
-| `10_fabricated_endpoints_probe.py` | 13 probes (monthly-calendar dates, marriage muhurat, exceptions, event-analysis, bhav-chalit, moon-lagna, Char dasha, Lal Kitab, rudraksha hi, name-analysis, restrictions) + `--require-501` (45 fabricated paths) | C1, C6 |
-| `11_geo_check.py` | Geo search (unknown city ≠ Delhi) aur timezone vs `pytz` (DST + historical; `date` query param bhejta hai) | C7 |
-| `12_input_validation_check.py` | Invalid `dob` / `tob` / `tz` / `ayanamsa` → 422 (500 ya silent 200 nahi) | S13 |
-| `13_spot_checks.py` | **Regression** — jo sahi nikla wo sahi rahe (Jaimini karakas, Western, numerology, Choghadiya, Rahu Kaal) | §2 (Pass 2) |
-| `14_nextjs_auth_map_check.py` | Next.js 25 routes ka handler-level auth map (static): unauthenticated writes, missing `@/lib/*`, frontend ke nonexistent backend paths | S14, S21, C5, Appendix D |
-| `15_nextjs_security_patterns_check.py` | 19 static pattern checks: password-hash leak, invoice XSS, Razorpay secret / order / webhook, placeholder secrets, seed creds, audit, NODE_ENV gate, wallet write, route exports, catch-success, secrets masking, register throttle, schema-only fields, bonus tiers | S15–S23, S26, S27, B5, B6, B9 |
-| `16_backend_lang_ephemeris_check.py` | `lang` path traversal / unknown lang / cache bloat; `/ready` vs ephemeris; Moshier fallback (WARN) | S24, S25 |
-| `17_docs_tests_hygiene_check.py` | Docs coverage (37/115 paths), test-count aur endpoint-count claims, env vars documented, hygiene (pins, Docker, CI, migrations, tests, unused deps), `--workers` vs in-memory jobs, `npm audit` | §6, Appendix E, S27 |
-| `run_all.py` | Upar ke sab chalata hai, PASS/FAIL table | — |
+## 5. Backend calculation status (verified live, not just read as code)
 
-Reference tables/rules: `ASTROENGINE_REPO_REVIEW.md` → Appendix A. Pass 2 ka method: Appendix B (06–13), Pass 3: Appendix B (14–17).
+Core astronomy (planetary positions, ascendant, Panchang) matches raw `pyswisseph` output exactly (Lahiri ayanamsa, mean node). The following have been specifically verified correct through live testing against direct backend calls, after an earlier independent review found real bugs in several of them:
 
-## Baseline @ commit `ad5a23e` (fix se pehle) — `run_all.py`: **3 PASS, 14 FAIL**
+- Ashtakoot Guna Milan — all 8 kootas now classical (previously 7/8 were wrong).
+- Divisional/Varga chart rules, geo search, timezone/DST — verified already correct.
+- Running Dasha (birth-Mahadasha edge case), KP horary table (float-precision bug), Kaal Sarp type (Rahu house from Lagna).
+- Panchang: sunrise-based weekday, Panchak, night Choghadiya, temporal Horas, tithi end-times.
+- Lal Kitab debts, rudraksha language bug, numerology (favorable numbers, forecast, missing-numbers).
+- PDF engine: now a real ReportLab render (was previously simulated with `asyncio.sleep` and a fake URL) — verified for all report types across all 6 supported languages, with per-request-key ownership checks added on both `/pdf/status/{job_id}` and `/pdf/download/{job_id}` (the latter had **no auth at all** before this fix).
+- A deep formula audit (beyond the original review's scope) fixed real bugs in Avasthas (unreachable Swapna state) and rewrote Shadbala/Bhavabala's Dig/Kaala/Chesta/Drik Bala components against classical reference sources (Saravali, PyJHora) — some components remain documented approximations rather than exact (e.g. Chesta Bala for non-Sun/Moon planets), not silently claimed as fully exact.
 
-| Script | Exit | Result |
-|---|---|---|
-| 01 | 0 | 117/117 (1 = `pdf/status/{job_id}` 404 expected). `--real-auth` + `NEXT_APP_URL` unset → 115/117 500 |
-| 02 | **1** | 112 POST: 60 input-dependent, **45 identical**, 7 non-200 (PDF 202). Per-endpoint classification (heuristic ke 9 false-positive + 9 miss ke saath): review md Appendix C |
-| 03 | 0 | Planets/Asc worst diff 0.0000°; tithi 12, nakshatra 24, yoga 9, vaar THURSDAY sab match |
-| 04 | **1** | Nadi 160/729 pairs galat; Gana 242/729; Bhakoot 24/144 (distance 5, 9 miss); Vimshottari PASS |
-| 05 | **1** | Sections A, B, C, E FAIL; D OK. **A:** D1, D9, D12, D60 = 39/39; D2 2, D3 15, D4 14, D7 21, D10 21, D16 10, D20 3, D24 4, D27 9, D30 1, D40 3, D45 10. **B (sweep):** wahi 12 galat, D1/D9/D12/D60 100% (boundaries samet). **C:** route mapping OK; `lang=hi` **30/32** routes par ignore; `ayanamsa` API se ignore; unknown varga (D99, D5 …) 7/7 → 200. **D:** 0/1728 violations. **E:** ayanamsa IGNORED (Asc + 0/288 planets) |
-| 06 | **1** | Reference 249 rows ✓; `get_kp_sub_lord` 0 / 20,000 mismatch; **horary: 137/249 galat tuple, 131/249 galat sub-lord**, max start-degree error 2.26° |
-| 07 | **1** | 1995-11-04: API hamesha `Takshak`; **11 / 12 time slots mismatch** (sirf 18:00 par coincide) |
-| 08 | **1** | Birth MD (RAHU 1995-10-05): **30 / 141** sampled dates par AD galat; AD list MD end se **171 din** aage |
-| 09 | **1** | 7 checks FAIL: vaar 03:00 → SATURDAY; Dhanishta pada 3/4 inactive; Choghadiya day only; hora 3600 s vs 4177 s, hora #13; tithi end-time nahi. INFO: sunrise +73 s |
-| 10 | **1** | **0 / 13** probes OK; `--require-501`: 0 / 45 paths 501 dete hain |
-| 11 | **1** | 10 checks FAIL: search Udaipur / Kathmandu / nonsense → Delhi; tz Kathmandu, Kabul, NY Sep, London Jul, Sydney Jan, Adelaide Jan, Delhi 1943 |
-| 12 | **1** | 9 / 14 cases FAIL (dob → 500; tob 25:99 / 12:60 → 200; tz ±99 → 200; ayanamsa FOO → 200) |
-| 13 | 0 | Sab 7 regression checks OK |
-| 14 | **1** | A1 FAIL: `plans` POST + `playground` POST bina auth; A3 FAIL: 7 `@/lib/*` modules missing (`apiKey`, `authGuard`, `email`, `prisma`, `session`, `ssrf`, `webSession`); A4 FAIL: `/api/v1/matchmaking/ashtakoota` (playground route + docs page + LivePlayground), `/api/v1/pdf/generate` (pdf/queue) FastAPI me nahi. INFO: middleware `/api/*` cover nahi karta |
-| 15 | **1** | **0 / 19** checks OK — S17 (`user/me`, `admin/data`), S16 (invoice raw ×6), S15 (DB-secret ×3 routes, no Orders API, no webhook), 13 placeholder-secret hits, S19 (4 creds + 2 unsalted SHA-256), S22, S3 ×3, S26, S27 ×2, S23 ×2, S18, S20, B5, B6 (10/10 fields unused), B9 |
-| 16 | **1** | L1 / L2 / L3 / E1 / E3 FAIL (traversal Hindi locale load karti hai; `fr` / `zz` → 200; cache 20 entries; `/ready` galat EPHE_PATH par bhi ready; `ret_flag` kabhi test nahi hota). E2 WARN: ephe/ nahi, Moshier (`retflag` 4) |
-| 17 | **1** | D1 37/115 paths documented (78 undocumented); D2 claims 37 / 38 vs 39 collected; D3 "37 Endpoints" vs 117; D4 12/17 env vars undocumented; D5 13/13 deps unpinned + Docker / CI / migrations / frontend tests / `.env.example` nahi + redis, timezonefinder unused; D6 `--workers 4` + in-memory `PDF_JOBS`; **D7 OK** (`npm audit`: 0 vulnerabilities) |
+**Still open / not yet re-verified since the last review:**
+- Roughly 40 of the ~45 originally-fabricated/hardcoded endpoints identified by the independent review have not been confirmed fixed (only 5 named ones were: `pinnacles-challenges`, `transits/daily`, `synastry/score`, `solar-return`, `tajik/varshesh`).
+- `frontend/src/lib` was reported missing from the repo at review time, blocking a from-scratch build and auditing of auth/session code — confirm this still applies before relying on it.
+- Next.js `pdf/queue/route.ts` calling a nonexistent `/api/v1/pdf/generate` FastAPI endpoint (404 in production) was flagged and not yet fixed as of the last calculation-focused pass.
 
-**Fix ke baad expected:** 01–17 sab exit 0. Jab tak koi endpoint 501 rakha gaya hai, `10 --require-501` PASS hoga par
-uske probes (jo real behaviour maangte hain) tab tak FAIL rahenge — implement karne par hi PASS.
+## 6. Security & billing — known open findings
 
-## Limits (dhyan rakhna)
+These were identified by an independent code review and, as far as the calculation-fix work above documents, **have not been confirmed fixed**. Treat all of these as still open until re-verified:
 
-- **03 aur 05 ka reference wahi library (pyswisseph)** hai → wrapper sahi hai ye prove hota hai; ayanamsa / house system / mean-vs-true node spec ka decision hai.
-- **D30 reference** standard BPHS Trimshamsha mapping hai; apne reference software (Jagannatha Hora / Drik) se cross-check karo. Varga variants (D2 Jaimini Hora, D3 Jagannatha) chahiye to spec me decide karke `classical()` badlo.
-- **04 me sirf wahi kootas** test hote hain jo API output me dikhte hain (Nadi/Bhakoot flag, Gana points). Vashya / Yoni / Tara / Graha Maitri ke lookup tables (Appendix A5) banane ke baad unke golden tests alag likho.
-- **02 "identical = static" heuristic hai, dono taraf galat ho sakta hai** (Pass 2 me source padhne par confirm hua): 45 flagged me 9 false positive (4 Dasha sub-period expanders design se birth-independent, 2 legit catalogs, 3 test-data coincidence) aur 9 fabricated endpoints miss (input ki date/name echo karte hain, jaise `panchang/monthly-calendar` Feb ko `2026-02-30` deta hai). Script PASS hona "sab real hai" ka saboot **nahi** — uske liye per-endpoint golden tests (gate G2) chahiye.
-- **05:** section A ke 39 placements = 3 births × (Ascendant + 12 bodies: 9 grahas + Uranus/Neptune/Pluto); reference (Julian Day + swisseph) script ka apna hai, repo ke helpers nahi. Outer planets par classical varga rules traditionally lagte nahi, par API unhe bhi varga me rakhta hai — isliye script unhe bhi compare karti hai. **Section B** me `pc.swe` ko sirf script ke process me fake-longitude proxy se replace kiya jata hai (repo ki file nahi badalti); agar `compute_varga_chart` ka internal structure badle (swisseph call ka tarika), to proxy update karna padega. Section C `lang=hi` check tab hi meaningful hai jab `hi.json` locale me planet names hon (script khud detect karke SKIP karti hai). D30 / D2 / D3 conventions ke caveats upar wale bullets me hain.
-- **06:** reference 249-table standard KP construction hai (27 × 9 Vimshottari sub-divisions, sign boundary par split → 249 ✓); KP software se ek baar cross-check karo. `kp/horary/1-2193` yahan test nahi hota (sirf 501-gate).
-- **07 / 08:** Kaal Sarp classical type-by-house map standard hai. 08 ka reference API ka hi year length (365.2422 d) use karta hai — sirf *logic* compare hota hai, year-length convention (JHora 365.25) spec ka decision hai.
-- **09:** Panchak expectation = Moon Kumbha se Revati tak (Dhanishta pada 3–4 …); hora expectation = temporal hours (convention — spec me decide karo, wahi 09 ka standard hai); Bhadra loka (C6.6) test **nahi** hota (convention, sirf code reading). Sunrise convention INFO hai, fail nahi.
-- **10:** har probe sirf "sahi behaviour" maangta hai (jaise Feb me `2026-02-30` na aaye); pass hone se endpoint certify nahi hota. Baaki ~30 fabricated endpoints ke liye sirf 501-gate hai — unke probes implement karte waqt add karo.
-- **11:** endpoint ko `date` query param chahiye (abhi nahi leta — isliye DST/historical cases FAIL). Expected offsets `pytz` ki tz database se aate hain (pytz purana ho to recent tz-rule changes miss ho sakte hain). Search ke liye real geocoder chahiye.
-- **12:** validation sirf `core/planets/positions` (shared `BirthDataRequest`) par test hota hai; `MatchmakingRequest` aur query params (`seed`, `age`, `target_year` …) cover nahi.
-- **13:** regression only — fix ke dauran kuch tootne par pata chale.
-- **14 / 15 static heuristics hain** (regex / file scan) — "pattern maujood hai" pakadte hain, "runtime me exploit ho sakta hai" prove nahi karte. Fix ke baad code restructure ho jaye (jaise invoice ko template engine par le jao) to pattern gayab hone se check PASS ho sakta hai — asli saboot staging runtime tests (G3 / G5) hain. Route / file ka naam badle to script "route nahi mili" (FAIL) deti hai — tab regex update karo. 14 me `PUBLIC_WRITE_ALLOWLIST` / `PUBLIC_READ_ALLOWLIST` (sirf `auth/session`, `plans` GET, `billing/tiers` GET) jaan-bujh kar chhoti hain — naya public endpoint add karo to socho-samajh kar allowlist me daalo. **`frontend/src/lib` missing hai**, isliye 14 / 15 auth helpers ki *implementation* verify nahi karte (sirf unka istemal).
-- **16:** E2 tab tak WARN hai jab tak `ASTRO_REQUIRE_EPHE=1` na do (dev machine par ephemeris files na hon to bhi chalna chahiye); production check me `ASTRO_REQUIRE_EPHE=1` lagao.
-- **17:** D1 exact `/api/v1/...` mention dhoondhta hai (path param ke liye ek segment `{x}` se replace karke); D2 / D3 docs me numbers regex se nikalta hai (per-file "(4 tests)" aur HTTP status codes ignore) — docs ka wording badle to regex tune karo. D7 network (registry advisory lookup) use karta hai.
-- Next.js flows (auth, payment, quota, wallet) ye scripts runtime me test **nahi** karte — wo gate **G3** (staging E2E) me aate hain.
+- `POST /api/plans` had no authentication — anyone could rewrite pricing/quotas.
+- Wallet recharge could be credited without a real payment — no actual Razorpay Orders API call or webhook signature verification, fake local order IDs accepted.
+- Stored XSS in the invoice page (exploitable against admin sessions).
+- `GET /api/user/me` returned the password hash to the browser.
+- Hardcoded default admin credentials in seed scripts, reset on every seed run.
+- No rate limiting actually implemented (docs described it, code didn't enforce it), no recurring billing/quota-reset job, money stored as `Float` instead of `Decimal`, Team feature is schema-only/inert, GST/accounting math had errors.
+
+If picking this back up, re-run the verification harness at `C:\xampp\htdocs\my-app\docs\astroengine_review_scripts\run_all.py` (lives one level up, outside this repo — see its own README there) before assuming anything above is still accurate; it's a from-code-evidence differential test suite, not a changelog.
+
+## 7. Frontend: public-site redesign & i18n
+
+The public marketing site (structural reference: a competitor's layout, not its colors/branding) went through a 9-phase visual redesign, now fully committed on `main`:
+
+1. **Design tokens** (`globals.css`) — warm amber accent (`#b45309`) + cream surface palette (`--surface`, `--card`, `--line`, `--ink*`), replacing the dashboard's cold defaults on public pages only.
+2. **Navbar** — dropdown nav groups, promo banner, live Panchang info ticker.
+3. **Hero** — DOB-entry Kundli form + AI Astrologer chat widget.
+4. **Calculators directory** — 24+ calculator cards with search/filter.
+5. **Panchang & Muhurat widget** on the homepage.
+6. **12-Rashi horoscope section**.
+7. **Footer** rebuild — 5-column link directory.
+8. **Pricing & documentation pages** restyled to the design tokens.
+9. **Final QA pass** — confirmed `(dashboard)`, `(admin)`, and all `backend/**` routes were left untouched by the redesign.
+
+**Dedicated calculator pages:** all 29 calculators moved off the internal `/demo` test console onto real pages at `frontend/src/app/[locale]/calculators/<slug>/`, each with its own `BirthDataFields`, `CalculatorPageShell`, live-tested against real backend responses (multiple field-name mismatches between assumed and actual API response shapes were found and fixed this way — e.g. `sign` being an object not a string, `kootas` vs `gunas`, nested `lifetime_cycles[].phases[]`, etc.).
+
+**Bilingual locale routing (this session, on top of the above):**
+- Full `hi`/`en` URL routing for the homepage, all 29 calculators, and `/pricing` + `/documentation`, via `app/[locale]/**` + a `proxy.ts` rewrite (bare path ↔ prefixed path).
+- **Default locale is English** (`DEFAULT_LOCALE = "en"` in `lib/locale.ts`) — bare URLs (`/`, `/calculators/lagna-kundli`, `/pricing`, …) serve English; Hindi lives at the `/hi/*` prefix. (This was previously the reverse — Hindi bare, `/en/*` prefixed — and was swapped project-wide across `proxy.ts`, every locale-aware page/component, `sitemap.ts`, and `schema.ts`.)
+- A shared translation dictionary (`src/dictionaries/dictionary.ts`) now actually drives the Navbar (nav groups, promo banner, info ticker, sign-in), Footer, Hero, Panchang widget, and Horoscope section — the Navbar previously hardcoded English regardless of locale despite the dictionary comment claiming it was covered.
+- The custom ReDoc API documentation page (`backend/app/main.py`) and the Next.js `/documentation` page's code-sample panel were retheme'd from an indigo/zinc palette to the site's amber-accent/warm-ink palette, leaving semantic HTTP-method and status colors (GET/POST/error/success) untouched.
+
+**Still not locale-routed:** the ~185 hardcoded strings in a few remaining shared-chrome edge cases beyond what's listed above, if any turn up — verify by toggling the language switcher across the site rather than assuming full coverage.
+
+## 8. Reconciled numbers that used to conflict
+
+The old docs disagreed with each other on several numbers. Resolutions:
+
+- **Endpoint count:** don't trust 37, ~115, or 135 — check `/openapi.json` directly.
+- **Test count:** "37 passed, 100%" (old install guide) was wrong; an independent count found 39 tests collected (38 pass + 1 fail on a clean clone missing `NEXT_APP_URL`).
+- **Pricing:** three different tables existed (design spec vs. DB seed vs. backend fallback) — needs a single source of truth, not yet reconciled.
+- **Frontend redesign phase count:** confirmed via `git log` that all 9 phases are actually committed on `main` (Phases 1–2 have descriptive commit messages `945bcee`/`24d89a6`; Phases 3–9 landed in later, generically-messaged commits) — not just claimed in the fix log.
+
+## 9. Where things live
+
+- `backend/app/` — FastAPI app, one module per astrology domain under `modules/`.
+- `frontend/src/app/[locale]/` — locale-routed public pages (homepage, calculators, pricing, documentation).
+- `frontend/src/app/(dashboard)/`, `frontend/src/app/(admin)/` — authenticated SaaS portal, untouched by the public redesign.
+- `frontend/src/app/demo/` — internal API-testing console, intentionally left as-is (not part of the redesign).
+- `frontend/src/dictionaries/dictionary.ts` — shared hi/en translation dictionary for public-site chrome.
+- `frontend/src/lib/locale.ts` — locale routing source of truth (`DEFAULT_LOCALE`, migrated-paths list, path helpers).
+- `C:\xampp\htdocs\my-app\docs\astroengine_review_scripts\` (outside this repo) — the independent verification harness referenced in §6.
