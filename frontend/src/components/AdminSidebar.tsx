@@ -1,9 +1,10 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import axios from "axios";
 import { usePathname } from "next/navigation";
-import { 
+import {
   ShieldAlert, 
   Users, 
   CreditCard, 
@@ -33,8 +34,23 @@ const ADMIN_LINKS = [
   { name: "System Settings", href: "/admin/settings", icon: Settings },
 ];
 
+interface EnvStatus {
+  fastApiHealth?: { status: string };
+  dbHealth?: { status: string };
+  environment?: string;
+}
+
 export const AdminSidebar = () => {
   const pathname = usePathname();
+  const [envStatus, setEnvStatus] = useState<EnvStatus | null>(null);
+
+  useEffect(() => {
+    axios.get("/api/admin/stats")
+      .then(res => {
+        if (res.data?.data) setEnvStatus(res.data.data);
+      })
+      .catch(() => {});
+  }, []);
 
   return (
     <aside className="w-64 border-r border-slate-200 bg-white flex flex-col h-screen sticky top-0 shadow-sm z-20">
@@ -80,15 +96,19 @@ export const AdminSidebar = () => {
           <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 text-xs text-slate-600 space-y-1.5">
             <div className="flex items-center justify-between text-[11px]">
               <span className="text-slate-500">FastAPI C-Core:</span>
-              <span className="font-mono font-bold text-emerald-700">ONLINE</span>
+              <span className={`font-mono font-bold ${envStatus?.fastApiHealth?.status === "Online" ? "text-emerald-700" : "text-rose-700"}`}>
+                {envStatus?.fastApiHealth?.status?.toUpperCase() || "CHECKING..."}
+              </span>
             </div>
             <div className="flex items-center justify-between text-[11px]">
               <span className="text-slate-500">MySQL Database:</span>
-              <span className="font-mono font-bold text-emerald-700">CONNECTED</span>
+              <span className={`font-mono font-bold ${envStatus?.dbHealth?.status === "Connected" ? "text-emerald-700" : "text-rose-700"}`}>
+                {envStatus?.dbHealth?.status?.toUpperCase() || "CHECKING..."}
+              </span>
             </div>
             <div className="flex items-center justify-between text-[11px]">
-              <span className="text-slate-500">Active Node:</span>
-              <span className="font-mono text-slate-800">prod-mumbai-01</span>
+              <span className="text-slate-500">Environment:</span>
+              <span className="font-mono text-slate-800">{envStatus?.environment || "—"}</span>
             </div>
           </div>
         </div>

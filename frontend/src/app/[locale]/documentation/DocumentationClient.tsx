@@ -3,13 +3,14 @@
 import React, { useState } from "react";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
-import { 
-  Copy, 
-  Check, 
+import {
+  Copy,
+  Check,
   ExternalLink,
   Code2,
   Terminal
 } from "lucide-react";
+import type { Locale } from "@/lib/locale";
 
 interface ApiEndpointDoc {
   module: string;
@@ -311,10 +312,46 @@ const API_DOCS: ApiEndpointDoc[] = [
   }
 ];
 
-export default function DocumentationPage() {
+const STRINGS = {
+  hi: {
+    badge: "डेवलपर API संदर्भ • 135 Production Endpoints",
+    title: "API Documentation",
+    subtitle: "cURL, Node.js, Python और PHP कोड नमूनों के साथ पूर्ण API संदर्भ।",
+    downloadPostman: "Download Postman",
+    redocReference: "ReDoc Reference",
+    commonEndpoints: "प्रमुख एंडपॉइंट्स (Common Endpoints)",
+    headerRequired: "आवश्यक है",
+    copied: "Copied",
+    copy: "Copy",
+    fullReferenceTitle: "Full Interactive ReDoc Reference",
+    fullReferenceSubtitle: "पूर्ण 135+ एंडपॉइंट्स, स्कीमा और अनुरोध/प्रतिक्रिया मॉडल्स के साथ इंटरैक्टिव OpenAPI डॉक्यूमेंटेशन।",
+    customRedocTitle: "कस्टम ReDoc — सम्पूर्ण API संदर्भ",
+    customRedocSubtitle: "FastAPI बैकएंड द्वारा संचालित संपूर्ण 135 लाइव एंडपॉइंट्स की विस्तृत जांच, पैरामीटर्स और स्कीमा देखने के लिए ReDoc खोलें।",
+    openRedoc: "ReDoc डॉक्यूमेंटेशन खोलें",
+  },
+  en: {
+    badge: "Developer API Reference • 135 Production Endpoints",
+    title: "API Documentation",
+    subtitle: "Complete API reference with cURL, Node.js, Python, and PHP code samples.",
+    downloadPostman: "Download Postman",
+    redocReference: "ReDoc Reference",
+    commonEndpoints: "Common Endpoints",
+    headerRequired: "is required",
+    copied: "Copied",
+    copy: "Copy",
+    fullReferenceTitle: "Full Interactive ReDoc Reference",
+    fullReferenceSubtitle: "Interactive OpenAPI documentation with all 135+ endpoints, schemas, and request/response models.",
+    customRedocTitle: "Custom ReDoc — Complete API Reference",
+    customRedocSubtitle: "Open ReDoc for a detailed look at all 135 live endpoints powered by the FastAPI backend, including parameters and schemas.",
+    openRedoc: "Open ReDoc Documentation",
+  },
+} as const;
+
+export default function DocumentationClient({ locale }: { locale: Locale }) {
   const [activeDoc, setActiveDoc] = useState<ApiEndpointDoc>(API_DOCS[0]);
   const [activeTab, setActiveTab] = useState<"curl" | "node" | "python" | "php">("curl");
   const [copied, setCopied] = useState(false);
+  const t = STRINGS[locale];
 
   const getSnippet = () => {
     const payloadStr = JSON.stringify(activeDoc.samplePayload, null, 2);
@@ -329,7 +366,7 @@ export default function DocumentationPage() {
     if (activeTab === "node") {
       return `import axios from 'axios';
 
-const response = await axios.${activeDoc.method.toLowerCase()}('${apiBaseUrl}${activeDoc.path}', 
+const response = await axios.${activeDoc.method.toLowerCase()}('${apiBaseUrl}${activeDoc.path}',
   ${payloadStr},
   {
     headers: {
@@ -387,11 +424,11 @@ echo $response;`;
           <div>
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-accent-soft border border-line text-xs font-semibold text-accent mb-2">
               <Terminal className="w-3.5 h-3.5" />
-              <span>डेवलपर API संदर्भ • 135 Production Endpoints</span>
+              <span>{t.badge}</span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-ink">API Documentation</h1>
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-ink">{t.title}</h1>
             <p className="text-ink-soft text-xs sm:text-sm mt-1">
-              cURL, Node.js, Python और PHP कोड नमूनों के साथ पूर्ण API संदर्भ।
+              {t.subtitle}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -400,7 +437,7 @@ echo $response;`;
               download="AstroEngine_Postman_Collection.json"
               className="px-3.5 py-2 rounded-xl bg-accent hover:bg-accent-hover text-white text-xs font-semibold flex items-center gap-1.5 shadow-xs transition"
             >
-              <span>Download Postman</span>
+              <span>{t.downloadPostman}</span>
               <ExternalLink className="w-3 h-3 text-white/80" />
             </a>
             <a
@@ -410,7 +447,7 @@ echo $response;`;
               id="redoc-link"
               className="px-3.5 py-2 rounded-xl bg-card hover:bg-surface-alt border border-line text-ink text-xs font-semibold flex items-center gap-1.5 transition"
             >
-              <span>ReDoc Reference</span>
+              <span>{t.redocReference}</span>
               <ExternalLink className="w-3 h-3 text-ink-muted" />
             </a>
           </div>
@@ -421,7 +458,7 @@ echo $response;`;
           {/* Endpoints Nav Sidebar */}
           <div className="lg:col-span-4 space-y-1">
             <div className="text-[11px] font-bold uppercase text-ink-muted tracking-wider mb-2 px-2">
-              प्रमुख एंडपॉइंट्स (Common Endpoints)
+              {t.commonEndpoints}
             </div>
             {API_DOCS.map((doc, idx) => (
               <button
@@ -450,7 +487,7 @@ echo $response;`;
           <div className="lg:col-span-8 space-y-4">
             <div className="p-5 rounded-2xl border border-line bg-card shadow-xs space-y-2">
               <div className="flex items-center gap-2">
-                <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 font-mono text-[10px] font-bold border border-emerald-200">
+                <span className="px-2 py-0.5 rounded-md bg-accent-soft text-accent font-mono text-[10px] font-bold border border-line">
                   {activeDoc.method}
                 </span>
                 <span className="font-mono text-xs text-ink font-bold">{activeDoc.path}</span>
@@ -459,20 +496,20 @@ echo $response;`;
                 {activeDoc.description}
               </p>
               <div className="text-[11px] text-ink-muted pt-2 border-t border-line font-mono">
-                Header: <code className="text-accent font-semibold">x-api-key: ak_live_...</code> आवश्यक है
+                Header: <code className="text-accent font-semibold">x-api-key: ak_live_...</code> {t.headerRequired}
               </div>
             </div>
 
             {/* Code Snippet Box */}
-            <div className="rounded-2xl border border-line bg-zinc-950 overflow-hidden shadow-sm">
-              <div className="flex items-center justify-between px-4 py-2.5 bg-zinc-900 border-b border-zinc-800 text-xs">
+            <div className="rounded-2xl border border-line bg-ink overflow-hidden shadow-sm">
+              <div className="flex items-center justify-between px-4 py-2.5 bg-black/20 border-b border-white/10 text-xs">
                 <div className="flex items-center gap-1 font-mono text-[11px]">
                   {(["curl", "node", "python", "php"] as const).map((tab) => (
                     <button
                       key={tab}
                       onClick={() => setActiveTab(tab)}
                       className={`px-3 py-1 rounded-lg uppercase transition font-semibold cursor-pointer ${
-                        activeTab === tab ? "bg-accent text-white" : "text-zinc-400 hover:text-zinc-200"
+                        activeTab === tab ? "bg-accent text-white" : "text-white/50 hover:text-white/80"
                       }`}
                     >
                       {tab}
@@ -481,14 +518,14 @@ echo $response;`;
                 </div>
                 <button
                   onClick={handleCopy}
-                  className="flex items-center gap-1 text-zinc-400 hover:text-white transition text-xs cursor-pointer"
+                  className="flex items-center gap-1 text-white/50 hover:text-white transition text-xs cursor-pointer"
                 >
                   {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                  <span>{copied ? "Copied" : "Copy"}</span>
+                  <span>{copied ? t.copied : t.copy}</span>
                 </button>
               </div>
 
-              <pre className="p-4 font-mono text-xs text-zinc-200 overflow-x-auto leading-relaxed">
+              <pre className="p-4 font-mono text-xs text-accent-soft overflow-x-auto leading-relaxed">
                 {getSnippet()}
               </pre>
             </div>
@@ -499,9 +536,9 @@ echo $response;`;
         <div id="redoc" className="mt-14 pt-10 border-t border-line">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="text-lg font-bold text-ink">Full Interactive ReDoc Reference</h2>
+              <h2 className="text-lg font-bold text-ink">{t.fullReferenceTitle}</h2>
               <p className="text-xs text-ink-muted mt-0.5">
-                पूर्ण 135+ एंडपॉइंट्स, स्कीमा और अनुरोध/प्रतिक्रिया मॉडल्स के साथ इंटरैक्टिव OpenAPI डॉक्यूमेंटेशन।
+                {t.fullReferenceSubtitle}
               </p>
             </div>
           </div>
@@ -509,9 +546,9 @@ echo $response;`;
             <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-accent-soft text-accent mb-4">
               <Code2 className="w-6 h-6" />
             </div>
-            <h3 className="text-base font-bold text-ink mb-1.5">कस्टम ReDoc — सम्पूर्ण API संदर्भ</h3>
+            <h3 className="text-base font-bold text-ink mb-1.5">{t.customRedocTitle}</h3>
             <p className="text-xs text-ink-soft mb-6 max-w-md mx-auto leading-relaxed">
-              FastAPI बैकएंड द्वारा संचालित संपूर्ण 135 लाइव एंडपॉइंट्स की विस्तृत जांच, पैरामीटर्स और स्कीमा देखने के लिए ReDoc खोलें।
+              {t.customRedocSubtitle}
             </p>
             <a
               href={`${apiBaseUrl}/documentation`}
@@ -519,7 +556,7 @@ echo $response;`;
               rel="noreferrer"
               className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-accent hover:bg-accent-hover text-white text-xs font-bold transition shadow-xs"
             >
-              <span>ReDoc डॉक्यूमेंटेशन खोलें</span>
+              <span>{t.openRedoc}</span>
               <ExternalLink className="w-3.5 h-3.5" />
             </a>
           </div>

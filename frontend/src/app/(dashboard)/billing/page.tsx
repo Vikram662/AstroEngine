@@ -57,6 +57,8 @@ export default function BillingPage() {
   const [purchasingAddonMethod, setPurchasingAddonMethod] = useState<string | null>(null);
 
   const [userSubscription, setUserSubscription] = useState<{ currentPeriodEnd?: string } | null>(null);
+  const [userName, setUserName] = useState<string>("");
+  const [userEmail, setUserEmail] = useState<string>("");
 
   const fetchAddons = () => {
     axios.get("/api/user/addons")
@@ -79,6 +81,8 @@ export default function BillingPage() {
           setCurrentPlanTier(res.data.data.planTier || "STARTER");
           setCurrentQuota(res.data.data.monthlyQuota || 35000);
           setUserSubscription(res.data.data.subscription || null);
+          setUserName(res.data.data.name || "");
+          setUserEmail(res.data.data.email || "");
         }
       })
       .catch(() => {});
@@ -195,8 +199,8 @@ export default function BillingPage() {
               }
             },
             prefill: {
-              name: "Developer",
-              email: "dev@client.com"
+              name: userName || undefined,
+              email: userEmail || undefined
             },
             theme: {
               color: "#0f172a"
@@ -293,8 +297,8 @@ export default function BillingPage() {
             }
           },
           prefill: {
-            name: "Developer",
-            email: "dev@client.com"
+            name: userName || undefined,
+            email: userEmail || undefined
           },
           theme: {
             color: "#0f172a"
@@ -397,8 +401,8 @@ export default function BillingPage() {
               }
             },
             prefill: {
-              name: "Developer",
-              email: "dev@client.com"
+              name: userName || undefined,
+              email: userEmail || undefined
             },
             theme: {
               color: "#0f172a"

@@ -149,6 +149,9 @@ model PdfGenerationJob {
   webhookUrl     String?                            // §12.13 — optional client callback
   failureReason  String?                            // set on FAILED
   refunded       Boolean      @default(false)       // true once creditsCost auto-refunded on FAILED
+  requestPayload Json?                              // { birthData, branding, lang } — stored so a
+                                                     // failed job can actually be retried later
+  subjectName    String?                            // display name of the person the report is for
   user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt      DateTime     @default(now())
 
@@ -197,6 +200,7 @@ model AuditLog {
   targetType  String?                               // 'User', 'Transaction', 'PdfGenerationJob'
   targetId    String?
   metadata    Json?                                 // old vs new state
+  ipAddress   String?                               // request IP of the acting admin
   createdAt   DateTime @default(now())
 
   @@index([actorUserId, createdAt])

@@ -231,7 +231,7 @@ export const PanchangWidget: React.FC = () => {
                   {t.var}: <strong className="text-ink">{data?.vaar || (locale === "en" ? "Tuesday" : "मंगलवार")}</strong> • {t.samvat}
                 </span>
                 <Link
-                  href={locale === "en" ? "/en/calculators/daily-panchang" : "/calculators/daily-panchang"}
+                  href={locale === "hi" ? "/hi/calculators/daily-panchang" : "/calculators/daily-panchang"}
                   className="font-bold text-accent hover:text-accent-hover flex items-center gap-1 transition"
                 >
                   <span>{t.viewFullPanchang}</span>
@@ -366,7 +366,7 @@ export const PanchangWidget: React.FC = () => {
               {/* Bottom Quick Action */}
               <div className="pt-2">
                 <Link
-                  href={locale === "en" ? "/en/calculators/daily-panchang" : "/calculators/daily-panchang"}
+                  href={locale === "hi" ? "/hi/calculators/daily-panchang" : "/calculators/daily-panchang"}
                   className="w-full py-2.5 px-4 rounded-xl bg-accent hover:bg-accent-hover text-white font-bold text-xs transition flex items-center justify-center gap-1.5 shadow-2xs"
                 >
                   <Compass className="w-3.5 h-3.5" />

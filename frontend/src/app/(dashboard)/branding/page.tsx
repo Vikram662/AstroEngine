@@ -2,14 +2,15 @@
 
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { 
-  Upload, 
-  Globe, 
-  Phone, 
-  Building2, 
-  Check, 
+import {
+  Upload,
+  Globe,
+  Phone,
+  Building2,
+  Check,
   Sparkles,
-  Loader2
+  Loader2,
+  AlertCircle
 } from "lucide-react";
 
 export default function BrandingPage() {
@@ -17,8 +18,12 @@ export default function BrandingPage() {
   const [website, setWebsite] = useState("");
   const [phone, setPhone] = useState("");
   const [primaryColor, setPrimaryColor] = useState("#0f172a");
+  const [logoUrl, setLogoUrl] = useState("");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     // Fetch live saved branding from /api/user/me
@@ -30,10 +35,34 @@ export default function BrandingPage() {
           if (branding.website) setWebsite(branding.website);
           if (branding.contactPhone) setPhone(branding.contactPhone);
           if (branding.primaryColor) setPrimaryColor(branding.primaryColor);
+          if (branding.logoUrl) setLogoUrl(branding.logoUrl);
         }
       })
       .catch(() => {});
   }, []);
+
+  const handleLogoSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadError(null);
+    setUploadingLogo(true);
+    try {
+      const formData = new FormData();
+      formData.append("logo", file);
+      const res = await axios.post("/api/user/upload-logo", formData, {
+        headers: { "Content-Type": "multipart/form-data" }
+      });
+      if (res.data?.logoUrl) {
+        setLogoUrl(res.data.logoUrl);
+      }
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { message?: string } } };
+      setUploadError(error.response?.data?.message || "Logo upload failed.");
+    } finally {
+      setUploadingLogo(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -137,11 +166,36 @@ export default function BrandingPage() {
             <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
               Agency Logo (PNG / JPG / WebP)
             </label>
-            <div className="border-2 border-dashed border-slate-200 hover:border-slate-400 rounded-xl p-6 text-center cursor-pointer transition bg-slate-50">
-              <Upload className="w-6 h-6 text-slate-500 mx-auto mb-2" />
-              <div className="text-xs text-slate-800 font-semibold">Click to upload brand logo</div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/jpg,image/webp,image/svg+xml"
+              onChange={handleLogoSelected}
+              className="hidden"
+              id="logo-upload-input"
+            />
+            <label
+              htmlFor="logo-upload-input"
+              className="border-2 border-dashed border-slate-200 hover:border-slate-400 rounded-xl p-6 text-center cursor-pointer transition bg-slate-50 block"
+            >
+              {uploadingLogo ? (
+                <Loader2 className="w-6 h-6 text-slate-500 mx-auto mb-2 animate-spin" />
+              ) : logoUrl ? (
+                <img src={logoUrl} alt="Brand logo" className="h-10 mx-auto mb-2 object-contain" />
+              ) : (
+                <Upload className="w-6 h-6 text-slate-500 mx-auto mb-2" />
+              )}
+              <div className="text-xs text-slate-800 font-semibold">
+                {uploadingLogo ? "Uploading..." : logoUrl ? "Click to replace logo" : "Click to upload brand logo"}
+              </div>
               <div className="text-[11px] text-slate-500 mt-0.5">Recommended: Transparent PNG, 400x120px max</div>
-            </div>
+            </label>
+            {uploadError && (
+              <div className="mt-2 text-[11px] text-rose-700 flex items-center gap-1.5">
+                <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                <span>{uploadError}</span>
+              </div>
+            )}
           </div>
 
           <button
@@ -184,8 +238,8 @@ export default function BrandingPage() {
                 <div className="text-[11px] text-slate-400 uppercase font-semibold">Prepared By</div>
                 <div className="font-bold text-sm text-slate-900">{brandName || "Your Company Name"}</div>
               </div>
-              <div className="w-9 h-9 rounded bg-slate-100 border border-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-600">
-                LOGO
+              <div className="w-9 h-9 rounded bg-slate-100 border border-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-600 overflow-hidden">
+                {logoUrl ? <img src={logoUrl} alt="Logo" className="w-full h-full object-contain" /> : "LOGO"}
               </div>
             </div>
 

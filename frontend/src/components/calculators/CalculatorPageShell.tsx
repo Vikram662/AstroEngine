@@ -31,15 +31,15 @@ export const CalculatorPageShell: React.FC<Props> = ({
   slug,
   category,
   icon,
-  locale = "hi",
+  locale = "en",
   children,
 }) => {
   const related = CALCULATOR_TOOLS.filter((t) => t.category === category && t.id !== slug).slice(0, 3);
   const t = STRINGS[locale];
-  const homeHref = locale === "en" ? "/en" : "/";
-  const calculatorsHref = locale === "en" ? "/en/#calculators" : "/#calculators";
+  const homeHref = locale === "hi" ? "/hi" : "/";
+  const calculatorsHref = locale === "hi" ? "/hi/#calculators" : "/#calculators";
   const relatedHref = (r: (typeof related)[number]) =>
-    locale === "en" && isMigratedPath(r.href) ? `/en${r.href}` : r.href;
+    locale === "hi" && isMigratedPath(r.href) ? `/hi${r.href}` : r.href;
 
   return (
     <div className="min-h-screen flex flex-col bg-surface text-ink">

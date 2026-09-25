@@ -511,7 +511,7 @@ async def custom_redoc_html():
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>AstroEngine B2B API Suite — Documentation</title>
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%236366f1'><path d='M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z'/></svg>" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23b45309'><path d='M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z'/></svg>" />
   
   <!-- Next.js Typography: Inter & JetBrains Mono -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -520,16 +520,16 @@ async def custom_redoc_html():
 
   <style>
     :root {{
-      --bg-page: #fafafa;
+      --bg-page: #fdfaf5;
       --bg-card: #ffffff;
-      --border-color: #e4e4e7;
-      --border-muted: #f4f4f5;
-      --primary: #6366f1;
-      --primary-hover: #4f46e5;
-      --text-main: #09090b;
-      --text-muted: #71717a;
-      --code-panel-bg: #18181b;
-      --code-panel-text: #f4f4f5;
+      --border-color: #ece1d1;
+      --border-muted: #f7efe2;
+      --primary: #b45309;
+      --primary-hover: #92400e;
+      --text-main: #241a12;
+      --text-muted: #8a7a6c;
+      --code-panel-bg: #241a12;
+      --code-panel-text: #fdf1de;
     }}
 
     * {{
@@ -577,21 +577,21 @@ async def custom_redoc_html():
       width: 32px;
       height: 32px;
       border-radius: 8px;
-      background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+      background: linear-gradient(135deg, #92400e 0%, #b45309 100%);
       display: flex;
       align-items: center;
       justify-content: center;
       color: #ffffff;
       font-weight: 800;
       font-size: 15px;
-      box-shadow: 0 2px 8px rgba(99, 102, 241, 0.25);
+      box-shadow: 0 2px 8px rgba(180, 83, 9, 0.25);
     }}
 
     .brand-title {{
       font-size: 15px;
       font-weight: 700;
       letter-spacing: -0.02em;
-      color: #09090b;
+      color: #241a12;
       display: flex;
       align-items: center;
       gap: 8px;
@@ -602,9 +602,9 @@ async def custom_redoc_html():
       font-weight: 600;
       padding: 2px 8px;
       border-radius: 9999px;
-      background: #f4f4f5;
+      background: #f7efe2;
       border: 1px solid var(--border-color);
-      color: #52525b;
+      color: #5b4a3d;
       letter-spacing: 0.04em;
     }}
 
@@ -646,7 +646,7 @@ async def custom_redoc_html():
       gap: 6px;
       font-size: 13px;
       font-weight: 500;
-      color: #3f3f46;
+      color: #5b4a3d;
       text-decoration: none;
       padding: 6px 13px;
       border-radius: 7px;
@@ -657,20 +657,20 @@ async def custom_redoc_html():
     }}
 
     .nav-btn:hover {{
-      color: #09090b;
-      background: #f4f4f5;
-      border-color: #d4d4d8;
+      color: #241a12;
+      background: #f7efe2;
+      border-color: #ece1d1;
     }}
 
     .nav-btn-primary {{
-      background: #09090b;
+      background: #b45309;
       color: #ffffff;
-      border: 1px solid #09090b;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      border: 1px solid #b45309;
+      box-shadow: 0 1px 3px rgba(180, 83, 9, 0.2);
     }}
 
     .nav-btn-primary:hover {{
-      background: #27272a;
+      background: #92400e;
       color: #ffffff;
     }}
 
@@ -699,7 +699,7 @@ async def custom_redoc_html():
       font-family: 'Inter', sans-serif !important;
       font-size: 14px !important;
       font-weight: 600 !important;
-      color: #4f46e5 !important;
+      color: #b45309 !important;
     }}
 
     /* ReDoc Overrides matching Next.js Light Theme */
@@ -717,15 +717,15 @@ async def custom_redoc_html():
       font-family: 'Inter', sans-serif !important;
       font-size: 13px !important;
       font-weight: 500 !important;
-      color: #52525b !important;
+      color: #5b4a3d !important;
     }}
 
     .menu-item-title:hover {{
-      color: #09090b !important;
+      color: #241a12 !important;
     }}
 
     .active .menu-item-title {{
-      color: #4f46e5 !important;
+      color: #b45309 !important;
       font-weight: 600 !important;
     }}
 
@@ -778,14 +778,14 @@ async def custom_redoc_html():
       height: 6px;
     }}
     ::-webkit-scrollbar-track {{
-      background: #f4f4f5;
+      background: #f7efe2;
     }}
     ::-webkit-scrollbar-thumb {{
-      background: #d4d4d8;
+      background: #ece1d1;
       border-radius: 3px;
     }}
     ::-webkit-scrollbar-thumb:hover {{
-      background: #a1a1aa;
+      background: #8a7a6c;
     }}
 
     /* Markdown Tables in Light Mode */
@@ -799,8 +799,8 @@ async def custom_redoc_html():
     }}
 
     th {{
-      background-color: #f8fafc !important;
-      color: #0f172a !important;
+      background-color: #f7efe2 !important;
+      color: #241a12 !important;
       font-weight: 600 !important;
       font-size: 13px !important;
       padding: 12px 16px !important;
@@ -811,11 +811,11 @@ async def custom_redoc_html():
       padding: 11px 16px !important;
       border-bottom: 1px solid var(--border-color) !important;
       font-size: 13px !important;
-      color: #334155 !important;
+      color: #5b4a3d !important;
     }}
 
     tr:nth-child(even) {{
-      background-color: #fafafa !important;
+      background-color: #fdfaf5 !important;
     }}
   </style>
 </head>
@@ -856,8 +856,8 @@ async def custom_redoc_html():
   <!-- ReDoc Container with Centered Next.js Loader -->
   <div id="redoc-container">
     <div id="init-loader" style="min-height: calc(100vh - 120px); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; margin: auto;">
-      <div style="width: 32px; height: 32px; border: 3px solid #e4e4e7; border-top-color: #4f46e5; border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
-      <div style="font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 500; color: #71717a;">Loading Documentation...</div>
+      <div style="width: 32px; height: 32px; border: 3px solid #ece1d1; border-top-color: #b45309; border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
+      <div style="font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 500; color: #8a7a6c;">Loading Documentation...</div>
     </div>
   </div>
 
@@ -879,9 +879,9 @@ async def custom_redoc_html():
         colors: {{
           tonalOffset: 0.2,
           primary: {{
-            main: '#4f46e5',
-            light: '#6366f1',
-            dark: '#4338ca'
+            main: '#b45309',
+            light: '#d97706',
+            dark: '#78350f'
           }},
           success: {{
             main: '#16a34a',
@@ -899,12 +899,12 @@ async def custom_redoc_html():
             dark: '#b91c1c'
           }},
           text: {{
-            primary: '#09090b',
-            secondary: '#71717a'
+            primary: '#241a12',
+            secondary: '#8a7a6c'
           }},
           border: {{
-            dark: '#e4e4e7',
-            light: '#f4f4f5'
+            dark: '#ece1d1',
+            light: '#f7efe2'
           }},
           http: {{
             get: '#2563eb',
@@ -914,7 +914,7 @@ async def custom_redoc_html():
             patch: '#0891b2',
             delete: '#dc2626',
             basic: '#52525b',
-            link: '#4f46e5',
+            link: '#b45309',
             head: '#9333ea'
           }},
           responses: {{
@@ -947,32 +947,32 @@ async def custom_redoc_html():
             fontSize: '13px',
             fontFamily: "'JetBrains Mono', 'Fira Code', Menlo, Monaco, Consolas, monospace",
             lineHeight: '1.6em',
-            backgroundColor: '#f4f4f5',
-            color: '#09090b'
+            backgroundColor: '#f7efe2',
+            color: '#241a12'
           }}
         }},
         sidebar: {{
           width: '280px',
           backgroundColor: '#ffffff',
-          textColor: '#52525b',
-          activeTextColor: '#09090b',
+          textColor: '#5b4a3d',
+          activeTextColor: '#241a12',
           groupItems: {{
-            activeBackgroundColor: '#f4f4f5',
-            activeTextColor: '#09090b'
+            activeBackgroundColor: '#f7efe2',
+            activeTextColor: '#241a12'
           }},
           level1Items: {{
-            activeBackgroundColor: '#eef2ff',
-            activeTextColor: '#4f46e5'
+            activeBackgroundColor: '#fdf1de',
+            activeTextColor: '#b45309'
           }}
         }},
         rightPanel: {{
-          backgroundColor: '#18181b',
+          backgroundColor: '#241a12',
           width: '42%',
-          textColor: '#f4f4f5'
+          textColor: '#fdf1de'
         }},
         schema: {{
-          nestedBackground: '#f8fafc',
-          linesColor: '#e4e4e7',
+          nestedBackground: '#f7efe2',
+          linesColor: '#ece1d1',
           defaultDetailsWidth: '75%'
         }}
       }},

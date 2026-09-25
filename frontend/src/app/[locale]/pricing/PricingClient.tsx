@@ -6,6 +6,7 @@ import axios from "axios";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { Check, Zap, Sparkles, ShieldCheck, ArrowRight, Loader2, Compass } from "lucide-react";
+import type { Locale } from "@/lib/locale";
 
 interface PlanItem {
   id: string;
@@ -32,10 +33,62 @@ export interface AddonItem {
   icon: string;
 }
 
-export default function PricingPage() {
+const STRINGS = {
+  hi: {
+    badge: "पारदर्शी मूल्य निर्धारण • Real-time Quota & Billing",
+    headingPrefix: "डेवलपर एवं एंटरप्राइज",
+    headingAccent: "सब्सक्रिप्शन प्लान्स",
+    subtitle: "सभी प्लान्स में ₹100 फ्री टेस्ट क्रेडिट्स, स्विस एफिमेरिस C-कोर गति, और 6 भारतीय भाषाओं में द्वैत-कुंजी JSON सपोर्ट शामिल है।",
+    loadingPlans: "प्लान्स लोड हो रहे हैं...",
+    perMonth: "/ महीना",
+    monthlyQuota: "मासिक कोटा:",
+    calls: "कॉल्स",
+    rateLimit: "रेट लिमिट:",
+    overage: "अतिरिक्त कॉल (Overage):",
+    perCall: "/ call",
+    mostPopular: "सर्वाधिक लोकप्रिय (Recommended)",
+    enterpriseContact: "एंटरप्राइज संपर्क करें",
+    choosePlan: (name: string) => `${name} चुनें`,
+    addonsBadge: "मॉड्यूलर पावर-अप्स",
+    addonsTitle: "स्टैंडअलोन इंजन",
+    addonsTitleAccent: "ऐड-ऑन्स (Add-ons)",
+    addonsSubtitle: "वेस्टर्न, लाल किताब या पीडीएफ रिपोर्ट जैसे विशिष्ट इंजन अलग से एक्टिवेट करें — पूरे एंटरप्राइज प्लान के बिना।",
+    limit: "लिमिट:",
+    pdfs: "PDFs",
+    speed: "स्पीड:",
+    activateInDashboard: "डैशबोर्ड में एक्टिवेट करें",
+  },
+  en: {
+    badge: "Transparent Pricing • Real-time Quota & Billing",
+    headingPrefix: "Developer & Enterprise",
+    headingAccent: "Subscription Plans",
+    subtitle: "Every plan includes ₹100 free test credits, Swiss Ephemeris C-core speed, and dual-key JSON support across 6 Indian languages.",
+    loadingPlans: "Loading plans...",
+    perMonth: "/ month",
+    monthlyQuota: "Monthly quota:",
+    calls: "calls",
+    rateLimit: "Rate limit:",
+    overage: "Overage:",
+    perCall: "/ call",
+    mostPopular: "Most Popular (Recommended)",
+    enterpriseContact: "Contact Enterprise",
+    choosePlan: (name: string) => `Choose ${name}`,
+    addonsBadge: "Modular Power-ups",
+    addonsTitle: "Standalone Engine",
+    addonsTitleAccent: "Add-ons",
+    addonsSubtitle: "Activate a specific engine like Western, Lal Kitab, or PDF Reports separately — without a full Enterprise plan.",
+    limit: "Limit:",
+    pdfs: "PDFs",
+    speed: "Speed:",
+    activateInDashboard: "Activate in Dashboard",
+  },
+} as const;
+
+export default function PricingClient({ locale }: { locale: Locale }) {
   const [plans, setPlans] = useState<PlanItem[]>([]);
   const [addons, setAddons] = useState<AddonItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const t = STRINGS[locale];
 
   useEffect(() => {
     // Fetch live plans and addons dynamically from MySQL API
@@ -64,20 +117,20 @@ export default function PricingPage() {
         <div className="text-center max-w-2xl mx-auto mb-16">
           <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-accent-soft border border-line text-xs font-semibold text-accent mb-4">
             <Compass className="w-3.5 h-3.5" />
-            <span>पारदर्शी मूल्य निर्धारण • Real-time Quota & Billing</span>
+            <span>{t.badge}</span>
           </div>
           <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-ink">
-            डेवलपर एवं एंटरप्राइज <span className="font-display italic text-accent font-normal">सब्सक्रिप्शन प्लान्स</span>
+            {t.headingPrefix} <span className="font-display italic text-accent font-normal">{t.headingAccent}</span>
           </h1>
           <p className="text-ink-soft text-xs sm:text-sm mt-3 leading-relaxed">
-            सभी प्लान्स में ₹100 फ्री टेस्ट क्रेडिट्स, स्विस एफिमेरिस C-कोर गति, और 6 भारतीय भाषाओं में द्वैत-कुंजी JSON सपोर्ट शामिल है।
+            {t.subtitle}
           </p>
         </div>
 
         {loading ? (
           <div className="flex items-center justify-center py-24 text-ink-muted gap-2">
             <Loader2 className="w-5 h-5 animate-spin text-accent" />
-            <span className="text-xs font-medium">प्लान्स लोड हो रहे हैं...</span>
+            <span className="text-xs font-medium">{t.loadingPlans}</span>
           </div>
         ) : (
           <>
@@ -94,7 +147,7 @@ export default function PricingPage() {
                 >
                   {p.isPopular && (
                     <div className="absolute -top-3 right-6 px-3 py-0.5 rounded-full bg-accent text-white text-[10px] font-bold uppercase tracking-wider shadow-xs">
-                      सर्वाधिक लोकप्रिय (Recommended)
+                      {t.mostPopular}
                     </div>
                   )}
 
@@ -102,21 +155,21 @@ export default function PricingPage() {
                     <div className="text-xs font-bold text-accent uppercase tracking-wider">{p.name}</div>
                     <div className="mt-3 flex items-baseline gap-1">
                       <span className="text-3xl sm:text-4xl font-black font-mono text-ink">₹{p.priceMonthly.toLocaleString()}</span>
-                      <span className="text-xs text-ink-muted">/ महीना</span>
+                      <span className="text-xs text-ink-muted">{t.perMonth}</span>
                     </div>
 
                     <div className="mt-4 py-3 border-y border-line text-[11px] text-ink-soft space-y-1.5">
                       <div className="flex justify-between">
-                        <span>मासिक कोटा:</span>
-                        <strong className="text-ink font-mono">{p.includedQuota.toLocaleString()} कॉल्स</strong>
+                        <span>{t.monthlyQuota}</span>
+                        <strong className="text-ink font-mono">{p.includedQuota.toLocaleString()} {t.calls}</strong>
                       </div>
                       <div className="flex justify-between">
-                        <span>रेट लिमिट:</span>
+                        <span>{t.rateLimit}</span>
                         <strong className="text-ink font-mono">{p.rateLimitPerMin} req / min</strong>
                       </div>
                       <div className="flex justify-between">
-                        <span>अतिरिक्त कॉल (Overage):</span>
-                        <strong className="text-ink font-mono">₹{p.overageCost.toFixed(2)} / call</strong>
+                        <span>{t.overage}</span>
+                        <strong className="text-ink font-mono">₹{p.overageCost.toFixed(2)} {t.perCall}</strong>
                       </div>
                     </div>
 
@@ -139,7 +192,7 @@ export default function PricingPage() {
                           : "bg-surface-alt hover:bg-line text-ink"
                       }`}
                     >
-                      <span>{p.tier === "ENTERPRISE" ? "एंटरप्राइज संपर्क करें" : `${p.name} चुनें`}</span>
+                      <span>{p.tier === "ENTERPRISE" ? t.enterpriseContact : t.choosePlan(p.name)}</span>
                     </Link>
                   </div>
                 </div>
@@ -152,13 +205,13 @@ export default function PricingPage() {
                 <div className="text-center max-w-2xl mx-auto mb-12">
                   <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent-soft border border-line text-xs font-semibold text-accent mb-3">
                     <Sparkles className="w-3.5 h-3.5" />
-                    <span>मॉड्यूलर पावर-अप्स</span>
+                    <span>{t.addonsBadge}</span>
                   </div>
                   <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-ink">
-                    स्टैंडअलोन इंजन ऐड-ऑन्स <span className="font-display italic text-accent font-normal">(Add-ons)</span>
+                    {t.addonsTitle} <span className="font-display italic text-accent font-normal">{t.addonsTitleAccent}</span>
                   </h2>
                   <p className="text-ink-soft text-xs sm:text-sm mt-2">
-                    वेस्टर्न, लाल किताब या पीडीएफ रिपोर्ट जैसे विशिष्ट इंजन अलग से एक्टिवेट करें — पूरे एंटरप्राइज प्लान के बिना।
+                    {t.addonsSubtitle}
                   </p>
                 </div>
 
@@ -178,7 +231,7 @@ export default function PricingPage() {
                           </div>
                           <div className="text-right">
                             <span className="text-xl font-black font-mono text-ink">₹{addon.priceMonthly}</span>
-                            <span className="text-[10px] text-ink-muted block">/ महीना</span>
+                            <span className="text-[10px] text-ink-muted block">{t.perMonth}</span>
                           </div>
                         </div>
 
@@ -189,10 +242,10 @@ export default function PricingPage() {
                         {/* Quota & Limits Badge */}
                         <div className="mt-3 py-2 px-3 rounded-xl bg-surface border border-line flex items-center justify-between text-[10px] font-mono text-ink-soft">
                           <span>
-                            लिमिट: <strong className="text-ink">{(addon.monthlyQuota || 1000).toLocaleString()} {addon.category === "REPORTS" ? "PDFs" : "कॉल्स"}</strong>
+                            {t.limit} <strong className="text-ink">{(addon.monthlyQuota || 1000).toLocaleString()} {addon.category === "REPORTS" ? t.pdfs : t.calls}</strong>
                           </span>
                           <span>
-                            स्पीड: <strong className="text-ink">{addon.rateLimitPerMin || 60} RPM</strong>
+                            {t.speed} <strong className="text-ink">{addon.rateLimitPerMin || 60} RPM</strong>
                           </span>
                         </div>
 
@@ -212,7 +265,7 @@ export default function PricingPage() {
                           className="w-full py-2.5 rounded-xl bg-accent hover:bg-accent-hover text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition shadow-xs"
                         >
                           <Zap className="w-3.5 h-3.5 text-amber-200" />
-                          <span>डैशबोर्ड में एक्टिवेट करें</span>
+                          <span>{t.activateInDashboard}</span>
                         </Link>
                       </div>
                     </div>

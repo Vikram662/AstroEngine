@@ -29,7 +29,7 @@ export function buildSoftwareApplicationSchema(tool: CalculatorTool, locale: Loc
       price: "0",
       priceCurrency: "INR",
     },
-    url: `${SITE_URL}${locale === "hi" ? tool.href : `/en${tool.href}`}`,
+    url: `${SITE_URL}${locale === "en" ? tool.href : `/hi${tool.href}`}`,
   };
 }
 

@@ -14,10 +14,17 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { brandName, website, contactPhone, primaryColor } = body;
 
+    const user = await prisma.user.findUnique({ where: { email: sessionEmail } });
+    if (!user) {
+      return NextResponse.json({ status: "error", message: "User not found." }, { status: 404 });
+    }
+
+    const existingConfig = (user.brandingConfig as Record<string, unknown>) || {};
     await prisma.user.update({
       where: { email: sessionEmail },
       data: {
         brandingConfig: {
+          ...existingConfig,
           brandName,
           website,
           contactPhone,
@@ -33,8 +40,8 @@ export async function POST(req: NextRequest) {
   } catch (err: unknown) {
     const error = err as { message?: string };
     return NextResponse.json({
-      status: "success",
-      message: "Branding updated (fallback mode)."
-    });
+      status: "error",
+      message: error.message || "Failed to save branding configuration."
+    }, { status: 500 });
   }
 }
