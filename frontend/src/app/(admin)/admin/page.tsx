@@ -31,6 +31,10 @@ interface AdminStats {
     status: string;
     latencyMs: number;
   };
+  fastApiHealth?: {
+    status: string;
+    latencyMs: number | null;
+  };
   pdfStats: {
     failedJobs24h: number;
     activeProcessing: number;
@@ -157,8 +161,16 @@ export default function AdminOverviewPage() {
                 <div className="text-slate-500 text-[11px] font-mono">{process.env.NEXT_PUBLIC_ASTRO_ENGINE_URL || "http://localhost:8000"}/health (Swiss Ephemeris Engine)</div>
               </div>
             </div>
-            <span className="px-2.5 py-1 rounded bg-emerald-100 text-emerald-800 font-semibold border border-emerald-200 text-[11px]">
-              200 OK • Online
+            <span className={`px-2.5 py-1 rounded font-semibold border text-[11px] ${
+              stats?.fastApiHealth?.status === "Online"
+                ? "bg-emerald-100 text-emerald-800 border-emerald-200"
+                : "bg-rose-100 text-rose-800 border-rose-200"
+            }`}>
+              {stats?.fastApiHealth
+                ? stats.fastApiHealth.status === "Online"
+                  ? `200 OK • Online • ${stats.fastApiHealth.latencyMs}ms`
+                  : stats.fastApiHealth.status
+                : "Checking connection..."}
             </span>
           </div>
 

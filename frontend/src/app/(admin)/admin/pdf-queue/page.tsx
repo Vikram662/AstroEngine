@@ -34,6 +34,7 @@ export default function AdminPdfQueuePage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [retryError, setRetryError] = useState<string | null>(null);
 
   const fetchJobs = async () => {
     try {
@@ -57,10 +58,20 @@ export default function AdminPdfQueuePage() {
 
   const handleRetryJob = async (jobId: string) => {
     setActionLoading(jobId);
+    setRetryError(null);
     try {
-      // simulate retry trigger or queue dispatch
-      await new Promise(r => setTimeout(r, 1000));
+      const res = await fetch("/api/admin/pdf-queue/retry", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jobId })
+      });
+      const json = await res.json();
+      if (json.status !== "success") {
+        setRetryError(json.message || "Retry failed.");
+      }
       fetchJobs();
+    } catch {
+      setRetryError("Retry request failed — check your connection and try again.");
     } finally {
       setActionLoading(null);
     }
@@ -144,6 +155,13 @@ export default function AdminPdfQueuePage() {
           <div className="text-[11px] text-slate-400 mt-0.5">Auto-refunded via §12.6</div>
         </div>
       </div>
+
+      {retryError && (
+        <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-800 flex items-start gap-2.5">
+          <AlertCircle className="w-4 h-4 text-rose-500 flex-shrink-0 mt-0.5" />
+          <span>{retryError}</span>
+        </div>
+      )}
 
       {/* R2 Storage Status Notice (§5 / §8.3.5) */}
       <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-xs text-slate-600">

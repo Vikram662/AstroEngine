@@ -51,11 +51,29 @@ export async function GET(req: NextRequest) {
     }
 
     if (type === "audit") {
-      let audits = await prisma.auditLog.findMany({
+      const audits = await prisma.auditLog.findMany({
         orderBy: { createdAt: "desc" },
         take: 50
       });
-      return NextResponse.json({ status: "success", data: audits });
+
+      // Resolve target/actor user emails for display (best-effort — targets can be
+      // non-User entities like Transaction/PdfGenerationJob, which have no email).
+      const userIds = [...new Set([
+        ...audits.filter(a => a.targetType === "User" && a.targetId).map(a => a.targetId as string),
+        ...audits.map(a => a.actorUserId)
+      ])];
+      const users = userIds.length
+        ? await prisma.user.findMany({ where: { id: { in: userIds } }, select: { id: true, email: true } })
+        : [];
+      const emailById = new Map(users.map(u => [u.id, u.email]));
+
+      const enriched = audits.map(a => ({
+        ...a,
+        actorEmail: emailById.get(a.actorUserId) || a.actorUserId,
+        targetEmail: a.targetType === "User" && a.targetId ? emailById.get(a.targetId) || a.targetId : a.targetId
+      }));
+
+      return NextResponse.json({ status: "success", data: enriched });
     }
 
     if (type === "prompts") {
@@ -146,15 +164,18 @@ export async function PATCH(req: NextRequest) {
       data: updateData
     });
 
+    const requestIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+
     // Immutable audit trail entry (§12.5)
     await prisma.auditLog.create({
       data: {
-        actorUserId: "admin_super",
-        actorRole: "ADMIN",
+        actorUserId: admin.userId,
+        actorRole: admin.role as "ADMIN" | "SUPER_ADMIN",
         action: planTier ? "PLAN_TIER_CHANGED" : addCredit ? "WALLET_CREDIT_ADDED" : "USER_STATUS_TOGGLED",
         targetType: "User",
         targetId: userId,
-        metadata: JSON.parse(JSON.stringify({ updateData }))
+        metadata: JSON.parse(JSON.stringify({ updateData })),
+        ipAddress: requestIp
       }
     });
 

@@ -15,6 +15,8 @@ import {
 
 export default function ApiKeysPage() {
   const [apiKeyPrefix, setApiKeyPrefix] = useState("");
+  const [apiKeyCreatedAt, setApiKeyCreatedAt] = useState<string | null>(null);
+  const [apiKeyLastUsedAt, setApiKeyLastUsedAt] = useState<string | null>(null);
   const [newRawKey, setNewRawKey] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -26,9 +28,32 @@ export default function ApiKeysPage() {
         if (res.data?.data?.apiKeyPrefix) {
           setApiKeyPrefix(res.data.data.apiKeyPrefix);
         }
+        if (res.data?.data?.apiKeyCreatedAt) {
+          setApiKeyCreatedAt(res.data.data.apiKeyCreatedAt);
+        }
+        if (res.data?.data?.apiKeyLastUsedAt) {
+          setApiKeyLastUsedAt(res.data.data.apiKeyLastUsedAt);
+        }
       })
       .catch(() => {});
   }, []);
+
+  const formatDate = (iso: string | null) => {
+    if (!iso) return null;
+    return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  };
+
+  const formatRelativeTime = (iso: string | null) => {
+    if (!iso) return "Never";
+    const diffMs = Date.now() - new Date(iso).getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    if (diffMins < 1) return "Active now";
+    if (diffMins < 60) return `${diffMins}m ago`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours}h ago`;
+    const diffDays = Math.floor(diffHours / 24);
+    return `${diffDays}d ago`;
+  };
 
   const handleRegenerateKey = async () => {
     setIsGenerating(true);
@@ -37,6 +62,8 @@ export default function ApiKeysPage() {
       if (res.data?.rawKey) {
         setNewRawKey(res.data.rawKey);
         setApiKeyPrefix(res.data.apiKeyPrefix);
+        setApiKeyCreatedAt(new Date().toISOString());
+        setApiKeyLastUsedAt(null);
       }
     } catch (err) {
       // Fallback
@@ -96,7 +123,9 @@ export default function ApiKeysPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <div className="text-sm font-bold text-slate-900">Active Production Key</div>
-            <div className="text-xs text-slate-500 mt-0.5">Created on Sep 16, 2026 • Environment: Live Production</div>
+            <div className="text-xs text-slate-500 mt-0.5">
+              {apiKeyCreatedAt ? `Created on ${formatDate(apiKeyCreatedAt)}` : "Created date unavailable"} • Environment: Live Production
+            </div>
           </div>
           <button
             onClick={handleRegenerateKey}
@@ -126,7 +155,7 @@ export default function ApiKeysPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs text-slate-600 pt-3 border-t border-slate-100">
           <div className="flex items-center gap-2">
             <Clock className="w-4 h-4 text-slate-400" />
-            <span>Last used: <strong className="text-slate-900">Active now</strong></span>
+            <span>Last used: <strong className="text-slate-900">{formatRelativeTime(apiKeyLastUsedAt)}</strong></span>
           </div>
           <div className="flex items-center gap-2">
             <Key className="w-4 h-4 text-slate-400" />

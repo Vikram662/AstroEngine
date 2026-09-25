@@ -10,10 +10,13 @@ import {
 interface AuditEntry {
   id: string;
   actorUserId: string;
-  targetUserId: string;
+  actorEmail: string;
+  targetType: string | null;
+  targetId: string | null;
+  targetEmail: string | null;
   action: string;
-  details: string;
-  ipAddress: string;
+  metadata: Record<string, unknown> | null;
+  ipAddress: string | null;
   createdAt: string;
 }
 
@@ -38,10 +41,10 @@ export default function AdminAuditLogPage() {
     fetchAudits();
   }, []);
 
-  const filtered = audits.filter(a => 
-    (a.targetUserId || "").toLowerCase().includes(searchTerm.toLowerCase()) || 
+  const filtered = audits.filter(a =>
+    (a.targetEmail || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
     (a.action || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (a.details || "").toLowerCase().includes(searchTerm.toLowerCase())
+    JSON.stringify(a.metadata || {}).toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -103,7 +106,7 @@ export default function AdminAuditLogPage() {
                     {log.createdAt}
                   </td>
                   <td className="px-6 py-4 text-slate-900 font-bold whitespace-nowrap">
-                    {log.actorUserId}
+                    {log.actorEmail}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-800 font-bold border border-blue-200 text-[10px] font-sans">
@@ -111,13 +114,14 @@ export default function AdminAuditLogPage() {
                     </span>
                   </td>
                   <td className="px-6 py-4 text-slate-900 font-sans">
-                    <div className="font-semibold">{log.targetUserId}</div>
+                    <div className="font-semibold">{log.targetEmail || "—"}</div>
+                    {log.targetType && <div className="text-[10px] text-slate-400">{log.targetType}</div>}
                   </td>
-                  <td className="px-6 py-4 text-slate-700 font-sans text-xs leading-relaxed max-w-sm">
-                    {log.details}
+                  <td className="px-6 py-4 text-slate-700 font-sans text-xs leading-relaxed max-w-sm truncate">
+                    {log.metadata ? JSON.stringify(log.metadata) : "—"}
                   </td>
                   <td className="px-6 py-4 text-slate-500 text-[11px] whitespace-nowrap">
-                    {log.ipAddress || "127.0.0.1"}
+                    {log.ipAddress || "unknown"}
                   </td>
                 </tr>
               ))}

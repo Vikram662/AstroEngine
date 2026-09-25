@@ -43,6 +43,20 @@ export async function GET() {
     await prisma.$queryRaw`SELECT 1`;
     const dbLatencyMs = Date.now() - dbStartTime;
 
+    // 6. Live FastAPI Backend Health Check
+    const astroEngineUrl = (process.env.NEXT_PUBLIC_ASTRO_ENGINE_URL || "http://localhost:8000").replace(/\/$/, "");
+    let fastApiHealth: { status: string; latencyMs: number | null } = { status: "Unreachable", latencyMs: null };
+    try {
+      const fastApiStartTime = Date.now();
+      const healthRes = await fetch(`${astroEngineUrl}/health`, { signal: AbortSignal.timeout(4000) });
+      fastApiHealth = {
+        status: healthRes.ok ? "Online" : "Degraded",
+        latencyMs: Date.now() - fastApiStartTime
+      };
+    } catch {
+      fastApiHealth = { status: "Unreachable", latencyMs: null };
+    }
+
     return NextResponse.json({
       status: "success",
       data: {
@@ -59,6 +73,8 @@ export async function GET() {
           status: "Connected",
           latencyMs: dbLatencyMs
         },
+        fastApiHealth,
+        environment: process.env.ENVIRONMENT || process.env.NODE_ENV || "development",
         pdfStats: {
           failedJobs24h: failedPdfJobs,
           activeProcessing: activePdfJobs,
