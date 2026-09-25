@@ -671,7 +671,7 @@ hero on `page.tsx` with a two-column Vedic consumer hero:
 - Right Column: "Acharya Veda AI" live chat widget with green online badge,
   100% data privacy badge, suggested prompt chips ("करियर में पदोन्नति", "विवाह योग",
   "आर्थिक लाभ", "विदेश यात्रा"), auto-scrolling message thread, and interactive
-  input connected to `/api/v1/ai-astrologer/ask` via `/api/demo/proxy`.
+  input connected to `/api/v1/ai-astrologer/ask` via `/api/proxy`.
 - Built entirely with the Phase 1 warm design tokens (`bg-surface`, `bg-card`,
   `text-ink`, `border-line`, `text-accent`, `bg-accent`, `font-display`).
 

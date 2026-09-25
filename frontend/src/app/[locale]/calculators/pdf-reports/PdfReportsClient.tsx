@@ -69,10 +69,7 @@ export default function PdfReportsClient({ locale }: { locale: Locale }) {
       lat: form.lat,
       lon: form.lon,
       tz: form.tz,
-      // The long-form renderer currently has one complete editorial language pack.
-      // Keep the document consistently English instead of mixing English prose with
-      // localized planet/sign labels. The surrounding page remains route-localized.
-      lang: "en",
+      lang: locale,
       branding: {
         company_name: "AstroEngine Astrological Platform",
       },
@@ -133,7 +130,7 @@ export default function PdfReportsClient({ locale }: { locale: Locale }) {
         <div className="lg:col-span-6 bg-card p-6 rounded-2xl border border-line h-fit">
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-xs leading-5 text-blue-900">
-              {isEnglish ? "PDF reports are generated in consistent English to prevent mixed-language tables and overlapping Indic text." : "PDF रिपोर्ट एकसमान English में बनती है, ताकि Hindi-English मिश्रण और अक्षरों का overlap न हो।"}
+              {isEnglish ? "The generated PDF will use English throughout." : "तैयार PDF पूरी तरह हिन्दी में होगी - शीर्षक, तालिकाएं, ग्रह-राशि और व्याख्या सभी।"}
             </div>
             <div>
               <label htmlFor="report_sel" className="block text-xs font-semibold text-ink-soft mb-1.5 flex items-center gap-1.5">

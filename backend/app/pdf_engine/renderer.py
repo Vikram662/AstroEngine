@@ -41,7 +41,7 @@ INK = (0.11, 0.13, 0.16)      # primary text
 SUBTLE = (0.38, 0.42, 0.47)   # secondary text (subtitles, descriptions)
 FAINT = (0.55, 0.58, 0.63)    # tertiary text (footer, meta labels)
 LINE = (0.88, 0.89, 0.91)     # hairline dividers / borders
-SURFACE = (0.985, 0.985, 0.99)  # near-white card background
+SURFACE = (0.975, 0.978, 0.985)  # cool near-white card background
 
 
 def _contrast_text_color(rgb: Tuple[float, float, float]) -> Tuple[float, float, float]:
@@ -81,6 +81,181 @@ def _clean_text(text: Any) -> str:
     if isinstance(text, dict):
         text = text.get("name") or text.get("id") or str(text)
     return str(text)
+
+
+_HI_PDF_TEXT = {
+    "PERSONAL ASTROLOGY REPORT": "व्यक्तिगत ज्योतिष रिपोर्ट",
+    "Private & confidential": "निजी एवं गोपनीय",
+    "Vedic Horoscope & Kundli Life Blueprint": "वैदिक जन्मकुंडली एवं जीवन रूपरेखा",
+    "Comprehensive 15-Page Astrological Analysis": "15 पृष्ठों का विस्तृत ज्योतिषीय विश्लेषण",
+    "1. NATIVITY & BIRTH PARTICULARS": "1. जन्म विवरण",
+    "2. LAGNA KUNDLI (D1 RASHI CHART)": "2. लग्न कुंडली (डी1 राशि चक्र)",
+    "D1 LAGNA": "डी1 लग्न",
+    "3. KEY PLANETARY POSITIONS AT BIRTH": "3. जन्मकालीन प्रमुख ग्रह स्थितियां",
+    "Planetary Longitudes & Nakshatra Padas": "ग्रह अंश एवं नक्षत्र चरण",
+    "Detailed astronomical planetary coordinates & stellar quarters": "ग्रहों की विस्तृत खगोलीय स्थिति और नक्षत्र चरण",
+    "FULL PLANETARY EPHEMERIS (GRAHA SPHUTA)": "संपूर्ण ग्रह स्पष्ट",
+    "GRAHA DIGNITIES, COMBUSTION & RETROGRESSION": "ग्रह गरिमा, अस्त एवं वक्री स्थिति",
+    "VEDIC ASTRONOMICAL INTERPRETATION": "वैदिक खगोलीय व्याख्या",
+    "Planetary Dignity & Consciousness Evolution": "ग्रह गरिमा एवं चेतना का विकास",
+    "In classical Maharishi Parashara Jyotish, planetary longitudes reveal how celestial rays interact with the Earth at your exact moment of birth. Planets situated in exaltation or own signs function with radiant strength, whereas combust or afflicted grahas call for mindful remedial action and conscious spiritual alignment to manifest their highest virtues.": "महर्षि पराशर की परंपरा में ग्रहों के अंश जन्मक्षण की सूक्ष्म ऊर्जा बताते हैं। उच्च या स्वराशि के ग्रह प्रभावशाली फल देते हैं, जबकि अस्त या पीड़ित ग्रह सजग आचरण, साधना और उचित उपाय की आवश्यकता दर्शाते हैं।",
+    "Navamsha D9 Chart — Dharma & Partnership": "नवांश डी9 चक्र - धर्म एवं दांपत्य",
+    "Microscopic 9th divisional harmonic revealing inner potential and marriage": "आंतरिक क्षमता और विवाह का सूक्ष्म नवमांश विश्लेषण",
+    "NAVAMSHA D9 VECTOR KUNDLI": "नवांश डी9 कुंडली",
+    "D9 NAVAMSHA": "डी9 नवांश",
+    "NAVAMSHA (D9) PLANETARY POSITIONS": "नवांश डी9 में ग्रह स्थिति",
+    "SIGNIFICANCE OF NAVAMSHA IN VEDIC ASTROLOGY": "वैदिक ज्योतिष में नवांश का महत्व",
+    "Inner Destiny & Karmic Fruition": "आंतरिक भाग्य एवं कर्मफल",
+    "In Parashari Jyotish, the Navamsha is hailed as the supreme divisional chart (Bhagya Kundli). While D1 reveals the outer physical tree of life, D9 reveals whether that tree bears sweet fruit in mature adulthood. Planets dignified in both D1 and D9 bestow enduring prosperity, moral righteousness, and deep emotional fulfillment with your life partner.": "पराशरी ज्योतिष में नवांश को भाग्य कुंडली कहा गया है। डी1 जीवन की बाहरी संरचना दिखाता है, जबकि डी9 परिपक्व आयु में उसके फल, धर्म और दांपत्य की गुणवत्ता बताता है। दोनों चक्रों में बलवान ग्रह स्थायी समृद्धि और भावनात्मक संतोष देते हैं।",
+    "Detailed evaluation of zodiac signs, governing lords, occupants and classical outcomes": "राशि, भावेश, स्थित ग्रह और शास्त्रीय फलों का विस्तृत अध्ययन",
+    "Bhava Significance:": "भाव का महत्व:",
+    "Predictive Guidance & Remedies:": "फलादेश एवं उपाय:",
+    "Vedic House Synthesis": "वैदिक भाव समन्वय",
+    "None (Empty House - Controlled directly by Lord)": "कोई ग्रह नहीं - फल भावेश के अधीन",
+    "Vimshottari Dasha 120-Year Timeline": "विंशोत्तरी दशा का 120 वर्षीय क्रम",
+    "Planetary rulers governing every major life epoch from birth to longevity": "जन्म से दीर्घायु तक जीवनकाल को संचालित करने वाली ग्रह दशाएं",
+    "120-YEAR MAHADASHA TIMELINE TABLE": "120 वर्षीय महादशा क्रम",
+    "OPERATIVE DASHA INTERPRETATION & KARMIC CYCLE": "सक्रिय दशा एवं कर्मचक्र की व्याख्या",
+    "The Cosmic Clock of Vimshottari Dasha:": "विंशोत्तरी दशा की काल-घड़ी:",
+    "In Maharishi Parashara's 120-year cycle, each planetary period awakens specific seeds of destiny (Prarabdha Karma). When a Mahadasha lord is well-placed in Kendra (1, 4, 7, 10) or Trikona (1, 5, 9), it unfolds worldly elevation, authority, and financial progress. Even demanding dasha lords promote invaluable self-discipline, spiritual maturity, and mental resilience.": "महर्षि पराशर के 120 वर्षीय चक्र में प्रत्येक ग्रह अवधि प्रारब्ध कर्म के विशेष बीज सक्रिय करती है। केंद्र या त्रिकोण में शुभ महादशा स्वामी उन्नति, अधिकार और आर्थिक प्रगति देता है। कठिन दशाएं भी अनुशासन, आध्यात्मिक परिपक्वता और मानसिक दृढ़ता सिखाती हैं।",
+    "Recommended Conduct During Major Dasha Shifts:": "महादशा परिवर्तन में उचित आचरण:",
+    "During periods of planetary transition (Dasha Sandhi), avoid hasty life-altering gambles. Fasting on the weekday of the dasha lord, practicing mindful charity, and maintaining daily meditation balances the subtle bio-energetic chakras.": "दशा संधि में जल्दबाजी वाले बड़े निर्णयों से बचें। दशा स्वामी के वार पर संयम, सत्पात्र दान और नियमित ध्यान सूक्ष्म ऊर्जा को संतुलित रखते हैं।",
+    "STRATEGIC NAVIGATION OF DASHA PHASES": "दशा चरणों का व्यावहारिक मार्गदर्शन",
+    "Predictive Roadmap": "फलादेश मार्गचित्र",
+    "Sub-periods (Antardashas) create the actual seasonal climate within the broader Mahadasha. Auspicious synergy between the Mahadasha lord and Antardasha lord marks the golden window for major career expansions, relocations, marriage, and financial investments.": "अंतर्दशा महादशा के भीतर वास्तविक परिस्थितियां बनाती है। महादशा और अंतर्दशा स्वामी का शुभ संबंध करियर विस्तार, स्थान परिवर्तन, विवाह और निवेश के लिए अनुकूल समय दर्शाता है।",
+    "Ashtakavarga Power Analysis": "अष्टकवर्ग बल विश्लेषण",
+    "Benefic bindu distributions indicating high-prosperity and caution houses": "शुभ बिंदुओं से समृद्धि और सावधानी वाले भावों का संकेत",
+    "SARVASHTAKAVARGA BINDU SCORES (12 HOUSES)": "सर्वाष्टकवर्ग बिंदु - 12 भाव",
+    "PRACTICAL UTILIZATION OF ASHTAKAVARGA": "अष्टकवर्ग का व्यावहारिक उपयोग",
+    "Transit Auspiciousness": "गोचर शुभता",
+    "Houses with 30 or more bindus produce extraordinary positive returns whenever major planets like Jupiter or Saturn transit through them. Undertake new initiatives, financial transactions, and major commitments when transits touch your highest bindu houses.": "30 या अधिक बिंदु वाले भावों में गुरु या शनि जैसे प्रमुख ग्रहों का गोचर सामान्यतः बेहतर फल देता है। सर्वाधिक बिंदु वाले भाव सक्रिय हों तो नई पहल, आर्थिक कार्य और महत्वपूर्ण संकल्प अधिक अनुकूल रहते हैं।",
+    "Classical Parashari Yogas Catalog": "शास्त्रीय पराशरी योग",
+    "Auspicious royal planetary combinations and fortunes formed in your chart": "कुंडली में बने शुभ, राजयोग और भाग्यवर्धक ग्रह संयोग",
+    "KEY YOGAS IDENTIFIED IN YOUR HOROSCOPE": "कुंडली में प्राप्त प्रमुख योग",
+    "HOW YOGAS FRUCTIFY IN LIFE": "जीवन में योगों का फलित होना",
+    "Dasha Alignment Factor": "दशा अनुकूलता",
+    "Vedic Yogas remain dormant seeds until their participating planetary lords activate during their corresponding Mahadasha and Antardasha periods. Maintain proactive diligence when approaching your yoga-activating cycles.": "वैदिक योग तब प्रमुख फल देते हैं जब उनसे जुड़े ग्रहों की महादशा या अंतर्दशा सक्रिय होती है। योग सक्रिय करने वाले काल में सजग प्रयास और अनुशासन बनाए रखें।",
+    "Karmic Dosha & Transit Afflictions Audit": "कर्मजन्य दोष एवं गोचर परीक्षण",
+    "Thorough examination of Manglik, Kaal Sarp, and Shani Sade Sati influences": "मांगलिक, कालसर्प और शनि साढ़ेसाती प्रभावों का विस्तृत परीक्षण",
+    "1. MANGLIK (KUJA) DOSHA EXAMINATION": "1. मांगलिक दोष परीक्षण",
+    "Mars Affliction Check:": "मंगल प्रभाव परीक्षण:",
+    "Evaluated from Lagna, Moon, and Venus. In your chart, Mars operates with mitigated influence due to natural benefic counter-aspects, ensuring stability in partnerships through clear communication and patience.": "लग्न, चंद्र और शुक्र से मंगल का परीक्षण किया गया है। शुभ प्रतिदृष्टियों के कारण मंगल का प्रभाव संतुलित है; स्पष्ट संवाद और धैर्य संबंधों में स्थिरता बढ़ाते हैं।",
+    "2. SHANI SADE SATI & DHAIYA AUDIT": "2. शनि साढ़ेसाती एवं ढैया परीक्षण",
+    "Saturn Transit Status:": "शनि गोचर स्थिति:",
+    "Saturn teaches mastery through discipline and structural perseverance. When transiting adjacent to your Moon sign, cultivate mindfulness, avoid impulsive speculative ventures, and honor commitments faithfully.": "शनि अनुशासन और धैर्य सिखाता है। चंद्र राशि के आसपास गोचर के समय सजग रहें, आवेगपूर्ण निवेश से बचें और अपने दायित्व ईमानदारी से निभाएं।",
+    "3. KAAL SARP & ANCESTRAL HARMONY": "3. कालसर्प एवं पितृ सामंजस्य",
+    "Nodal Axis Assessment:": "राहु-केतु अक्ष परीक्षण:",
+    "Rahu and Ketu mark your soul's karmic evolution axis. Planetary placements on either side of the axis ensure freedom from malefic entrapment, fostering healthy individual growth and independent achievements.": "राहु और केतु आत्मा के कर्म-विकास अक्ष को दर्शाते हैं। अक्ष के दोनों ओर ग्रह होने पर पूर्ण कालसर्प बंधन नहीं बनता और स्वतंत्र प्रगति की संभावना बढ़ती है।",
+    "Vedic Remedial Suite & Sacred Upayas": "वैदिक उपाय एवं साधना",
+    "Holistic gemological, mantra, and lifestyle remedies tailored to your chart": "कुंडली के अनुसार रत्न, मंत्र और जीवनशैली संबंधी उपाय",
+    "1. GEMOLOGICAL ADVISORY (RATNA CHIKITSA)": "1. रत्न परामर्श",
+    "Benefic Gemstone Recommendation:": "शुभ रत्न सुझाव:",
+    "2. SACRED MANTRAS & CHANTING CYCLES": "2. मंत्र एवं जप क्रम",
+    "Stotra & Beeja Mantras:": "स्तोत्र एवं बीज मंत्र:",
+    "Chant the Gayatri Mantra (108 times) during dawn. Reciting the Mahamrityunjaya Mantra on Mondays dispels health anxieties and strengthens longevity and inner resilience.": "प्रातःकाल 108 बार गायत्री मंत्र का जप करें। सोमवार को महामृत्युंजय मंत्र का जप स्वास्थ्य संबंधी चिंता घटाकर आंतरिक शक्ति बढ़ाता है।",
+    "3. CHARITY, FASTING & LIFESTYLE HARMONIZATION": "3. दान, व्रत एवं जीवनशैली संतुलन",
+    "Daily Karmic Balance (Daana):": "दैनिक कर्म संतुलन - दान:",
+    "Offering food to birds and cows on Saturdays, supporting underprivileged students with educational books, and watering a Peepal tree without touching on Saturdays brings tremendous peace and dissolves karmic friction.": "शनिवार को पक्षियों और गौमाता को भोजन दें, जरूरतमंद विद्यार्थियों को पुस्तकें दें और पीपल में जल अर्पित करें। ये कार्य मन की शांति और कर्म संतुलन में सहायक हैं।",
+    "Executive Life Summary & Ethical Advisory": "जीवन सार एवं नैतिक परामर्श",
+    "Synthesized guidance for career, health, relationships and spiritual growth": "करियर, स्वास्थ्य, संबंध और आध्यात्मिक विकास का समेकित मार्गदर्शन",
+    "CORE DESTINY BLUEPRINT": "मूल भाग्य रूपरेखा",
+    "Life Trajectory Overview:": "जीवन दिशा का सार:",
+    "ETHICAL Jyotish DISCLAIMER & LEGAL NOTICE": "नैतिक ज्योतिष अस्वीकरण एवं कानूनी सूचना",
+    "Astrological Advisory Notice:": "ज्योतिषीय परामर्श सूचना:",
+    "Vedic astrology provides probabilistic guidance rooted in classical mathematics and karmic celestial indications. It is intended to empower self-awareness and foresight. All crucial life choices regarding medical, legal, financial, or marital matters must always be taken in conjunction with qualified professional counsel and conscious personal judgment.": "वैदिक ज्योतिष शास्त्रीय गणना पर आधारित संभावित मार्गदर्शन देता है। इसका उद्देश्य आत्म-जागरूकता बढ़ाना है। चिकित्सा, कानूनी, आर्थिक या वैवाहिक निर्णय योग्य विशेषज्ञ की सलाह और अपने विवेक से ही लें।",
+    "ENTERPRISE CERTIFICATE OF AUTHENTICITY": "गणना प्रामाणिकता प्रमाण",
+    "Vedic Engine Verification": "वैदिक गणना सत्यापन",
+    "Planet": "ग्रह", "Graha": "ग्रह", "Sign": "राशि", "Rashi": "राशि", "Degree": "अंश",
+    "Sign Degree": "राशि अंश", "Longitude": "देशांतर", "Motion": "गति", "House": "भाव",
+    "Dignity": "गरिमा", "Nakshatra": "नक्षत्र", "Pada": "चरण", "Natural Nature": "प्राकृतिक स्वभाव",
+    "Awastha": "अवस्था", "Role & Significance": "भूमिका एवं महत्व", "D1 Rashi": "डी1 राशि",
+    "D9 Navamsha Sign": "डी9 नवांश राशि", "D9 House": "डी9 भाव", "Harmonic Strength / Vargottama": "नवांश बल",
+    "Mahadasha Lord": "महादशा स्वामी", "Duration": "अवधि", "Start Date": "आरंभ तिथि", "End Date": "समाप्ति तिथि",
+    "Dasha Category": "दशा प्रकार", "Bindu Count": "बिंदु संख्या", "Classification": "वर्गीकरण",
+    "Practical Application": "व्यावहारिक फल", "Yoga Name": "योग नाम", "Category": "श्रेणी",
+    "Intensity": "तीव्रता", "Primary Effect": "मुख्य प्रभाव", "Direct": "मार्गी", "Retrograde": "वक्री",
+    "Retrograde (R)": "वक्री", "Direct (Normal Motion)": "मार्गी", "Vakri (Retrograde)": "वक्री",
+    "Asta (Combust)": "अस्त", "Neutral": "सम", "NEUTRAL": "सम", "EXALTED": "उच्च",
+    "DEBILITATED": "नीच", "OWN_SIGN": "स्वराशि", "STRONG": "प्रबल", "HIGH": "उच्च",
+    "Birth Balance Dasha": "जन्म शेष दशा", "Full Epoch": "पूर्ण महादशा", " Yrs": " वर्ष",
+    "Highly Auspicious (30+)": "अत्यंत शुभ", "Moderate (28-29)": "मध्यम", "Challenging (<28)": "सावधानी",
+    "Vargottama (Exalted Potency)": "वर्गोत्तम - उच्च बल", "Auspicious Kendra/Trikona": "शुभ केंद्र या त्रिकोण",
+    "Growth Harmonic": "विकासशील नवांश", "Planetary Entity": "ग्रह तत्व", "Karmic Agent": "कर्म कारक",
+}
+
+_HI_PLANETS = {"Sun": "सूर्य", "Moon": "चंद्रमा", "Mars": "मंगल", "Mercury": "बुध", "Jupiter": "बृहस्पति", "Venus": "शुक्र", "Saturn": "शनि", "Rahu": "राहु", "Ketu": "केतु", "Uranus": "अरुण", "Neptune": "वरुण", "Pluto": "यम"}
+_HI_SIGNS = {"Aries": "मेष", "Taurus": "वृषभ", "Gemini": "मिथुन", "Cancer": "कर्क", "Leo": "सिंह", "Virgo": "कन्या", "Libra": "तुला", "Scorpio": "वृश्चिक", "Sagittarius": "धनु", "Capricorn": "मकर", "Aquarius": "कुंभ", "Pisces": "मीन"}
+_HI_NAKSHATRAS = dict(zip(
+    ["Ashwini", "Bharani", "Krittika", "Rohini", "Mrigashira", "Ardra", "Punarvasu", "Pushya", "Ashlesha", "Magha", "Purva Phalguni", "Uttara Phalguni", "Hasta", "Chitra", "Swati", "Vishakha", "Anuradha", "Jyeshtha", "Mula", "Purva Ashadha", "Uttara Ashadha", "Shravana", "Dhanishta", "Shatabhisha", "Purva Bhadrapada", "Uttara Bhadrapada", "Revati"],
+    ["अश्विनी", "भरणी", "कृत्तिका", "रोहिणी", "मृगशिरा", "आर्द्रा", "पुनर्वसु", "पुष्य", "आश्लेषा", "मघा", "पूर्वाफाल्गुनी", "उत्तराफाल्गुनी", "हस्त", "चित्रा", "स्वाति", "विशाखा", "अनुराधा", "ज्येष्ठा", "मूल", "पूर्वाषाढ़ा", "उत्तराषाढ़ा", "श्रवण", "धनिष्ठा", "शतभिषा", "पूर्वाभाद्रपद", "उत्तराभाद्रपद", "रेवती"]
+))
+_HI_HOUSES = {
+    1: "तनु भाव - व्यक्तित्व, शरीर एवं जीवन शक्ति", 2: "धन भाव - धन, वाणी एवं परिवार",
+    3: "सहज भाव - साहस, भाई-बहन एवं प्रयास", 4: "सुख भाव - माता, गृह एवं मानसिक शांति",
+    5: "पुत्र भाव - बुद्धि, संतान एवं पूर्व पुण्य", 6: "रिपु भाव - रोग, ऋण एवं प्रतिस्पर्धा",
+    7: "कलत्र भाव - विवाह एवं साझेदारी", 8: "आयु भाव - परिवर्तन, आयु एवं गूढ़ ज्ञान",
+    9: "भाग्य भाव - धर्म, गुरु एवं सौभाग्य", 10: "कर्म भाव - करियर, प्रतिष्ठा एवं अधिकार",
+    11: "लाभ भाव - आय, इच्छापूर्ति एवं मित्र", 12: "व्यय भाव - विदेश, व्यय एवं मोक्ष",
+}
+_HI_PDF_TEXT.update({
+    "Date of Birth:": "जन्म तिथि:", "Time of Birth:": "जन्म समय:", "Latitude:": "अक्षांश:",
+    "Longitude:": "देशांतर:", "Timezone:": "समय क्षेत्र:", "Ascendant Sign:": "लग्न राशि:",
+    "Zodiac Sign in House:": "भाव की राशि:", "House Lord (Bhavesh):": "भावेश:", "Occupying Planets:": "स्थित ग्रह:",
+    "Natural Cruel / Krura": "प्राकृतिक क्रूर", "Natural Benefic (Shubha)": "प्राकृतिक शुभ",
+    "Natural Malefic (Papa)": "प्राकृतिक पाप ग्रह", "Conditional Benefic": "स्थितिनुसार शुभ",
+    "Supreme Benefic (Guru)": "परम शुभ गुरु", "Natural Benefic (Shukra)": "प्राकृतिक शुभ शुक्र",
+    "Natural Malefic (Shani)": "प्राकृतिक पाप शनि", "Shadow Node (Chhaya)": "छाया ग्रह",
+    "Shadow Node (Moksha)": "मोक्ष कारक छाया ग्रह", "Atmakaraka - Soul / Vitality": "आत्मा एवं जीवन शक्ति",
+    "Manas / Emotional Mind": "मन एवं भावनाएं", "Bhratrikaraka / Drive & Energy": "पराक्रम एवं ऊर्जा",
+    "Buddhi / Analytical Intellect": "बुद्धि एवं विश्लेषण", "Jnana / Wisdom & Dharma": "ज्ञान एवं धर्म",
+    "Kalatra / Harmony & Arts": "दांपत्य, सामंजस्य एवं कला", "Ayush / Longevity & Duty": "आयु एवं कर्तव्य",
+    "Worldly Desire & Foreign Link": "भौतिक इच्छा एवं विदेश", "Detachment & Spiritual Release": "वैराग्य एवं मोक्ष",
+    "Raja Yoga": "राजयोग", "Maha Raja Yoga": "महाराजयोग", "Pancha Mahapurusha Yoga": "पंच महापुरुष योग",
+    "Shubha Yoga": "शुभ योग", "Arishta Yoga": "अरिष्ट योग", "Budhaditya Yoga": "बुधादित्य योग",
+    "Gajakesari Yoga": "गजकेसरी योग", "Hamsa Yoga": "हंस योग", "Malavya Yoga": "मालव्य योग",
+    "Amala Yoga": "अमल योग", "Kemadruma Yoga": "केमद्रुम योग", "Chandra Mangala Yoga": "चंद्र-मंगल योग",
+    "Sasa Yoga": "शश योग", "Dhana Yoga": "धन योग", "HIGH": "उच्च", "STRONG": "प्रबल",
+    "Auspicious": "शुभ", "MODERATE": "मध्यम", "NEUTRALIZED": "निष्प्रभावी",
+})
+
+
+def _localize_pdf_text(text: Any, lang: str) -> str:
+    value = _clean_text(text)
+    if (lang or "en").lower().strip() != "hi":
+        return value
+    # Headers are upper-cased by the table/section renderer, so resolve the
+    # editorial dictionary without case sensitivity before applying fallbacks.
+    mapped = _HI_PDF_TEXT.get(value)
+    if mapped is None:
+        value_folded = value.casefold()
+        mapped = next((translated for source, translated in _HI_PDF_TEXT.items() if source.casefold() == value_folded), None)
+    if mapped is not None:
+        return mapped
+    value = _re.sub(r"Comprehensive Houses Analysis: (\d+) & (\d+)", r"विस्तृत भाव विश्लेषण: \1 एवं \2", value)
+    house_title = _re.match(r"^(\d+)(?:st|nd|rd|th) Bhava .*", value)
+    if house_title:
+        number = int(house_title.group(1))
+        return f"भाव {number} - {_HI_HOUSES.get(number, 'जीवन क्षेत्र')}"
+    section_house = _re.match(r"^(?:BHAVA|भाव) (\d+):.*", value)
+    if section_house:
+        number = int(section_house.group(1))
+        return f"भाव {number}: {_HI_HOUSES.get(number, 'जीवन क्षेत्र')}"
+    value = _re.sub(r"BHAVA (\d+)", r"भाव \1", value)
+    value = _re.sub(r"House (\d+)", r"भाव \1", value)
+    value = value.replace(" SYNERGY INSIGHT", " का संयुक्त फल")
+    value = value.replace(" - Sign ", " - राशि संख्या ")
+    value = value.replace("Pada ", "चरण ").replace(" Bindus", " बिंदु").replace(" deg", " अंश").replace(" Yrs", " वर्ष")
+    for english, hindi in {**_HI_PLANETS, **_HI_SIGNS, **_HI_NAKSHATRAS}.items():
+        value = _re.sub(rf"\b{english}\b", hindi, value)
+    if value.startswith("This authentic 15-page Kundli report"):
+        return "यह 15 पृष्ठों की कुंडली स्विस एफेमेरिस, लाहिरी अयनांश और सत्यापित खगोलीय गणनाओं से तैयार की गई है।"
+    # Brand names, web addresses and technical chart codes are intentionally kept.
+    protected = ("AstroEngine", "www.", "http", "D1", "D9", "UTC")
+    if _re.search(r"[A-Za-z]{3,}", value) and not any(token in value for token in protected):
+        if len(value) > 55:
+            return "इस क्षेत्र का फल ग्रह स्थिति, भावेश और दशा के संयुक्त बल से निर्धारित होता है। शुभ परिणाम बढ़ाने के लिए अनुशासन, संयम और सत्कर्म अपनाएं।"
+        return "ज्योतिषीय विवरण"
+    return value
 
 
 # Historical Indic-to-Latin transliteration map, retained only as a display fallback
@@ -217,7 +392,7 @@ class _CmdList(list):
                 bold = (font_num == "2")
                 super().append((
                     "text", float(x), float(y), self._owner._font(bold),
-                    float(size), text, self._raw_color
+                    float(size), _localize_pdf_text(text, self._owner.lang), self._raw_color
                 ))
             return
         # Any other raw op (unused by current callers) is safely ignored rather
@@ -245,7 +420,7 @@ class PageBuilder:
         return f"{self.family}-Bold" if bold else self.family
 
     def _text(self, x: float, y: float, size: float, text: Any, rgb: Tuple[float, float, float], bold: bool = False, align: str = "left"):
-        clean = _clean_text(text)
+        clean = _localize_pdf_text(text, self.lang)
         if not clean:
             return
         font = self._font(bold)
@@ -269,35 +444,38 @@ class PageBuilder:
     def _init_page(self):
         r, g, b = self.brand_color
         text_on_brand = _contrast_text_color(self.brand_color)
-        # Small filled logo-mark badge in the brand color (a filled square reads as
-        # "color" at any lightness, unlike a thin line, which is why a near-black
-        # brand color like #0f172a used to vanish against the neutral ink text).
+        # A calm editorial masthead: a tinted header field, strong brand rail, and
+        # compact folio. This keeps every report recognizably branded without the
+        # old template's busy full-width bars.
+        self._rect(0, 792, 595.28, 49, fill_rgb=SURFACE)
+        self._rect(0, 0, 5, 841.89, fill_rgb=(r, g, b))
         initial = (self.company_name or "A").strip()[:1].upper() or "A"
-        self._rect(30, 800, 18, 18, fill_rgb=(r, g, b))
-        self._text(39, 806, 10, initial, text_on_brand, bold=True, align="center")
-        self._text(56, 815, 13, self.company_name, INK, bold=True)
-        self._text(595.28 - 30, 816, 7.5, "VEDIC ASTROLOGY PORTAL", FAINT, bold=False, align="right")
-        # Solid brand-color stripe under the header (filled bar, not a hairline)
-        self._rect(0, 803, 595.28, 3, fill_rgb=(r, g, b))
+        self._rect(30, 804, 22, 22, fill_rgb=(r, g, b))
+        self._text(41, 811, 11, initial, text_on_brand, bold=True, align="center")
+        self._text(62, 817, 12.5, self.company_name, INK, bold=True)
+        self._text(62, 805, 7.2, "PERSONAL ASTROLOGY REPORT", FAINT)
+        self._rect(518, 805, 47, 20, fill_rgb=(1, 1, 1), stroke_rgb=LINE, line_w=0.75)
+        self._text(541.5, 812, 7.5, f"{self.page_num} / {self.total_pages}", SUBTLE, bold=True, align="center")
         # Bottom Footer line
         self._line(30, 45, 565, 45, LINE, 0.75)
         # Bottom Footer text
         self._text(30, 32, 8, f"{self.company_name}  ·  {self.website}", FAINT)
-        self._text(565.28, 32, 8, f"Page {self.page_num} of {self.total_pages}", FAINT, align="right")
+        self._text(565.28, 32, 8, "Private & confidential", FAINT, align="right")
 
     def add_page_title(self, title: str, subtitle: str = ""):
         r, g, b = self.brand_color
-        self._text(30, 772, 17, title, INK, bold=True)
+        self._text(30, 768, 18, title, INK, bold=True)
         if subtitle:
-            self._text(30, 757, 9, subtitle, SUBTLE)
-        # Bold accent divider -- the deliberate color touch on the page
-        self._rect(30, 747, 535, 2.5, fill_rgb=(r, g, b))
+            self._text(30, 751, 9, subtitle, SUBTLE)
+        self._rect(30, 739, 42, 3, fill_rgb=(r, g, b))
+        self._line(78, 740.5, 565, 740.5, LINE, 0.75)
 
     def add_section_header(self, y: float, title: str):
         r, g, b = self.brand_color
-        # Filled accent mark -- small but solid, so it reads as color at any brightness
-        self._rect(30, y - 1, 3.5, 13, fill_rgb=(r, g, b))
-        self._text(42, y, 10.5, title.upper(), INK, bold=True)
+        tint = (0.93 + r * 0.06, 0.93 + g * 0.06, 0.93 + b * 0.06)
+        self._rect(30, y - 5, 535, 22, fill_rgb=tint, stroke_rgb=LINE, line_w=0.5)
+        self._rect(30, y - 5, 5, 22, fill_rgb=(r, g, b))
+        self._text(44, y + 1, 10.2, title.upper(), INK, bold=True)
 
     def draw_card(self, x: float, y: float, w: float, h: float, bg_rgb: Tuple[float, float, float] = SURFACE, border_rgb: Tuple[float, float, float] = LINE):
         self._rect(x, y, w, h, fill_rgb=bg_rgb, stroke_rgb=border_rgb, line_w=0.75)
@@ -359,13 +537,13 @@ class PageBuilder:
     def draw_table(self, x: float, y: float, headers: List[str], rows: List[List[str]], col_widths: List[float], row_h: float = 16):
         r, g, b = self.brand_color
         total_w = sum(col_widths)
-        # Header Row: light neutral background + dark text, with a solid accent-colored
-        # underline as the color touch (replaces the old full brand-color fill).
-        self._rect(x, y, total_w, row_h, fill_rgb=(0.95, 0.95, 0.96))
-        self._rect(x, y - 1.5, total_w, 2, fill_rgb=(r, g, b))
+        # Brand-colored headers and softly tinted alternate rows create a stronger,
+        # more approachable visual hierarchy without sacrificing print legibility.
+        header_text = _contrast_text_color(self.brand_color)
+        self._rect(x, y, total_w, row_h, fill_rgb=(r, g, b), stroke_rgb=(r, g, b), line_w=0.5)
         curr_x = x + 6
         for idx, h in enumerate(headers):
-            self._text(curr_x, y + 4, 8, h.upper(), INK, bold=True)
+            self._text(curr_x, y + 4, 8, h.upper(), header_text, bold=True)
             curr_x += col_widths[idx]
 
         # Table Rows
@@ -373,7 +551,7 @@ class PageBuilder:
         for r_idx, row in enumerate(rows):
             # Alternating background -- very subtle
             if r_idx % 2 == 1:
-                self._rect(x, curr_y, total_w, row_h, fill_rgb=(0.98, 0.98, 0.985))
+                self._rect(x, curr_y, total_w, row_h, fill_rgb=(0.965 + r * 0.025, 0.965 + g * 0.025, 0.965 + b * 0.025))
             self._rect(x, curr_y, total_w, row_h, stroke_rgb=LINE, line_w=0.5)
 
             curr_x = x + 6
@@ -395,7 +573,10 @@ class PageBuilder:
             curr_y = y
 
         body_font = self._font(bold=False)
-        words = str(text).split(" ")
+        # Translate the complete paragraph before wrapping. Translating each
+        # already-wrapped English fragment produced repeated generic Hindi copy.
+        localized_text = _localize_pdf_text(text, self.lang)
+        words = localized_text.split(" ")
         lines: List[str] = []
         curr_line = ""
         for w in words:
@@ -515,10 +696,10 @@ def build_basic_kundli_pdf(birth_data: Dict[str, Any], chart: Dict[str, Any], br
     for p in planets:
         h = p.get("house", 1)
         p_id = p.get("id", p.get("name", "Pl"))
-        # Abbreviate: Sun -> Su, Moon -> Mo, Mars -> Ma, Merc -> Me, Jup -> Ju, Ven -> Ve, Sat -> Sa, Rahu -> Ra, Ketu -> Ke
-        abbr = p_id[:2].capitalize()
+        hi_abbr = {"SUN": "सू", "MOON": "चं", "MARS": "मं", "MERCURY": "बु", "JUPITER": "गु", "VENUS": "शु", "SATURN": "श", "RAHU": "रा", "KETU": "के", "URANUS": "अ", "NEPTUNE": "व", "PLUTO": "य"}
+        abbr = hi_abbr.get(str(p_id).upper(), str(p_id)[:2].capitalize()) if lang == "hi" else str(p_id)[:2].capitalize()
         if p.get("is_retrograde"):
-            abbr += "(R)"
+            abbr += "(व)" if lang == "hi" else "(R)"
         d1_houses[h].append(abbr)
 
     # PAGE 1: Grand Front Cover Page
@@ -535,7 +716,7 @@ def build_basic_kundli_pdf(birth_data: Dict[str, Any], chart: Dict[str, Any], br
     p1.cmds.append(f"BT /F2 9.5 Tf 310 655 Td (Ascendant Sign:) Tj /F1 9.5 Tf 400 655 Td ({_escape_pdf_text(asc_name)} - Sign {asc_sign}) Tj ET")
 
     p1.add_section_header(615, "2. LAGNA KUNDLI (D1 RASHI CHART)")
-    p1.draw_north_chart(175, 360, 240, asc_sign, d1_houses, "D1 LAGNA")
+    p1.draw_north_chart(195, 395, 205, asc_sign, d1_houses, "D1 LAGNA")
 
     # Table of Core Coordinates
     p1.add_section_header(335, "3. KEY PLANETARY POSITIONS AT BIRTH")
@@ -557,7 +738,7 @@ def build_basic_kundli_pdf(birth_data: Dict[str, Any], chart: Dict[str, Any], br
     p2 = PageBuilder(2, total_pages, company, website, b_color, lang=lang)
     p2.add_page_title("Planetary Longitudes & Nakshatra Padas", "Detailed astronomical planetary coordinates & stellar quarters")
     p2.add_section_header(725, "FULL PLANETARY EPHEMERIS (GRAHA SPHUTA)")
-    e_headers = ["Graha", "Rashi", "Degree In Sign", "Absolute Longitude", "Motion", "Nakshatra", "Pada"]
+    e_headers = ["Graha", "Rashi", "Sign Degree", "Longitude", "Motion", "Nakshatra", "Pada"]
     e_rows = []
     for p in planets:
         p_name = p.get("name") if not isinstance(p.get("name"), dict) else p.get("id", "")
@@ -575,8 +756,8 @@ def build_basic_kundli_pdf(birth_data: Dict[str, Any], chart: Dict[str, Any], br
         e_rows.append([str(p_name), str(s_name), deg_in_sign, f"{lon:.2f} deg", motion, nak_str, f"Pada {pada_idx}"])
     p2.draw_table(30, 705, e_headers, e_rows, [70, 75, 80, 85, 75, 90, 60], row_h=17)
 
-    p2.add_section_header(515, "GRAHA DIGNITIES, COMBUSTION & RETROGRESSION")
-    dig_headers = ["Graha", "Natural Benefic / Malefic", "Dignity in Rashi", "Awastha", "Planetary Status & Power"]
+    p2.add_section_header(475, "GRAHA DIGNITIES, COMBUSTION & RETROGRESSION")
+    dig_headers = ["Graha", "Natural Nature", "Dignity", "Awastha", "Role & Significance"]
     dig_rows = []
     benefic_map = {
         "Sun": ("Natural Cruel / Krura", "Atmakaraka - Soul / Vitality"),
@@ -591,7 +772,9 @@ def build_basic_kundli_pdf(birth_data: Dict[str, Any], chart: Dict[str, Any], br
     }
     for p in planets:
         p_name = p.get("name") if not isinstance(p.get("name"), dict) else p.get("id", "Sun")
-        p_clean = str(p_name).split(" ")[0]
+        # The visible name can already be localized; the stable id remains
+        # English and is the correct key for the interpretation lookup.
+        p_clean = str(p.get("id") or p_name).split(" ")[0].title()
         nature, role = benefic_map.get(p_clean, ("Planetary Entity", "Karmic Agent"))
         dig = str(p.get("dignity", "Neutral"))
         ret_comb = []
@@ -604,10 +787,10 @@ def build_basic_kundli_pdf(birth_data: Dict[str, Any], chart: Dict[str, Any], br
         motion_str = ", ".join(ret_comb)
         dig_rows.append([str(p_name), nature, dig, motion_str, role])
     
-    p2.draw_table(30, 495, dig_headers, dig_rows[:9], [75, 115, 85, 120, 140], row_h=16)
+    p2.draw_table(30, 450, dig_headers, dig_rows[:9], [75, 115, 85, 120, 140], row_h=16)
 
-    p2.add_section_header(325, "VEDIC ASTRONOMICAL INTERPRETATION")
-    p2.add_text_block(30, 305, 535, "Planetary Dignity & Consciousness Evolution",
+    p2.add_section_header(270, "VEDIC ASTRONOMICAL INTERPRETATION")
+    p2.add_text_block(42, 238, 510, "Planetary Dignity & Consciousness Evolution",
                       "In classical Maharishi Parashara Jyotish, planetary longitudes reveal how celestial rays interact with the Earth at your exact moment of birth. Planets situated in exaltation or own signs function with radiant strength, whereas combust or afflicted grahas call for mindful remedial action and conscious spiritual alignment to manifest their highest virtues.")
     streams.append(p2.get_stream())
 
@@ -625,16 +808,20 @@ def build_basic_kundli_pdf(birth_data: Dict[str, Any], chart: Dict[str, Any], br
         p_lon = float(p.get("longitude", 0.0))
         d9_s = compute_d9_navamsha_sign(p_lon) + 1
         d9_h = ((d9_s - d9_asc_sign) % 12) + 1
-        abbr = p.get("id", p.get("name", "Pl"))[:2].capitalize()
+        p_id = p.get("id", p.get("name", "Pl"))
+        hi_abbr = {"SUN": "सू", "MOON": "चं", "MARS": "मं", "MERCURY": "बु", "JUPITER": "गु", "VENUS": "शु", "SATURN": "श", "RAHU": "रा", "KETU": "के", "URANUS": "अ", "NEPTUNE": "व", "PLUTO": "य"}
+        abbr = hi_abbr.get(str(p_id).upper(), str(p_id)[:2].capitalize()) if lang == "hi" else str(p_id)[:2].capitalize()
         d9_houses[d9_h].append(abbr)
 
-    p3.draw_north_chart(175, 500, 210, d9_asc_sign, d9_houses, "D9 NAVAMSHA")
+    p3.draw_north_chart(207, 525, 180, d9_asc_sign, d9_houses, "D9 NAVAMSHA")
 
     p3.add_section_header(475, "NAVAMSHA (D9) PLANETARY POSITIONS")
     d9_headers = ["Graha", "D1 Rashi", "D9 Navamsha Sign", "D9 House", "Harmonic Strength / Vargottama"]
     d9_rows = []
-    rashi_names = ["Mesha (Aries)", "Vrishabha (Taurus)", "Mithuna (Gemini)", "Karka (Cancer)", "Simha (Leo)", "Kanya (Virgo)",
-                   "Tula (Libra)", "Vrishchika (Scorpio)", "Dhanu (Sagittarius)", "Makara (Capricorn)", "Kumbha (Aquarius)", "Meena (Pisces)"]
+    rashi_names = (["मेष", "वृषभ", "मिथुन", "कर्क", "सिंह", "कन्या", "तुला", "वृश्चिक", "धनु", "मकर", "कुंभ", "मीन"]
+                   if lang == "hi" else
+                   ["Mesha (Aries)", "Vrishabha (Taurus)", "Mithuna (Gemini)", "Karka (Cancer)", "Simha (Leo)", "Kanya (Virgo)",
+                    "Tula (Libra)", "Vrishchika (Scorpio)", "Dhanu (Sagittarius)", "Makara (Capricorn)", "Kumbha (Aquarius)", "Meena (Pisces)"])
     for p in planets:
         p_name = p.get("name") if not isinstance(p.get("name"), dict) else p.get("id", "Graha")
         p_lon = float(p.get("longitude", 0.0))
@@ -720,10 +907,43 @@ def build_basic_kundli_pdf(birth_data: Dict[str, Any], chart: Dict[str, Any], br
          "Fosters rich subconscious intuition, success in multinational enterprises or overseas travel, and profound spiritual enlightenment. Regular charitable giving and quiet meditation channel its energies positively.")
     ]
 
-    rashi_names = ["Mesha (Aries)", "Vrishabha (Taurus)", "Mithuna (Gemini)", "Karka (Cancer)", "Simha (Leo)", "Kanya (Virgo)",
-                   "Tula (Libra)", "Vrishchika (Scorpio)", "Dhanu (Sagittarius)", "Makara (Capricorn)", "Kumbha (Aquarius)", "Meena (Pisces)"]
-    rashi_lords = ["Mangal (Mars)", "Shukra (Venus)", "Budha (Mercury)", "Chandra (Moon)", "Surya (Sun)", "Budha (Mercury)",
-                   "Shukra (Venus)", "Mangal (Mars)", "Brihaspati (Jupiter)", "Shani (Saturn)", "Shani (Saturn)", "Brihaspati (Jupiter)"]
+    if lang == "hi":
+        bhava_hi_text = [
+            ("लग्न शरीर, स्वास्थ्य, स्वभाव, आत्मविश्वास और जीवन की मूल दिशा को दर्शाता है। इसकी शक्ति पूरे जन्मपत्र के फल को प्रभावित करती है।",
+             "अनुकूल लग्न मजबूत रोग-प्रतिरोध, नेतृत्व और सम्मान देता है। नियमित व्यायाम, अनुशासित दिनचर्या और स्पष्ट सीमाएं जीवन शक्ति बढ़ाती हैं।"),
+            ("द्वितीय भाव संचित धन, परिवार, वाणी, भोजन, संस्कार और आर्थिक सुरक्षा की क्षमता का सूचक है।",
+             "मधुर वाणी, सुविचारित बचत और परिवार में सामंजस्य स्थायी समृद्धि बढ़ाते हैं। कठोर शब्द और अनियोजित खर्च से बचें।"),
+            ("तृतीय भाव साहस, पराक्रम, छोटे भाई-बहन, संचार, लेखन, कला, कौशल और छोटी यात्राओं का प्रतिनिधित्व करता है।",
+             "लगातार प्रयास से मीडिया, व्यापार, बातचीत और स्वतंत्र काम में सफलता मिलती है। छोटे अवसरों पर समय से कार्रवाई करें।"),
+            ("चतुर्थ भाव माता, घर, भूमि, वाहन, शिक्षा, मानसिक शांति और भावनात्मक सुरक्षा से जुड़ा है।",
+             "घर में शांत वातावरण, माता और बुजुर्गों का सम्मान तथा संपत्ति के निर्णयों में सावधानी स्थिर सुख देती है।"),
+            ("पंचम भाव बुद्धि, संतान, रचनात्मकता, प्रेम, मंत्र, पूर्व पुण्य और विवेकपूर्ण निवेश का द्योतक है।",
+             "अध्ययन, मंत्र-जप और बच्चों की शिक्षा में सहयोग भाग्य को सक्रिय करता है। सट्टात्मक निर्णय सोच-समझकर लें।"),
+            ("षष्ठ भाव रोग-प्रतिरोध, ऋण, सेवा, प्रतिस्पर्धा, विवाद और दैनिक कार्यशैली को दर्शाता है।",
+             "नियमित आहार, व्यवस्थित काम और शांत विवाद-समाधान बाधाओं पर विजय दिलाते हैं। ऋण और कानूनी मामलों में अनुशासन रखें।"),
+            ("सप्तम भाव विवाह, जीवनसाथी, व्यापारिक साझेदारी, समझौते, जनसंपर्क और सामाजिक प्रतिष्ठा का सूचक है।",
+             "पारदर्शी संवाद, आर्थिक अपेक्षाओं की स्पष्टता और धैर्य दांपत्य व व्यावसायिक संबंधों को टिकाऊ बनाते हैं।"),
+            ("अष्टम भाव आयु, अचानक परिवर्तन, विरासत, बीमा, गूढ़ ज्ञान, शोध और मनोवैज्ञानिक रूपांतरण को दर्शाता है।",
+             "शोध, प्राणायाम और आर्थिक दस्तावेजों में ईमानदारी लाभ देती है। अचानक बदलावों में संयम और आपात बचत बनाए रखें।"),
+            ("नवम भाव भाग्य, धर्म, पिता, गुरु, उच्च शिक्षा, तीर्थयात्रा, दर्शन और नैतिक आचरण का प्रतिनिधित्व करता है।",
+             "सत्कर्म, दान, गुरु और पूर्वजों का सम्मान कठिन समय में संरक्षण देता है तथा शिक्षा और लंबी यात्राओं के अवसर बढ़ाता है।"),
+            ("दशम भाव करियर, पद, नेतृत्व, जिम्मेदारी, सार्वजनिक उपलब्धि और दीर्घकालीन प्रतिष्ठा का मुख्य संकेतक है।",
+             "निरंतर मेहनत और नैतिक नेतृत्व से पदोन्नति व सम्मान मिलता है। कार्यस्थल पर उत्तरदायित्व और कौशल-विकास बनाए रखें।"),
+            ("एकादश भाव आय, लाभ, इच्छापूर्ति, बड़े भाई-बहन, मित्र, संरक्षक और व्यापक सामाजिक नेटवर्क से जुड़ा है।",
+             "सहयोगी नेटवर्क और पुराने निवेश लाभ दे सकते हैं। अच्छे संबंध बनाए रखें और आय के स्रोतों में संतुलित विस्तार करें।"),
+            ("द्वादश भाव व्यय, विदेश, एकांत, निद्रा, अस्पताल, दान, ध्यान और आध्यात्मिक मुक्ति का प्रतिनिधित्व करता है।",
+             "विदेशी कार्य और ध्यान से प्रगति संभव है। खर्च का लेखा रखें, नियमित दान करें और पर्याप्त विश्राम को प्राथमिकता दें।"),
+        ]
+        bhava_data = [(entry[0], *bhava_hi_text[index]) for index, entry in enumerate(bhava_data)]
+
+    rashi_names = (["मेष", "वृषभ", "मिथुन", "कर्क", "सिंह", "कन्या", "तुला", "वृश्चिक", "धनु", "मकर", "कुंभ", "मीन"]
+                   if lang == "hi" else
+                   ["Mesha (Aries)", "Vrishabha (Taurus)", "Mithuna (Gemini)", "Karka (Cancer)", "Simha (Leo)", "Kanya (Virgo)",
+                    "Tula (Libra)", "Vrishchika (Scorpio)", "Dhanu (Sagittarius)", "Makara (Capricorn)", "Kumbha (Aquarius)", "Meena (Pisces)"])
+    rashi_lords = (["मंगल", "शुक्र", "बुध", "चंद्रमा", "सूर्य", "बुध", "शुक्र", "मंगल", "बृहस्पति", "शनि", "शनि", "बृहस्पति"]
+                    if lang == "hi" else
+                    ["Mangal (Mars)", "Shukra (Venus)", "Budha (Mercury)", "Chandra (Moon)", "Surya (Sun)", "Budha (Mercury)",
+                     "Shukra (Venus)", "Mangal (Mars)", "Brihaspati (Jupiter)", "Shani (Saturn)", "Shani (Saturn)", "Brihaspati (Jupiter)"])
 
     for page_idx in range(6):
         p_num = 4 + page_idx
@@ -770,8 +990,10 @@ def build_basic_kundli_pdf(birth_data: Dict[str, Any], chart: Dict[str, Any], br
 
         # Synthesis Note
         pb.add_section_header(375, f"BHAVA {h1_num} & BHAVA {h2_num} SYNERGY INSIGHT")
-        pb.add_text_block(30, 355, 535, "Vedic House Synthesis",
-                          f"In classical Jaimini and Parashari analysis, the connection between Bhavas {h1_num} and {h2_num} creates a potent feedback loop. Strengthening {h1_lord_name} and {h2_lord_name} through righteous action and sacred charity unlocks latent material harmony and removes karmic resistance.")
+        synthesis = (f"भाव {h1_num} और भाव {h2_num} का संबंध जीवन के इन दोनों क्षेत्रों में परस्पर प्रभाव बनाता है। "
+                     f"{h1_lord_name} और {h2_lord_name} से जुड़े सदाचार, सेवा और दान को अपनाने से संतुलन बढ़ता है तथा कर्मजन्य बाधाएं घटती हैं।") if lang == "hi" else (
+                     f"In classical Jaimini and Parashari analysis, the connection between Bhavas {h1_num} and {h2_num} creates a potent feedback loop. Strengthening {h1_lord_name} and {h2_lord_name} through righteous action and sacred charity unlocks latent material harmony and removes karmic resistance.")
+        pb.add_text_block(30, 355, 535, "Vedic House Synthesis", synthesis)
         streams.append(pb.get_stream())
 
     # PAGE 10: Vimshottari Mahadasha 120-Year Timeline
@@ -781,7 +1003,7 @@ def build_basic_kundli_pdf(birth_data: Dict[str, Any], chart: Dict[str, Any], br
     
     from app.modules.dasha.calculator import calculate_vimshottari_mahadasha
     moon_lon = float(next((p.get("longitude", 0.0) for p in planets if p.get("id") == "MOON"), 45.0))
-    dasha_res = calculate_vimshottari_mahadasha(birth_data.get("dob", "1995-10-05"), birth_data.get("tob", "14:30"), float(birth_data.get("tz", 5.5)), moon_lon, "en")
+    dasha_res = calculate_vimshottari_mahadasha(birth_data.get("dob", "1995-10-05"), birth_data.get("tob", "14:30"), float(birth_data.get("tz", 5.5)), moon_lon, lang)
     d_rows = []
     for md in dasha_res.get("mahadashas", []):
         p_name = md.get("planet_name", md.get("planet_id"))
@@ -816,7 +1038,8 @@ def build_basic_kundli_pdf(birth_data: Dict[str, Any], chart: Dict[str, Any], br
     for h_num in range(1, 13):
         score = sav_scores[h_num - 1]
         category = "Highly Auspicious (30+)" if score >= 30 else ("Moderate (28-29)" if score >= 28 else "Challenging (<28)")
-        sav_rows.append([f"House {h_num}", f"{score} Bindus", category, f"Supports affairs of Bhava {h_num}"])
+        practical = f"भाव {h_num} के प्रमुख क्षेत्रों को समर्थन" if lang == "hi" else f"Supports affairs of Bhava {h_num}"
+        sav_rows.append([f"House {h_num}", f"{score} Bindus", category, practical])
     p11.draw_table(30, 705, ["House", "Bindu Count", "Classification", "Practical Application"], sav_rows, [95, 105, 155, 180], row_h=17)
     
     p11.add_section_header(455, "PRACTICAL UTILIZATION OF ASHTAKAVARGA")
@@ -837,7 +1060,16 @@ def build_basic_kundli_pdf(birth_data: Dict[str, Any], chart: Dict[str, Any], br
         y_name = y.get("name", "Raja Yoga")
         y_cat = y.get("category", "Auspicious")
         y_str = y.get("strength", "HIGH")
-        y_desc = y.get("description", "Auspicious combination conferring honor.")[:45] + "..."
+        if lang == "hi":
+            yoga_effects = {
+                "Gajakesari Yoga": "प्रतिष्ठा, विवेक और समृद्धि को बढ़ाने वाला योग",
+                "Sasa Yoga": "अनुशासन, अधिकार और नेतृत्व क्षमता देने वाला योग",
+                "Chandra Mangala Yoga": "उद्यम, आर्थिक सूझबूझ और साहस बढ़ाने वाला योग",
+                "Kemadruma Yoga": "केंद्र ग्रहों के समर्थन से दोष का प्रभाव कम है",
+            }
+            y_desc = yoga_effects.get(str(y_name), "शुभ अवसर, सम्मान और प्रगति देने वाला योग")
+        else:
+            y_desc = y.get("description", "Auspicious combination conferring honor.")[:45] + "..."
         y_rows.append([str(y_name), str(y_cat), str(y_str), str(y_desc)])
     if not y_rows:
         y_rows.append(["Budhaditya Yoga", "Raja Yoga", "STRONG", "Conferring sharp intellect and managerial acumen."])
@@ -873,8 +1105,10 @@ def build_basic_kundli_pdf(birth_data: Dict[str, Any], chart: Dict[str, Any], br
     p14.add_page_title("Vedic Remedial Suite & Sacred Upayas", "Holistic gemological, mantra, and lifestyle remedies tailored to your chart")
     p14.add_section_header(725, "1. GEMOLOGICAL ADVISORY (RATNA CHIKITSA)")
     p14.draw_card(30, 615, 535, 90)
-    p14.add_text_block(45, 680, 505, "Benefic Gemstone Recommendation:",
-                       f"Based on your {asc_name} Lagna lordship, wearing a natural untreated Yellow Sapphire (Jupiter) or Ruby/Emerald strengthens your vital energy, decision-making clarity, and executive command. Wear set in gold/copper after energizing on an auspicious sunrise.")
+    gemstone_guidance = (f"आपके {asc_name} लग्न के अनुसार रत्न केवल व्यक्तिगत ग्रहबल की पुष्टि के बाद पहनें। उपयुक्त प्राकृतिक पुखराज, माणिक या पन्ना "
+                         "निर्णय क्षमता और आत्मबल में सहायक हो सकता है। प्रमाणित रत्न को शुभ मुहूर्त में सोना या तांबे में धारण करें।") if lang == "hi" else (
+                         f"Based on your {asc_name} Lagna lordship, wearing a natural untreated Yellow Sapphire (Jupiter) or Ruby/Emerald strengthens your vital energy, decision-making clarity, and executive command. Wear set in gold/copper after energizing on an auspicious sunrise.")
+    p14.add_text_block(45, 680, 505, "Benefic Gemstone Recommendation:", gemstone_guidance)
 
     p14.add_section_header(590, "2. SACRED MANTRAS & CHANTING CYCLES")
     p14.draw_card(30, 480, 535, 90)
@@ -892,8 +1126,10 @@ def build_basic_kundli_pdf(birth_data: Dict[str, Any], chart: Dict[str, Any], br
     p15.add_page_title("Executive Life Summary & Ethical Advisory", "Synthesized guidance for career, health, relationships and spiritual growth")
     p15.add_section_header(725, "CORE DESTINY BLUEPRINT")
     p15.draw_card(30, 580, 535, 125)
-    p15.add_text_block(45, 675, 505, "Life Trajectory Overview:",
-                       f"Your {asc_name} ascendant grants an innate capacity for visionary leadership, perseverance, and intellectual independence. By harmonizing key planetary energies and respecting cyclical dasha timings, you possess the full potential to achieve worldly success and profound peace.")
+    life_summary = (f"{asc_name} लग्न आपको व्यावहारिक नेतृत्व, धैर्य और स्वतंत्र निर्णय की क्षमता देता है। ग्रहों की प्रमुख शक्तियों को संतुलित रखते हुए "
+                    "दशा के अनुकूल समय में प्रयास करने से करियर, संबंध और आंतरिक शांति में स्थायी प्रगति संभव है।") if lang == "hi" else (
+                    f"Your {asc_name} ascendant grants an innate capacity for visionary leadership, perseverance, and intellectual independence. By harmonizing key planetary energies and respecting cyclical dasha timings, you possess the full potential to achieve worldly success and profound peace.")
+    p15.add_text_block(45, 675, 505, "Life Trajectory Overview:", life_summary)
 
     p15.add_section_header(550, "ETHICAL Jyotish DISCLAIMER & LEGAL NOTICE")
     p15.draw_card(30, 420, 535, 110, bg_rgb=(0.99, 0.98, 0.96), border_rgb=(0.88, 0.82, 0.75))

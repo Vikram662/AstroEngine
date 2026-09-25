@@ -1,5 +1,63 @@
 # Dedicated calculator pages + language-selection fixes
 
+## Update: calculator UX completion, shared profile, PDF refresh, and proxy rename ✅
+
+- The browser-facing backend bridge moved out of the demo route and now lives at
+  `src/app/api/proxy/route.ts`. All calculator, hero, city-search, PDF polling/download,
+  and developer-console calls now use `/api/proxy`; the legacy proxy URL is gone.
+- Removed the remaining public "Live Demo" links from the navbar, ticker, calculator
+  directory banner, and footer. They now lead to the relevant dedicated calculator or
+  calculator directory; `/demo` remains available only as a direct developer surface.
+- `BirthDataFields.tsx` now keeps the primary person's complete birth profile in local
+  storage and hydrates it on every calculator. Filling one calculator therefore
+  auto-fills all other birth-data calculators on the same device. Secondary bride /
+  partner fields stay isolated and never overwrite the primary profile.
+- Added a shared post-result reading guide to every calculator page so a result is not
+  presented as an unexplained mini data block, and clarified that indicators should be
+  interpreted together.
+- The PDF Reports page now follows the URL locale directly (no conflicting in-form
+  language selector) and its complete job/empty/error/download UI is single-language.
+- Refreshed the shared PDF visual system: editorial masthead, brand side rail, compact
+  page folio, calmer title hierarchy, higher-legibility tables, and a confidential
+  footer. Generated and rendered a real 15-page Kundli PDF; first and final pages were
+  visually checked with no clipping, overlap, or broken chart/table layout.
+- Verification: `next typegen` succeeded and `tsc --noEmit` is clean after the route
+  move and UI changes.
+
+## Update: full Panchang/Kundli results and cleaner consumer header ✅
+
+- Daily Panchang no longer stops at the five basic Angas. One submission now combines
+  seven existing APIs (`daily`, `sun-moon/timings`, `advanced`, `choghadiya`, `hora`,
+  `bhadra`, and `panchak`) with partial-failure tolerance. The result includes sunrise,
+  sunset, moonrise, moonset, day length, Abhijit/Brahma Muhurta, Rahu/Yamaganda/Gulika,
+  Bhadra/Panchak status, all day/night Choghadiya slots, and all 24 planetary Horas.
+- Lagna Kundli now fetches D1 data/SVG together with the 12-house prediction, classical
+  Yoga, and Shadbala APIs. The page presents the chart, full planet table, Yoga cards,
+  strength comparison, and expandable prediction/remedy cards for all twelve houses.
+- Removed the API version badge, duplicate external API Reference link, and Console CTA
+  from the public header. Documentation remains the single API-information destination;
+  the header now keeps only consumer navigation, locale, calculators, and sign-in.
+- Verification: `tsc --noEmit` passes; targeted ESLint has zero errors (one pre-existing
+  Next Image optimization warning remains for the configurable company logo).
+
+## Update: wide result layouts and PDF collision/language redesign ✅
+
+- Increased the shared calculator shell from a narrow `max-w-4xl` column to the full
+  `max-w-7xl` content grid. Kundli and Daily Panchang switch to full-width form/result
+  rows after calculation, so long tables/cards use the page instead of leaving a tall
+  blank column under the form.
+- PDF Reports now follow the selected site language end-to-end: Hindi reports use
+  Hindi headings, table labels, planet/sign names, narratives, status text and dashas;
+  English reports remain fully English. This removes the previous mixed-language PDF.
+- Reduced the D1 and D9 chart footprints so both charts stay visually balanced with
+  the surrounding report content instead of dominating the page.
+- Redesigned the shared PDF hierarchy with brand-color table headers, softly tinted
+  section bands and alternating rows, while preserving high-contrast print output.
+- Fixed the dense page-2 ephemeris/dignity collision by shortening column headers and
+  reflowing the second table and interpretation block. Regenerated the 15-page Hindi
+  sample and visually verified the cover, dense tables, dashas, remedies, and final
+  page; no text overlap or clipping remains.
+
 ## Update: bilingual locale routing (all 29 calculators + homepage) ✅
 A separate, later effort added real Hindi/English URL routing on top of everything
 below — Hindi stays at the bare URLs documented in this file (`/calculators/<slug>`),
@@ -21,13 +79,17 @@ enumerate both language variants for every migrated path, and a Hindi/English sw
 was added to `Navbar.tsx`. `CALCULATOR_TOOLS` entries in `calculatorsData.ts` gained an
 optional `seo: {hi, en}` field (title + description) for all 29.
 
-**Still deferred** (this pass was routing/SEO infrastructure only, not translation):
-`/pricing` and `/documentation` are not yet locale-routed, and the ~185 hardcoded
-strings in shared chrome (`Navbar.tsx`, `Footer.tsx`, `HeroSection.tsx`,
-`HoroscopeSection.tsx`, `PanchangWidget.tsx`, `BirthDataFields.tsx`) still render in
-Hindi regardless of `/en/*` — only each calculator's own result content changes
-language today (via its existing API-response toggle, now correctly defaulting to the
-URL's locale). Building a real translation dictionary for that chrome is the next step.
+## Update: Single-Language Enforcement & 404 Routing Fix (Completed) ✅
+Following the initial migration, two critical production-readiness issues were resolved:
+1. **Next.js 16 Proxy / Middleware Conflict (404s)**:
+   - Removed deprecated `src/middleware.ts` in favor of Next.js 16 `src/proxy.ts`.
+   - Updated `proxy.ts` matcher to comprehensively cover bare paths, `/hi`, `/en`, `/calculators/:path*`, and added `x-locale-rewrite` header protection to eliminate infinite redirect/rewrite loops.
+   - All calculator URLs (`/calculators/<slug>` and `/en/calculators/<slug>`) now resolve cleanly with zero 404s.
+
+2. **Single-Language English Enforcement on `/en/*`**:
+   - `CalculatorPageShell.tsx`: Subtitles (`description`), breadcrumbs, and bottom "Related Calculators" cards now dynamically adapt to `locale === "en"` without hardcoded Hindi fallback strings.
+   - In-form duplicate language toggles were removed or aligned with the route `locale` so user selection doesn't fight URL routing.
+   - Default city strings set dynamically based on locale (e.g. `"New Delhi, India"` on English vs `"नई दिल्ली, भारत"` on Hindi).
 
 ## Execution Status: Built, bugs found via live testing, fixed and re-verified ✅
 
@@ -189,7 +251,7 @@ always-wrong status flags, permanently-empty tables, blank cells).
 
 ### Local dev setup notes (for whoever resumes testing)
 - `frontend/.env.local` was created (gitignored) with `ASTRO_BACKEND_URL` and
-  `ASTRO_INTERNAL_API_KEY=dev_test_key` so `/api/demo/proxy` can actually reach a
+  `ASTRO_INTERNAL_API_KEY=dev_test_key` so `/api/proxy` can actually reach a
   backend — it didn't exist before, so every page would have 500'd with
   "ASTRO_INTERNAL_API_KEY is not configured" even before reaching the real bugs above.
 - Backend was run with `ENVIRONMENT=development NEXT_APP_URL=http://127.0.0.1:59999
@@ -260,7 +322,7 @@ calculator pages will inherit whichever pattern is used.
 
 - **`frontend/src/components/calculators/BirthDataFields.tsx`** — extract the existing
   name/gender/DOB/TOB/city-autocomplete form out of `HeroSection.tsx` (lines ~322-427,
-  including the `/api/demo/proxy` → `core/geo/search` autocomplete logic at lines
+  including the `/api/proxy` → `core/geo/search` autocomplete logic at lines
   109-142) into a standalone controlled component: `value`, `onChange`, and boolean
   props `requireName`, `requireTime`, `requireGender` (default all true) so pages that
   need less (e.g. DOB-only, or date-only) can render a trimmed version. Accepts a
@@ -281,8 +343,8 @@ calculator pages will inherit whichever pattern is used.
   same shape so `CalculatorsSection.tsx` needed only a one-line change
   (`tool.tabTarget` → `tool.href`, `CalculatorsSection.tsx:95`).
 - All pages call the backend the same way `HeroSection.tsx` already does today —
-  `axios.post("/api/demo/proxy", {endpoint, payload, method})` — this route
-  (`frontend/src/app/api/demo/proxy/route.ts`) is already confirmed to work from
+  `axios.post("/api/proxy", {endpoint, payload, method})` — this route
+  (`frontend/src/app/api/proxy/route.ts`) is already confirmed to work from
   outside `/demo` with no changes needed (no referrer/origin restriction; SVG
   endpoints already get special raw-text handling for `/svg` and `/wheel-svg` paths).
 
@@ -349,7 +411,7 @@ Request body for every "birth data" endpoint is the standard
 
 | slug | flow |
 |---|---|
-| pdf-reports | Port `demo/page.tsx`'s existing `generatePdf`/`pollPdfStatus` orchestration (create job → `GET pdf/status/{job_id}` poll every 3s, up to 60 tries → `window.open("/api/demo/proxy?dl=pdf&job_id=...")` once `COMPLETED`) into the new page, offering the 7 report types (`pdf/kundli/basic`, `/kundli/brihat`, `/matching/report`, `/varshphal/annual`, `/lalkitab/full`, `/dosha/sade-sati`, `/numerology/report`) as a picker — matching-type and varshphal-type need the extra `girl_*`/`target_year` fields respectively. |
+| pdf-reports | Port `demo/page.tsx`'s existing `generatePdf`/`pollPdfStatus` orchestration (create job → `GET pdf/status/{job_id}` poll every 3s, up to 60 tries → `window.open("/api/proxy?dl=pdf&job_id=...")` once `COMPLETED`) into the new page, offering the 7 report types (`pdf/kundli/basic`, `/kundli/brihat`, `/matching/report`, `/varshphal/annual`, `/lalkitab/full`, `/dosha/sade-sati`, `/numerology/report`) as a picker — matching-type and varshphal-type need the extra `girl_*`/`target_year` fields respectively. |
 
 ### Link rewiring (remove every `/demo?tab=` reference on the public site)
 
