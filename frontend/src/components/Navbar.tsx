@@ -6,7 +6,8 @@ import { usePathname } from "next/navigation";
 import axios from "axios";
 import { ChevronDown, Sparkles, X } from "lucide-react";
 import { useLocale } from "@/hooks/useLocale";
-import { isMigratedPath, getHindiPath } from "@/lib/locale";
+import { isMigratedPath, getEnglishPath } from "@/lib/locale";
+import { getDictionary, type Dictionary } from "@/dictionaries/dictionary";
 
 const PROMO_DISMISSED_KEY = "astroengine_promo_dismissed_v1";
 
@@ -25,46 +26,48 @@ interface NavGroup {
 // rather than pages that don't exist yet — the dedicated /calculators, /panchang
 // etc. routes land in later redesign phases, at which point these should point
 // there instead of into the demo page's tabs.
-const NAV_GROUPS: NavGroup[] = [
-  {
-    label: "Astrology",
-    items: [
-      { label: "Kundli & Divisional Charts", href: "/calculators/lagna-kundli" },
-      { label: "Planetary Positions", href: "/calculators/planetary-positions" },
-      { label: "Vimshottari Dasha", href: "/calculators/vimshottari-dasha" },
-      { label: "Yogas & Ashtakvarga", href: "/calculators/dhan-yogas" },
-      { label: "Western Astrology", href: "/calculators/western-astrology" },
-      { label: "KP System", href: "/calculators/kp-system" },
-      { label: "Lal Kitab", href: "/calculators/lal-kitab-debts" },
-      { label: "Jaimini & Tajik", href: "/calculators/char-dasha" },
-    ],
-  },
-  {
-    label: "Matching",
-    items: [
-      { label: "Kundli Milan (Ashtakoot)", href: "/calculators/kundli-matching" },
-      { label: "Dosha Analysis", href: "/calculators/manglik-dosha" },
-    ],
-  },
-  {
-    label: "Panchang",
-    items: [
-      { label: "Daily Panchang", href: "/calculators/daily-panchang" },
-      { label: "Today's Horoscope", href: "/#horoscope" },
-    ],
-  },
-  { label: "Chat", href: "/#ai-chat" },
-  { label: "Reports", href: "/calculators/pdf-reports" },
-  {
-    label: "Calculators",
-    items: [
-      { label: "Numerology", href: "/calculators/core-numerology" },
-      { label: "Tarot Reading", href: "/calculators/tarot-reading" },
-      { label: "Vastu Shastra", href: "/calculators/vastu-shastra" },
-      { label: "Remedies & Gemstones", href: "/calculators/gemstone-suggestion" },
-    ],
-  },
-];
+function buildNavGroups(t: Dictionary["navbar"]): NavGroup[] {
+  return [
+    {
+      label: t.groups.astrology,
+      items: [
+        { label: t.items.kundliCharts, href: "/calculators/lagna-kundli" },
+        { label: t.items.planetaryPositions, href: "/calculators/planetary-positions" },
+        { label: t.items.vimshottariDasha, href: "/calculators/vimshottari-dasha" },
+        { label: t.items.yogasAshtakvarga, href: "/calculators/dhan-yogas" },
+        { label: t.items.westernAstrology, href: "/calculators/western-astrology" },
+        { label: t.items.kpSystem, href: "/calculators/kp-system" },
+        { label: t.items.lalKitab, href: "/calculators/lal-kitab-debts" },
+        { label: t.items.jaiminiTajik, href: "/calculators/char-dasha" },
+      ],
+    },
+    {
+      label: t.groups.matching,
+      items: [
+        { label: t.items.kundliMilan, href: "/calculators/kundli-matching" },
+        { label: t.items.doshaAnalysis, href: "/calculators/manglik-dosha" },
+      ],
+    },
+    {
+      label: t.groups.panchang,
+      items: [
+        { label: t.items.dailyPanchang, href: "/calculators/daily-panchang" },
+        { label: t.items.todaysHoroscope, href: "/#horoscope" },
+      ],
+    },
+    { label: t.groups.chat, href: "/#ai-chat" },
+    { label: t.groups.reports, href: "/calculators/pdf-reports" },
+    {
+      label: t.groups.calculators,
+      items: [
+        { label: t.items.numerology, href: "/calculators/core-numerology" },
+        { label: t.items.tarotReading, href: "/calculators/tarot-reading" },
+        { label: t.items.vastuShastra, href: "/calculators/vastu-shastra" },
+        { label: t.items.remediesGemstones, href: "/calculators/gemstone-suggestion" },
+      ],
+    },
+  ];
+}
 
 interface TodayPanchang {
   vaar: string | null;
@@ -81,7 +84,7 @@ function formatHM(hms: string) {
   return `${hour12}:${m} ${suffix}`;
 }
 
-const PromoBanner = ({ onDismiss }: { onDismiss: () => void }) => (
+const PromoBanner = ({ t, locale, onDismiss }: { t: Dictionary["navbar"]; locale: "hi" | "en"; onDismiss: () => void }) => (
   <div className="relative bg-linear-to-r from-accent to-accent-hover text-accent-foreground">
     <div className="max-w-6xl mx-auto px-4 sm:px-6 h-9 flex items-center justify-center gap-2 text-xs font-medium text-center">
       <span className="hidden sm:inline-flex items-center gap-1 bg-white/15 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide">
@@ -89,10 +92,10 @@ const PromoBanner = ({ onDismiss }: { onDismiss: () => void }) => (
         New
       </span>
       <span>
-        135 production endpoints now live — AI Astrologer, Tarot & Vastu just shipped.
+        {t.promoText}
       </span>
-      <Link href="/pricing" className="underline underline-offset-2 font-semibold hover:opacity-80 transition shrink-0">
-        See plans
+      <Link href={locale === "hi" ? "/hi/pricing" : "/pricing"} className="underline underline-offset-2 font-semibold hover:opacity-80 transition shrink-0">
+        {t.promoCta}
       </Link>
     </div>
     <button
@@ -106,7 +109,7 @@ const PromoBanner = ({ onDismiss }: { onDismiss: () => void }) => (
   </div>
 );
 
-const InfoTicker = () => {
+const InfoTicker = ({ t, locale }: { t: Dictionary["navbar"]; locale: "hi" | "en" }) => {
   const [data, setData] = useState<TodayPanchang | null>(null);
 
   useEffect(() => {
@@ -131,28 +134,28 @@ const InfoTicker = () => {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 h-8 flex items-center gap-4 overflow-x-auto whitespace-nowrap">
         {data.vaar && (
           <span>
-            <span className="text-white/50">Today:</span> {data.vaar}
+            <span className="text-white/50">{t.tickerToday}:</span> {data.vaar}
           </span>
         )}
         {data.tithi?.name && (
           <span>
             {/* data.tithi.name already reads e.g. "Shukla Dwadashi" — the paksha is
                 baked into the name, so it isn't repeated here. */}
-            <span className="text-white/50">Tithi:</span> {data.tithi.name}
+            <span className="text-white/50">{t.tickerTithi}:</span> {data.tithi.name}
           </span>
         )}
         {data.nakshatra?.name && (
           <span className="hidden sm:inline">
-            <span className="text-white/50">Nakshatra:</span> {data.nakshatra.name}
+            <span className="text-white/50">{t.tickerNakshatra}:</span> {data.nakshatra.name}
           </span>
         )}
         {data.rahu_kaal && (
           <span>
-            <span className="text-white/50">Rahu Kaal:</span> {formatHM(data.rahu_kaal.start)}–{formatHM(data.rahu_kaal.end)}
+            <span className="text-white/50">{t.tickerRahuKaal}:</span> {formatHM(data.rahu_kaal.start)}–{formatHM(data.rahu_kaal.end)}
           </span>
         )}
-        <Link href="/calculators/daily-panchang" className="ml-auto shrink-0 text-accent-soft hover:text-white transition font-medium">
-          Full Panchang →
+        <Link href={locale === "hi" ? "/hi/calculators/daily-panchang" : "/calculators/daily-panchang"} className="ml-auto shrink-0 text-accent-soft hover:text-white transition font-medium">
+          {t.tickerFullPanchang}
         </Link>
       </div>
     </div>
@@ -162,29 +165,29 @@ const InfoTicker = () => {
 const LanguageSwitcher = () => {
   const pathname = usePathname();
   const locale = useLocale();
-  const barePathname = locale === "en" ? getHindiPath(pathname) : pathname;
+  const barePathname = locale === "hi" ? getEnglishPath(pathname) : pathname;
 
   if (!isMigratedPath(barePathname)) return null;
 
-  const englishHref = barePathname === "/" ? "/en" : `/en${barePathname}`;
+  const hindiHref = barePathname === "/" ? "/hi" : `/hi${barePathname}`;
 
   return (
     <div className="hidden sm:flex items-center rounded-md bg-surface-alt p-0.5 border border-line text-[11px] font-medium">
       <Link
         href={barePathname}
         className={`px-2 py-1 rounded transition ${
-          locale === "hi" ? "bg-accent text-white shadow-xs" : "text-ink-muted hover:text-ink"
-        }`}
-      >
-        हिं
-      </Link>
-      <Link
-        href={englishHref}
-        className={`px-2 py-1 rounded transition ${
           locale === "en" ? "bg-accent text-white shadow-xs" : "text-ink-muted hover:text-ink"
         }`}
       >
         EN
+      </Link>
+      <Link
+        href={hindiHref}
+        className={`px-2 py-1 rounded transition ${
+          locale === "hi" ? "bg-accent text-white shadow-xs" : "text-ink-muted hover:text-ink"
+        }`}
+      >
+        हिं
       </Link>
     </div>
   );
@@ -197,7 +200,9 @@ export const Navbar = () => {
   const [openGroup, setOpenGroup] = useState<string | null>(null);
   const navRef = useRef<HTMLDivElement>(null);
   const locale = useLocale();
-  const homeHref = locale === "en" ? "/en" : "/";
+  const homeHref = locale === "hi" ? "/hi" : "/";
+  const t = getDictionary(locale).navbar;
+  const navGroups = buildNavGroups(t);
 
   useEffect(() => {
     axios.get("/api/settings/public")
@@ -257,7 +262,7 @@ export const Navbar = () => {
 
   return (
     <div className="sticky top-0 z-50 w-full">
-      {!promoDismissed && <PromoBanner onDismiss={dismissPromo} />}
+      {!promoDismissed && <PromoBanner t={t} locale={locale} onDismiss={dismissPromo} />}
 
       <header className="w-full bg-surface/90 backdrop-blur border-b border-line">
         <div ref={navRef} className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
@@ -279,7 +284,7 @@ export const Navbar = () => {
           </Link>
 
           <nav className="hidden md:flex items-center gap-1 text-xs font-medium text-ink-soft font-brand">
-            {NAV_GROUPS.map((group) => (
+            {navGroups.map((group) => (
               <div key={group.label} className="relative">
                 {group.items ? (
                   <>
@@ -297,7 +302,7 @@ export const Navbar = () => {
                     {openGroup === group.label && (
                       <div className="absolute left-0 top-full mt-1 w-64 bg-card border border-line rounded-lg shadow-lg py-1.5 z-50">
                         {group.items.map((item) => {
-                          const targetHref = locale === "en" && isMigratedPath(item.href) ? `/en${item.href}` : item.href;
+                          const targetHref = locale === "hi" && isMigratedPath(item.href) ? `/hi${item.href}` : item.href;
                           return (
                             <Link
                               key={item.href}
@@ -314,7 +319,7 @@ export const Navbar = () => {
                   </>
                 ) : (
                   <Link 
-                    href={locale === "en" && isMigratedPath(group.href!) ? `/en${group.href}` : group.href!} 
+                    href={locale === "hi" && isMigratedPath(group.href!) ? `/hi${group.href}` : group.href!}
                     className="block px-3 py-2 rounded-md hover:text-ink hover:bg-surface-alt transition"
                   >
                     {group.label}
@@ -322,34 +327,34 @@ export const Navbar = () => {
                 )}
               </div>
             ))}
-            <Link href="/documentation" className="px-3 py-2 rounded-md hover:text-ink hover:bg-surface-alt transition">
-              Documentation
+            <Link href={locale === "hi" ? "/hi/documentation" : "/documentation"} className="px-3 py-2 rounded-md hover:text-ink hover:bg-surface-alt transition">
+              {t.documentation}
             </Link>
-            <Link href="/pricing" className="px-3 py-2 rounded-md hover:text-ink hover:bg-surface-alt transition">
-              Pricing
+            <Link href={locale === "hi" ? "/hi/pricing" : "/pricing"} className="px-3 py-2 rounded-md hover:text-ink hover:bg-surface-alt transition">
+              {t.pricing}
             </Link>
           </nav>
 
           <div className="flex items-center gap-3">
             <LanguageSwitcher />
             <Link
-              href={locale === "en" ? "/en/#calculators" : "/#calculators"}
+              href={locale === "hi" ? "/hi/#calculators" : "/#calculators"}
               className="hidden lg:flex items-center gap-1 text-xs font-semibold text-accent hover:text-accent-hover transition"
             >
               <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse"></span>
-              Calculators
+              {t.browseCalculators}
             </Link>
             <Link
               href="/login"
               className="text-xs px-3 py-1.5 rounded-md text-ink-soft hover:text-ink hover:bg-surface-alt transition font-medium"
             >
-              Sign in
+              {t.signIn}
             </Link>
           </div>
         </div>
       </header>
 
-      <InfoTicker />
+      <InfoTicker t={t} locale={locale} />
     </div>
   );
 };

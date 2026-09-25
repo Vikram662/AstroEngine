@@ -54,8 +54,8 @@ export const CalculatorsSection: React.FC = () => {
   });
 
   const getToolHref = (href: string) => {
-    if (locale === "en" && isMigratedPath(href)) {
-      return `/en${href}`;
+    if (locale === "hi" && isMigratedPath(href)) {
+      return `/hi${href}`;
     }
     return href;
   };
@@ -181,7 +181,7 @@ export const CalculatorsSection: React.FC = () => {
             </div>
           </div>
           <Link
-            href={locale === "en" ? "/en/calculators/lagna-kundli" : "/calculators/lagna-kundli"}
+            href={locale === "hi" ? "/hi/calculators/lagna-kundli" : "/calculators/lagna-kundli"}
             className="px-5 py-2.5 rounded-xl bg-accent hover:bg-accent-hover text-white font-bold text-xs transition flex items-center gap-1.5 shrink-0 shadow-xs"
           >
             <span>{locale === "en" ? "Start with your birth chart" : "अपनी जन्म कुंडली से शुरू करें"}</span>

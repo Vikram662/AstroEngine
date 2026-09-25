@@ -28,10 +28,10 @@ export async function generateMetadata({
     title: seo.title,
     description: seo.description,
     alternates: {
-      canonical: locale === "hi" ? "/" : "/en",
+      canonical: locale === "en" ? "/" : "/hi",
       languages: {
-        hi: "/",
-        en: "/en",
+        hi: "/hi",
+        en: "/",
         "x-default": "/",
       },
     },

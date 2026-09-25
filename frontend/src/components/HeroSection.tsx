@@ -734,7 +734,7 @@ export const HeroSection: React.FC = () => {
                       <p className="text-xs text-ink-soft mt-0.5">{tHero.modalBannerSubtitle}</p>
                     </div>
                     <Link
-                      href={activeLang === "en" ? "/en/calculators/lagna-kundli" : "/calculators/lagna-kundli"}
+                      href={activeLang === "hi" ? "/hi/calculators/lagna-kundli" : "/calculators/lagna-kundli"}
                       className="px-4 py-2 rounded-xl bg-accent hover:bg-accent-hover text-white font-bold text-xs transition flex items-center gap-1.5 shrink-0 shadow-xs"
                     >
                       <span>{tHero.modalOpenFullKundli}</span>

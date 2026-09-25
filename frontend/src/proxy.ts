@@ -8,18 +8,18 @@ export async function proxy(request: NextRequest) {
 
   // ── Locale rewrite/redirect (runs before auth — none of these paths are
   //    protected routes) ──
-  // A literal /hi/... URL should never be indexable (it'd duplicate the bare
-  // Hindi page), so bounce it to the bare equivalent.
+  // A literal /en/... URL should never be indexable (it'd duplicate the bare
+  // English page), so bounce it to the bare equivalent.
   // Note: Only redirect actual external browser requests, NOT internal rewrites!
-  if ((pathname === "/hi" || pathname.startsWith("/hi/")) && !request.headers.get("x-locale-rewrite")) {
-    const bare = pathname === "/hi" ? "/" : pathname.slice("/hi".length);
+  if ((pathname === "/en" || pathname.startsWith("/en/")) && !request.headers.get("x-locale-rewrite")) {
+    const bare = pathname === "/en" ? "/" : pathname.slice("/en".length);
     return NextResponse.redirect(new URL(bare, request.url));
   }
   // A bare path that has a migrated app/[locale] route gets internally rewritten
-  // to /hi/... so it resolves there — the browser URL stays bare.
+  // to /en/... so it resolves there — the browser URL stays bare.
   if (isMigratedPath(pathname)) {
     const nextUrl = request.nextUrl.clone();
-    nextUrl.pathname = pathname === "/" ? "/hi" : `/hi${pathname}`;
+    nextUrl.pathname = pathname === "/" ? "/en" : `/en${pathname}`;
     const requestHeaders = new Headers(request.headers);
     requestHeaders.set("x-locale-rewrite", "1");
     return NextResponse.rewrite(nextUrl, {
@@ -111,5 +111,7 @@ export const config = {
     "/en",
     "/en/:path*",
     "/calculators/:path*",
+    "/pricing",
+    "/documentation",
   ],
 };

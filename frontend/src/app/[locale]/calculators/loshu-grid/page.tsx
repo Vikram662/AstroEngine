@@ -23,10 +23,10 @@ export async function generateMetadata({
     title: seo.title,
     description: seo.description,
     alternates: {
-      canonical: locale === "hi" ? TOOL.href : `/en${TOOL.href}`,
+      canonical: locale === "en" ? TOOL.href : `/hi${TOOL.href}`,
       languages: {
-        hi: TOOL.href,
-        en: `/en${TOOL.href}`,
+        hi: `/hi${TOOL.href}`,
+        en: TOOL.href,
         "x-default": TOOL.href,
       },
     },
@@ -46,10 +46,10 @@ export default async function Page({
       <JsonLd data={buildSoftwareApplicationSchema(TOOL, locale)} />
       <JsonLd
         data={buildBreadcrumbSchema([
-          { name: locale === "hi" ? "होम" : "Home", path: locale === "hi" ? "/" : "/en" },
+          { name: locale === "hi" ? "होम" : "Home", path: locale === "en" ? "/" : "/hi" },
           {
             name: locale === "hi" ? TOOL.hindiTitle : TOOL.title,
-            path: locale === "hi" ? TOOL.href : `/en${TOOL.href}`,
+            path: locale === "en" ? TOOL.href : `/hi${TOOL.href}`,
           },
         ])}
       />

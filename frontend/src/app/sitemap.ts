@@ -11,7 +11,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   return allPaths.map((path) => {
     const migrated = MIGRATED_LOCALE_PATHS.includes(path);
-    const enPath = path === "/" ? "/en" : `/en${path}`;
+    const hiPath = path === "/" ? "/hi" : `/hi${path}`;
 
     return {
       url: `${SITE_URL}${path}`,
@@ -21,8 +21,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
         ? {
             alternates: {
               languages: {
-                hi: `${SITE_URL}${path}`,
-                en: `${SITE_URL}${enPath}`,
+                hi: `${SITE_URL}${hiPath}`,
+                en: `${SITE_URL}${path}`,
               },
             },
           }

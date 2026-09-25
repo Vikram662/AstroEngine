@@ -36,7 +36,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="hi" className={`h-full antialiased font-sans ${figtree.variable} ${fraunces.variable}`}>
+    <html lang="en" className={`h-full antialiased font-sans ${figtree.variable} ${fraunces.variable}`}>
       <body className="min-h-full flex flex-col bg-white text-slate-900">
         <JsonLd data={buildOrganizationSchema()} />
         {children}

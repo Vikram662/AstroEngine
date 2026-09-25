@@ -27,7 +27,7 @@ export const Footer = () => {
   const t = dict.footer;
 
   const getHref = (path: string) => {
-    return locale === "en" ? `/en${path}` : path;
+    return locale === "hi" ? `/hi${path}` : path;
   };
 
   useEffect(() => {
@@ -252,7 +252,7 @@ export const Footer = () => {
 
             <ul className="space-y-2 text-xs pt-1">
               <li>
-                <Link href={locale === "en" ? "/en/#calculators" : "/#calculators"} className="text-accent font-semibold hover:text-accent-hover transition flex items-center gap-1">
+                <Link href={locale === "hi" ? "/hi/#calculators" : "/#calculators"} className="text-accent font-semibold hover:text-accent-hover transition flex items-center gap-1">
                   <span>{locale === "en" ? "Browse calculators" : "कैलकुलेटर देखें"}</span>
                   <ChevronRight className="w-3 h-3" />
                 </Link>
@@ -263,7 +263,7 @@ export const Footer = () => {
                 </Link>
               </li>
               <li>
-                <Link href="/pricing" className="hover:text-ink transition">
+                <Link href={getHref("/pricing")} className="hover:text-ink transition">
                   {t.pricing}
                 </Link>
               </li>
