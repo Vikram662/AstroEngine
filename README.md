@@ -4,6 +4,8 @@ High-performance, multi-language (i18n) B2B Vedic + Western Astrology REST API s
 
 This file replaces the previous set of 8 root-level markdown docs (`README.md`, `API_DOCUMENTATION.md`, `INSTALLATION_GUIDE.md`, `TECHNICAL_SPECIFICATION.md`, `ASTROENGINE_REPO_REVIEW.md`, `BACKEND_PROGRESS.md`, `CALCULATOR_PAGES_PLAN.md`, `POST_REVIEW_FIX_LOG.md`), which had overlapping and in places contradictory content (see [§8 Reconciled numbers](#8-reconciled-numbers-that-used-to-conflict)). It is a condensed, current-as-of-this-edit summary, not a full reproduction — historical per-finding detail from those files is not preserved verbatim.
 
+See [DASHBOARD_ADMIN_FIXES.md](DASHBOARD_ADMIN_FIXES.md) for a detailed log of a pass that replaced hardcoded/fake data and dead buttons in the user dashboard and admin panel with real implementations.
+
 ---
 
 ## 1. Architecture
