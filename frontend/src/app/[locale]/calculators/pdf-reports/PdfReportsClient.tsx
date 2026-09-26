@@ -6,7 +6,7 @@ import { CalculatorPageShell } from "@/components/calculators/CalculatorPageShel
 import type { Locale } from "@/lib/locale";
 import { BirthDataFields, DEFAULT_BIRTH_DATA, BirthDataValue } from "@/components/calculators/BirthDataFields";
 import { SubmitButton, ErrorNote } from "@/components/calculators/ResultRows";
-import { FileText, Download, Loader2, CheckCircle2 } from "lucide-react";
+import { FileText, Download, Loader2, CheckCircle2, Languages } from "lucide-react";
 
 const REPORT_TYPES = [
   { id: "kundli/basic", en: "Basic Kundli (12 pages)", hi: "मूल कुंडली (12 पृष्ठ)" },
@@ -27,6 +27,7 @@ export default function PdfReportsClient({ locale }: { locale: Locale }) {
   });
   const [targetYear, setTargetYear] = useState(String(new Date().getFullYear()));
   const [reportType, setReportType] = useState("kundli/basic");
+  const [pdfLanguage, setPdfLanguage] = useState<Locale>(locale);
   const isEnglish = locale === "en";
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -69,7 +70,7 @@ export default function PdfReportsClient({ locale }: { locale: Locale }) {
       lat: form.lat,
       lon: form.lon,
       tz: form.tz,
-      lang: locale,
+      lang: pdfLanguage,
       branding: {
         company_name: "AstroEngine Astrological Platform",
       },
@@ -130,8 +131,31 @@ export default function PdfReportsClient({ locale }: { locale: Locale }) {
         <div className="lg:col-span-6 bg-card p-6 rounded-2xl border border-line h-fit">
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-xs leading-5 text-blue-900">
-              {isEnglish ? "The generated PDF will use English throughout." : "तैयार PDF पूरी तरह हिन्दी में होगी - शीर्षक, तालिकाएं, ग्रह-राशि और व्याख्या सभी।"}
+              {pdfLanguage === "hi"
+                ? (isEnglish
+                    ? "The generated PDF will use Hindi throughout: headings, tables, planets, signs, and interpretations."
+                    : "तैयार PDF पूरी तरह हिन्दी में होगी - शीर्षक, तालिकाएं, ग्रह-राशि और व्याख्या सभी।")
+                : (isEnglish
+                    ? "The generated PDF will use English throughout."
+                    : "तैयार PDF पूरी तरह English में होगी - शीर्षक, तालिकाएं और व्याख्या सभी।")}
             </div>
+
+            <div>
+              <label htmlFor="pdf_language" className="block text-xs font-semibold text-ink-soft mb-1.5 flex items-center gap-1.5">
+                <Languages className="w-3.5 h-3.5 text-accent" />
+                <span>{isEnglish ? "PDF language" : "PDF की भाषा"}</span>
+              </label>
+              <select
+                id="pdf_language"
+                value={pdfLanguage}
+                onChange={(e) => setPdfLanguage(e.target.value as Locale)}
+                className="w-full px-3 py-2.5 rounded-xl border border-line bg-surface text-ink text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition"
+              >
+                <option value="hi">{isEnglish ? "Hindi" : "हिन्दी"}</option>
+                <option value="en">English</option>
+              </select>
+            </div>
+
             <div>
               <label htmlFor="report_sel" className="block text-xs font-semibold text-ink-soft mb-1.5 flex items-center gap-1.5">
                 <FileText className="w-3.5 h-3.5 text-accent" />
