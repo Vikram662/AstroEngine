@@ -156,7 +156,7 @@ export async function POST(req: NextRequest) {
           "1,500,000 Requests / Month",
           "1,200 RPM High-Volume Burst Capacity",
           "ALL 135 Production Calculation APIs Unlocked",
-          "Full Automated 20+ Page PDF Report Engine",
+          "Full Automated 12–60 Page PDF Report Engine",
           "Whitelabel Branding, Custom Logo & Watermark",
           "Multi-User Team Sub-Accounts & API Keys",
           "Custom Ephemeris & Dedicated Slack 24/7 SLA"
@@ -211,7 +211,7 @@ export async function POST(req: NextRequest) {
         monthlyQuota: 500, // 500 PDF generations included per month
         rateLimitPerMin: 30, // Rate limit: 30 PDF generation requests / min
         overageCost: 5.00, // ₹5.00 per additional PDF generated beyond 500
-        description: "Generate 20+ page print-ready Brihat Kundli, Matchmaking, and Dosha PDF reports with vector charts.",
+        description: "Generate 12–60 page print-ready Kundli, Matchmaking, and specialist PDF reports with vector charts.",
         features: ["500 PDF Generations / mo", "Vector SVG Charts", "Print-Ready 300 DPI", "Cloudflare R2 Direct URLs"],
         icon: "FileText",
         isActive: true

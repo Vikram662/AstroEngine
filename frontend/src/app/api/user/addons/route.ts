@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getVerifiedSession } from "@/lib/authGuard";
 import { Prisma } from "@prisma/client";
+import { OfferValidationError, recordOfferRedemption, resolveOfferForUser } from "@/lib/offers";
 
 export interface AddonItem {
   id: string;
@@ -63,7 +64,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { addonId, action, paymentMethod = "WALLET", gatewayPaymentId, gatewayOrderId } = body; // action: "activate" | "deactivate"
+    const { addonId, action, paymentMethod = "WALLET", gatewayPaymentId, gatewayOrderId, offerCode } = body; // action: "activate" | "deactivate"
 
     // Fetch addon details strictly from MySQL database
     const addon = await (prisma as any).addonPackage.findUnique({
@@ -81,6 +82,14 @@ export async function POST(req: NextRequest) {
       }
 
       let newBalance = user.walletBalance;
+      const appliedOffer = await resolveOfferForUser({
+        userId: user.id,
+        code: offerCode,
+        targetType: "ADDON",
+        targetId: addon.id,
+        amount: addon.priceMonthly,
+      });
+      const payablePrice = appliedOffer?.finalAmount ?? addon.priceMonthly;
 
       // OPTION 1: Pay via Razorpay Gateway directly
       if (paymentMethod === "GATEWAY") {
@@ -153,10 +162,10 @@ export async function POST(req: NextRequest) {
           }, { status: 400 });
         }
 
-        if (pendingOrder.amount < addon.priceMonthly) {
+        if (pendingOrder.amount < payablePrice) {
           return NextResponse.json({
             status: "error",
-            message: `Order amount (₹${pendingOrder.amount}) does not match addon price (₹${addon.priceMonthly}).`
+            message: `Order amount (₹${pendingOrder.amount}) does not match add-on payable price (₹${payablePrice}).`
           }, { status: 400 });
         }
 
@@ -178,6 +187,8 @@ export async function POST(req: NextRequest) {
             if (updateResult.count !== 1) {
               throw new Error("ORDER_ALREADY_SETTLED");
             }
+
+            await recordOfferRedemption(tx, user.id, appliedOffer, gatewayOrderId);
 
             activeAddons.push(addonId);
             await tx.user.update({
@@ -202,34 +213,37 @@ export async function POST(req: NextRequest) {
           status: "success",
           message: `Successfully activated ${addon.name} Add-on via Razorpay Gateway!`,
           activeAddons,
-          walletBalance: user.walletBalance
+          walletBalance: user.walletBalance,
+          offerDiscount: appliedOffer?.discountAmount || 0,
+          offerCode: appliedOffer?.code || null,
         });
       }
       // OPTION 2: Pay from Wallet
       else {
-        if (user.walletBalance < addon.priceMonthly && user.planTier !== "ENTERPRISE") {
+        if (user.walletBalance < payablePrice && user.planTier !== "ENTERPRISE") {
           return NextResponse.json({
             status: "error",
             error_code: "INSUFFICIENT_FUNDS",
-            message: `Insufficient wallet balance. Activating ${addon.name} requires ₹${addon.priceMonthly}. Current wallet balance: ₹${user.walletBalance.toFixed(2)}.`,
-            requiredAmount: addon.priceMonthly,
+            message: `Insufficient wallet balance. Activating ${addon.name} requires ₹${payablePrice}. Current wallet balance: ₹${user.walletBalance.toFixed(2)}.`,
+            requiredAmount: payablePrice,
             walletBalance: user.walletBalance
           }, { status: 400 });
         }
 
         if (user.planTier !== "ENTERPRISE") {
-          newBalance = Math.max(0, user.walletBalance - addon.priceMonthly);
+          newBalance = Math.max(0, user.walletBalance - payablePrice);
         }
 
         activeAddons.push(addonId);
 
         const updatedUser = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+          await recordOfferRedemption(tx, user.id, appliedOffer, `addon_${addonId}_${Date.now()}`);
           if (user.planTier !== "ENTERPRISE") {
             await tx.transaction.create({
               data: {
                 userId: user.id,
-                amount: -addon.priceMonthly,
-                creditsAdded: -addon.priceMonthly,
+                amount: -payablePrice,
+                creditsAdded: -payablePrice,
                 paymentGateway: "WALLET_INTERNAL",
                 gatewayPaymentId: `addon_${addonId}_${Date.now()}`,
                 webhookVerified: true,
@@ -251,7 +265,9 @@ export async function POST(req: NextRequest) {
           status: "success",
           message: `Successfully activated ${addon.name} Add-on via Wallet Balance!`,
           activeAddons,
-          walletBalance: updatedUser.walletBalance
+          walletBalance: updatedUser.walletBalance,
+          offerDiscount: appliedOffer?.discountAmount || 0,
+          offerCode: appliedOffer?.code || null,
         });
       }
 
@@ -276,6 +292,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ status: "error", message: "Invalid action" }, { status: 400 });
   } catch (error: unknown) {
     const err = error as { message?: string };
-    return NextResponse.json({ status: "error", message: err.message }, { status: 500 });
+    return NextResponse.json(
+      { status: "error", message: err.message },
+      { status: error instanceof OfferValidationError ? 400 : 500 },
+    );
   }
 }

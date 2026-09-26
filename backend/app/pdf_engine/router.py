@@ -42,7 +42,7 @@ async def create_basic_kundli_job(
 ):
     """
     Module 12 — Endpoint 93:
-    Asynchronous 15–20 Page Basic Kundli PDF Generator with White-Label Branding.
+    Asynchronous 15 Page Basic Kundli PDF Generator with White-Label Branding.
     Returns HTTP 202 Accepted with job_id for polling.
     """
     # Sanitize webhook_url if provided to prevent SSRF
@@ -101,7 +101,7 @@ async def create_brihat_kundli_job(
 ):
     """
     Module 12 — Endpoint 94:
-    Asynchronous 60–100 Page Grand Brihat Kundli PDF Generator with White-Label Branding.
+    Asynchronous 60 Page Grand Brihat Kundli PDF Generator with White-Label Branding.
     """
     if req.webhook_url:
         validate_safe_webhook_url(req.webhook_url)
@@ -226,7 +226,7 @@ async def create_matching_pdf_job(
     key_hash: str = Depends(verify_api_key),
     x_api_key: str = Header(None, alias="x-api-key")
 ):
-    """Module 12 — Endpoint 95: 20–25 Page Matchmaking & Compatibility PDF Report."""
+    """Module 12 — Endpoint 95: 20 Page Matchmaking & Compatibility PDF Report."""
     if req.webhook_url:
         validate_safe_webhook_url(req.webhook_url)
 
@@ -268,7 +268,7 @@ async def create_varshphal_pdf_job(
     key_hash: str = Depends(verify_api_key),
     x_api_key: str = Header(None, alias="x-api-key")
 ):
-    """Module 12 — Endpoint 96: 25–35 Page Varshphal (Annual Solar Return) PDF Report."""
+    """Module 12 — Endpoint 96: 20 Page Varshphal (Annual Solar Return) PDF Report."""
     if req.webhook_url:
         validate_safe_webhook_url(req.webhook_url)
 
@@ -310,7 +310,7 @@ async def create_lalkitab_pdf_job(
     key_hash: str = Depends(verify_api_key),
     x_api_key: str = Header(None, alias="x-api-key")
 ):
-    """Module 12 — Endpoint 97: 35–45 Page Lal Kitab Remedial & Farman PDF Report."""
+    """Module 12 — Endpoint 97: 30 Page Lal Kitab Remedial & Farman PDF Report."""
     if req.webhook_url:
         validate_safe_webhook_url(req.webhook_url)
 
@@ -349,7 +349,7 @@ async def create_sadesati_pdf_job(
     key_hash: str = Depends(verify_api_key),
     x_api_key: str = Header(None, alias="x-api-key")
 ):
-    """Module 12 — Endpoint 98: 12–15 Page Shani Sade Sati Life Guide PDF Report."""
+    """Module 12 — Endpoint 98: 15 Page Shani Sade Sati Life Guide PDF Report."""
     if req.webhook_url:
         validate_safe_webhook_url(req.webhook_url)
 
@@ -388,7 +388,7 @@ async def create_numerology_pdf_job(
     key_hash: str = Depends(verify_api_key),
     x_api_key: str = Header(None, alias="x-api-key")
 ):
-    """Module 12 — Endpoint 99: 15–25 Page Complete Numerology Blueprint PDF Report."""
+    """Module 12 — Endpoint 99: 12 Page Complete Numerology Blueprint PDF Report."""
     if req.webhook_url:
         validate_safe_webhook_url(req.webhook_url)
 

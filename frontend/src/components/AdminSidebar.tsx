@@ -17,7 +17,8 @@ import {
   Layers,
   BarChart3,
   MessageSquare,
-  Settings
+  Settings,
+  BadgePercent
 } from "lucide-react";
 
 const ADMIN_LINKS = [
@@ -25,6 +26,7 @@ const ADMIN_LINKS = [
   { name: "Traffic Monitor", href: "/admin/traffic", icon: Server },
   { name: "PDF Job Queue", href: "/admin/pdf-queue", icon: FileText },
   { name: "Subscription Plans", href: "/admin/plans", icon: Layers },
+  { name: "Offers & Coupons", href: "/admin/offers", icon: BadgePercent },
   { name: "User Management", href: "/admin/users", icon: Users },
   { name: "Billing Audits", href: "/admin/billing", icon: CreditCard },
   { name: "Support Desk", href: "/admin/support", icon: MessageSquare },

@@ -67,7 +67,7 @@ export const SYSTEM_MODULES = [
   { id: "western", label: "Western Tropical", desc: "Tropical zodiac, planet aspects matrix, wheel SVGs" },
   { id: "lalkitab", label: "Lal Kitab System", desc: "Ancestral debts (Rin), sleeping houses, Varshphal" },
   { id: "advanced", label: "Advanced Ephemeris", desc: "Planetary yogas, transit triggers, specialized charts" },
-  { id: "pdf", label: "Automated PDF Reports", desc: "High-res 20+ page print-ready Kundli PDF engine" }
+  { id: "pdf", label: "Automated PDF Reports", desc: "High-res 12–60 page print-ready astrology PDF engine" }
 ];
 
 const ADDON_ICONS: Record<string, React.ReactNode> = {

@@ -673,7 +673,7 @@ export const CALCULATOR_TOOLS: CalculatorTool[] = [
     id: "pdf-reports",
     title: "PDF Kundli Reports",
     hindiTitle: "वृहत् कुंडली PDF रिपोर्ट",
-    description: "20-80 पृष्ठीय विस्तृत कुंडली, मिलान, वर्षफल एवं लाल किताब PDF रिपोर्ट बनाएं।",
+    description: "12-60 पृष्ठीय विस्तृत कुंडली, मिलान, वर्षफल एवं लाल किताब PDF रिपोर्ट बनाएं।",
     category: "reports",
     categoryLabel: "PDF रिपोर्ट्स",
     icon: "📄",
@@ -682,12 +682,12 @@ export const CALCULATOR_TOOLS: CalculatorTool[] = [
       hi: {
         title: "वृहत् कुंडली PDF रिपोर्ट मुफ्त ऑनलाइन कैलकुलेटर | AstroEngine",
         description:
-          "20-80 पृष्ठीय विस्तृत कुंडली, मिलान, वर्षफल एवं लाल किताब PDF रिपोर्ट बनाएं।",
+          "12-60 पृष्ठीय विस्तृत कुंडली, मिलान, वर्षफल एवं लाल किताब PDF रिपोर्ट बनाएं।",
       },
       en: {
         title: "Free PDF Kundli Reports Calculator | AstroEngine",
         description:
-          "Generate 20-80 page detailed Kundli, matching, Varshphal and Lal Kitab PDF reports.",
+          "Generate 12-60 page detailed Kundli, matching, Varshphal and Lal Kitab PDF reports.",
       },
     },
   }

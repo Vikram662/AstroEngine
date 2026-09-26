@@ -8,14 +8,25 @@ import { BirthDataFields, DEFAULT_BIRTH_DATA, BirthDataValue } from "@/component
 import { SubmitButton, ErrorNote } from "@/components/calculators/ResultRows";
 import { FileText, Download, Loader2, CheckCircle2, Languages } from "lucide-react";
 
+type PdfLanguage = "en" | "hi" | "mr" | "gu" | "ta" | "te";
+
+const PDF_LANGUAGES: { id: PdfLanguage; label: string; nativeLabel: string }[] = [
+  { id: "hi", label: "Hindi", nativeLabel: "हिन्दी" },
+  { id: "en", label: "English", nativeLabel: "English" },
+  { id: "mr", label: "Marathi", nativeLabel: "मराठी" },
+  { id: "gu", label: "Gujarati", nativeLabel: "ગુજરાતી" },
+  { id: "ta", label: "Tamil", nativeLabel: "தமிழ்" },
+  { id: "te", label: "Telugu", nativeLabel: "తెలుగు" },
+];
+
 const REPORT_TYPES = [
-  { id: "kundli/basic", en: "Basic Kundli (12 pages)", hi: "मूल कुंडली (12 पृष्ठ)" },
-  { id: "kundli/brihat", en: "Brihat Horoscope (65+ pages)", hi: "वृहत् कुंडली (65+ पृष्ठ)" },
-  { id: "matching/report", en: "Matchmaking Dossier (25 pages)", hi: "कुंडली मिलान रिपोर्ट (25 पृष्ठ)" },
-  { id: "varshphal/annual", en: "Tajik Varshphal (30 pages)", hi: "ताजिक वर्षफल (30 पृष्ठ)" },
-  { id: "lalkitab/full", en: "Lal Kitab Full Report (40 pages)", hi: "लाल किताब संपूर्ण रिपोर्ट (40 पृष्ठ)" },
-  { id: "dosha/sade-sati", en: "Shani Sade Sati Dossier (18 pages)", hi: "शनि साढ़े साती रिपोर्ट (18 पृष्ठ)" },
-  { id: "numerology/report", en: "Numerology & Lo Shu (20 pages)", hi: "अंकशास्त्र एवं लो शू (20 पृष्ठ)" },
+  { id: "kundli/basic", en: "Basic Kundli (15 pages)", hi: "मूल कुंडली (15 पृष्ठ)" },
+  { id: "kundli/brihat", en: "Brihat Horoscope (60 pages)", hi: "वृहत् कुंडली (60 पृष्ठ)" },
+  { id: "matching/report", en: "Matchmaking Dossier (20 pages)", hi: "कुंडली मिलान रिपोर्ट (20 पृष्ठ)" },
+  { id: "varshphal/annual", en: "Tajik Varshphal (20 pages)", hi: "ताजिक वर्षफल (20 पृष्ठ)" },
+  { id: "lalkitab/full", en: "Lal Kitab Full Report (30 pages)", hi: "लाल किताब संपूर्ण रिपोर्ट (30 पृष्ठ)" },
+  { id: "dosha/sade-sati", en: "Shani Sade Sati Dossier (15 pages)", hi: "शनि साढ़े साती रिपोर्ट (15 पृष्ठ)" },
+  { id: "numerology/report", en: "Numerology & Lo Shu (12 pages)", hi: "अंकशास्त्र एवं लो शू (12 पृष्ठ)" },
 ];
 
 export default function PdfReportsClient({ locale }: { locale: Locale }) {
@@ -27,7 +38,7 @@ export default function PdfReportsClient({ locale }: { locale: Locale }) {
   });
   const [targetYear, setTargetYear] = useState(String(new Date().getFullYear()));
   const [reportType, setReportType] = useState("kundli/basic");
-  const [pdfLanguage, setPdfLanguage] = useState<Locale>(locale);
+  const [pdfLanguage, setPdfLanguage] = useState<PdfLanguage>(locale === "hi" ? "hi" : "en");
   const isEnglish = locale === "en";
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -36,6 +47,7 @@ export default function PdfReportsClient({ locale }: { locale: Locale }) {
 
   const isMatching = reportType === "matching/report";
   const isVarshphal = reportType === "varshphal/annual";
+  const selectedPdfLanguage = PDF_LANGUAGES.find((language) => language.id === pdfLanguage) || PDF_LANGUAGES[0];
 
   const pollStatus = async (jId: string) => {
     for (let i = 0; i < 60; i++) {
@@ -123,7 +135,7 @@ export default function PdfReportsClient({ locale }: { locale: Locale }) {
       category="reports"
       title="PDF Kundli Reports"
       hindiTitle="वृहत् कुंडली PDF रिपोर्ट"
-      description="20-80 पृष्ठीय विस्तृत कुंडली, मिलान, वर्षफल एवं लाल किताब PDF रिपोर्ट बनाएं।"
+      description="12-60 पृष्ठीय विस्तृत कुंडली, मिलान, वर्षफल एवं लाल किताब PDF रिपोर्ट बनाएं।"
       icon="📄"
       locale={locale}
     >
@@ -131,13 +143,9 @@ export default function PdfReportsClient({ locale }: { locale: Locale }) {
         <div className="lg:col-span-6 bg-card p-6 rounded-2xl border border-line h-fit">
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-xs leading-5 text-blue-900">
-              {pdfLanguage === "hi"
-                ? (isEnglish
-                    ? "The generated PDF will use Hindi throughout: headings, tables, planets, signs, and interpretations."
-                    : "तैयार PDF पूरी तरह हिन्दी में होगी - शीर्षक, तालिकाएं, ग्रह-राशि और व्याख्या सभी।")
-                : (isEnglish
-                    ? "The generated PDF will use English throughout."
-                    : "तैयार PDF पूरी तरह English में होगी - शीर्षक, तालिकाएं और व्याख्या सभी।")}
+              {isEnglish
+                ? `The generated PDF will use ${selectedPdfLanguage.label} throughout, with its embedded script font.`
+                : `तैयार PDF पूरी तरह ${selectedPdfLanguage.nativeLabel} में होगी और उसी भाषा का embedded font उपयोग करेगी।`}
             </div>
 
             <div>
@@ -148,11 +156,14 @@ export default function PdfReportsClient({ locale }: { locale: Locale }) {
               <select
                 id="pdf_language"
                 value={pdfLanguage}
-                onChange={(e) => setPdfLanguage(e.target.value as Locale)}
+                onChange={(e) => setPdfLanguage(e.target.value as PdfLanguage)}
                 className="w-full px-3 py-2.5 rounded-xl border border-line bg-surface text-ink text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition"
               >
-                <option value="hi">{isEnglish ? "Hindi" : "हिन्दी"}</option>
-                <option value="en">English</option>
+                {PDF_LANGUAGES.map((language) => (
+                  <option key={language.id} value={language.id}>
+                    {language.nativeLabel}{isEnglish && language.label !== language.nativeLabel ? ` (${language.label})` : ""}
+                  </option>
+                ))}
               </select>
             </div>
 

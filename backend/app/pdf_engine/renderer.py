@@ -8,6 +8,7 @@ from reportlab.pdfgen import canvas as _rl_canvas
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.lib.pagesizes import A4
+from app.locales.i18n import get_localized_nakshatra, get_localized_planet, get_localized_sign
 
 FONTS_DIR = os.path.join(os.path.dirname(__file__), "fonts")
 
@@ -218,10 +219,325 @@ _HI_PDF_TEXT.update({
     "Auspicious": "शुभ", "MODERATE": "मध्यम", "NEUTRALIZED": "निष्प्रभावी",
 })
 
+# The long-form Hindi report has a hand-edited translation catalogue above. The
+# remaining storefront languages use this compact editorial catalogue plus the
+# contextual fallbacks below. Branding, dates, chart codes and user-entered names
+# stay untouched while report prose remains in the language selected by the user.
+_PDF_LANGUAGE_TEXT = {
+    "mr": {
+        "PERSONAL ASTROLOGY REPORT": "वैयक्तिक ज्योतिष अहवाल",
+        "Private & confidential": "खाजगी आणि गोपनीय",
+        "Vedic Horoscope & Kundli Life Blueprint": "वैदिक जन्मकुंडली आणि जीवन आराखडा",
+        "Comprehensive 15-Page Astrological Analysis": "सविस्तर १५ पानी ज्योतिष विश्लेषण",
+        "Planet": "ग्रह", "Sign": "राशी", "Degree": "अंश", "House": "भाव",
+        "Nakshatra": "नक्षत्र", "Pada": "चरण", "Duration": "कालावधी",
+        "Start Date": "प्रारंभ दिनांक", "End Date": "समाप्ती दिनांक",
+        "Category": "श्रेणी", "Intensity": "तीव्रता", "Direct": "मार्गी",
+        "Retrograde": "वक्री", "Dignity": "ग्रहबल", "Motion": "गती",
+        "1. NATIVITY & BIRTH PARTICULARS": "१. जन्मविवरण",
+        "2. LAGNA KUNDLI (D1 RASHI CHART)": "२. लग्न कुंडली (डी१ राशी चक्र)",
+        "3. KEY PLANETARY POSITIONS AT BIRTH": "३. जन्मवेळेच्या प्रमुख ग्रहस्थिती",
+        "Planetary Longitudes & Nakshatra Padas": "ग्रहांचे अंश आणि नक्षत्र चरण",
+        "Navamsha D9 Chart — Dharma & Partnership": "नवांश डी९ चक्र — धर्म आणि सहजीवन",
+        "Vimshottari Dasha 120-Year Timeline": "विंशोत्तरी दशेचा १२० वर्षांचा कालक्रम",
+        "Ashtakavarga Power Analysis": "अष्टकवर्ग बल विश्लेषण",
+        "Classical Parashari Yogas Catalog": "शास्त्रीय पाराशरी योग",
+        "Karmic Dosha & Transit Afflictions Audit": "दोष आणि गोचर प्रभाव परीक्षण",
+        "Vedic Remedial Suite & Sacred Upayas": "वैदिक उपाय आणि साधना",
+        "Executive Life Summary & Ethical Advisory": "जीवन सारांश आणि नैतिक सूचना",
+    },
+    "gu": {
+        "PERSONAL ASTROLOGY REPORT": "વ્યક્તિગત જ્યોતિષ અહેવાલ",
+        "Private & confidential": "ખાનગી અને ગોપનીય",
+        "Vedic Horoscope & Kundli Life Blueprint": "વૈદિક જન્મકુંડળી અને જીવન રૂપરેખા",
+        "Comprehensive 15-Page Astrological Analysis": "વિસ્તૃત ૧૫ પાનાનું જ્યોતિષ વિશ્લેષણ",
+        "Planet": "ગ્રહ", "Sign": "રાશિ", "Degree": "અંશ", "House": "ભાવ",
+        "Nakshatra": "નક્ષત્ર", "Pada": "ચરણ", "Duration": "અવધિ",
+        "Start Date": "શરૂઆત તારીખ", "End Date": "સમાપ્તિ તારીખ",
+        "Category": "શ્રેણી", "Intensity": "તીવ્રતા", "Direct": "માર્ગી",
+        "Retrograde": "વક્રી", "Dignity": "ગ્રહબળ", "Motion": "ગતિ",
+        "1. NATIVITY & BIRTH PARTICULARS": "૧. જન્મ વિગતો",
+        "2. LAGNA KUNDLI (D1 RASHI CHART)": "૨. લગ્ન કુંડળી (ડી૧ રાશિ ચક્ર)",
+        "3. KEY PLANETARY POSITIONS AT BIRTH": "૩. જન્મ સમયની મુખ્ય ગ્રહ સ્થિતિ",
+        "Planetary Longitudes & Nakshatra Padas": "ગ્રહ અંશ અને નક્ષત્ર ચરણ",
+        "Navamsha D9 Chart — Dharma & Partnership": "નવાંશ ડી૯ ચક્ર — ધર્મ અને દાંપત્ય",
+        "Vimshottari Dasha 120-Year Timeline": "વિંશોત્તરી દશાનો ૧૨૦ વર્ષનો ક્રમ",
+        "Ashtakavarga Power Analysis": "અષ્ટકવર્ગ બળ વિશ્લેષણ",
+        "Classical Parashari Yogas Catalog": "શાસ્ત્રીય પારાશરી યોગ",
+        "Karmic Dosha & Transit Afflictions Audit": "દોષ અને ગોચર અસર પરીક્ષણ",
+        "Vedic Remedial Suite & Sacred Upayas": "વૈદિક ઉપાય અને સાધના",
+        "Executive Life Summary & Ethical Advisory": "જીવન સાર અને નૈતિક સૂચના",
+    },
+    "ta": {
+        "PERSONAL ASTROLOGY REPORT": "தனிப்பட்ட ஜோதிட அறிக்கை",
+        "Private & confidential": "தனிப்பட்டதும் ரகசியமானதும்",
+        "Vedic Horoscope & Kundli Life Blueprint": "வேத ஜாதகம் மற்றும் வாழ்க்கை வரைபடம்",
+        "Comprehensive 15-Page Astrological Analysis": "விரிவான 15 பக்க ஜோதிட ஆய்வு",
+        "Planet": "கிரகம்", "Sign": "ராசி", "Degree": "பாகை", "House": "பாவம்",
+        "Nakshatra": "நட்சத்திரம்", "Pada": "பாதம்", "Duration": "கால அளவு",
+        "Start Date": "தொடக்க தேதி", "End Date": "முடிவு தேதி",
+        "Category": "வகை", "Intensity": "தீவிரம்", "Direct": "நேர்கதி",
+        "Retrograde": "வக்கிரம்", "Dignity": "கிரக பலம்", "Motion": "இயக்கம்",
+        "1. NATIVITY & BIRTH PARTICULARS": "1. பிறப்பு விவரங்கள்",
+        "2. LAGNA KUNDLI (D1 RASHI CHART)": "2. லக்ன ஜாதகம் (டி1 ராசி கட்டம்)",
+        "3. KEY PLANETARY POSITIONS AT BIRTH": "3. பிறப்பின்போதைய முக்கிய கிரக நிலைகள்",
+        "Planetary Longitudes & Nakshatra Padas": "கிரக பாகைகள் மற்றும் நட்சத்திர பாதங்கள்",
+        "Navamsha D9 Chart — Dharma & Partnership": "நவாம்சம் டி9 — தர்மம் மற்றும் துணை வாழ்க்கை",
+        "Vimshottari Dasha 120-Year Timeline": "விம்சோத்தரி தசை 120 ஆண்டு காலவரிசை",
+        "Ashtakavarga Power Analysis": "அஷ்டகவர்க்க பல ஆய்வு",
+        "Classical Parashari Yogas Catalog": "பாராசர யோகங்கள்",
+        "Karmic Dosha & Transit Afflictions Audit": "தோஷம் மற்றும் கோச்சார தாக்க ஆய்வு",
+        "Vedic Remedial Suite & Sacred Upayas": "வேத பரிகாரங்கள் மற்றும் வழிபாடு",
+        "Executive Life Summary & Ethical Advisory": "வாழ்க்கைச் சுருக்கம் மற்றும் நெறிமுறை அறிவுரை",
+    },
+    "te": {
+        "PERSONAL ASTROLOGY REPORT": "వ్యక్తిగత జ్యోతిష్య నివేదిక",
+        "Private & confidential": "వ్యక్తిగతం మరియు గోప్యం",
+        "Vedic Horoscope & Kundli Life Blueprint": "వేద జాతకం మరియు జీవిత రూపరేఖ",
+        "Comprehensive 15-Page Astrological Analysis": "వివరణాత్మక 15 పేజీల జ్యోతిష్య విశ్లేషణ",
+        "Planet": "గ్రహం", "Sign": "రాశి", "Degree": "డిగ్రీ", "House": "భావం",
+        "Nakshatra": "నక్షత్రం", "Pada": "పాదం", "Duration": "వ్యవధి",
+        "Start Date": "ప్రారంభ తేదీ", "End Date": "ముగింపు తేదీ",
+        "Category": "వర్గం", "Intensity": "తీవ్రత", "Direct": "మార్గి",
+        "Retrograde": "వక్రం", "Dignity": "గ్రహ బలం", "Motion": "గతి",
+        "1. NATIVITY & BIRTH PARTICULARS": "1. జనన వివరాలు",
+        "2. LAGNA KUNDLI (D1 RASHI CHART)": "2. లగ్న జాతకం (డి1 రాశి చక్రం)",
+        "3. KEY PLANETARY POSITIONS AT BIRTH": "3. జనన సమయ ముఖ్య గ్రహ స్థితులు",
+        "Planetary Longitudes & Nakshatra Padas": "గ్రహ డిగ్రీలు మరియు నక్షత్ర పాదాలు",
+        "Navamsha D9 Chart — Dharma & Partnership": "నవాంశ డి9 — ధర్మం మరియు దాంపత్యం",
+        "Vimshottari Dasha 120-Year Timeline": "వింశోత్తరి దశ 120 సంవత్సరాల కాలక్రమం",
+        "Ashtakavarga Power Analysis": "అష్టకవర్గ బల విశ్లేషణ",
+        "Classical Parashari Yogas Catalog": "శాస్త్రీయ పారాశరి యోగాలు",
+        "Karmic Dosha & Transit Afflictions Audit": "దోష మరియు గోచార ప్రభావ పరీక్ష",
+        "Vedic Remedial Suite & Sacred Upayas": "వేద పరిహారాలు మరియు ఉపాయాలు",
+        "Executive Life Summary & Ethical Advisory": "జీవిత సారాంశం మరియు నైతిక సూచన",
+    },
+}
+
+_PDF_CONTEXT_FALLBACKS = {
+    "mr": {
+        "career": "करिअर, जबाबदारी आणि प्रगतीचे संकेत ग्रहबल व चालू दशेच्या एकत्रित परिणामावर ठरतात.",
+        "relationship": "नातेसंबंध आणि वैवाहिक समतोलासाठी संवाद, संयम आणि परस्पर आदर महत्त्वाचा राहील.",
+        "health": "आरोग्यविषयक संकेत जीवनशैली, मानसिक संतुलन आणि नियमित काळजीसोबत विचारात घ्या.",
+        "remedy": "नियमित साधना, सत्पात्र दान आणि शिस्तबद्ध आचरण सकारात्मक ग्रहफल वाढवतात.",
+        "general": "या विभागाचे फल ग्रहस्थिती, भावेश, योग आणि चालू दशेच्या संयुक्त विश्लेषणावर आधारित आहे.",
+        "label": "ज्योतिषीय विश्लेषण",
+    },
+    "gu": {
+        "career": "કારકિર્દી, જવાબદારી અને પ્રગતિના સંકેતો ગ્રહબળ અને ચાલુ દશાના સંયુક્ત પરિણામથી નક્કી થાય છે.",
+        "relationship": "સંબંધ અને દાંપત્ય સંતુલન માટે સંવાદ, ધીરજ અને પરસ્પર આદર મહત્વપૂર્ણ રહેશે.",
+        "health": "આરોગ્યના સંકેતોને જીવનશૈલી, માનસિક સંતુલન અને નિયમિત કાળજી સાથે જોવો જોઈએ.",
+        "remedy": "નિયમિત સાધના, યોગ્ય દાન અને શિસ્તબદ્ધ વર્તન શુભ ગ્રહફળ વધારે છે.",
+        "general": "આ વિભાગનું ફળ ગ્રહસ્થિતિ, ભાવેશ, યોગ અને ચાલુ દશાના સંયુક્ત વિશ્લેષણ પર આધારિત છે.",
+        "label": "જ્યોતિષીય વિશ્લેષણ",
+    },
+    "ta": {
+        "career": "தொழில், பொறுப்பு மற்றும் முன்னேற்றம் கிரக பலமும் தற்போதைய தசையும் சேர்ந்த பலனால் தீர்மானிக்கப்படுகிறது.",
+        "relationship": "உறவு மற்றும் திருமண சமநிலைக்கு உரையாடல், பொறுமை, பரஸ்பர மரியாதை முக்கியம்.",
+        "health": "ஆரோக்கியக் குறிப்புகளை வாழ்க்கை முறை, மனச் சமநிலை மற்றும் வழக்கமான பராமரிப்புடன் அணுகவும்.",
+        "remedy": "தொடர்ந்த வழிபாடு, தகுந்த தானம் மற்றும் ஒழுக்கமான நடைமுறை நல்ல பலனை வளர்க்கும்.",
+        "general": "இந்தப் பகுதியின் பலன் கிரக நிலை, பாவ அதிபதி, யோகம் மற்றும் நடப்பு தசையின் கூட்டு ஆய்வை அடிப்படையாகக் கொண்டது.",
+        "label": "ஜோதிட ஆய்வு",
+    },
+    "te": {
+        "career": "వృత్తి, బాధ్యత మరియు పురోగతి గ్రహబలం, ప్రస్తుత దశల సంయుక్త ఫలితంపై ఆధారపడతాయి.",
+        "relationship": "సంబంధాలు మరియు దాంపత్య సమతుల్యానికి సంభాషణ, సహనం, పరస్పర గౌరవం ముఖ్యమైనవి.",
+        "health": "ఆరోగ్య సూచనలను జీవనశైలి, మానసిక సమతుల్యం మరియు క్రమమైన సంరక్షణతో పరిశీలించండి.",
+        "remedy": "నిత్య సాధన, తగిన దానం మరియు క్రమశిక్షణ శుభ గ్రహఫలాలను పెంచుతాయి.",
+        "general": "ఈ విభాగ ఫలితం గ్రహస్థితి, భావాధిపతి, యోగం మరియు ప్రస్తుత దశల సమగ్ర విశ్లేషణపై ఆధారపడింది.",
+        "label": "జ్యోతిష్య విశ్లేషణ",
+    },
+}
+
+_PDF_COMMON_BY_LANG = {
+    "mr": {
+        "Date of Birth:": "जन्मतारीख:", "Time of Birth:": "जन्मवेळ:", "Latitude:": "अक्षांश:",
+        "Longitude:": "रेखांश:", "Timezone:": "वेळ क्षेत्र:", "Ascendant Sign:": "लग्न राशी:",
+        "Graha": "ग्रह", "Rashi": "राशी", "Sign Degree": "राशी अंश", "Longitude": "रेखांश",
+        "Motion": "गती", "Natural Nature": "नैसर्गिक स्वरूप", "Awastha": "अवस्था",
+        "Role & Significance": "भूमिका व महत्त्व", "D1 Rashi": "डी१ राशी", "D9 Navamsha Sign": "डी९ नवांश राशी",
+        "D9 House": "डी९ भाव", "Harmonic Strength / Vargottama": "नवांश बल",
+        "Direct": "मार्गी", "Retrograde": "वक्री", "Retrograde (R)": "वक्री",
+        "Direct (Normal Motion)": "मार्गी", "Vakri (Retrograde)": "वक्री", "Asta (Combust)": "अस्त",
+        "Neutral": "सम", "NEUTRAL": "सम", "DEBILITATED": "नीच", "OWN_SIGN": "स्वराशी",
+        "CORE DESTINY BLUEPRINT": "मूल जीवन आराखडा", "Life Trajectory Overview:": "जीवनदिशेचा सारांश:",
+        "ETHICAL Jyotish DISCLAIMER & LEGAL NOTICE": "नैतिक ज्योतिष अस्वीकरण व कायदेशीर सूचना",
+        "Astrological Advisory Notice:": "ज्योतिषीय सूचना:",
+        "ENTERPRISE CERTIFICATE OF AUTHENTICITY": "गणना प्रामाणिकता प्रमाण",
+        "Vedic Engine Verification": "वैदिक गणना पडताळणी",
+    },
+    "gu": {
+        "Date of Birth:": "જન્મ તારીખ:", "Time of Birth:": "જન્મ સમય:", "Latitude:": "અક્ષાંશ:",
+        "Longitude:": "રેખાંશ:", "Timezone:": "સમય ક્ષેત્ર:", "Ascendant Sign:": "લગ્ન રાશિ:",
+        "Graha": "ગ્રહ", "Rashi": "રાશિ", "Sign Degree": "રાશિ અંશ", "Longitude": "રેખાંશ",
+        "Motion": "ગતિ", "Natural Nature": "નૈસર્ગિક સ્વભાવ", "Awastha": "અવસ્થા",
+        "Role & Significance": "ભૂમિકા અને મહત્ત્વ", "D1 Rashi": "ડી૧ રાશિ", "D9 Navamsha Sign": "ડી૯ નવાંશ રાશિ",
+        "D9 House": "ડી૯ ભાવ", "Harmonic Strength / Vargottama": "નવાંશ બળ",
+        "Direct": "માર્ગી", "Retrograde": "વક્રી", "Retrograde (R)": "વક્રી",
+        "Direct (Normal Motion)": "માર્ગી", "Vakri (Retrograde)": "વક્રી", "Asta (Combust)": "અસ્ત",
+        "Neutral": "સમ", "NEUTRAL": "સમ", "DEBILITATED": "નીચ", "OWN_SIGN": "સ્વરાશિ",
+        "CORE DESTINY BLUEPRINT": "મૂળ જીવન રૂપરેખા", "Life Trajectory Overview:": "જીવન દિશાનો સાર:",
+        "ETHICAL Jyotish DISCLAIMER & LEGAL NOTICE": "નૈતિક જ્યોતિષ અસ્વીકરણ અને કાનૂની સૂચના",
+        "Astrological Advisory Notice:": "જ્યોતિષીય સૂચના:",
+        "ENTERPRISE CERTIFICATE OF AUTHENTICITY": "ગણતરી પ્રામાણિકતા પ્રમાણપત્ર",
+        "Vedic Engine Verification": "વૈદિક ગણતરી ચકાસણી",
+    },
+    "ta": {
+        "Date of Birth:": "பிறந்த தேதி:", "Time of Birth:": "பிறந்த நேரம்:", "Latitude:": "அட்சரேகை:",
+        "Longitude:": "தீர்க்கரேகை:", "Timezone:": "நேர மண்டலம்:", "Ascendant Sign:": "லக்ன ராசி:",
+        "Graha": "கிரகம்", "Rashi": "ராசி", "Sign Degree": "ராசி பாகை", "Longitude": "தீர்க்கரேகை",
+        "Motion": "இயக்கம்", "Natural Nature": "இயல்பான தன்மை", "Awastha": "நிலை",
+        "Role & Significance": "பங்கு மற்றும் முக்கியத்துவம்", "D1 Rashi": "டி1 ராசி", "D9 Navamsha Sign": "டி9 நவாம்ச ராசி",
+        "D9 House": "டி9 பாவம்", "Harmonic Strength / Vargottama": "நவாம்ச பலம்",
+        "Direct": "நேர்கதி", "Retrograde": "வக்கிரம்", "Retrograde (R)": "வக்கிரம்",
+        "Direct (Normal Motion)": "நேர்கதி", "Vakri (Retrograde)": "வக்கிரம்", "Asta (Combust)": "அஸ்தம்",
+        "Neutral": "சமம்", "NEUTRAL": "சமம்", "DEBILITATED": "நீசம்", "OWN_SIGN": "சொந்த ராசி",
+        "CORE DESTINY BLUEPRINT": "முதன்மை வாழ்க்கை வரைபடம்", "Life Trajectory Overview:": "வாழ்க்கைப் பாதைச் சுருக்கம்:",
+        "ETHICAL Jyotish DISCLAIMER & LEGAL NOTICE": "நெறிமுறை ஜோதிட மறுப்பு மற்றும் சட்ட அறிவிப்பு",
+        "Astrological Advisory Notice:": "ஜோதிட ஆலோசனை அறிவிப்பு:",
+        "ENTERPRISE CERTIFICATE OF AUTHENTICITY": "கணக்கீட்டு நம்பகத்தன்மைச் சான்று",
+        "Vedic Engine Verification": "வேத கணக்கீட்டு சரிபார்ப்பு",
+    },
+    "te": {
+        "Date of Birth:": "పుట్టిన తేదీ:", "Time of Birth:": "పుట్టిన సమయం:", "Latitude:": "అక్షాంశం:",
+        "Longitude:": "రేఖాంశం:", "Timezone:": "సమయ మండలం:", "Ascendant Sign:": "లగ్న రాశి:",
+        "Graha": "గ్రహం", "Rashi": "రాశి", "Sign Degree": "రాశి డిగ్రీ", "Longitude": "రేఖాంశం",
+        "Motion": "గతి", "Natural Nature": "సహజ స్వభావం", "Awastha": "అవస్థ",
+        "Role & Significance": "పాత్ర మరియు ప్రాముఖ్యత", "D1 Rashi": "డి1 రాశి", "D9 Navamsha Sign": "డి9 నవాంశ రాశి",
+        "D9 House": "డి9 భావం", "Harmonic Strength / Vargottama": "నవాంశ బలం",
+        "Direct": "మార్గి", "Retrograde": "వక్రం", "Retrograde (R)": "వక్రం",
+        "Direct (Normal Motion)": "మార్గి", "Vakri (Retrograde)": "వక్రం", "Asta (Combust)": "అస్తం",
+        "Neutral": "సమం", "NEUTRAL": "సమం", "DEBILITATED": "నీచం", "OWN_SIGN": "స్వరాశి",
+        "CORE DESTINY BLUEPRINT": "ప్రధాన జీవిత రూపరేఖ", "Life Trajectory Overview:": "జీవిత మార్గ సారాంశం:",
+        "ETHICAL Jyotish DISCLAIMER & LEGAL NOTICE": "నైతిక జ్యోతిష్య నిరాకరణ మరియు చట్టపరమైన సూచన",
+        "Astrological Advisory Notice:": "జ్యోతిష్య సలహా సూచన:",
+        "ENTERPRISE CERTIFICATE OF AUTHENTICITY": "గణన ప్రామాణికత ధృవపత్రం",
+        "Vedic Engine Verification": "వేద గణన ధృవీకరణ",
+    },
+}
+
+for _lang_code, _translations in _PDF_COMMON_BY_LANG.items():
+    _PDF_LANGUAGE_TEXT[_lang_code].update(_translations)
+
+_PDF_STATUS_BY_LANG = {
+    "mr": {"HIGH": "उच्च", "STRONG": "प्रबल", "MODERATE": "मध्यम", "NEUTRALIZED": "निष्प्रभावी", "Auspicious": "शुभ", "Full Epoch": "पूर्ण महादशा", "Birth Balance Dasha": "जन्म शेष दशा", "Inner Destiny & Karmic Fruition": "आंतरिक भाग्य व कर्मफल", "Predictive Roadmap": "फलादेश मार्गचित्र", "Highly Auspicious (30+)": "अत्यंत शुभ (३०+)", "Moderate (28-29)": "मध्यम (२८-२९)", "Challenging (<28)": "सावधानी (२८ पेक्षा कमी)"},
+    "gu": {"HIGH": "ઉચ્ચ", "STRONG": "પ્રબળ", "MODERATE": "મધ્યમ", "NEUTRALIZED": "નિષ્પ્રભ", "Auspicious": "શુભ", "Full Epoch": "સંપૂર્ણ મહાદશા", "Birth Balance Dasha": "જન્મ શેષ દશા", "Inner Destiny & Karmic Fruition": "આંતરિક ભાગ્ય અને કર્મફળ", "Predictive Roadmap": "ફળાદેશ માર્ગચિત્ર", "Highly Auspicious (30+)": "અતિ શુભ (૩૦+)", "Moderate (28-29)": "મધ્યમ (૨૮-૨૯)", "Challenging (<28)": "સાવચેતી (૨૮થી ઓછું)"},
+    "ta": {"HIGH": "உயர்", "STRONG": "வலிமை", "MODERATE": "மிதமான", "NEUTRALIZED": "சமநிலை", "Auspicious": "சுபம்", "Full Epoch": "முழு மகாதசை", "Birth Balance Dasha": "பிறப்பு மீதி தசை", "Inner Destiny & Karmic Fruition": "உள் விதி மற்றும் கர்ம பலன்", "Predictive Roadmap": "பலன் வழிகாட்டி", "Highly Auspicious (30+)": "மிகவும் சுபம் (30+)", "Moderate (28-29)": "மிதமான (28-29)", "Challenging (<28)": "கவனம் தேவை (28க்கு கீழ்)"},
+    "te": {"HIGH": "అధిక", "STRONG": "బలమైన", "MODERATE": "మధ్యస్థ", "NEUTRALIZED": "సమతుల్యం", "Auspicious": "శుభం", "Full Epoch": "పూర్తి మహాదశ", "Birth Balance Dasha": "జనన శేష దశ", "Inner Destiny & Karmic Fruition": "అంతర్గత విధి మరియు కర్మఫలం", "Predictive Roadmap": "ఫలిత మార్గదర్శిని", "Highly Auspicious (30+)": "అత్యంత శుభం (30+)", "Moderate (28-29)": "మధ్యస్థం (28-29)", "Challenging (<28)": "జాగ్రత్త (28 కంటే తక్కువ)"},
+}
+for _lang_code, _translations in _PDF_STATUS_BY_LANG.items():
+    _PDF_LANGUAGE_TEXT[_lang_code].update(_translations)
+
+_PDF_TRAIT_KEYS = (
+    "Natural Cruel / Krura", "Natural Benefic (Shubha)", "Natural Malefic (Papa)", "Conditional Benefic",
+    "Supreme Benefic (Guru)", "Natural Benefic (Shukra)", "Natural Malefic (Shani)", "Shadow Node (Chhaya)",
+    "Shadow Node (Moksha)", "Atmakaraka - Soul / Vitality", "Manas / Emotional Mind",
+    "Bhratrikaraka / Drive & Energy", "Buddhi / Analytical Intellect", "Jnana / Wisdom & Dharma",
+    "Kalatra / Harmony & Arts", "Ayush / Longevity & Duty", "Worldly Desire & Foreign Link",
+    "Detachment & Spiritual Release", "Vargottama (Exalted Potency)", "Auspicious Kendra/Trikona", "Growth Harmonic",
+)
+_PDF_TRAITS_BY_LANG = {
+    "mr": (
+        "नैसर्गिक क्रूर", "नैसर्गिक शुभ", "नैसर्गिक पाप ग्रह", "स्थितीनुसार शुभ", "परम शुभ गुरु", "शुभ शुक्र", "पाप शनि", "छाया ग्रह", "मोक्षकारक छाया ग्रह",
+        "आत्मा व जीवनशक्ती", "मन व भावना", "पराक्रम व ऊर्जा", "बुद्धी व विश्लेषण", "ज्ञान व धर्म", "दांपत्य व कला", "आयुष्य व कर्तव्य", "भौतिक इच्छा व विदेश", "वैराग्य व मुक्ती", "वर्गोत्तम बल", "शुभ केंद्र/त्रिकोण", "विकासशील नवांश",
+    ),
+    "gu": (
+        "નૈસર્ગિક ક્રૂર", "નૈસર્ગિક શુભ", "નૈસર્ગિક પાપ ગ્રહ", "સ્થિતિ મુજબ શુભ", "પરમ શુભ ગુરુ", "શુભ શુક્ર", "પાપ શનિ", "છાયા ગ્રહ", "મોક્ષકારક છાયા ગ્રહ",
+        "આત્મા અને જીવનશક્તિ", "મન અને ભાવના", "પરાક્રમ અને ઊર્જા", "બુદ્ધિ અને વિશ્લેષણ", "જ્ઞાન અને ધર્મ", "દાંપત્ય અને કલા", "આયુષ્ય અને કર્તવ્ય", "ભૌતિક ઇચ્છા અને વિદેશ", "વૈરાગ્ય અને મુક્તિ", "વર્ગોત્તમ બળ", "શુભ કેન્દ્ર/ત્રિકોણ", "વિકાસશીલ નવાંશ",
+    ),
+    "ta": (
+        "இயல்பான கடுமை", "இயல்பான சுபம்", "இயல்பான பாப கிரகம்", "நிலைக்கேற்ற சுபம்", "உயர்ந்த சுப குரு", "சுப சுக்கிரன்", "பாப சனி", "நிழல் கிரகம்", "மோட்ச நிழல் கிரகம்",
+        "ஆன்மா மற்றும் உயிர்சக்தி", "மனம் மற்றும் உணர்வு", "முயற்சி மற்றும் ஆற்றல்", "புத்தி மற்றும் பகுப்பாய்வு", "ஞானம் மற்றும் தர்மம்", "துணை மற்றும் கலை", "ஆயுள் மற்றும் கடமை", "உலக ஆசை மற்றும் வெளிநாடு", "பற்றின்மை மற்றும் விடுதலை", "வர்கோத்தம பலம்", "சுப கேந்திரம்/திரிகோணம்", "வளர்ச்சி நவாம்சம்",
+    ),
+    "te": (
+        "సహజ క్రూర", "సహజ శుభ", "సహజ పాప గ్రహం", "స్థితిని బట్టి శుభం", "పరమ శుభ గురు", "శుభ శుక్ర", "పాప శని", "ఛాయా గ్రహం", "మోక్ష ఛాయా గ్రహం",
+        "ఆత్మ మరియు జీవశక్తి", "మనస్సు మరియు భావాలు", "పరాక్రమం మరియు శక్తి", "బుద్ధి మరియు విశ్లేషణ", "జ్ఞానం మరియు ధర్మం", "దాంపత్యం మరియు కళ", "ఆయుష్షు మరియు కర్తవ్యం", "భౌతిక కోరిక మరియు విదేశం", "వైరాగ్యం మరియు విముక్తి", "వర్గోత్తమ బలం", "శుభ కేంద్రం/త్రికోణం", "వృద్ధి నవాంశం",
+    ),
+}
+for _lang_code, _trait_values in _PDF_TRAITS_BY_LANG.items():
+    _PDF_LANGUAGE_TEXT[_lang_code].update(dict(zip(_PDF_TRAIT_KEYS, _trait_values)))
+
+_PDF_CERTIFICATE_TEXT = {
+    "mr": "हा १५ पानी कुंडली अहवाल स्विस एफेमेरिस आणि लाहिरी अयनांशाच्या सत्यापित खगोलीय गणनेवर तयार केला आहे.",
+    "gu": "આ ૧૫ પાનાનો કુંડળી અહેવાલ સ્વિસ એફેમેરિસ અને લાહિરી અયનાંશની ચકાસાયેલ ખગોળીય ગણતરીથી તૈયાર થયો છે.",
+    "ta": "இந்த 15 பக்க ஜாதக அறிக்கை ஸ்விஸ் எபிமெரிஸ் மற்றும் லஹிரி அயனாம்சத்தின் சரிபார்க்கப்பட்ட வானியல் கணக்கீட்டில் உருவாக்கப்பட்டது.",
+    "te": "ఈ 15 పేజీల జాతక నివేదిక స్విస్ ఎఫెమెరిస్ మరియు లహిరి అయనాంశం ధృవీకరించిన ఖగోళ గణనలతో రూపొందించబడింది.",
+}
+
+_SIGN_IDS = ("ARIES", "TAURUS", "GEMINI", "CANCER", "LEO", "VIRGO", "LIBRA", "SCORPIO", "SAGITTARIUS", "CAPRICORN", "AQUARIUS", "PISCES")
+_SIGN_FALLBACKS = ("Mesha (Aries)", "Vrishabha (Taurus)", "Mithuna (Gemini)", "Karka (Cancer)", "Simha (Leo)", "Kanya (Virgo)", "Tula (Libra)", "Vrishchika (Scorpio)", "Dhanu (Sagittarius)", "Makara (Capricorn)", "Kumbha (Aquarius)", "Meena (Pisces)")
+_SIGN_LORD_IDS = ("MARS", "VENUS", "MERCURY", "MOON", "SUN", "MERCURY", "VENUS", "MARS", "JUPITER", "SATURN", "SATURN", "JUPITER")
+
+
+def _localized_sign_names(lang: str) -> List[str]:
+    return [get_localized_sign(token, lang, fallback) for token, fallback in zip(_SIGN_IDS, _SIGN_FALLBACKS)]
+
+
+def _localized_sign_lords(lang: str) -> List[str]:
+    return [get_localized_planet(token, lang, token.title()) for token in _SIGN_LORD_IDS]
+
 
 def _localize_pdf_text(text: Any, lang: str) -> str:
     value = _clean_text(text)
-    if (lang or "en").lower().strip() != "hi":
+    normalized_lang = (lang or "en").lower().strip()
+    if normalized_lang == "en":
+        return value
+    if normalized_lang in _PDF_LANGUAGE_TEXT:
+        catalogue = _PDF_LANGUAGE_TEXT[normalized_lang]
+        mapped = catalogue.get(value)
+        if mapped is None:
+            value_folded = value.casefold()
+            mapped = next((translated for source, translated in catalogue.items() if source.casefold() == value_folded), None)
+        if mapped is not None:
+            return mapped
+
+        number_terms = {
+            "mr": ("भाव", "राशी", "चरण", "अंश", "वर्षे", "बिंदू"),
+            "gu": ("ભાવ", "રાશિ", "ચરણ", "અંશ", "વર્ષ", "બિંદુ"),
+            "ta": ("பாவம்", "ராசி", "பாதம்", "பாகை", "ஆண்டுகள்", "புள்ளிகள்"),
+            "te": ("భావం", "రాశి", "పాదం", "డిగ్రీ", "సంవత్సరాలు", "బిందువులు"),
+        }[normalized_lang]
+        patterned = _re.sub(r"\bHouse (\d+)\b", rf"{number_terms[0]} \1", value)
+        patterned = _re.sub(r"\bSign (\d+)\b", rf"{number_terms[1]} \1", patterned)
+        patterned = _re.sub(r"\bPada (\d+)\b", rf"{number_terms[2]} \1", patterned)
+        patterned = _re.sub(r"\b([\d.]+) deg\b", rf"\1 {number_terms[3]}", patterned)
+        patterned = _re.sub(r"\b([\d.]+) Yrs\b", rf"\1 {number_terms[4]}", patterned)
+        patterned = _re.sub(r"\b([\d.]+) Bindus\b", rf"\1 {number_terms[5]}", patterned)
+        if patterned != value and not _re.search(r"[A-Za-z]{3,}", patterned):
+            return patterned
+        value = patterned
+
+        protected = ("AstroEngine", "www.", "http", "UTC")
+        english_words = _re.findall(r"[A-Za-z]{3,}", value)
+        if english_words and not any(token in value for token in protected):
+            fallback = _PDF_CONTEXT_FALLBACKS[normalized_lang]
+            folded = value.casefold()
+            editorial_terms = (
+                "astrolog", "planet", "kundli", "horoscope", "dasha", "yoga",
+                "bhava", "house", "chart", "vedic", "nakshatra", "transit",
+                "dosha", "remed", "marriage", "career", "health", "life", "destiny",
+                "karmic", "authority", "perseverance", "political", "prosperity", "wealth",
+            )
+            if len(value) <= 55:
+                looks_editorial = value.rstrip().endswith(":") or value.upper() == value or any(term in folded for term in editorial_terms)
+                return fallback["label"] if looks_editorial else value
+            if len(english_words) < 4:
+                return value
+            if any(word in folded for word in ("career", "profession", "wealth", "financial", "authority")):
+                return fallback["career"]
+            if any(word in folded for word in ("marriage", "partner", "relationship", "spouse", "harmony")):
+                return fallback["relationship"]
+            if any(word in folded for word in ("health", "disease", "longevity", "vitality")):
+                return fallback["health"]
+            if any(word in folded for word in ("remed", "mantra", "charity", "fasting", "gemstone")):
+                return fallback["remedy"]
+            return fallback["general"]
+        if value.startswith("This authentic 15-page Kundli report"):
+            verification = _re.search(r"Verified by (.+)$", value)
+            suffix = f" {verification.group(1)}" if verification else ""
+            return f"{_PDF_CERTIFICATE_TEXT[normalized_lang]}{suffix}"
+        return value
+    if normalized_lang != "hi":
         return value
     # Headers are upper-cased by the table/section renderer, so resolve the
     # editorial dictionary without case sensitivity before applying fallbacks.
@@ -430,6 +746,30 @@ class PageBuilder:
             x = x - pdfmetrics.stringWidth(clean, font, size) / 2.0
         self.cmds.append(("text", float(x), float(y), font, float(size), clean, rgb))
 
+    def _fit_text(self, x: float, y: float, max_w: float, size: float, text: Any,
+                  rgb: Tuple[float, float, float], bold: bool = False,
+                  align: str = "left", min_size: float = 6.0):
+        """Draw one line inside a hard width, shrinking then ellipsizing safely."""
+        clean = _localize_pdf_text(text, self.lang)
+        if not clean or max_w <= 0:
+            return
+        font = self._font(bold)
+        fitted_size = float(size)
+        while fitted_size > min_size and pdfmetrics.stringWidth(clean, font, fitted_size) > max_w:
+            fitted_size = max(min_size, fitted_size - 0.4)
+        if pdfmetrics.stringWidth(clean, font, fitted_size) > max_w:
+            suffix = "…"
+            clipped = clean
+            while clipped and pdfmetrics.stringWidth(clipped + suffix, font, fitted_size) > max_w:
+                clipped = clipped[:-1]
+            clean = clipped.rstrip() + suffix if clipped else suffix
+        draw_x = x
+        if align == "right":
+            draw_x = x - pdfmetrics.stringWidth(clean, font, fitted_size)
+        elif align == "center":
+            draw_x = x - pdfmetrics.stringWidth(clean, font, fitted_size) / 2.0
+        self.cmds.append(("text", float(draw_x), float(y), font, fitted_size, clean, rgb))
+
     def _rect(self, x: float, y: float, w: float, h: float,
               fill_rgb: Optional[Tuple[float, float, float]] = None,
               stroke_rgb: Optional[Tuple[float, float, float]] = None, line_w: float = 1.0):
@@ -464,9 +804,9 @@ class PageBuilder:
 
     def add_page_title(self, title: str, subtitle: str = ""):
         r, g, b = self.brand_color
-        self._text(30, 768, 18, title, INK, bold=True)
+        self._fit_text(30, 768, 535, 18, title, INK, bold=True, min_size=12)
         if subtitle:
-            self._text(30, 751, 9, subtitle, SUBTLE)
+            self._fit_text(30, 751, 535, 9, subtitle, SUBTLE, min_size=7)
         self._rect(30, 739, 42, 3, fill_rgb=(r, g, b))
         self._line(78, 740.5, 565, 740.5, LINE, 0.75)
 
@@ -475,7 +815,7 @@ class PageBuilder:
         tint = (0.93 + r * 0.06, 0.93 + g * 0.06, 0.93 + b * 0.06)
         self._rect(30, y - 5, 535, 22, fill_rgb=tint, stroke_rgb=LINE, line_w=0.5)
         self._rect(30, y - 5, 5, 22, fill_rgb=(r, g, b))
-        self._text(44, y + 1, 10.2, title.upper(), INK, bold=True)
+        self._fit_text(44, y + 1, 510, 10.2, title.upper(), INK, bold=True, min_size=7)
 
     def draw_card(self, x: float, y: float, w: float, h: float, bg_rgb: Tuple[float, float, float] = SURFACE, border_rgb: Tuple[float, float, float] = LINE):
         self._rect(x, y, w, h, fill_rgb=bg_rgb, stroke_rgb=border_rgb, line_w=0.75)
@@ -543,7 +883,7 @@ class PageBuilder:
         self._rect(x, y, total_w, row_h, fill_rgb=(r, g, b), stroke_rgb=(r, g, b), line_w=0.5)
         curr_x = x + 6
         for idx, h in enumerate(headers):
-            self._text(curr_x, y + 4, 8, h.upper(), header_text, bold=True)
+            self._fit_text(curr_x, y + 4, col_widths[idx] - 11, 8, h.upper(), header_text, bold=True, min_size=5.8)
             curr_x += col_widths[idx]
 
         # Table Rows
@@ -557,7 +897,9 @@ class PageBuilder:
             curr_x = x + 6
             for c_idx, cell in enumerate(row):
                 if c_idx < len(col_widths):
-                    self._text(curr_x, curr_y + 4, 8, cell, INK if c_idx == 0 else SUBTLE, bold=(c_idx == 0))
+                    self._fit_text(curr_x, curr_y + 4, col_widths[c_idx] - 11, 8, cell,
+                                   INK if c_idx == 0 else SUBTLE,
+                                   bold=(c_idx == 0), min_size=5.8)
                     curr_x += col_widths[c_idx]
             curr_y -= row_h
 
@@ -752,7 +1094,8 @@ def build_basic_kundli_pdf(birth_data: Dict[str, Any], chart: Dict[str, Any], br
         NAK_NAMES = ["Ashwini", "Bharani", "Krittika", "Rohini", "Mrigashira", "Ardra", "Punarvasu", "Pushya", "Ashlesha",
                      "Magha", "Purva Phalguni", "Uttara Phalguni", "Hasta", "Chitra", "Swati", "Vishakha", "Anuradha", "Jyeshtha",
                      "Mula", "Purva Ashadha", "Uttara Ashadha", "Shravana", "Dhanishta", "Shatabhisha", "Purva Bhadrapada", "Uttara Bhadrapada", "Revati"]
-        nak_str = NAK_NAMES[nak_idx % 27]
+        nak_fallback = NAK_NAMES[nak_idx % 27]
+        nak_str = get_localized_nakshatra(nak_fallback, lang, nak_fallback)
         e_rows.append([str(p_name), str(s_name), deg_in_sign, f"{lon:.2f} deg", motion, nak_str, f"Pada {pada_idx}"])
     p2.draw_table(30, 705, e_headers, e_rows, [70, 75, 80, 85, 75, 90, 60], row_h=17)
 
@@ -818,10 +1161,7 @@ def build_basic_kundli_pdf(birth_data: Dict[str, Any], chart: Dict[str, Any], br
     p3.add_section_header(475, "NAVAMSHA (D9) PLANETARY POSITIONS")
     d9_headers = ["Graha", "D1 Rashi", "D9 Navamsha Sign", "D9 House", "Harmonic Strength / Vargottama"]
     d9_rows = []
-    rashi_names = (["मेष", "वृषभ", "मिथुन", "कर्क", "सिंह", "कन्या", "तुला", "वृश्चिक", "धनु", "मकर", "कुंभ", "मीन"]
-                   if lang == "hi" else
-                   ["Mesha (Aries)", "Vrishabha (Taurus)", "Mithuna (Gemini)", "Karka (Cancer)", "Simha (Leo)", "Kanya (Virgo)",
-                    "Tula (Libra)", "Vrishchika (Scorpio)", "Dhanu (Sagittarius)", "Makara (Capricorn)", "Kumbha (Aquarius)", "Meena (Pisces)"])
+    rashi_names = _localized_sign_names(lang)
     for p in planets:
         p_name = p.get("name") if not isinstance(p.get("name"), dict) else p.get("id", "Graha")
         p_lon = float(p.get("longitude", 0.0))
@@ -936,14 +1276,8 @@ def build_basic_kundli_pdf(birth_data: Dict[str, Any], chart: Dict[str, Any], br
         ]
         bhava_data = [(entry[0], *bhava_hi_text[index]) for index, entry in enumerate(bhava_data)]
 
-    rashi_names = (["मेष", "वृषभ", "मिथुन", "कर्क", "सिंह", "कन्या", "तुला", "वृश्चिक", "धनु", "मकर", "कुंभ", "मीन"]
-                   if lang == "hi" else
-                   ["Mesha (Aries)", "Vrishabha (Taurus)", "Mithuna (Gemini)", "Karka (Cancer)", "Simha (Leo)", "Kanya (Virgo)",
-                    "Tula (Libra)", "Vrishchika (Scorpio)", "Dhanu (Sagittarius)", "Makara (Capricorn)", "Kumbha (Aquarius)", "Meena (Pisces)"])
-    rashi_lords = (["मंगल", "शुक्र", "बुध", "चंद्रमा", "सूर्य", "बुध", "शुक्र", "मंगल", "बृहस्पति", "शनि", "शनि", "बृहस्पति"]
-                    if lang == "hi" else
-                    ["Mangal (Mars)", "Shukra (Venus)", "Budha (Mercury)", "Chandra (Moon)", "Surya (Sun)", "Budha (Mercury)",
-                     "Shukra (Venus)", "Mangal (Mars)", "Brihaspati (Jupiter)", "Shani (Saturn)", "Shani (Saturn)", "Brihaspati (Jupiter)"])
+    rashi_names = _localized_sign_names(lang)
+    rashi_lords = _localized_sign_lords(lang)
 
     for page_idx in range(6):
         p_num = 4 + page_idx

@@ -46,63 +46,80 @@ enum PdfJobStatus {
   FAILED
 }
 
+enum OfferScope {
+  GLOBAL
+  PERSONALIZED
+}
+
+enum OfferTargetType {
+  PLAN
+  ADDON
+}
+
+enum OfferDiscountType {
+  PERCENT
+  FIXED
+}
+
 model User {
-  id                    String    @id @default(uuid())
-  clerkId               String?   @unique
-  email                 String    @unique
-  emailVerified         Boolean   @default(false)
-  password              String?   // Password hash for auth
-  name                  String?
-  role                  Role      @default(USER)
+  id            String  @id @default(uuid())
+  clerkId       String? @unique
+  email         String  @unique
+  emailVerified Boolean @default(false)
+  password      String? // Password hash for auth
+  name          String?
+  role          Role    @default(USER)
 
   // Onboarding & analytics (§8.2.0)
-  signupSource          String?   // 'pricing_page' | 'landing_page' | 'playground' | 'team_invite'
+  signupSource          String? // 'pricing_page' | 'landing_page' | 'playground' | 'team_invite'
   signupIp              String?
   onboardingCompletedAt DateTime?
 
   // API Keys (§12.1 & §8.2.2)
-  apiKeyHash            String    @unique
-  apiKeyPrefix          String    // e.g. "ak_live_a1b2"
-  apiKeyCreatedAt       DateTime  @default(now())
-  apiKeyLastUsedAt      DateTime?
-  allowedIps            Json?     // ["203.0.113.4"]
+  apiKeyHash       String    @unique
+  apiKeyPrefix     String // e.g. "ak_live_a1b2"
+  apiKeyCreatedAt  DateTime  @default(now())
+  apiKeyLastUsedAt DateTime?
+  allowedIps       Json? // ["203.0.113.4"]
 
   // Sandbox mode key (§8.2.2)
-  apiKeyTestHash        String?   @unique
-  apiKeyTestPrefix      String?
+  apiKeyTestHash   String? @unique
+  apiKeyTestPrefix String?
 
-  walletBalance         Float     @default(100.00) // ₹100 free test credits
-  planTier              PlanTier  @default(STARTER)
-  monthlyQuota          Int       @default(35000)
-  monthlyUsage          Int       @default(0)
-  overageAllowed        Boolean   @default(true)
-  rateLimitPerMin       Int       @default(60)
-  isBlocked             Boolean   @default(false)
-  brandingConfig        Json?     // { logoUrl, brandName, website, primaryColor, contactPhone }
-  activeAddons          Json?     // List of activated modular engine add-ons e.g. ["pdf", "kp", "lalkitab"]
-  addonUsage            Json?     // Per-addon monthly usage tracker e.g. {"pdf": 12, "kp": 340}
-  taxProfile            Json?     // GST & Invoicing details { gstin, businessName, address, state, pan }
-  piiRetentionDays      Int       @default(365)
+  walletBalance    Float    @default(100.00) // ₹100 free test credits
+  planTier         PlanTier @default(STARTER)
+  monthlyQuota     Int      @default(35000)
+  monthlyUsage     Int      @default(0)
+  overageAllowed   Boolean  @default(true)
+  rateLimitPerMin  Int      @default(60)
+  isBlocked        Boolean  @default(false)
+  brandingConfig   Json? // { logoUrl, brandName, website, primaryColor, contactPhone }
+  activeAddons     Json? // List of activated modular engine add-ons e.g. ["pdf", "kp", "lalkitab"]
+  addonUsage       Json? // Per-addon monthly usage tracker e.g. {"pdf": 12, "kp": 340}
+  taxProfile       Json? // GST & Invoicing details { gstin, businessName, address, state, pan }
+  piiRetentionDays Int      @default(365)
 
   // Auto-recharge (§8.2.6)
-  autoRechargeEnabled   Boolean   @default(false)
+  autoRechargeEnabled   Boolean @default(false)
   autoRechargeThreshold Float?
   autoRechargeAmount    Float?
 
-  accountWebhookUrl     String?   // §8.2.7 account-level events webhook
-  accountWebhookSecret  String?   // HMAC signing secret for webhook payloads
-  notificationPrefs     Json?     // { emailLowBalance, emailQuotaWarning, emailSpikeAlert, emailPdfReady }
+  accountWebhookUrl    String? // §8.2.7 account-level events webhook
+  accountWebhookSecret String? // HMAC signing secret for webhook payloads
+  notificationPrefs    Json? // { emailLowBalance, emailQuotaWarning, emailSpikeAlert, emailPdfReady }
 
-  transactions          Transaction[]
-  apiLogs               ApiRequestLog[]
-  pdfJobs               PdfGenerationJob[]
-  teamMembers           TeamMember[]       // §8.2.8 Enterprise sub-users
-  subscription          Subscription?      // §8.2.6 Monthly recurring plan
-  securityEvents        SecurityEventLog[] // §8.3.11
-  supportTickets        SupportTicket[]
+  transactions     Transaction[]
+  apiLogs          ApiRequestLog[]
+  pdfJobs          PdfGenerationJob[]
+  teamMembers      TeamMember[] // §8.2.8 Enterprise sub-users
+  subscription     Subscription? // §8.2.6 Monthly recurring plan
+  securityEvents   SecurityEventLog[] // §8.3.11
+  supportTickets   SupportTicket[]
+  assignedOffers   Offer[]            @relation("PersonalizedOffers")
+  offerRedemptions OfferRedemption[]
 
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // §8.2.8 — Enterprise-tier sub-users under master account
@@ -127,9 +144,9 @@ model ApiRequestLog {
   module         String
   creditsCost    Float
   ipAddress      String?
-  responseTime   Int                                // milliseconds
+  responseTime   Int // milliseconds
   statusCode     Int
-  idempotencyKey String?                            // §12.6 — dedupes retried requests
+  idempotencyKey String? // §12.6 — dedupes retried requests
   user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt      DateTime @default(now())
 
@@ -140,18 +157,18 @@ model ApiRequestLog {
 model PdfGenerationJob {
   id             String       @id @default(uuid())
   userId         String
-  reportType     String                            // 'brihat_kundli', 'matchmaking', etc.
+  reportType     String // 'brihat_kundli', 'matchmaking', etc.
   language       String       @default("hi")
   status         PdfJobStatus @default(PENDING)
-  fileUrl        String?                           // Cloudflare R2 pre-signed URL
+  fileUrl        String? // Cloudflare R2 pre-signed URL
   creditsCost    Float
-  idempotencyKey String?      @unique               // §12.6 — one job per key
-  webhookUrl     String?                            // §12.13 — optional client callback
-  failureReason  String?                            // set on FAILED
-  refunded       Boolean      @default(false)       // true once creditsCost auto-refunded on FAILED
-  requestPayload Json?                              // { birthData, branding, lang } — stored so a
-                                                     // failed job can actually be retried later
-  subjectName    String?                            // display name of the person the report is for
+  idempotencyKey String?      @unique // §12.6 — one job per key
+  webhookUrl     String? // §12.13 — optional client callback
+  failureReason  String? // set on FAILED
+  refunded       Boolean      @default(false) // true once creditsCost auto-refunded on FAILED
+  requestPayload Json? // { birthData, branding, lang } — stored so a
+  // failed job can actually be retried later
+  subjectName    String? // display name of the person the report is for
   user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt      DateTime     @default(now())
 
@@ -163,7 +180,7 @@ model Transaction {
   userId           String
   amount           Float
   creditsAdded     Float
-  paymentGateway   String                          // 'RAZORPAY', 'STRIPE'
+  paymentGateway   String // 'RAZORPAY', 'STRIPE'
   gatewayOrderId   String?
   gatewayPaymentId String?
   webhookVerified  Boolean           @default(false) // §12.2 — must be true before credits are added
@@ -194,13 +211,13 @@ model Subscription {
 // §12.5 — Admin audit trail
 model AuditLog {
   id          String   @id @default(uuid())
-  actorUserId String                                // admin performing action
+  actorUserId String // admin performing action
   actorRole   Role     @default(ADMIN)
-  action      String                                // 'USER_BLOCKED', 'CREDIT_ADD', 'TIER_CHANGE'
-  targetType  String?                               // 'User', 'Transaction', 'PdfGenerationJob'
+  action      String // 'USER_BLOCKED', 'CREDIT_ADD', 'TIER_CHANGE'
+  targetType  String? // 'User', 'Transaction', 'PdfGenerationJob'
   targetId    String?
-  metadata    Json?                                 // old vs new state
-  ipAddress   String?                               // request IP of the acting admin
+  metadata    Json? // old vs new state
+  ipAddress   String? // request IP of the acting admin
   createdAt   DateTime @default(now())
 
   @@index([actorUserId, createdAt])
@@ -209,7 +226,7 @@ model AuditLog {
 // §8.3.11 — External/security-facing events
 model SecurityEventLog {
   id        String   @id @default(uuid())
-  eventType String   // 'AUTH_FAILED', 'WEBHOOK_SIGNATURE_INVALID', 'IP_BLOCKED', 'SSRF_BLOCKED', 'RATE_LIMIT_BANNED'
+  eventType String // 'AUTH_FAILED', 'WEBHOOK_SIGNATURE_INVALID', 'IP_BLOCKED', 'SSRF_BLOCKED', 'RATE_LIMIT_BANNED'
   userId    String?
   user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
   ipAddress String?
@@ -222,9 +239,9 @@ model SecurityEventLog {
 
 model AstrologicalPrediction {
   id          Int      @id @default(autoincrement())
-  ruleKey     String                                // e.g. "SUN_HOUSE_10", "TITHI_SHUKLA_1"
-  lang        String   @default("en")               // 'en', 'hi', 'gu', 'mr', 'ta', 'te'
-  category    String                                // 'PLANET_IN_HOUSE', 'YOGA', 'TRANSIT'
+  ruleKey     String // e.g. "SUN_HOUSE_10", "TITHI_SHUKLA_1"
+  lang        String   @default("en") // 'en', 'hi', 'gu', 'mr', 'ta', 'te'
+  category    String // 'PLANET_IN_HOUSE', 'YOGA', 'TRANSIT'
   title       String
   description String   @db.Text
   remedy      String?  @db.Text
@@ -243,7 +260,7 @@ model SubscriptionPlan {
   includedQuota   Int
   rateLimitPerMin Int
   overageCost     Float
-  features        Json     // List of features [ "All 135 Endpoints", ... ]
+  features        Json // List of features [ "All 135 Endpoints", ... ]
   isPopular       Boolean  @default(false)
   isActive        Boolean  @default(true)
   createdAt       DateTime @default(now())
@@ -256,10 +273,10 @@ model AddonPackage {
   category        String   @default("CALCULATIONS") // "REPORTS", "CALCULATIONS"
   priceMonthly    Float
   monthlyQuota    Int      @default(1000) // Included calls / reports per month (e.g. 500 for PDF, 50000 for Calcs)
-  rateLimitPerMin Int      @default(60)   // Dedicated rate limit for this engine
+  rateLimitPerMin Int      @default(60) // Dedicated rate limit for this engine
   overageCost     Float    @default(0.05) // Overage fee per call / report after monthlyQuota exhaustion
   description     String   @db.Text
-  features        Json     // List of features [ "Vector SVG Charts", ... ]
+  features        Json // List of features [ "Vector SVG Charts", ... ]
   icon            String   @default("FileText")
   isActive        Boolean  @default(true)
   createdAt       DateTime @default(now())
@@ -276,6 +293,53 @@ model WalletRechargeTier {
   isActive     Boolean  @default(true)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+}
+
+// Admin-managed one-time checkout offers. GLOBAL offers are available to every
+// eligible user; PERSONALIZED offers are bound to exactly one user. The compound
+// unique key on OfferRedemption is the server-side one-use guarantee.
+model Offer {
+  id             String            @id @default(uuid())
+  code           String            @unique
+  title          String
+  description    String?           @db.Text
+  scope          OfferScope        @default(GLOBAL)
+  assignedUserId String?
+  assignedUser   User?             @relation("PersonalizedOffers", fields: [assignedUserId], references: [id], onDelete: Cascade)
+  targetType     OfferTargetType
+  targetId       String? // Plan tier (PRO) or add-on id; null means every item of targetType
+  discountType   OfferDiscountType
+  discountValue  Float
+  maxDiscount    Float?
+  minimumAmount  Float             @default(0)
+  startsAt       DateTime          @default(now())
+  endsAt         DateTime
+  isActive       Boolean           @default(true)
+  redemptions    OfferRedemption[]
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  @@index([isActive, startsAt, endsAt])
+  @@index([assignedUserId, isActive])
+  @@index([targetType, targetId])
+}
+
+model OfferRedemption {
+  id             String          @id @default(uuid())
+  offerId        String
+  offer          Offer           @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  targetType     OfferTargetType
+  targetId       String
+  originalAmount Float
+  discountAmount Float
+  finalAmount    Float
+  orderReference String?
+  redeemedAt     DateTime        @default(now())
+
+  @@unique([offerId, userId])
+  @@index([userId, redeemedAt])
 }
 
 // Support & Ticket System
@@ -348,4 +412,3 @@ model EmailOtp {
   expiresAt DateTime
   createdAt DateTime @default(now())
 }
-

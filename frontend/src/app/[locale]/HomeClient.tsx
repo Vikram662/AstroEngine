@@ -108,7 +108,7 @@ export default function HomeClient() {
               <FileText className="w-5 h-5 text-zinc-800 mb-3" />
               <h3 className="text-sm font-bold text-zinc-900 mb-1.5">Asynchronous White-Label PDF</h3>
               <p className="text-xs text-zinc-600 leading-relaxed">
-                Background worker pipeline rendering 20–100 page custom reports with embedded vector SVG charts, brand headers, and auto-expiring Cloudflare R2 delivery links.
+                Background worker pipeline rendering 12–60 page custom reports with embedded vector SVG charts, brand headers, and auto-expiring Cloudflare R2 delivery links.
               </p>
             </div>
 

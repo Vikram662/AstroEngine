@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import axios from "axios";
 import Link from "next/link";
 import { 
@@ -14,6 +14,7 @@ import {
   AlertCircle,
   ArrowUpRight,
   FileText,
+  BadgePercent,
   Check,
   X
 } from "lucide-react";
@@ -37,6 +38,16 @@ interface SubscriptionPlanData {
   isPopular?: boolean;
 }
 
+interface CheckoutOffer {
+  code: string;
+  title: string;
+  targetType: "PLAN" | "ADDON";
+  targetId: string;
+  originalAmount: number;
+  discountAmount: number;
+  finalAmount: number;
+}
+
 export default function BillingPage() {
   const [walletBalance, setWalletBalance] = useState<number>(0);
   const [currentPlanTier, setCurrentPlanTier] = useState<string>("STARTER");
@@ -51,14 +62,21 @@ export default function BillingPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [transactions, setTransactions] = useState<any[]>([]);
   const [addons, setAddons] = useState<any[]>([]);
+  const [addonsLoaded, setAddonsLoaded] = useState(false);
   const [activeAddons, setActiveAddons] = useState<string[]>([]);
   const [togglingAddon, setTogglingAddon] = useState<string | null>(null);
   const [selectedAddonForPurchase, setSelectedAddonForPurchase] = useState<any | null>(null);
   const [purchasingAddonMethod, setPurchasingAddonMethod] = useState<string | null>(null);
+  const [offerCode, setOfferCode] = useState("");
+  const [appliedOffer, setAppliedOffer] = useState<CheckoutOffer | null>(null);
+  const [availableOffers, setAvailableOffers] = useState<any[]>([]);
+  const [validatingOffer, setValidatingOffer] = useState(false);
 
   const [userSubscription, setUserSubscription] = useState<{ currentPeriodEnd?: string } | null>(null);
   const [userName, setUserName] = useState<string>("");
   const [userEmail, setUserEmail] = useState<string>("");
+  const [userDataLoaded, setUserDataLoaded] = useState(false);
+  const checkoutLinkHandled = useRef(false);
 
   const fetchAddons = () => {
     axios.get("/api/user/addons")
@@ -68,7 +86,8 @@ export default function BillingPage() {
           setActiveAddons(res.data.activeAddons || []);
         }
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setAddonsLoaded(true));
   };
 
   const fetchUserData = () => {
@@ -85,7 +104,12 @@ export default function BillingPage() {
           setUserEmail(res.data.data.email || "");
         }
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setUserDataLoaded(true));
+
+    axios.get("/api/billing/offers")
+      .then(res => setAvailableOffers(res.data?.data || []))
+      .catch(() => setAvailableOffers([]));
 
     // Fetch user transaction history from database
     axios.get("/api/billing/recharge")
@@ -128,11 +152,37 @@ export default function BillingPage() {
 
   const [selectedPlanForUpgrade, setSelectedPlanForUpgrade] = useState<SubscriptionPlanData | null>(null);
 
+  const resetCheckoutOffer = () => {
+    setOfferCode("");
+    setAppliedOffer(null);
+  };
+
+  const applyCheckoutOffer = useCallback(async (targetType: "PLAN" | "ADDON", targetId: string, amount: number, code = offerCode) => {
+    setValidatingOffer(true);
+    setErrorMessage(null);
+    try {
+      const res = await axios.post("/api/billing/offers", { code, targetType, targetId, amount });
+      setAppliedOffer(res.data.data);
+      setOfferCode(res.data.data.code);
+    } catch (err: any) {
+      setAppliedOffer(null);
+      setErrorMessage(err.response?.data?.message || "Offer code could not be applied.");
+    } finally {
+      setValidatingOffer(false);
+    }
+  }, [offerCode]);
+
+  const openAddonPurchaseModal = (addon: any) => {
+    resetCheckoutOffer();
+    setSelectedAddonForPurchase(addon);
+  };
+
   const openUpgradeModal = (plan: SubscriptionPlanData) => {
     if (plan.tier === "STARTER" || plan.priceMonthly === 0) {
       // Free plan switches directly
       executeUpgrade(plan.tier, "WALLET");
     } else {
+      resetCheckoutOffer();
       setSelectedPlanForUpgrade(plan);
     }
   };
@@ -156,7 +206,9 @@ export default function BillingPage() {
             creditDiscount = Math.round((currentPlanCost / 30) * unusedDays * 100) / 100;
           }
         }
-        const netPayable = Math.max(0, Math.round(((selectedPlanForUpgrade?.priceMonthly || 0) - creditDiscount) * 100) / 100);
+        const adjustedPrice = Math.max(0, Math.round(((selectedPlanForUpgrade?.priceMonthly || 0) - creditDiscount) * 100) / 100);
+        const activeOffer = appliedOffer?.targetType === "PLAN" && appliedOffer.targetId === tier ? appliedOffer : null;
+        const netPayable = activeOffer?.finalAmount ?? adjustedPrice;
 
         const orderRes = await axios.post("/api/billing/recharge", {
           action: "create_order",
@@ -182,7 +234,8 @@ export default function BillingPage() {
                   paymentMethod: "GATEWAY",
                   gatewayOrderId: response.razorpay_order_id || orderId,
                   gatewayPaymentId: response.razorpay_payment_id,
-                  gatewaySignature: response.razorpay_signature
+                  gatewaySignature: response.razorpay_signature,
+                  offerCode: activeOffer?.code,
                 });
 
                 if (res.data?.status === "success") {
@@ -226,7 +279,8 @@ export default function BillingPage() {
         // Pay using live Wallet Balance
         const res = await axios.post("/api/billing/subscribe", { 
           planTier: tier,
-          paymentMethod: "WALLET"
+          paymentMethod: "WALLET",
+          offerCode: appliedOffer?.targetType === "PLAN" && appliedOffer.targetId === tier ? appliedOffer.code : undefined,
         });
 
         if (res.data?.status === "success") {
@@ -361,10 +415,12 @@ export default function BillingPage() {
     setSuccessMessage(null);
 
     try {
+      const activeOffer = appliedOffer?.targetType === "ADDON" && appliedOffer.targetId === addon.id ? appliedOffer : null;
+      const payablePrice = activeOffer?.finalAmount ?? addon.priceMonthly;
       if (method === "GATEWAY") {
         const orderRes = await axios.post("/api/billing/recharge", {
           action: "create_order",
-          amount: addon.priceMonthly
+          amount: payablePrice
         });
 
         const { orderId, key, amount, currency } = orderRes.data;
@@ -384,7 +440,9 @@ export default function BillingPage() {
                   action: "activate",
                   paymentMethod: "GATEWAY",
                   gatewayOrderId: response.razorpay_order_id || orderId,
-                  gatewayPaymentId: response.razorpay_payment_id
+                  gatewayPaymentId: response.razorpay_payment_id,
+                  gatewaySignature: response.razorpay_signature,
+                  offerCode: activeOffer?.code,
                 });
 
                 if (res.data?.status === "success") {
@@ -428,7 +486,8 @@ export default function BillingPage() {
         const res = await axios.post("/api/user/addons", {
           addonId: addon.id,
           action: "activate",
-          paymentMethod: "WALLET"
+          paymentMethod: "WALLET",
+          offerCode: activeOffer?.code,
         });
 
         if (res.data?.status === "success") {
@@ -447,6 +506,115 @@ export default function BillingPage() {
         setPurchasingAddonMethod(null);
       }
     }
+  };
+
+  useEffect(() => {
+    if (checkoutLinkHandled.current || !userDataLoaded || plans.length === 0) return;
+
+    const timeoutId = window.setTimeout(() => {
+      const params = new URLSearchParams(window.location.search);
+      const planTier = params.get("plan")?.toUpperCase();
+      const addonId = params.get("addon");
+      const linkedOffer = params.get("offer")?.trim() || "";
+
+      if (planTier) {
+        const plan = plans.find(item => item.tier === planTier);
+        if (plan && plan.tier !== "STARTER" && plan.priceMonthly > 0) {
+          checkoutLinkHandled.current = true;
+          setSelectedPlanForUpgrade(plan);
+          setOfferCode(linkedOffer);
+          setAppliedOffer(null);
+
+          if (linkedOffer) {
+            const currentPlanCost = plans.find(item => item.tier === currentPlanTier)?.priceMonthly || 0;
+            let creditDiscount = 0;
+            if (userSubscription?.currentPeriodEnd && currentPlanCost > 0) {
+              const remainingMs = new Date(userSubscription.currentPeriodEnd).getTime() - Date.now();
+              const unusedDays = Math.max(0, Math.ceil(remainingMs / (1000 * 60 * 60 * 24)));
+              if (unusedDays > 0 && unusedDays <= 30) {
+                creditDiscount = Math.round((currentPlanCost / 30) * unusedDays * 100) / 100;
+              }
+            }
+            const amount = Math.max(0, Math.round((plan.priceMonthly - creditDiscount) * 100) / 100);
+            void applyCheckoutOffer("PLAN", plan.tier, amount, linkedOffer);
+          }
+          return;
+        }
+      }
+
+      if (addonId) {
+        if (!addonsLoaded) return;
+        const addon = addons.find(item => item.id === addonId);
+        if (addon) {
+          checkoutLinkHandled.current = true;
+          setSelectedAddonForPurchase(addon);
+          setOfferCode(linkedOffer);
+          setAppliedOffer(null);
+          if (linkedOffer) {
+            void applyCheckoutOffer("ADDON", addon.id, Number(addon.priceMonthly), linkedOffer);
+          }
+          return;
+        }
+      }
+
+      checkoutLinkHandled.current = true;
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [addons, addonsLoaded, applyCheckoutOffer, currentPlanTier, plans, userDataLoaded, userSubscription]);
+
+  const checkoutTotal = (targetType: "PLAN" | "ADDON", targetId: string, amount: number) =>
+    appliedOffer?.targetType === targetType && appliedOffer.targetId === targetId
+      ? appliedOffer.finalAmount
+      : amount;
+
+  const renderCheckoutOffer = (targetType: "PLAN" | "ADDON", targetId: string, amount: number) => {
+    const active = appliedOffer?.targetType === targetType && appliedOffer.targetId === targetId ? appliedOffer : null;
+    const eligible = availableOffers.filter((offer) =>
+      offer.targetType === targetType && (!offer.targetId || offer.targetId === targetId),
+    );
+    return (
+      <div className="rounded-xl border border-violet-200 bg-violet-50/60 p-3 space-y-2.5">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 text-xs font-bold text-violet-900">
+            <BadgePercent className="w-4 h-4" /> One-time offer
+          </div>
+          {active && <span className="text-[10px] font-bold text-emerald-700">SAVED ₹{active.discountAmount.toFixed(2)}</span>}
+        </div>
+        <div className="flex gap-2">
+          <input
+            value={offerCode}
+            onChange={(event) => { setOfferCode(event.target.value.toUpperCase()); setAppliedOffer(null); }}
+            placeholder="Enter offer code"
+            className="min-w-0 flex-1 rounded-lg border border-violet-200 bg-white px-3 py-2 text-xs font-mono uppercase outline-none focus:border-violet-500"
+          />
+          <button
+            type="button"
+            onClick={() => applyCheckoutOffer(targetType, targetId, amount)}
+            disabled={validatingOffer || !offerCode.trim()}
+            className="rounded-lg bg-violet-700 px-3 py-2 text-xs font-bold text-white disabled:opacity-50"
+          >
+            {validatingOffer ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Apply"}
+          </button>
+        </div>
+        {eligible.length > 0 && !active && (
+          <div className="flex flex-wrap gap-1.5">
+            {eligible.map((offer) => (
+              <button
+                key={offer.code}
+                type="button"
+                onClick={() => { setOfferCode(offer.code); applyCheckoutOffer(targetType, targetId, amount, offer.code); }}
+                className="rounded-full border border-violet-200 bg-white px-2.5 py-1 text-[10px] font-bold text-violet-800 hover:border-violet-400"
+                title={offer.description || offer.title}
+              >
+                {offer.code} · {offer.title}
+              </button>
+            ))}
+          </div>
+        )}
+        {active && <p className="text-[11px] text-violet-800">{active.title} applied. This code can be used only once on your account.</p>}
+      </div>
+    );
   };
 
   return (
@@ -803,7 +971,7 @@ export default function BillingPage() {
                     </div>
                   ) : (
                     <button
-                      onClick={() => setSelectedAddonForPurchase(addon)}
+                      onClick={() => openAddonPurchaseModal(addon)}
                       className="w-full py-2 px-3 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs shadow flex items-center justify-center gap-1.5 transition"
                     >
                       <Zap className="w-3.5 h-3.5 text-amber-400" />
@@ -849,7 +1017,7 @@ export default function BillingPage() {
                 <p className="text-xs text-slate-500 mt-0.5">Choose your preferred payment method to activate plan</p>
               </div>
               <button 
-                onClick={() => setSelectedPlanForUpgrade(null)}
+                onClick={() => { setSelectedPlanForUpgrade(null); resetCheckoutOffer(); }}
                 className="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-100 transition"
               >
                 <X className="w-4 h-4" />
@@ -872,6 +1040,7 @@ export default function BillingPage() {
               }
 
               const netPayable = Math.max(0, Math.round((selectedPlanForUpgrade.priceMonthly - creditDiscount) * 100) / 100);
+              const finalPayable = checkoutTotal("PLAN", selectedPlanForUpgrade.tier, netPayable);
 
               return (
                 <div className="space-y-4">
@@ -887,6 +1056,8 @@ export default function BillingPage() {
                     </div>
                   ) : null}
 
+                  {renderCheckoutOffer("PLAN", selectedPlanForUpgrade.tier, netPayable)}
+
                   {/* Plan Price Summary */}
                   <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
                     <div>
@@ -894,10 +1065,10 @@ export default function BillingPage() {
                         {creditDiscount > 0 ? "Adjusted Net Payable Price" : "Monthly Subscription Price"}
                       </div>
                       <div className="text-xl font-extrabold text-slate-900 font-mono mt-0.5">
-                        ₹{netPayable.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-                        {creditDiscount > 0 && (
+                        ₹{finalPayable.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                        {(creditDiscount > 0 || finalPayable < netPayable) && (
                           <span className="text-xs text-slate-400 line-through font-normal ml-2">
-                            ₹{selectedPlanForUpgrade.priceMonthly.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                            ₹{(finalPayable < netPayable ? netPayable : selectedPlanForUpgrade.priceMonthly).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                           </span>
                         )}
                       </div>
@@ -924,7 +1095,7 @@ export default function BillingPage() {
                       </div>
                     </div>
 
-                    {walletBalance >= netPayable ? (
+                    {walletBalance >= finalPayable ? (
                       <button
                         onClick={() => executeUpgrade(selectedPlanForUpgrade.tier, "WALLET")}
                         disabled={subscribingTier === selectedPlanForUpgrade.tier}
@@ -936,12 +1107,12 @@ export default function BillingPage() {
                             <span>Processing Debit...</span>
                           </>
                         ) : (
-                          <span>Pay ₹{netPayable.toLocaleString("en-IN", { minimumFractionDigits: 2 })} from Wallet</span>
+                          <span>Pay ₹{finalPayable.toLocaleString("en-IN", { minimumFractionDigits: 2 })} from Wallet</span>
                         )}
                       </button>
                     ) : (
                       <div className="text-xs text-amber-700 bg-amber-50 p-2.5 rounded-lg border border-amber-200">
-                        <span>Insufficient balance (Short by ₹{(netPayable - walletBalance).toFixed(2)}). Recharge wallet or use Payment Gateway below.</span>
+                        <span>Insufficient balance (Short by ₹{(finalPayable - walletBalance).toFixed(2)}). Recharge wallet or use Payment Gateway below.</span>
                       </div>
                     )}
                   </div>
@@ -960,7 +1131,7 @@ export default function BillingPage() {
 
                     <button
                       onClick={() => executeUpgrade(selectedPlanForUpgrade.tier, "GATEWAY")}
-                      disabled={subscribingTier === selectedPlanForUpgrade.tier}
+                      disabled={subscribingTier === selectedPlanForUpgrade.tier || finalPayable <= 0}
                       className="w-full py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-2 transition disabled:opacity-50 shadow-xs"
                     >
                       {subscribingTier === selectedPlanForUpgrade.tier ? (
@@ -971,7 +1142,7 @@ export default function BillingPage() {
                       ) : (
                         <>
                           <CreditCard className="w-3.5 h-3.5" />
-                          <span>Pay ₹{netPayable.toLocaleString("en-IN", { minimumFractionDigits: 2 })} with Razorpay</span>
+                          <span>{finalPayable <= 0 ? "Use wallet option to activate free" : `Pay ₹${finalPayable.toLocaleString("en-IN", { minimumFractionDigits: 2 })} with Razorpay`}</span>
                         </>
                       )}
                     </button>
@@ -1008,12 +1179,14 @@ export default function BillingPage() {
                 </h3>
               </div>
               <button
-                onClick={() => setSelectedAddonForPurchase(null)}
+                onClick={() => { setSelectedAddonForPurchase(null); resetCheckoutOffer(); }}
                 className="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
+
+            {renderCheckoutOffer("ADDON", selectedAddonForPurchase.id, selectedAddonForPurchase.priceMonthly)}
 
             <p className="text-xs text-slate-600">
               {selectedAddonForPurchase.description}
@@ -1030,7 +1203,7 @@ export default function BillingPage() {
               <div className="text-right">
                 <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Price</span>
                 <span className="text-xl font-black font-mono text-slate-900">
-                  ₹{selectedAddonForPurchase.priceMonthly}
+                  ₹{checkoutTotal("ADDON", selectedAddonForPurchase.id, selectedAddonForPurchase.priceMonthly)}
                 </span>
                 <span className="text-[10px] text-slate-400">/mo</span>
               </div>
@@ -1057,7 +1230,7 @@ export default function BillingPage() {
                   </div>
                 </div>
 
-                {walletBalance >= selectedAddonForPurchase.priceMonthly ? (
+                {walletBalance >= checkoutTotal("ADDON", selectedAddonForPurchase.id, selectedAddonForPurchase.priceMonthly) ? (
                   <button
                     onClick={() => executeAddonPurchase(selectedAddonForPurchase, "WALLET")}
                     disabled={purchasingAddonMethod === "WALLET"}
@@ -1069,12 +1242,12 @@ export default function BillingPage() {
                         <span>Deducting Wallet Balance...</span>
                       </>
                     ) : (
-                      <span>Pay ₹{selectedAddonForPurchase.priceMonthly} from Wallet</span>
+                      <span>Pay ₹{checkoutTotal("ADDON", selectedAddonForPurchase.id, selectedAddonForPurchase.priceMonthly)} from Wallet</span>
                     )}
                   </button>
                 ) : (
                   <div className="text-[11px] text-amber-800 bg-amber-50 p-2 rounded-lg border border-amber-200">
-                    Insufficient wallet balance (Short by ₹{(selectedAddonForPurchase.priceMonthly - walletBalance).toFixed(2)}). Pay with Razorpay below.
+                    Insufficient wallet balance (Short by ₹{(checkoutTotal("ADDON", selectedAddonForPurchase.id, selectedAddonForPurchase.priceMonthly) - walletBalance).toFixed(2)}). Pay with Razorpay below.
                   </div>
                 )}
               </div>
@@ -1093,7 +1266,7 @@ export default function BillingPage() {
 
                 <button
                   onClick={() => executeAddonPurchase(selectedAddonForPurchase, "GATEWAY")}
-                  disabled={purchasingAddonMethod === "GATEWAY"}
+                  disabled={purchasingAddonMethod === "GATEWAY" || checkoutTotal("ADDON", selectedAddonForPurchase.id, selectedAddonForPurchase.priceMonthly) <= 0}
                   className="w-full py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-2 transition disabled:opacity-50 shadow-xs"
                 >
                   {purchasingAddonMethod === "GATEWAY" ? (
@@ -1104,7 +1277,7 @@ export default function BillingPage() {
                   ) : (
                     <>
                       <CreditCard className="w-3.5 h-3.5" />
-                      <span>Pay ₹{selectedAddonForPurchase.priceMonthly} with Razorpay</span>
+                      <span>{checkoutTotal("ADDON", selectedAddonForPurchase.id, selectedAddonForPurchase.priceMonthly) <= 0 ? "Use wallet option to activate free" : `Pay ₹${checkoutTotal("ADDON", selectedAddonForPurchase.id, selectedAddonForPurchase.priceMonthly)} with Razorpay`}</span>
                     </>
                   )}
                 </button>

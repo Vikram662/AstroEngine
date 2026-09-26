@@ -97,7 +97,7 @@ Core astronomy (planetary positions, ascendant, Panchang) matches raw `pyswissep
 - Running Dasha (birth-Mahadasha edge case), KP horary table (float-precision bug), Kaal Sarp type (Rahu house from Lagna).
 - Panchang: sunrise-based weekday, Panchak, night Choghadiya, temporal Horas, tithi end-times.
 - Lal Kitab debts, rudraksha language bug, numerology (favorable numbers, forecast, missing-numbers).
-- PDF engine: now a real ReportLab render (was previously simulated with `asyncio.sleep` and a fake URL), with per-request-key ownership checks on both `/pdf/status/{job_id}` and `/pdf/download/{job_id}`. The 15-page basic Kundli follows the requested language end-to-end; the Hindi report uses Hindi headings, tables, planet/sign names, Dashas, house readings, remedies, and disclaimer copy. Paragraph wrapping, page-2 collisions, and mixed-language fallback text were fixed, while the D1/D9 charts were reduced to a balanced size. A rendered 15-page Hindi sample was visually checked page by page with no clipping or overlap.
+- PDF engine: now a real ReportLab render (was previously simulated with `asyncio.sleep` and a fake URL), with per-request-key ownership checks on both `/pdf/status/{job_id}` and `/pdf/download/{job_id}`. The report form exposes six output languages (`en`, `hi`, `mr`, `gu`, `ta`, `te`), each backed by an embedded Noto font and localized headings, tables, planet/sign/nakshatra names, narrative fallbacks, remedies, and disclaimer copy. Table cells and titles use measured auto-fit/ellipsis bounds, and paragraph wrapping prevents the previous page-2 and translated-text collisions. Six rendered 15-page samples (90 pages total) were checked with zero out-of-page or overlapping word boxes. All seven report routes were also smoke-tested across all six languages (42 valid PDF combinations).
 - A deep formula audit (beyond the original review's scope) fixed real bugs in Avasthas (unreachable Swapna state) and rewrote Shadbala/Bhavabala's Dig/Kaala/Chesta/Drik Bala components against classical reference sources (Saravali, PyJHora) — some components remain documented approximations rather than exact (e.g. Chesta Bala for non-Sun/Moon planets), not silently claimed as fully exact.
 
 **Still open / not yet re-verified since the last review:**
@@ -139,7 +139,7 @@ The public marketing site (structural reference: a competitor's layout, not its 
 - Public Live Demo links were removed, the consumer header was simplified, and result layouts now use the full `max-w-7xl` content grid.
 - One saved primary birth profile auto-fills every calculator on the same device; partner/bride fields remain isolated.
 - Daily Panchang combines daily Angas, sun/moon timings, advanced Muhurat, Choghadiya, Hora, Bhadra, and Panchak data. Lagna Kundli includes D1, full planet positions, Yogas, Shadbala, and all 12 house readings.
-- Hindi and English PDF generation follows the active URL locale, and each calculator includes a post-result interpretation guide.
+- PDF reports default from the active Hindi/English URL locale but can independently generate English, Hindi, Marathi, Gujarati, Tamil, or Telugu; each calculator also includes a post-result interpretation guide.
 
 **Bilingual locale routing (this session, on top of the above):**
 - Full `hi`/`en` URL routing for the homepage, all 29 calculators, and `/pricing` + `/documentation`, via `app/[locale]/**` + a `proxy.ts` rewrite (bare path ↔ prefixed path).
@@ -161,6 +161,8 @@ The authenticated dashboard and admin panel were audited for hardcoded data, dea
 6. Dashboard PDF generation has a complete birth-data form, report type, language, second-person matchmaking inputs, Varshphal year, and a persisted `subjectName`.
 7. Tenant logo upload uses the shared Cloudflare R2 signer. Branding saves preserve `logoUrl` and return real errors instead of fake success responses.
 8. Admin interpretation rules have working create, edit, and delete endpoints and UI actions backed by `AstrologicalPrediction`.
+9. Offers are database-driven rather than hardcoded: admins can create global or single-user personalized codes for a plan or add-on, configure percentage/fixed discounts, minimum spend, maximum discount, validity and status. Eligible one-time offers appear directly on public Pricing/Plans cards with original price, discounted price and savings; the selected code is carried into Billing and auto-applied. Checkout validates it server-side for wallet and Razorpay flows, and `OfferRedemption` enforces one redemption per offer per user.
+10. PDF page-count labels now match the renderer everywhere: Basic 15, Brihat 60, Matchmaking 20, Lal Kitab 30, Varshphal 20, Numerology 12 and Sade Sati 15 pages.
 
 Relevant schema additions:
 
@@ -172,6 +174,12 @@ model AuditLog {
 model PdfGenerationJob {
   requestPayload Json?
   subjectName    String?
+}
+
+model OfferRedemption {
+  offerId String
+  userId  String
+  @@unique([offerId, userId])
 }
 ```
 
@@ -195,5 +203,6 @@ The old docs disagreed with each other on several numbers. Resolutions:
 - `frontend/src/dictionaries/dictionary.ts` — shared hi/en translation dictionary for public-site chrome.
 - `frontend/src/lib/locale.ts` — locale routing source of truth (`DEFAULT_LOCALE`, migrated-paths list, path helpers).
 - `frontend/src/lib/pdfEngine.ts` — shared PDF report dispatch used by creation and retry flows.
+- `frontend/src/lib/offers.ts` — shared server-side offer validation, price calculation, and one-time redemption recording.
 - `frontend/src/lib/r2Upload.ts` — shared Cloudflare R2 upload/signing helper.
 - `C:\xampp\htdocs\my-app\docs\astroengine_review_scripts\` (outside this repo) — the independent verification harness referenced in §6.

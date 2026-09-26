@@ -149,7 +149,7 @@ export const dictionaries = {
         kpSystem: "केपी पद्धति",
         western: "पाश्चात्य ज्योतिष",
         vastu: "16-जोन वास्तु शास्त्र विश्लेषण",
-        pdfReports: "20-80 पृष्ठीय वृहत् कुंडली PDF"
+        pdfReports: "12-60 पृष्ठीय विस्तृत कुंडली PDF"
       }
     },
     panchang: {
@@ -350,7 +350,7 @@ export const dictionaries = {
         kpSystem: "KP System (Sub-Lord)",
         western: "Western Astrology (Big-3)",
         vastu: "16-Zone Vastu Shastra",
-        pdfReports: "20-80 Page Full Kundli PDF"
+        pdfReports: "12-60 Page Astrology PDF Reports"
       }
     },
     panchang: {

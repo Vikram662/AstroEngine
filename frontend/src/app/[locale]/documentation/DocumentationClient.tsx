@@ -268,7 +268,7 @@ const API_DOCS: ApiEndpointDoc[] = [
     name: "Async Kundli PDF Generator",
     method: "POST",
     path: "/api/v1/pdf/kundli/basic",
-    description: "Generates 15–20 page print-ready branded Kundli PDF report (Async Queue).",
+    description: "Generates a 15-page print-ready branded Kundli PDF report (Async Queue).",
     samplePayload: {
       dob: "1995-10-05",
       tob: "14:30",
@@ -285,10 +285,10 @@ const API_DOCS: ApiEndpointDoc[] = [
   },
   {
     module: "PDF Reports",
-    name: "Grand Brihat Kundli PDF (80+ Pages)",
+    name: "Grand Brihat Kundli PDF (60 Pages)",
     method: "POST",
     path: "/api/v1/pdf/kundli/brihat",
-    description: "Generates 60–100 page grand encyclopedic Kundli PDF with all harmonic charts and dasha trees.",
+    description: "Generates a 60-page grand encyclopedic Kundli PDF with all harmonic charts and dasha trees.",
     samplePayload: {
       dob: "1995-10-05",
       tob: "14:30",

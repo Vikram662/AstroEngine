@@ -5,7 +5,7 @@ import Link from "next/link";
 import axios from "axios";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
-import { Check, Zap, Sparkles, ShieldCheck, ArrowRight, Loader2, Compass } from "lucide-react";
+import { Check, Zap, Sparkles, Loader2, Compass } from "lucide-react";
 import type { Locale } from "@/lib/locale";
 
 interface PlanItem {
@@ -18,6 +18,25 @@ interface PlanItem {
   overageCost: number;
   features: string[];
   isPopular: boolean;
+}
+
+interface OfferItem {
+  code: string;
+  title: string;
+  description?: string | null;
+  scope: "GLOBAL" | "PERSONALIZED";
+  targetType: "PLAN" | "ADDON";
+  targetId?: string | null;
+  discountType: "PERCENT" | "FIXED";
+  discountValue: number;
+  maxDiscount?: number | null;
+  minimumAmount: number;
+  endsAt: string;
+}
+
+interface DisplayOffer extends OfferItem {
+  discountAmount: number;
+  finalAmount: number;
 }
 
 export interface AddonItem {
@@ -57,6 +76,9 @@ const STRINGS = {
     pdfs: "PDFs",
     speed: "स्पीड:",
     activateInDashboard: "डैशबोर्ड में एक्टिवेट करें",
+    offer: "एक बार का ऑफर",
+    useCode: "कोड",
+    save: "बचत",
   },
   en: {
     badge: "Transparent Pricing • Real-time Quota & Billing",
@@ -81,32 +103,62 @@ const STRINGS = {
     pdfs: "PDFs",
     speed: "Speed:",
     activateInDashboard: "Activate in Dashboard",
+    offer: "One-time offer",
+    useCode: "Code",
+    save: "Save",
   },
 } as const;
+
+const formatInr = (value: number, showPaise = false) => value.toLocaleString("en-IN", {
+  minimumFractionDigits: showPaise ? 2 : 0,
+  maximumFractionDigits: 2,
+});
 
 export default function PricingClient({ locale }: { locale: Locale }) {
   const [plans, setPlans] = useState<PlanItem[]>([]);
   const [addons, setAddons] = useState<AddonItem[]>([]);
+  const [offers, setOffers] = useState<OfferItem[]>([]);
   const [loading, setLoading] = useState(true);
   const t = STRINGS[locale];
 
   useEffect(() => {
     // Fetch live plans and addons dynamically from MySQL API
-    Promise.all([
+    Promise.allSettled([
       axios.get("/api/plans"),
-      axios.get("/api/user/addons")
+      axios.get("/api/addons"),
+      axios.get("/api/billing/offers"),
     ])
-      .then(([plansRes, addonsRes]) => {
-        if (plansRes.data?.data) {
-          setPlans(plansRes.data.data);
+      .then(([plansResult, addonsResult, offersResult]) => {
+        if (plansResult.status === "fulfilled" && plansResult.value.data?.data) {
+          setPlans(plansResult.value.data.data);
         }
-        if (addonsRes.data?.catalog) {
-          setAddons(addonsRes.data.catalog);
+        if (addonsResult.status === "fulfilled" && addonsResult.value.data?.data) {
+          setAddons(addonsResult.value.data.data);
+        }
+        if (offersResult.status === "fulfilled" && offersResult.value.data?.data) {
+          setOffers(offersResult.value.data.data);
         }
       })
-      .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
+
+  const bestOffer = (targetType: "PLAN" | "ADDON", targetId: string, amount: number): DisplayOffer | null => {
+    if (amount <= 0) return null;
+    return offers.reduce<DisplayOffer | null>((best, offer) => {
+      const targetMatches = offer.targetType === targetType;
+      const idMatches = !offer.targetId || offer.targetId === targetId;
+      if (!targetMatches || !idMatches || amount < Number(offer.minimumAmount || 0)) return best;
+
+      let discountAmount = offer.discountType === "PERCENT"
+        ? amount * (Number(offer.discountValue) / 100)
+        : Number(offer.discountValue);
+      if (offer.maxDiscount != null) discountAmount = Math.min(discountAmount, Number(offer.maxDiscount));
+      discountAmount = Math.max(0, Math.min(amount, Math.round(discountAmount * 100) / 100));
+      if (discountAmount <= 0) return best;
+      const candidate = { ...offer, discountAmount, finalAmount: Math.round((amount - discountAmount) * 100) / 100 };
+      return !best || candidate.finalAmount < best.finalAmount ? candidate : best;
+    }, null);
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-surface text-ink">
@@ -136,7 +188,9 @@ export default function PricingClient({ locale }: { locale: Locale }) {
           <>
             {/* Core Subscription Plans Grid */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {plans.map((p) => (
+              {plans.map((p) => {
+                const offer = bestOffer("PLAN", p.tier, p.priceMonthly);
+                return (
                 <div
                   key={p.id || p.tier}
                   className={`p-6 sm:p-7 rounded-2xl border flex flex-col justify-between relative transition shadow-xs ${
@@ -153,10 +207,18 @@ export default function PricingClient({ locale }: { locale: Locale }) {
 
                   <div>
                     <div className="text-xs font-bold text-accent uppercase tracking-wider">{p.name}</div>
-                    <div className="mt-3 flex items-baseline gap-1">
-                      <span className="text-3xl sm:text-4xl font-black font-mono text-ink">₹{p.priceMonthly.toLocaleString()}</span>
+                    {offer && (
+                      <div className="mt-3 flex items-center justify-between gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-amber-900">
+                        <span className="text-[10px] font-extrabold uppercase tracking-wide">{t.offer}: {offer.title}</span>
+                        <span className="rounded-md bg-white px-2 py-1 font-mono text-[10px] font-bold">{t.useCode}: {offer.code}</span>
+                      </div>
+                    )}
+                    <div className="mt-3 flex items-baseline gap-2">
+                      {offer && <span className="text-sm font-bold font-mono text-ink-muted line-through">₹{formatInr(p.priceMonthly)}</span>}
+                      <span className="text-3xl sm:text-4xl font-black font-mono text-ink">₹{formatInr(offer?.finalAmount ?? p.priceMonthly, Boolean(offer))}</span>
                       <span className="text-xs text-ink-muted">{t.perMonth}</span>
                     </div>
+                    {offer && <div className="mt-1 text-[11px] font-semibold text-emerald-700">{t.save} ₹{formatInr(offer.discountAmount, true)}</div>}
 
                     <div className="mt-4 py-3 border-y border-line text-[11px] text-ink-soft space-y-1.5">
                       <div className="flex justify-between">
@@ -185,7 +247,7 @@ export default function PricingClient({ locale }: { locale: Locale }) {
 
                   <div className="mt-8 pt-6 border-t border-line">
                     <Link
-                      href="/dashboard"
+                      href={p.tier === "ENTERPRISE" && !offer ? "/dashboard" : `/billing?plan=${encodeURIComponent(p.tier)}${offer ? `&offer=${encodeURIComponent(offer.code)}` : ""}`}
                       className={`w-full py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition ${
                         p.isPopular
                           ? "bg-accent hover:bg-accent-hover text-white shadow-md shadow-accent/20"
@@ -196,7 +258,7 @@ export default function PricingClient({ locale }: { locale: Locale }) {
                     </Link>
                   </div>
                 </div>
-              ))}
+              )})}
             </div>
 
             {/* Modular Engine Add-ons Showcase */}
@@ -216,7 +278,9 @@ export default function PricingClient({ locale }: { locale: Locale }) {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                  {addons.map((addon) => (
+                  {addons.map((addon) => {
+                    const offer = bestOffer("ADDON", addon.id, addon.priceMonthly);
+                    return (
                     <div
                       key={addon.id}
                       className="p-5 rounded-2xl border border-line bg-card shadow-xs flex flex-col justify-between hover:border-accent/40 hover:shadow-md transition"
@@ -230,10 +294,21 @@ export default function PricingClient({ locale }: { locale: Locale }) {
                             </span>
                           </div>
                           <div className="text-right">
-                            <span className="text-xl font-black font-mono text-ink">₹{addon.priceMonthly}</span>
+                            {offer && <span className="block text-[10px] font-bold font-mono text-ink-muted line-through">₹{formatInr(addon.priceMonthly)}</span>}
+                            <span className="text-xl font-black font-mono text-ink">₹{formatInr(offer?.finalAmount ?? addon.priceMonthly, Boolean(offer))}</span>
                             <span className="text-[10px] text-ink-muted block">{t.perMonth}</span>
                           </div>
                         </div>
+
+                        {offer && (
+                          <div className="mt-3 flex items-center justify-between gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-amber-900">
+                            <div>
+                              <div className="text-[10px] font-extrabold uppercase">{t.offer}: {offer.title}</div>
+                              <div className="text-[10px] text-emerald-700">{t.save} ₹{formatInr(offer.discountAmount, true)}</div>
+                            </div>
+                            <span className="rounded-md bg-white px-2 py-1 font-mono text-[10px] font-bold">{offer.code}</span>
+                          </div>
+                        )}
 
                         <p className="mt-2.5 text-xs text-ink-soft leading-relaxed line-clamp-2">
                           {addon.description}
@@ -261,7 +336,7 @@ export default function PricingClient({ locale }: { locale: Locale }) {
 
                       <div className="mt-5 pt-4 border-t border-line">
                         <Link
-                          href="/billing#addons"
+                          href={`/billing?addon=${encodeURIComponent(addon.id)}${offer ? `&offer=${encodeURIComponent(offer.code)}` : ""}`}
                           className="w-full py-2.5 rounded-xl bg-accent hover:bg-accent-hover text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition shadow-xs"
                         >
                           <Zap className="w-3.5 h-3.5 text-amber-200" />
@@ -269,7 +344,7 @@ export default function PricingClient({ locale }: { locale: Locale }) {
                         </Link>
                       </div>
                     </div>
-                  ))}
+                  )})}
                 </div>
               </div>
             )}

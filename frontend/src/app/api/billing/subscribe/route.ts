@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getVerifiedSession } from "@/lib/authGuard";
 import { Prisma } from "@prisma/client";
 import crypto from "crypto";
+import { OfferValidationError, recordOfferRedemption, resolveOfferForUser } from "@/lib/offers";
 
 export async function POST(req: NextRequest) {
   try {
@@ -13,7 +14,7 @@ export async function POST(req: NextRequest) {
     const sessionEmail = session.email;
 
     const body = await req.json();
-    const { planTier, paymentMethod = "WALLET", gatewayOrderId, gatewayPaymentId, gatewaySignature } = body; 
+    const { planTier, paymentMethod = "WALLET", gatewayOrderId, gatewayPaymentId, gatewaySignature, offerCode } = body;
     // paymentMethod: "WALLET" | "GATEWAY"
 
     if (!planTier) {
@@ -86,7 +87,15 @@ export async function POST(req: NextRequest) {
     }
 
     // Net payable amount after prorated credit adjustment
-    const netPayablePrice = Math.max(0, Math.round((newPlanPrice - proratedDiscount) * 100) / 100);
+    const adjustedPlanPrice = Math.max(0, Math.round((newPlanPrice - proratedDiscount) * 100) / 100);
+    const appliedOffer = await resolveOfferForUser({
+      userId: user.id,
+      code: offerCode,
+      targetType: "PLAN",
+      targetId: plan.tier,
+      amount: adjustedPlanPrice,
+    });
+    const netPayablePrice = appliedOffer?.finalAmount ?? adjustedPlanPrice;
 
     // Option A: Pay using live Wallet Balance
     if (paymentMethod === "WALLET") {
@@ -100,61 +109,57 @@ export async function POST(req: NextRequest) {
         }, { status: 400 });
       }
 
-      // Deduct net payable from wallet balance
-      await prisma.user.update({
-        where: { email: sessionEmail },
-        data: {
-          walletBalance: { decrement: netPayablePrice },
-          planTier: plan.tier,
-          monthlyQuota: plan.includedQuota,
-          rateLimitPerMin: plan.rateLimitPerMin,
-        }
-      });
-
       const nextRenewal = new Date();
       nextRenewal.setDate(nextRenewal.getDate() + 30);
-
-      const sub = await prisma.subscription.upsert({
-        where: { userId: user.id },
-        update: {
-          planTier: plan.tier,
-          status: "ACTIVE",
-          currentPeriodEnd: nextRenewal,
-        },
-        create: {
-          userId: user.id,
-          planTier: plan.tier,
-          gatewaySubId: `sub_wallet_${crypto.randomBytes(6).toString("hex")}`,
-          status: "ACTIVE",
-          currentPeriodEnd: nextRenewal,
-        }
-      });
-
-      // Immutable settled transaction from Wallet (with metadata for prorated credit)
-      const tx = await prisma.transaction.create({
-        data: {
-          userId: user.id,
-          amount: netPayablePrice,
-          creditsAdded: 0,
-          paymentGateway: "WALLET",
-          gatewayOrderId: `wallet_sub_${crypto.randomBytes(6).toString("hex")}`,
-          gatewayPaymentId: `wallet_debit_${crypto.randomBytes(6).toString("hex")}`,
-          webhookVerified: true,
-          status: "SUCCESS"
-        }
+      const orderReference = `wallet_sub_${crypto.randomBytes(6).toString("hex")}`;
+      const walletResult = await prisma.$transaction(async (db: Prisma.TransactionClient) => {
+        await recordOfferRedemption(db, user.id, appliedOffer, orderReference);
+        await db.user.update({
+          where: { email: sessionEmail },
+          data: {
+            walletBalance: { decrement: netPayablePrice },
+            planTier: plan.tier,
+            monthlyQuota: plan.includedQuota,
+            rateLimitPerMin: plan.rateLimitPerMin,
+          },
+        });
+        const sub = await db.subscription.upsert({
+          where: { userId: user.id },
+          update: { planTier: plan.tier, status: "ACTIVE", currentPeriodEnd: nextRenewal },
+          create: {
+            userId: user.id,
+            planTier: plan.tier,
+            gatewaySubId: `sub_wallet_${crypto.randomBytes(6).toString("hex")}`,
+            status: "ACTIVE",
+            currentPeriodEnd: nextRenewal,
+          },
+        });
+        const transaction = await db.transaction.create({
+          data: {
+            userId: user.id,
+            amount: netPayablePrice,
+            creditsAdded: 0,
+            paymentGateway: "WALLET",
+            gatewayOrderId: orderReference,
+            gatewayPaymentId: `wallet_debit_${crypto.randomBytes(6).toString("hex")}`,
+            webhookVerified: true,
+            status: "SUCCESS",
+          },
+        });
+        return { sub, transaction };
       });
 
       return NextResponse.json({
         status: "success",
-        message: proratedDiscount > 0 
-          ? `Plan upgraded to ${plan.name}! Adjusted for ${remainingDays} unused days (-₹${proratedDiscount.toFixed(2)}). Paid ₹${netPayablePrice.toFixed(2)} from wallet.`
-          : `Plan upgraded to ${plan.name} successfully! ₹${netPayablePrice.toFixed(2)} deducted from your wallet.`,
+        message: `Plan upgraded to ${plan.name}. Paid ₹${netPayablePrice.toFixed(2)} from wallet${appliedOffer ? ` after offer ${appliedOffer.code} saved ₹${appliedOffer.discountAmount.toFixed(2)}` : ""}.`,
         plan: plan.name,
         monthlyQuota: plan.includedQuota,
         proratedDiscount,
+        offerDiscount: appliedOffer?.discountAmount || 0,
+        offerCode: appliedOffer?.code || null,
         netPaid: netPayablePrice,
-        subscription: sub,
-        transaction: tx
+        subscription: walletResult.sub,
+        transaction: walletResult.transaction,
       });
     }
 
@@ -265,6 +270,8 @@ export async function POST(req: NextRequest) {
             throw new Error("ORDER_ALREADY_SETTLED");
           }
 
+          await recordOfferRedemption(tx, user.id, appliedOffer, gatewayOrderId);
+
           const updatedUser = await tx.user.update({
             where: { email: sessionEmail },
             data: {
@@ -308,12 +315,12 @@ export async function POST(req: NextRequest) {
 
       return NextResponse.json({
         status: "success",
-        message: proratedDiscount > 0
-          ? `Plan upgraded to ${plan.name} via Razorpay! Adjusted for ${remainingDays} unused days (-₹${proratedDiscount.toFixed(2)}). Paid ₹${netPayablePrice.toFixed(2)}.`
-          : `Plan upgraded to ${plan.name} via Razorpay successfully! Paid ₹${netPayablePrice.toFixed(2)}.`,
+        message: `Plan upgraded to ${plan.name} via Razorpay. Paid ₹${netPayablePrice.toFixed(2)}${appliedOffer ? ` after offer ${appliedOffer.code} saved ₹${appliedOffer.discountAmount.toFixed(2)}` : ""}.`,
         plan: plan.name,
         monthlyQuota: plan.includedQuota,
         proratedDiscount,
+        offerDiscount: appliedOffer?.discountAmount || 0,
+        offerCode: appliedOffer?.code || null,
         netPaid: netPayablePrice,
         subscription: subResult.sub,
         transaction: subResult.settledTx
@@ -323,6 +330,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ status: "error", message: "Invalid payment method" }, { status: 400 });
   } catch (error: unknown) {
     const err = error as { message?: string };
-    return NextResponse.json({ status: "error", message: err.message }, { status: 500 });
+    return NextResponse.json(
+      { status: "error", message: err.message },
+      { status: error instanceof OfferValidationError ? 400 : 500 },
+    );
   }
 }

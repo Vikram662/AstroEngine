@@ -157,7 +157,7 @@ export default function NotificationsSettingsPage() {
               <div>
                 <span className="text-xs font-bold text-slate-800 block">PDF Compilation Completed</span>
                 <span className="text-[11px] text-slate-500">
-                  Receive an email with direct presigned download link whenever an 80+ page Brihat Kundli finishes rendering.
+                  Receive an email with direct presigned download link whenever a 60-page Brihat Kundli finishes rendering.
                 </span>
               </div>
             </label>

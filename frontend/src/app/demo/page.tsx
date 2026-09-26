@@ -1443,7 +1443,7 @@ export default function LiveDemoApp() {
                 { id: "kp", label: t.tabs.kp, icon: Sliders, endpoint: "POST /api/v1/kp/planets", work: "Krishnamurti Paddhati Sign/Star/Sub-Lords, Placidus Cusps, 1-249 Horary & Ruling Planets" },
                 { id: "lalkitab", label: t.tabs.lalkitab, icon: BookOpen, endpoint: "POST /api/v1/lalkitab/chart/kundli", work: "Lal Kitab Fixed Kalpurush Houses, Sleeping Houses/Planets, 6 Debts & Specific Upay" },
                 { id: "tajik", label: t.tabs.tajik, icon: Eye, endpoint: "POST /api/v1/advanced/jaimini/karakas", work: "7 Jaimini Chara Karakas, Chara Dasha, Tajik Varshphal, Muntha, Sahams & 16 Tajik Yogas" },
-                { id: "pdf", label: t.tabs.pdf, icon: FileDown, endpoint: "POST /api/v1/pdf/kundli/basic", work: "Async PDF Generation Queue (HTTP 202) for 20-80 page branded client astrology reports" },
+                { id: "pdf", label: t.tabs.pdf, icon: FileDown, endpoint: "POST /api/v1/pdf/kundli/basic", work: "Async PDF Generation Queue (HTTP 202) for 12-60 page branded client astrology reports" },
               ].map(tab => {
                 const Icon = tab.icon;
                 const isActive = activeTab === tab.id;

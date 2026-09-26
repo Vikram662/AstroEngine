@@ -89,7 +89,7 @@ export default function BrandingPage() {
       <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
         <h1 className="text-2xl font-bold tracking-tight text-slate-900">White-Label Branding Suite</h1>
         <p className="text-slate-600 text-xs sm:text-sm mt-1">
-          Inject your corporate branding, colors, and helpline directly into 60-100 page Brihat Kundli and Matchmaking PDF reports.
+          Inject your corporate branding, colors, and helpline directly into 12-60 page Kundli, Matchmaking, and specialist PDF reports.
         </p>
       </div>
 

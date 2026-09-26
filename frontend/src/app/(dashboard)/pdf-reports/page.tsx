@@ -24,14 +24,16 @@ interface PdfJobRecord {
 }
 
 const REPORT_TYPES: { value: string; label: string }[] = [
-  { value: "kundli_basic", label: "Basic Kundli (15-20 pages)" },
-  { value: "kundli_brihat", label: "Brihat Kundli (60-100 pages)" },
-  { value: "matching_report", label: "Matchmaking Dossier" },
-  { value: "lalkitab_full", label: "Lal Kitab Full Report" },
-  { value: "varshphal_annual", label: "Varshphal (Annual Chart)" },
-  { value: "numerology_report", label: "Numerology Report" },
-  { value: "sadesati_guide", label: "Sade Sati Guide" }
+  { value: "kundli_basic", label: "Basic Kundli (15 pages)" },
+  { value: "kundli_brihat", label: "Brihat Kundli (60 pages)" },
+  { value: "matching_report", label: "Matchmaking Dossier (20 pages)" },
+  { value: "lalkitab_full", label: "Lal Kitab Full Report (30 pages)" },
+  { value: "varshphal_annual", label: "Varshphal (20 pages)" },
+  { value: "numerology_report", label: "Numerology Report (12 pages)" },
+  { value: "sadesati_guide", label: "Sade Sati Guide (15 pages)" }
 ];
+
+type PdfLanguage = "hi" | "en" | "mr" | "gu" | "ta" | "te";
 
 export default function PdfReportsPage() {
   const [jobs, setJobs] = useState<PdfJobRecord[]>([]);
@@ -40,7 +42,7 @@ export default function PdfReportsPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [reportType, setReportType] = useState("kundli_brihat");
   const [birthData, setBirthData] = useState<BirthDataValue>(DEFAULT_BIRTH_DATA);
-  const [lang, setLang] = useState<"hi" | "en">("hi");
+  const [lang, setLang] = useState<PdfLanguage>("hi");
   const [targetYear, setTargetYear] = useState(new Date().getFullYear());
   const [bride, setBride] = useState<BirthDataValue>({ ...DEFAULT_BIRTH_DATA, gender: "female" });
 
@@ -187,11 +189,15 @@ export default function PdfReportsPage() {
                 <label className="block text-xs font-semibold text-slate-600 mb-1.5">Report Language</label>
                 <select
                   value={lang}
-                  onChange={(e) => setLang(e.target.value as "hi" | "en")}
+                  onChange={(e) => setLang(e.target.value as PdfLanguage)}
                   className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm"
                 >
                   <option value="hi">Hindi</option>
                   <option value="en">English</option>
+                  <option value="mr">Marathi</option>
+                  <option value="gu">Gujarati</option>
+                  <option value="ta">Tamil</option>
+                  <option value="te">Telugu</option>
                 </select>
               </div>
 
