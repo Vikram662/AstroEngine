@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getVerifiedSession } from "@/lib/authGuard";
 import { Prisma } from "@prisma/client";
 import { OfferValidationError, recordOfferRedemption, resolveOfferForUser } from "@/lib/offers";
+import { toMoney, toJsonSafe } from "@/lib/money";
 
 export interface AddonItem {
   id: string;
@@ -41,13 +42,13 @@ export async function GET() {
 
     return NextResponse.json({
       status: "success",
-      walletBalance: user.walletBalance,
+      walletBalance: toMoney(user.walletBalance),
       planTier: user.planTier,
       activeAddons,
-      catalog: (dbAddons || []).map((addon: any) => ({
+      catalog: toJsonSafe((dbAddons || []).map((addon: any) => ({
         ...addon,
         isActive: activeAddons.includes(addon.id) || user.planTier === "ENTERPRISE"
-      }))
+      })))
     });
   } catch (error: unknown) {
     const err = error as { message?: string };
@@ -81,15 +82,17 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ status: "success", message: `${addon.name} is already active on your account.` });
       }
 
-      let newBalance = user.walletBalance;
+      const currentWalletBalance = toMoney(user.walletBalance);
+      let newBalance: number = currentWalletBalance;
+      const addonPrice = toMoney(addon.priceMonthly);
       const appliedOffer = await resolveOfferForUser({
         userId: user.id,
         code: offerCode,
         targetType: "ADDON",
         targetId: addon.id,
-        amount: addon.priceMonthly,
+        amount: addonPrice,
       });
-      const payablePrice = appliedOffer?.finalAmount ?? addon.priceMonthly;
+      const payablePrice = appliedOffer?.finalAmount ?? addonPrice;
 
       // OPTION 1: Pay via Razorpay Gateway directly
       if (paymentMethod === "GATEWAY") {
@@ -162,10 +165,10 @@ export async function POST(req: NextRequest) {
           }, { status: 400 });
         }
 
-        if (pendingOrder.amount < payablePrice) {
+        if (toMoney(pendingOrder.amount) < payablePrice) {
           return NextResponse.json({
             status: "error",
-            message: `Order amount (₹${pendingOrder.amount}) does not match add-on payable price (₹${payablePrice}).`
+            message: `Order amount (₹${toMoney(pendingOrder.amount)}) does not match add-on payable price (₹${payablePrice}).`
           }, { status: 400 });
         }
 
@@ -213,25 +216,25 @@ export async function POST(req: NextRequest) {
           status: "success",
           message: `Successfully activated ${addon.name} Add-on via Razorpay Gateway!`,
           activeAddons,
-          walletBalance: user.walletBalance,
+          walletBalance: currentWalletBalance,
           offerDiscount: appliedOffer?.discountAmount || 0,
           offerCode: appliedOffer?.code || null,
         });
       }
       // OPTION 2: Pay from Wallet
       else {
-        if (user.walletBalance < payablePrice && user.planTier !== "ENTERPRISE") {
+        if (currentWalletBalance < payablePrice && user.planTier !== "ENTERPRISE") {
           return NextResponse.json({
             status: "error",
             error_code: "INSUFFICIENT_FUNDS",
-            message: `Insufficient wallet balance. Activating ${addon.name} requires ₹${payablePrice}. Current wallet balance: ₹${user.walletBalance.toFixed(2)}.`,
+            message: `Insufficient wallet balance. Activating ${addon.name} requires ₹${payablePrice.toFixed(2)}. Current wallet balance: ₹${currentWalletBalance.toFixed(2)}.`,
             requiredAmount: payablePrice,
-            walletBalance: user.walletBalance
+            walletBalance: currentWalletBalance
           }, { status: 400 });
         }
 
         if (user.planTier !== "ENTERPRISE") {
-          newBalance = Math.max(0, user.walletBalance - payablePrice);
+          newBalance = Math.max(0, currentWalletBalance - payablePrice);
         }
 
         activeAddons.push(addonId);
@@ -265,7 +268,7 @@ export async function POST(req: NextRequest) {
           status: "success",
           message: `Successfully activated ${addon.name} Add-on via Wallet Balance!`,
           activeAddons,
-          walletBalance: updatedUser.walletBalance,
+          walletBalance: toMoney(updatedUser.walletBalance),
           offerDiscount: appliedOffer?.discountAmount || 0,
           offerCode: appliedOffer?.code || null,
         });
@@ -285,7 +288,7 @@ export async function POST(req: NextRequest) {
         status: "success",
         message: `Deactivated ${addon.name} Add-on.`,
         activeAddons,
-        walletBalance: updatedUser.walletBalance
+        walletBalance: toMoney(updatedUser.walletBalance)
       });
     }
 

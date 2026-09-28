@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getVerifiedSession } from "@/lib/authGuard";
 import { Prisma } from "@prisma/client";
 import crypto from "crypto";
+import { toMoney, toJsonSafe } from "@/lib/money";
 
 export async function GET() {
   try {
@@ -27,7 +28,7 @@ export async function GET() {
 
     return NextResponse.json({
       status: "success",
-      transactions: user.transactions
+      transactions: toJsonSafe(user.transactions)
     });
   } catch (error: unknown) {
     const err = error as { message?: string };
@@ -238,7 +239,7 @@ export async function POST(req: NextRequest) {
       }
 
       // Exact server-verified amount from the pending order created during create_order
-      const verifiedAmount = pendingOrder.amount;
+      const verifiedAmount = toMoney(pendingOrder.amount);
       if (verifiedAmount <= 0) {
         return NextResponse.json({
           status: "error",
@@ -298,8 +299,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         status: "success",
         message: `Successfully credited ₹${creditsToAdd.toFixed(2)} to wallet.`,
-        transaction: result.settledTx,
-        newBalance: result.updatedUser.walletBalance
+        transaction: toJsonSafe(result.settledTx),
+        newBalance: toMoney(result.updatedUser.walletBalance)
       });
     }
 

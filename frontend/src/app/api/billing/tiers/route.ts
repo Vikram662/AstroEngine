@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { toJsonSafe } from "@/lib/money";
 
 export async function GET() {
   try {
@@ -10,7 +11,7 @@ export async function GET() {
 
     return NextResponse.json({
       status: "success",
-      data: tiers
+      data: toJsonSafe(tiers)
     });
   } catch (err: unknown) {
     const error = err as { message?: string };

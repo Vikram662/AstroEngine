@@ -1,11 +1,8 @@
 import { PrismaClient } from "@prisma/client";
 import crypto from "crypto";
+import { hashPassword } from "../src/lib/session";
 
 const prisma = new PrismaClient();
-
-function hashPassword(password: string): string {
-  return crypto.createHash("sha256").update(password).digest("hex");
-}
 
 async function main() {
   if (process.env.NODE_ENV === "production") {
@@ -16,7 +13,8 @@ async function main() {
   console.log("Seeding Master Admin and Core Platform Data...");
 
   // 1. Seed or Update Master Admin (do NOT overwrite existing password on update)
-  const adminPasswordHash = hashPassword("Admin@12345");
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD || "Admin@12345";
+  const adminPasswordHash = hashPassword(adminPassword);
   const admin = await prisma.user.upsert({
     where: { email: "admin@astroengine.io" },
     update: {
@@ -108,7 +106,7 @@ async function main() {
 
   console.log("\nSetup complete! You can now log in with:");
   console.log("Email: admin@astroengine.io");
-  console.log("Password: Admin@12345\n");
+  console.log(process.env.SEED_ADMIN_PASSWORD ? "Password: (from SEED_ADMIN_PASSWORD)" : "Password: Admin@12345 (default — set SEED_ADMIN_PASSWORD to override)\n");
 }
 
 main()

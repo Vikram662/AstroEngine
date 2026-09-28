@@ -8,7 +8,49 @@ import { BirthDataFields, DEFAULT_BIRTH_DATA, BirthDataValue } from "@/component
 import { ResultSection, ResultRow, ResultBadge, SubmitButton, ErrorNote } from "@/components/calculators/ResultRows";
 import { Loader2 } from "lucide-react";
 
+const STRINGS = {
+  hi: {
+    error: "पाश्चात्य ज्योतिष गणना विफल रही।",
+    calculating: "ट्रॉपिकल राशि गणना जारी...",
+    submit: "वेस्टर्न बिग-थ्री जानें",
+    emptyHint: "जन्म समय अनुसार वेस्टर्न ट्रॉपिकल ज़ोडिएक (Sun, Moon & Rising Sign) और नेटल व्हील देखें।",
+    loadingHint: "ट्रॉपिकल एफेमेरिस (सायन पद्धति) गणना जारी है...",
+    sunLabel: "सूर्य राशि (Sun Sign)",
+    moonLabel: "चंद्र राशि (Moon Sign)",
+    risingLabel: "लग्न (Rising / Asc)",
+    sunFallback: "सिंह",
+    moonFallback: "वृश्चिक",
+    risingFallback: "धनु",
+    wheelTitle: "वेस्टर्न नेटल व्हील (Tropical Natal Wheel)",
+    elementsTitle: "तत्व वितरण (Elements)",
+    fire: "अग्नि (Fire)",
+    earth: "पृथ्वी (Earth)",
+    air: "वायु (Air)",
+    water: "जल (Water)",
+  },
+  en: {
+    error: "Western astrology calculation failed.",
+    calculating: "Calculating tropical signs...",
+    submit: "Get Western Big-Three",
+    emptyHint: "See your Western Tropical zodiac Big-Three (Sun, Moon & Rising Sign) and natal wheel for your birth time.",
+    loadingHint: "Calculating the Tropical ephemeris...",
+    sunLabel: "Sun Sign",
+    moonLabel: "Moon Sign",
+    risingLabel: "Rising / Ascendant",
+    sunFallback: "Leo",
+    moonFallback: "Scorpio",
+    risingFallback: "Sagittarius",
+    wheelTitle: "Western Natal Wheel (Tropical)",
+    elementsTitle: "Element Distribution",
+    fire: "Fire",
+    earth: "Earth",
+    air: "Air",
+    water: "Water",
+  },
+} as const;
+
 export default function WesternAstrologyClient({ locale }: { locale: Locale }) {
+  const s = STRINGS[locale];
   const [form, setForm] = useState<BirthDataValue>(DEFAULT_BIRTH_DATA);
   const [lang, setLang] = useState<"hi" | "en">(locale);
   const [loading, setLoading] = useState(false);
@@ -58,7 +100,7 @@ export default function WesternAstrologyClient({ locale }: { locale: Locale }) {
         setWheelSvg(resSvg.data);
       }
     } catch (err: any) {
-      setError(err?.response?.data?.message || err?.message || "पाश्चात्य ज्योतिष गणना विफल रही।");
+      setError(err?.response?.data?.message || err?.message || s.error);
     } finally {
       setLoading(false);
     }
@@ -74,7 +116,7 @@ export default function WesternAstrologyClient({ locale }: { locale: Locale }) {
       category="western"
       title="Western Tropical Big-Three"
       hindiTitle="पाश्चात्य ज्योतिष (सूर्य-चंद्र-लग्न)"
-      description="उष्णकटिबंधीय (Tropical) राशि पद्धति अनुसार सूर्य, चंद्र एवं लग्न राशि की गणना।"
+      description={locale === "en" ? "Sun, Moon, and Rising sign calculated using the Tropical zodiac system." : "उष्णकटिबंधीय (Tropical) राशि पद्धति अनुसार सूर्य, चंद्र एवं लग्न राशि की गणना।"}
       icon="♈"
       locale={locale}
     >
@@ -110,10 +152,10 @@ export default function WesternAstrologyClient({ locale }: { locale: Locale }) {
             <SubmitButton loading={loading}>
               {loading ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin" /> ट्रॉपिकल राशि गणना जारी...
+                  <Loader2 className="w-4 h-4 animate-spin" /> {s.calculating}
                 </>
               ) : (
-                "वेस्टर्न बिग-थ्री जानें"
+                s.submit
               )}
             </SubmitButton>
           </form>
@@ -125,53 +167,53 @@ export default function WesternAstrologyClient({ locale }: { locale: Locale }) {
           {!data && !loading && !error && (
             <div className="bg-card rounded-2xl border border-line p-10 text-center text-ink-muted">
               <div className="text-4xl mb-3">♈</div>
-              <p className="text-sm">जन्म समय अनुसार वेस्टर्न ट्रॉपिकल ज़ोडिएक (Sun, Moon & Rising Sign) और नेटल व्हील देखें।</p>
+              <p className="text-sm">{s.emptyHint}</p>
             </div>
           )}
 
           {loading && (
             <div className="bg-card rounded-2xl border border-line p-12 text-center text-ink-soft flex flex-col items-center justify-center">
               <Loader2 className="w-8 h-8 text-accent animate-spin mb-3" />
-              <p className="text-sm">ट्रॉपिकल एफेमेरिस (सायन पद्धति) गणना जारी है...</p>
+              <p className="text-sm">{s.loadingHint}</p>
             </div>
           )}
 
           {data && (
             <div className="space-y-6">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="p-4 bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 rounded-2xl text-center">
-                  <div className="text-[11px] uppercase font-bold text-amber-800 mb-1">सूर्य राशि (Sun Sign)</div>
-                  <div className="text-xl font-extrabold text-amber-950">
-                    {typeof sun === "object" ? sun?.sign || sun?.name : sun || "Leo"}
+                <div className="p-4 bg-card border border-line rounded-xl text-center">
+                  <div className="text-[11px] uppercase font-bold text-ink-muted mb-1">{s.sunLabel}</div>
+                  <div className="font-display text-xl font-medium text-ink">
+                    {typeof sun === "object" ? sun?.sign || sun?.name : sun || s.sunFallback}
                   </div>
                   {typeof sun === "object" && sun?.degree && (
-                    <div className="text-xs text-amber-700 font-mono mt-1">{Number(sun.degree).toFixed(2)}°</div>
+                    <div className="text-xs text-accent font-mono-brand mt-1">{Number(sun.degree).toFixed(2)}°</div>
                   )}
                 </div>
 
-                <div className="p-4 bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-200 rounded-2xl text-center">
-                  <div className="text-[11px] uppercase font-bold text-indigo-800 mb-1">चंद्र राशि (Moon Sign)</div>
-                  <div className="text-xl font-extrabold text-indigo-950">
-                    {typeof moon === "object" ? moon?.sign || moon?.name : moon || "Scorpio"}
+                <div className="p-4 bg-card border border-line rounded-xl text-center">
+                  <div className="text-[11px] uppercase font-bold text-ink-muted mb-1">{s.moonLabel}</div>
+                  <div className="font-display text-xl font-medium text-ink">
+                    {typeof moon === "object" ? moon?.sign || moon?.name : moon || s.moonFallback}
                   </div>
                   {typeof moon === "object" && moon?.degree && (
-                    <div className="text-xs text-indigo-700 font-mono mt-1">{Number(moon.degree).toFixed(2)}°</div>
+                    <div className="text-xs text-accent font-mono-brand mt-1">{Number(moon.degree).toFixed(2)}°</div>
                   )}
                 </div>
 
-                <div className="p-4 bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-200 rounded-2xl text-center">
-                  <div className="text-[11px] uppercase font-bold text-purple-800 mb-1">लग्न (Rising / Asc)</div>
-                  <div className="text-xl font-extrabold text-purple-950">
-                    {typeof rising === "object" ? rising?.sign || rising?.name : rising || "Sagittarius"}
+                <div className="p-4 bg-card border border-line rounded-xl text-center">
+                  <div className="text-[11px] uppercase font-bold text-ink-muted mb-1">{s.risingLabel}</div>
+                  <div className="font-display text-xl font-medium text-ink">
+                    {typeof rising === "object" ? rising?.sign || rising?.name : rising || s.risingFallback}
                   </div>
                   {typeof rising === "object" && rising?.degree && (
-                    <div className="text-xs text-purple-700 font-mono mt-1">{Number(rising.degree).toFixed(2)}°</div>
+                    <div className="text-xs text-accent font-mono-brand mt-1">{Number(rising.degree).toFixed(2)}°</div>
                   )}
                 </div>
               </div>
 
               {wheelSvg && (
-                <ResultSection title="वेस्टर्न नेटल व्हील (Tropical Natal Wheel)">
+                <ResultSection title={s.wheelTitle}>
                   <div
                     className="w-full max-w-md mx-auto aspect-square flex items-center justify-center bg-surface-alt/50 rounded-xl p-2 border border-line/60"
                     dangerouslySetInnerHTML={{ __html: wheelSvg }}
@@ -180,22 +222,22 @@ export default function WesternAstrologyClient({ locale }: { locale: Locale }) {
               )}
 
               {data.element_distribution && (
-                <ResultSection title="तत्व वितरण (Elements)">
+                <ResultSection title={s.elementsTitle}>
                   <div className="grid grid-cols-4 gap-2 text-center text-xs">
                     <div className="p-2.5 rounded-lg bg-surface-alt border border-line">
-                      <div className="font-semibold text-rose-600">अग्नि (Fire)</div>
+                      <div className="font-semibold text-rose-600">{s.fire}</div>
                       <div className="text-sm font-bold text-ink mt-0.5">{data.element_distribution.fire || 0}%</div>
                     </div>
                     <div className="p-2.5 rounded-lg bg-surface-alt border border-line">
-                      <div className="font-semibold text-amber-600">पृथ्वी (Earth)</div>
+                      <div className="font-semibold text-amber-600">{s.earth}</div>
                       <div className="text-sm font-bold text-ink mt-0.5">{data.element_distribution.earth || 0}%</div>
                     </div>
                     <div className="p-2.5 rounded-lg bg-surface-alt border border-line">
-                      <div className="font-semibold text-sky-600">वायु (Air)</div>
+                      <div className="font-semibold text-sky-600">{s.air}</div>
                       <div className="text-sm font-bold text-ink mt-0.5">{data.element_distribution.air || 0}%</div>
                     </div>
                     <div className="p-2.5 rounded-lg bg-surface-alt border border-line">
-                      <div className="font-semibold text-blue-600">जल (Water)</div>
+                      <div className="font-semibold text-blue-600">{s.water}</div>
                       <div className="text-sm font-bold text-ink mt-0.5">{data.element_distribution.water || 0}%</div>
                     </div>
                   </div>

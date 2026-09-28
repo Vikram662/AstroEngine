@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getVerifiedSession } from "@/lib/authGuard";
 import { prisma } from "@/lib/prisma";
 import { OfferValidationError, resolveOfferForUser } from "@/lib/offers";
+import { toJsonSafe } from "@/lib/money";
 
 export async function GET() {
   const session = await getVerifiedSession();
@@ -35,7 +36,7 @@ export async function GET() {
     orderBy: [{ scope: "desc" }, { createdAt: "desc" }],
   });
 
-  return NextResponse.json({ status: "success", data: offers });
+  return NextResponse.json({ status: "success", data: toJsonSafe(offers) });
 }
 
 export async function POST(req: NextRequest) {

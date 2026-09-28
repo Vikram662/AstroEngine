@@ -8,7 +8,49 @@ import { ResultSection, ResultRow, ResultBadge, SubmitButton, ErrorNote } from "
 import { Loader2 } from "lucide-react";
 import type { Locale } from "@/lib/locale";
 
+const STRINGS = {
+  hi: {
+    error: "चंद्र राशि गणना विफल रही।",
+    calculating: "चंद्र राशि खोजी जा रही है...",
+    submit: "चंद्र राशि व नक्षत्र जानें",
+    emptyHint: "जन्म समय व स्थान दर्ज करें और अपना वैदिक चंद्र नक्षत्र व राशि जानें।",
+    loadingHint: "चंद्रमा के देशांतर एवं 27 नक्षत्रों के भोग की गणना जारी है...",
+    resultTitle: "आपकी वैदिक चंद्र राशि (Moon Sign)",
+    birthSignLabel: "वैदिक जन्म राशि",
+    signFallback: "कर्क (Cancer)",
+    bhogAmshLabel: "भोग अंश:",
+    nakshatraLabel: "जन्म नक्षत्र (Birth Nakshatra)",
+    nakshatraFallback: "पुष्य",
+    padaLabel: "चरण",
+    nakshatraLordLabel: "नक्षत्र स्वामी (Nakshatra Lord)",
+    signLordLabel: "राशि स्वामी (Sign Lord)",
+    namingSyllableLabel: "नामाक्षर (Naming Syllable)",
+    significanceTitle: "ज्योतिषीय महत्व",
+    significanceBody: "वैदिक ज्योतिष में चंद्र राशि को मन, भावना, स्वभाव और सोच का केंद्र माना जाता है। दैनिक राशिफल, साढ़े साती की गणना, और महादशा का प्रारंभ इसी नक्षत्र और चरण से होता है।",
+  },
+  en: {
+    error: "Moon sign calculation failed.",
+    calculating: "Finding your Moon sign...",
+    submit: "Get Moon Sign & Nakshatra",
+    emptyHint: "Enter your birth time and place to see your Vedic Moon Nakshatra and sign.",
+    loadingHint: "Calculating the Moon's longitude and its position across the 27 nakshatras...",
+    resultTitle: "Your Vedic Moon Sign",
+    birthSignLabel: "Vedic Birth Sign",
+    signFallback: "Cancer",
+    bhogAmshLabel: "Bhoga Amsha:",
+    nakshatraLabel: "Birth Nakshatra",
+    nakshatraFallback: "Pushya",
+    padaLabel: "Pada",
+    nakshatraLordLabel: "Nakshatra Lord",
+    signLordLabel: "Sign Lord",
+    namingSyllableLabel: "Naming Syllable",
+    significanceTitle: "Astrological Significance",
+    significanceBody: "In Vedic astrology, the Moon sign is considered the center of the mind, emotions, temperament, and thought. Daily horoscopes, the Sade Sati calculation, and the start of the Mahadasha all begin from this nakshatra and pada.",
+  },
+} as const;
+
 export default function MoonSignClient({ locale }: { locale: Locale }) {
+  const s = STRINGS[locale];
   const [form, setForm] = useState<BirthDataValue>(DEFAULT_BIRTH_DATA);
   const [lang, setLang] = useState<"hi" | "en">(locale);
   const [loading, setLoading] = useState(false);
@@ -42,7 +84,7 @@ export default function MoonSignClient({ locale }: { locale: Locale }) {
         setData(res.data);
       }
     } catch (err: any) {
-      setError(err?.response?.data?.message || err?.message || "चंद्र राशि गणना विफल रही।");
+      setError(err?.response?.data?.message || err?.message || s.error);
     } finally {
       setLoading(false);
     }
@@ -57,7 +99,7 @@ export default function MoonSignClient({ locale }: { locale: Locale }) {
       category="kundli"
       title="Moon Sign & Nakshatra"
       hindiTitle="चंद्र राशि एवं नक्षत्र"
-      description="जन्म कालीन चंद्र राशि, 27 नक्षत्र एवं 4 चरण आधारित नाम अक्षर।"
+      description={locale === "en" ? "Your Moon sign at birth, plus the Nakshatra and Pada that give the first letter of your name." : "जन्म कालीन चंद्र राशि, 27 नक्षत्र एवं 4 चरण आधारित नाम अक्षर।"}
       icon="🌙"
       locale={locale}
     >
@@ -93,10 +135,10 @@ export default function MoonSignClient({ locale }: { locale: Locale }) {
             <SubmitButton loading={loading}>
               {loading ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin" /> चंद्र राशि खोजी जा रही है...
+                  <Loader2 className="w-4 h-4 animate-spin" /> {s.calculating}
                 </>
               ) : (
-                "चंद्र राशि व नक्षत्र जानें"
+                s.submit
               )}
             </SubmitButton>
           </form>
@@ -108,58 +150,58 @@ export default function MoonSignClient({ locale }: { locale: Locale }) {
           {!moon && !loading && !error && (
             <div className="bg-card rounded-2xl border border-line p-10 text-center text-ink-muted">
               <div className="text-4xl mb-3">🌙</div>
-              <p className="text-sm">जन्म समय व स्थान दर्ज करें और अपना वैदिक चंद्र नक्षत्र व राशि जानें।</p>
+              <p className="text-sm">{s.emptyHint}</p>
             </div>
           )}
 
           {loading && (
             <div className="bg-card rounded-2xl border border-line p-12 text-center text-ink-soft flex flex-col items-center justify-center">
               <Loader2 className="w-8 h-8 text-accent animate-spin mb-3" />
-              <p className="text-sm">चंद्रमा के देशांतर एवं 27 नक्षत्रों के भोग की गणना जारी है...</p>
+              <p className="text-sm">{s.loadingHint}</p>
             </div>
           )}
 
           {moon && (
             <div className="space-y-6">
-              <ResultSection title="आपकी वैदिक चंद्र राशि (Moon Sign)">
-                <div className="p-6 bg-gradient-to-br from-amber-50 to-orange-50/40 rounded-xl border border-amber-200/70 text-center mb-4">
-                  <div className="text-xs uppercase tracking-wider text-amber-800 font-semibold mb-1">
-                    वैदिक जन्म राशि
+              <ResultSection title={s.resultTitle}>
+                <div className="p-6 bg-accent-soft rounded-xl border border-line text-center mb-4">
+                  <div className="text-xs uppercase tracking-wider text-accent font-semibold mb-1">
+                    {s.birthSignLabel}
                   </div>
-                  <div className="text-3xl font-extrabold text-amber-900">
-                    {moon.sign?.name || moon.rashi_name || "कर्क (Cancer)"}
+                  <div className="font-display text-3xl font-medium text-ink">
+                    {moon.sign?.name || moon.rashi_name || s.signFallback}
                   </div>
-                  <div className="text-xs text-amber-700 mt-1 font-mono">
-                    भोग अंश: {Number(moon.norm_degree ?? moon.degree ?? 0).toFixed(2)}°
+                  <div className="text-xs text-ink-soft mt-1 font-mono-brand">
+                    {s.bhogAmshLabel} {Number(moon.norm_degree ?? moon.degree ?? 0).toFixed(2)}°
                   </div>
                 </div>
 
                 <ResultRow
-                  label="जन्म नक्षत्र (Birth Nakshatra)"
+                  label={s.nakshatraLabel}
                   value={
                     <span className="flex items-center gap-1.5 font-bold text-accent">
-                      <span>{moon.nakshatra?.name || "पुष्य"}</span>
-                      {moon.nakshatra?.pada && <ResultBadge tone="accent">चरण {moon.nakshatra.pada}</ResultBadge>}
+                      <span>{moon.nakshatra?.name || s.nakshatraFallback}</span>
+                      {moon.nakshatra?.pada && <ResultBadge tone="accent">{s.padaLabel} {moon.nakshatra.pada}</ResultBadge>}
                     </span>
                   }
                 />
                 {moon.nakshatra?.lord && (
-                  <ResultRow label="नक्षत्र स्वामी (Nakshatra Lord)" value={moon.nakshatra.lord} />
+                  <ResultRow label={s.nakshatraLordLabel} value={moon.nakshatra.lord} />
                 )}
                 {moon.sign?.ruler && (
-                  <ResultRow label="राशि स्वामी (Sign Lord)" value={moon.sign.ruler} />
+                  <ResultRow label={s.signLordLabel} value={moon.sign.ruler} />
                 )}
                 {moon.pada_char && (
                   <ResultRow
-                    label="नामाक्षर (Naming Syllable)"
+                    label={s.namingSyllableLabel}
                     value={<ResultBadge tone="good">{moon.pada_char}</ResultBadge>}
                   />
                 )}
               </ResultSection>
 
-              <ResultSection title="ज्योतिषीय महत्व">
+              <ResultSection title={s.significanceTitle}>
                 <p className="text-xs text-ink-soft leading-relaxed">
-                  वैदिक ज्योतिष में चंद्र राशि को मन, भावना, स्वभाव और सोच का केंद्र माना जाता है। दैनिक राशिफल, साढ़े साती की गणना, और महादशा का प्रारंभ इसी नक्षत्र और चरण से होता है।
+                  {s.significanceBody}
                 </p>
               </ResultSection>
             </div>

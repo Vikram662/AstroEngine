@@ -8,7 +8,53 @@ import { BirthDataFields, DEFAULT_BIRTH_DATA, BirthDataValue } from "@/component
 import { ResultSection, ResultRow, ResultBadge, SubmitButton, ErrorNote } from "@/components/calculators/ResultRows";
 import { Loader2 } from "lucide-react";
 
+const STRINGS = {
+  hi: {
+    error: "विवाह मुहूर्त गणना विफल रही।",
+    dateLabel: "वांछित विवाह तिथि (Target Date)",
+    calculating: "त्रिबल शुद्धि जांची जा रही है...",
+    submit: "विवाह मुहूर्त खोजें",
+    emptyHint: "तारीख व स्थान चुनें और त्रिबल शुद्धि (सूर्य, चंद्र, गुरु बल) व शुभ लग्न मुहूर्त की अनुकूलता देखें।",
+    loadingHint: "गुरु-शुक्र अस्त, मलमास व बाण दोष नियमों की जांच जारी है...",
+    resultTitle: "विवाह मुहूर्त अनुकूलता",
+    verdictLabel: "तिथि अनुकूलता निष्कर्ष",
+    forbidden: "इस तिथि पर विवाह मुहूर्त वर्जित है",
+    favorable: "विवाह हेतु शुभ मुहूर्त उपलब्ध",
+    guruBal: "गुरु बल (Jupiter Strength)",
+    suryaBal: "सूर्य बल (Sun Strength)",
+    chandraBal: "चंद्र बल (Moon Strength)",
+    muhuratsTitle: (n: number) => `उपलब्ध शुभ विवाह लग्न मुहूर्त (${n})`,
+    muhuratFallback: (n: number) => `मुहूर्त ${n}`,
+    tithiLabel: "तिथि:",
+    nakshatraLabel: "नक्षत्र:",
+    abhijitLabel: "अभिजीत मुहूर्त:",
+    avoidLabel: "वर्जित काल:",
+  },
+  en: {
+    error: "Vivah Muhurat calculation failed.",
+    dateLabel: "Target Wedding Date",
+    calculating: "Checking Tribal Shuddhi...",
+    submit: "Find Vivah Muhurat",
+    emptyHint: "Choose a date and place to see Tribal Shuddhi (Sun, Moon, Jupiter strength) and auspicious wedding lagna compatibility.",
+    loadingHint: "Checking Jupiter/Venus combustion, Malmas, and Baan Dosha rules...",
+    resultTitle: "Vivah Muhurat Compatibility",
+    verdictLabel: "Date Compatibility Verdict",
+    forbidden: "Marriage muhurat is prohibited on this date",
+    favorable: "Auspicious muhurat available for marriage",
+    guruBal: "Jupiter Strength",
+    suryaBal: "Sun Strength",
+    chandraBal: "Moon Strength",
+    muhuratsTitle: (n: number) => `Available Auspicious Wedding Muhurats (${n})`,
+    muhuratFallback: (n: number) => `Muhurat ${n}`,
+    tithiLabel: "Tithi:",
+    nakshatraLabel: "Nakshatra:",
+    abhijitLabel: "Abhijit Muhurat:",
+    avoidLabel: "Avoid:",
+  },
+} as const;
+
 export default function MarriageMuhuratClient({ locale }: { locale: Locale }) {
+  const s = STRINGS[locale];
   const [form, setForm] = useState<BirthDataValue>({
     ...DEFAULT_BIRTH_DATA,
     dob: new Date().toISOString().split("T")[0],
@@ -46,7 +92,7 @@ export default function MarriageMuhuratClient({ locale }: { locale: Locale }) {
         setData(res.data);
       }
     } catch (err: any) {
-      setError(err?.response?.data?.message || err?.message || "विवाह मुहूर्त गणना विफल रही।");
+      setError(err?.response?.data?.message || err?.message || s.error);
     } finally {
       setLoading(false);
     }
@@ -62,7 +108,7 @@ export default function MarriageMuhuratClient({ locale }: { locale: Locale }) {
       category="panchang"
       title="Vivah Muhurat Finder"
       hindiTitle="विवाह शुभ मुहूर्त"
-      description="गुरु-शुक्र अस्त, त्रिबल शुद्धि एवं शुभ नक्षत्रों के आधार पर विवाह लग्न।"
+      description={locale === "en" ? "Auspicious wedding windows checked against Jupiter/Venus combustion, Tribal Shuddhi, and favorable nakshatras." : "गुरु-शुक्र अस्त, त्रिबल शुद्धि एवं शुभ नक्षत्रों के आधार पर विवाह लग्न।"}
       icon="👰"
       locale={locale}
     >
@@ -98,16 +144,16 @@ export default function MarriageMuhuratClient({ locale }: { locale: Locale }) {
               onChange={setForm}
               requireName={false}
               requireGender={false}
-              dateLabel="वांछित विवाह तिथि (Target Date)"
+              dateLabel={s.dateLabel}
             />
 
             <SubmitButton loading={loading}>
               {loading ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin" /> त्रिबल शुद्धि जांची जा रही है...
+                  <Loader2 className="w-4 h-4 animate-spin" /> {s.calculating}
                 </>
               ) : (
-                "विवाह मुहूर्त खोजें"
+                s.submit
               )}
             </SubmitButton>
           </form>
@@ -119,20 +165,20 @@ export default function MarriageMuhuratClient({ locale }: { locale: Locale }) {
           {!data && !loading && !error && (
             <div className="bg-card rounded-2xl border border-line p-10 text-center text-ink-muted">
               <div className="text-4xl mb-3">👰</div>
-              <p className="text-sm">तारीख व स्थान चुनें और त्रिबल शुद्धि (सूर्य, चंद्र, गुरु बल) व शुभ लग्न मुहूर्त की अनुकूलता देखें।</p>
+              <p className="text-sm">{s.emptyHint}</p>
             </div>
           )}
 
           {loading && (
             <div className="bg-card rounded-2xl border border-line p-12 text-center text-ink-soft flex flex-col items-center justify-center">
               <Loader2 className="w-8 h-8 text-accent animate-spin mb-3" />
-              <p className="text-sm">गुरु-शुक्र अस्त, मलमास व बाण दोष नियमों की जांच जारी है...</p>
+              <p className="text-sm">{s.loadingHint}</p>
             </div>
           )}
 
           {data && (
             <div className="space-y-6">
-              <ResultSection title="विवाह मुहूर्त अनुकूलता">
+              <ResultSection title={s.resultTitle}>
                 <div
                   className={`p-6 rounded-xl border text-center mb-4 ${
                     status === false
@@ -141,64 +187,64 @@ export default function MarriageMuhuratClient({ locale }: { locale: Locale }) {
                   }`}
                 >
                   <div className="text-xs uppercase font-bold tracking-wider mb-1">
-                    तिथि अनुकूलता निष्कर्ष
+                    {s.verdictLabel}
                   </div>
                   <div className="text-2xl sm:text-3xl font-extrabold">
-                    {data.summary || (status === false ? "इस तिथि पर विवाह मुहूर्त वर्जित है" : "विवाह हेतु शुभ मुहूर्त उपलब्ध")}
+                    {data.summary || (status === false ? s.forbidden : s.favorable)}
                   </div>
                   {data.reason && <div className="text-xs mt-2 opacity-80">{data.reason}</div>}
                 </div>
 
                 {data.guru_bal && (
                   <ResultRow
-                    label="गुरु बल (Jupiter Strength)"
+                    label={s.guruBal}
                     value={<ResultBadge tone="good">{data.guru_bal}</ResultBadge>}
                   />
                 )}
                 {data.surya_bal && (
                   <ResultRow
-                    label="सूर्य बल (Sun Strength)"
+                    label={s.suryaBal}
                     value={<ResultBadge tone="good">{data.surya_bal}</ResultBadge>}
                   />
                 )}
                 {data.chandra_bal && (
                   <ResultRow
-                    label="चंद्र बल (Moon Strength)"
+                    label={s.chandraBal}
                     value={<ResultBadge tone="good">{data.chandra_bal}</ResultBadge>}
                   />
                 )}
               </ResultSection>
 
               {Array.isArray(muhurats) && muhurats.length > 0 && (
-                <ResultSection title={`उपलब्ध शुभ विवाह लग्न मुहूर्त (${muhurats.length})`}>
+                <ResultSection title={s.muhuratsTitle(muhurats.length)}>
                   <div className="divide-y divide-line/60">
                     {muhurats.map((m: any, idx: number) => (
                       <div key={idx} className="py-3">
                         <div className="flex items-center justify-between gap-2 mb-1">
                           <div className="font-bold text-ink text-sm">
-                            {m.date || m.lagna || m.name || `मुहूर्त ${idx + 1}`}
+                            {m.date || m.lagna || m.name || s.muhuratFallback(idx + 1)}
                             {m.day && <span className="text-ink-muted font-normal"> ({m.day})</span>}
                           </div>
                           {m.quality && <ResultBadge tone="good">{m.quality}</ResultBadge>}
                         </div>
                         {(m.tithi || m.nakshatra) && (
                           <div className="text-[11px] text-ink-muted mb-1">
-                            {m.tithi && <span>तिथि: {m.tithi}</span>}
+                            {m.tithi && <span>{s.tithiLabel} {m.tithi}</span>}
                             {m.tithi && m.nakshatra && <span> · </span>}
-                            {m.nakshatra && <span>नक्षत्र: {m.nakshatra}</span>}
+                            {m.nakshatra && <span>{s.nakshatraLabel} {m.nakshatra}</span>}
                           </div>
                         )}
                         {(m.recommended_window || m.start || m.time || m.from) && (
-                          <div className="font-mono text-xs text-accent">
+                          <div className="font-mono-brand text-xs text-accent">
                             {m.recommended_window || `${m.start || m.time || m.from} - ${m.end || m.to}`}
                           </div>
                         )}
                         {m.abhijit_muhurat && (
-                          <div className="text-[11px] text-ink-muted mt-0.5">अभिजीत मुहूर्त: {m.abhijit_muhurat}</div>
+                          <div className="text-[11px] text-ink-muted mt-0.5">{s.abhijitLabel} {m.abhijit_muhurat}</div>
                         )}
                         {Array.isArray(m.avoid_periods) && m.avoid_periods.length > 0 && (
                           <div className="text-[11px] text-rose-700 mt-0.5">
-                            वर्जित काल: {m.avoid_periods.join("; ")}
+                            {s.avoidLabel} {m.avoid_periods.join("; ")}
                           </div>
                         )}
                       </div>

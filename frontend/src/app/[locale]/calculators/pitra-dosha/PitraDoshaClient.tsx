@@ -8,7 +8,47 @@ import { BirthDataFields, DEFAULT_BIRTH_DATA, BirthDataValue } from "@/component
 import { ResultSection, ResultRow, ResultBadge, SubmitButton, ErrorNote } from "@/components/calculators/ResultRows";
 import { Loader2 } from "lucide-react";
 
+const STRINGS = {
+  hi: {
+    error: "पितृ दोष गणना विफल रही।",
+    calculating: "नवम भाव व सूर्य स्थिति जांची जा रही है...",
+    submit: "पितृ दोष विश्लेषण करें",
+    emptyHint: "नवम भाव (धर्म/पितृ भाव), सूर्य एवं राहु-केतु युति जनित दोष का परीक्षण करें।",
+    loadingHint: "सूर्य, नवमेश एवं पूर्वज ऋण योगों की गणना हो रही है...",
+    resultTitle: "पितृ दोष निष्कर्ष",
+    verdictLabel: "विश्लेषण परिणाम",
+    present: "पितृ दोष के संकेत उपस्थित हैं",
+    absent: "पितृ दोष नहीं है (शुभ)",
+    severityLabel: "तीव्रता:",
+    statusLabel: "दोष स्थिति",
+    active: "सक्रिय",
+    doshaFree: "दोष मुक्त",
+    affectedHousesLabel: "संबंधित भाव",
+    factorsTitle: "दोष कारक ग्रह योग",
+    remediesTitle: "पितृ शांति एवं तर्पण उपाय",
+  },
+  en: {
+    error: "Pitra Dosha calculation failed.",
+    calculating: "Checking the 9th house and Sun's placement...",
+    submit: "Analyze Pitra Dosha",
+    emptyHint: "Check for dosha arising from the 9th house (Dharma/ancestor house), Sun, and Rahu-Ketu conjunctions.",
+    loadingHint: "Calculating Sun, 9th lord, and ancestral debt yogas...",
+    resultTitle: "Pitra Dosha Result",
+    verdictLabel: "Analysis Result",
+    present: "Indicators of Pitra Dosha are present",
+    absent: "No Pitra Dosha (Auspicious)",
+    severityLabel: "Severity:",
+    statusLabel: "Dosha Status",
+    active: "Active",
+    doshaFree: "Dosha-free",
+    affectedHousesLabel: "Affected Houses",
+    factorsTitle: "Contributing Planetary Yogas",
+    remediesTitle: "Pitra Shanti & Tarpan Remedies",
+  },
+} as const;
+
 export default function PitraDoshaClient({ locale }: { locale: Locale }) {
+  const s = STRINGS[locale];
   const [form, setForm] = useState<BirthDataValue>(DEFAULT_BIRTH_DATA);
   const [lang, setLang] = useState<"hi" | "en">(locale);
   const [loading, setLoading] = useState(false);
@@ -42,7 +82,7 @@ export default function PitraDoshaClient({ locale }: { locale: Locale }) {
         setData(res.data);
       }
     } catch (err: any) {
-      setError(err?.response?.data?.message || err?.message || "पितृ दोष गणना विफल रही।");
+      setError(err?.response?.data?.message || err?.message || s.error);
     } finally {
       setLoading(false);
     }
@@ -56,7 +96,7 @@ export default function PitraDoshaClient({ locale }: { locale: Locale }) {
       category="dosha"
       title="Pitra Dosha Calculator"
       hindiTitle="पितृ दोष एवं शांति"
-      description="नवम भाव, सूर्य एवं राहु युति जनित पूर्वजों के ऋण का शास्त्रोक्त विश्लेषण।"
+      description={locale === "en" ? "Scripture-based analysis of ancestral debt from the 9th house and Sun-Rahu conjunctions." : "नवम भाव, सूर्य एवं राहु युति जनित पूर्वजों के ऋण का शास्त्रोक्त विश्लेषण।"}
       icon="☀️"
       locale={locale}
     >
@@ -92,10 +132,10 @@ export default function PitraDoshaClient({ locale }: { locale: Locale }) {
             <SubmitButton loading={loading}>
               {loading ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin" /> नवम भाव व सूर्य स्थिति जांची जा रही है...
+                  <Loader2 className="w-4 h-4 animate-spin" /> {s.calculating}
                 </>
               ) : (
-                "पितृ दोष विश्लेषण करें"
+                s.submit
               )}
             </SubmitButton>
           </form>
@@ -107,20 +147,20 @@ export default function PitraDoshaClient({ locale }: { locale: Locale }) {
           {!data && !loading && !error && (
             <div className="bg-card rounded-2xl border border-line p-10 text-center text-ink-muted">
               <div className="text-4xl mb-3">☀️</div>
-              <p className="text-sm">नवम भाव (धर्म/पितृ भाव), सूर्य एवं राहु-केतु युति जनित दोष का परीक्षण करें।</p>
+              <p className="text-sm">{s.emptyHint}</p>
             </div>
           )}
 
           {loading && (
             <div className="bg-card rounded-2xl border border-line p-12 text-center text-ink-soft flex flex-col items-center justify-center">
               <Loader2 className="w-8 h-8 text-accent animate-spin mb-3" />
-              <p className="text-sm">सूर्य, नवमेश एवं पूर्वज ऋण योगों की गणना हो रही है...</p>
+              <p className="text-sm">{s.loadingHint}</p>
             </div>
           )}
 
           {data && (
             <div className="space-y-6">
-              <ResultSection title="पितृ दोष निष्कर्ष">
+              <ResultSection title={s.resultTitle}>
                 <div
                   className={`p-6 rounded-xl border text-center mb-4 ${
                     isPresent
@@ -129,39 +169,37 @@ export default function PitraDoshaClient({ locale }: { locale: Locale }) {
                   }`}
                 >
                   <div className="text-xs uppercase font-bold tracking-wider mb-1">
-                    विश्लेषण परिणाम
+                    {s.verdictLabel}
                   </div>
                   <div className="text-2xl sm:text-3xl font-extrabold">
-                    {isPresent
-                      ? "पितृ दोष के संकेत उपस्थित हैं"
-                      : "पितृ दोष नहीं है (शुभ)"}
+                    {isPresent ? s.present : s.absent}
                   </div>
                   {data.severity && (
-                    <div className="text-xs mt-2 text-ink-muted font-medium">तीव्रता: {data.severity}</div>
+                    <div className="text-xs mt-2 text-ink-muted font-medium">{s.severityLabel} {data.severity}</div>
                   )}
                 </div>
 
                 <ResultRow
-                  label="दोष स्थिति"
+                  label={s.statusLabel}
                   value={
                     isPresent ? (
-                      <ResultBadge tone="bad">सक्रिय</ResultBadge>
+                      <ResultBadge tone="bad">{s.active}</ResultBadge>
                     ) : (
-                      <ResultBadge tone="good">दोष मुक्त</ResultBadge>
+                      <ResultBadge tone="good">{s.doshaFree}</ResultBadge>
                     )
                   }
                   accent
                 />
                 {data.affected_houses && (
                   <ResultRow
-                    label="संबंधित भाव"
+                    label={s.affectedHousesLabel}
                     value={Array.isArray(data.affected_houses) ? data.affected_houses.join(", ") : String(data.affected_houses)}
                   />
                 )}
               </ResultSection>
 
               {(data.reasons || data.factors) && (data.reasons || data.factors).length > 0 && (
-                <ResultSection title="दोष कारक ग्रह योग">
+                <ResultSection title={s.factorsTitle}>
                   <ul className="space-y-2 text-xs">
                     {(data.reasons || data.factors).map((f: any, idx: number) => (
                       <li key={idx} className="p-3 bg-surface-alt rounded-lg border border-line text-ink">
@@ -173,7 +211,7 @@ export default function PitraDoshaClient({ locale }: { locale: Locale }) {
               )}
 
               {data.remedies && data.remedies.length > 0 && (
-                <ResultSection title="पितृ शांति एवं तर्पण उपाय">
+                <ResultSection title={s.remediesTitle}>
                   <ul className="space-y-1.5 text-xs text-ink-soft list-disc list-inside">
                     {data.remedies.map((r: any, idx: number) => (
                       <li key={idx}>{typeof r === "string" ? r : r.remedy}</li>

@@ -415,7 +415,7 @@ echo $response;`;
   const apiBaseUrl = `${process.env.NEXT_PUBLIC_ASTRO_ENGINE_URL}`;
 
   return (
-    <div className="min-h-screen flex flex-col bg-surface text-ink">
+    <div className="min-h-screen flex flex-col bg-surface text-ink font-brand">
       <Navbar />
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-12 w-full flex-1">
@@ -426,7 +426,7 @@ echo $response;`;
               <Terminal className="w-3.5 h-3.5" />
               <span>{t.badge}</span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-ink">{t.title}</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-ink">{t.title}</h1>
             <p className="text-ink-soft text-xs sm:text-sm mt-1">
               {t.subtitle}
             </p>
@@ -472,11 +472,11 @@ echo $response;`;
               >
                 <div className="flex items-center justify-between text-xs">
                   <span>{doc.name}</span>
-                  <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-surface-alt text-ink border border-line">
+                  <span className="text-[10px] font-mono-brand font-bold px-1.5 py-0.5 rounded bg-surface-alt text-ink border border-line">
                     {doc.method}
                   </span>
                 </div>
-                <div className="text-[11px] text-ink-muted font-mono mt-0.5 truncate">
+                <div className="text-[11px] text-ink-muted font-mono-brand mt-0.5 truncate">
                   {doc.path}
                 </div>
               </button>
@@ -487,15 +487,15 @@ echo $response;`;
           <div className="lg:col-span-8 space-y-4">
             <div className="p-5 rounded-2xl border border-line bg-card shadow-xs space-y-2">
               <div className="flex items-center gap-2">
-                <span className="px-2 py-0.5 rounded-md bg-accent-soft text-accent font-mono text-[10px] font-bold border border-line">
+                <span className="px-2 py-0.5 rounded-md bg-accent-soft text-accent font-mono-brand text-[10px] font-bold border border-line">
                   {activeDoc.method}
                 </span>
-                <span className="font-mono text-xs text-ink font-bold">{activeDoc.path}</span>
+                <span className="font-mono-brand text-xs text-ink font-bold">{activeDoc.path}</span>
               </div>
               <p className="text-ink-soft text-xs leading-relaxed">
                 {activeDoc.description}
               </p>
-              <div className="text-[11px] text-ink-muted pt-2 border-t border-line font-mono">
+              <div className="text-[11px] text-ink-muted pt-2 border-t border-line font-mono-brand">
                 Header: <code className="text-accent font-semibold">x-api-key: ak_live_...</code> {t.headerRequired}
               </div>
             </div>
@@ -503,7 +503,7 @@ echo $response;`;
             {/* Code Snippet Box */}
             <div className="rounded-2xl border border-line bg-ink overflow-hidden shadow-sm">
               <div className="flex items-center justify-between px-4 py-2.5 bg-black/20 border-b border-white/10 text-xs">
-                <div className="flex items-center gap-1 font-mono text-[11px]">
+                <div className="flex items-center gap-1 font-mono-brand text-[11px]">
                   {(["curl", "node", "python", "php"] as const).map((tab) => (
                     <button
                       key={tab}
@@ -525,7 +525,7 @@ echo $response;`;
                 </button>
               </div>
 
-              <pre className="p-4 font-mono text-xs text-accent-soft overflow-x-auto leading-relaxed">
+              <pre className="p-4 font-mono-brand text-xs text-accent-soft overflow-x-auto leading-relaxed">
                 {getSnippet()}
               </pre>
             </div>

@@ -7,7 +7,49 @@ import type { Locale } from "@/lib/locale";
 import { ResultSection, ResultRow, ResultBadge, SubmitButton, ErrorNote } from "@/components/calculators/ResultRows";
 import { Calendar, User, Loader2 } from "lucide-react";
 
+const STRINGS = {
+  hi: {
+    error: "अंकशास्त्र गणना विफल रही।",
+    calculating: "अंकशास्त्र गणना जारी...",
+    submit: "मूलांक एवं भाग्यांक निकालें",
+    emptyHint: "नाम और जन्मतिथि दर्ज करें और अपने मूलांक, भाग्यांक व नामांक का फल जानें।",
+    loadingHint: "पाइथागोरस एवं कीरो अंक सिद्धांतों की गणना जारी है...",
+    mulankLabel: "मूलांक (Driver)",
+    bhagyankLabel: "भाग्यांक (Conductor)",
+    namankLabel: "नामांक (Name Number)",
+    lordLabel: "स्वामी:",
+    mulankLordFallback: "बुध",
+    bhagyankLordFallback: "गुरु",
+    namankLordFallback: "सूर्य",
+    compatTitle: "अंक अनुकूलता विवरण",
+    luckyNumbers: "शुभ अंक (Lucky Numbers)",
+    luckyDays: "शुभ वार (Lucky Days)",
+    luckyColors: "शुभ रंग (Lucky Colors)",
+    predictionTitle: "अंकशास्त्र फलादेश",
+  },
+  en: {
+    error: "Numerology calculation failed.",
+    calculating: "Calculating numerology...",
+    submit: "Get Driver & Conductor Numbers",
+    emptyHint: "Enter your name and date of birth to see your Driver, Conductor, and Name number readings.",
+    loadingHint: "Calculating per Pythagorean and Chaldean numerology principles...",
+    mulankLabel: "Driver Number",
+    bhagyankLabel: "Conductor Number",
+    namankLabel: "Name Number",
+    lordLabel: "Ruler:",
+    mulankLordFallback: "Mercury",
+    bhagyankLordFallback: "Jupiter",
+    namankLordFallback: "Sun",
+    compatTitle: "Numerology Compatibility",
+    luckyNumbers: "Lucky Numbers",
+    luckyDays: "Lucky Days",
+    luckyColors: "Lucky Colors",
+    predictionTitle: "Numerology Reading",
+  },
+} as const;
+
 export default function CoreNumerologyClient({ locale }: { locale: Locale }) {
+  const s = STRINGS[locale];
   const [name, setName] = useState("Aditya Sharma");
   const [dob, setDob] = useState("1995-10-05");
   const [lang, setLang] = useState<"hi" | "en">(locale);
@@ -43,7 +85,7 @@ export default function CoreNumerologyClient({ locale }: { locale: Locale }) {
         setData(res.data);
       }
     } catch (err: any) {
-      setError(err?.response?.data?.message || err?.message || "अंकशास्त्र गणना विफल रही।");
+      setError(err?.response?.data?.message || err?.message || s.error);
     } finally {
       setLoading(false);
     }
@@ -59,7 +101,7 @@ export default function CoreNumerologyClient({ locale }: { locale: Locale }) {
       category="numerology"
       title="Life Path & Destiny Numbers"
       hindiTitle="मूलांक एवं भाग्यांक"
-      description="जन्मतिथि आधारित मूलांक, भाग्यांक एवं नामांक की समग्र शास्त्रीय गणना।"
+      description={locale === "en" ? "Classical numerology from your birth date — Driver, Conductor, and Name numbers in full." : "जन्मतिथि आधारित मूलांक, भाग्यांक एवं नामांक की समग्र शास्त्रीय गणना।"}
       icon="🔢"
       locale={locale}
     >
@@ -124,10 +166,10 @@ export default function CoreNumerologyClient({ locale }: { locale: Locale }) {
             <SubmitButton loading={loading}>
               {loading ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin" /> अंकशास्त्र गणना जारी...
+                  <Loader2 className="w-4 h-4 animate-spin" /> {s.calculating}
                 </>
               ) : (
-                "मूलांक एवं भाग्यांक निकालें"
+                s.submit
               )}
             </SubmitButton>
           </form>
@@ -139,75 +181,75 @@ export default function CoreNumerologyClient({ locale }: { locale: Locale }) {
           {!data && !loading && !error && (
             <div className="bg-card rounded-2xl border border-line p-10 text-center text-ink-muted">
               <div className="text-4xl mb-3">🔢</div>
-              <p className="text-sm">नाम और जन्मतिथि दर्ज करें और अपने मूलांक, भाग्यांक व नामांक का फल जानें।</p>
+              <p className="text-sm">{s.emptyHint}</p>
             </div>
           )}
 
           {loading && (
             <div className="bg-card rounded-2xl border border-line p-12 text-center text-ink-soft flex flex-col items-center justify-center">
               <Loader2 className="w-8 h-8 text-accent animate-spin mb-3" />
-              <p className="text-sm">पाइथागोरस एवं कीरो अंक सिद्धांतों की गणना जारी है...</p>
+              <p className="text-sm">{s.loadingHint}</p>
             </div>
           )}
 
           {data && (
             <div className="space-y-6">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="p-4 bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 rounded-2xl text-center">
-                  <div className="text-[11px] uppercase font-bold text-amber-800 mb-1">मूलांक (Driver)</div>
-                  <div className="text-3xl font-extrabold text-amber-950">
+                <div className="p-4 bg-card border border-line rounded-xl text-center">
+                  <div className="text-[11px] uppercase font-bold text-ink-muted mb-1">{s.mulankLabel}</div>
+                  <div className="font-display text-3xl font-medium text-accent">
                     {mulank?.number ?? mulank ?? 5}
                   </div>
-                  <div className="text-xs text-amber-700 mt-1">
-                    स्वामी: {mulank?.ruler || mulank?.lord || "बुध"}
+                  <div className="text-xs text-ink-soft mt-1">
+                    {s.lordLabel} {mulank?.ruler || mulank?.lord || s.mulankLordFallback}
                   </div>
                 </div>
 
-                <div className="p-4 bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-200 rounded-2xl text-center">
-                  <div className="text-[11px] uppercase font-bold text-indigo-800 mb-1">भाग्यांक (Conductor)</div>
-                  <div className="text-3xl font-extrabold text-indigo-950">
+                <div className="p-4 bg-card border border-line rounded-xl text-center">
+                  <div className="text-[11px] uppercase font-bold text-ink-muted mb-1">{s.bhagyankLabel}</div>
+                  <div className="font-display text-3xl font-medium text-accent">
                     {bhagyank?.number ?? bhagyank ?? 3}
                   </div>
-                  <div className="text-xs text-indigo-700 mt-1">
-                    स्वामी: {bhagyank?.ruler || bhagyank?.lord || "गुरु"}
+                  <div className="text-xs text-ink-soft mt-1">
+                    {s.lordLabel} {bhagyank?.ruler || bhagyank?.lord || s.bhagyankLordFallback}
                   </div>
                 </div>
 
-                <div className="p-4 bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-200 rounded-2xl text-center">
-                  <div className="text-[11px] uppercase font-bold text-purple-800 mb-1">नामांक (Name Number)</div>
-                  <div className="text-3xl font-extrabold text-purple-950">
+                <div className="p-4 bg-card border border-line rounded-xl text-center">
+                  <div className="text-[11px] uppercase font-bold text-ink-muted mb-1">{s.namankLabel}</div>
+                  <div className="font-display text-3xl font-medium text-accent">
                     {namank?.number ?? namank ?? 1}
                   </div>
-                  <div className="text-xs text-purple-700 mt-1">
-                    स्वामी: {namank?.ruler || namank?.lord || "सूर्य"}
+                  <div className="text-xs text-ink-soft mt-1">
+                    {s.lordLabel} {namank?.ruler || namank?.lord || s.namankLordFallback}
                   </div>
                 </div>
               </div>
 
-              <ResultSection title="अंक अनुकूलता विवरण">
+              <ResultSection title={s.compatTitle}>
                 {data.favorable_numbers && (
                   <ResultRow
-                    label="शुभ अंक (Lucky Numbers)"
+                    label={s.luckyNumbers}
                     value={Array.isArray(data.favorable_numbers) ? data.favorable_numbers.join(", ") : String(data.favorable_numbers)}
                     accent
                   />
                 )}
                 {data.favorable_days && (
                   <ResultRow
-                    label="शुभ वार (Lucky Days)"
+                    label={s.luckyDays}
                     value={Array.isArray(data.favorable_days) ? data.favorable_days.join(", ") : String(data.favorable_days)}
                   />
                 )}
                 {data.favorable_colors && (
                   <ResultRow
-                    label="शुभ रंग (Lucky Colors)"
+                    label={s.luckyColors}
                     value={Array.isArray(data.favorable_colors) ? data.favorable_colors.join(", ") : String(data.favorable_colors)}
                   />
                 )}
               </ResultSection>
 
               {data.prediction && (
-                <ResultSection title="अंकशास्त्र फलादेश">
+                <ResultSection title={s.predictionTitle}>
                   <p className="text-xs text-ink-soft leading-relaxed">{data.prediction}</p>
                 </ResultSection>
               )}

@@ -8,7 +8,53 @@ import { BirthDataFields, DEFAULT_BIRTH_DATA, BirthDataValue } from "@/component
 import { ResultSection, ResultRow, ResultBadge, SubmitButton, ErrorNote } from "@/components/calculators/ResultRows";
 import { Loader2 } from "lucide-react";
 
+const STRINGS = {
+  hi: {
+    error: "कालसर्प दोष गणना विफल रही।",
+    defaultType: "अनंत कालसर्प",
+    calculating: "राहु-केतु अक्ष का विश्लेषण जारी...",
+    submit: "कालसर्प दोष जांचें",
+    emptyHint: "राहु-केतु के बीच सभी ग्रहों के घिरे होने की स्थिति का सटीक परीक्षण करें।",
+    loadingHint: "राहु-केतु नोडल अक्ष एवं 12 प्रकार के कालसर्प योगों का मिलान हो रहा है...",
+    resultTitle: "कालसर्प दोष परीक्षण परिणाम",
+    verdictLabel: "परीक्षण निष्कर्ष",
+    present: "कालसर्प दोष उपस्थित है",
+    absent: "कुंडली में कालसर्प दोष नहीं है",
+    typeLabel: "योग प्रकार:",
+    statusLabel: "दोष स्थिति",
+    directionFallback: "उदित / अनुदित",
+    doshaFree: "दोष मुक्त",
+    rahuHouse: "राहु भाव",
+    ketuHouse: "केतु भाव",
+    house: (n: number) => `${n}वां भाव`,
+    effectsTitle: "कालसर्प प्रभाव एवं फलादेश",
+    remediesTitle: "शास्त्रसम्मत शांति उपाय",
+  },
+  en: {
+    error: "Kaal Sarp Dosha calculation failed.",
+    defaultType: "Anant Kaal Sarp",
+    calculating: "Analyzing the Rahu-Ketu axis...",
+    submit: "Check Kaal Sarp Dosha",
+    emptyHint: "A precise check for whether every planet sits within the Rahu-Ketu axis.",
+    loadingHint: "Matching the Rahu-Ketu nodal axis against all 12 Kaal Sarp yoga types...",
+    resultTitle: "Kaal Sarp Dosha Result",
+    verdictLabel: "Verdict",
+    present: "Kaal Sarp Dosha is present",
+    absent: "No Kaal Sarp Dosha in this chart",
+    typeLabel: "Yoga type:",
+    statusLabel: "Dosha status",
+    directionFallback: "Rising / Setting",
+    doshaFree: "Dosha-free",
+    rahuHouse: "Rahu House",
+    ketuHouse: "Ketu House",
+    house: (n: number) => `House ${n}`,
+    effectsTitle: "Effects & Predictions",
+    remediesTitle: "Classical Remedies",
+  },
+} as const;
+
 export default function KaalsarpDoshaClient({ locale }: { locale: Locale }) {
+  const s = STRINGS[locale];
   const [form, setForm] = useState<BirthDataValue>(DEFAULT_BIRTH_DATA);
   const [lang, setLang] = useState<"hi" | "en">(locale);
   const [loading, setLoading] = useState(false);
@@ -42,14 +88,14 @@ export default function KaalsarpDoshaClient({ locale }: { locale: Locale }) {
         setData(res.data);
       }
     } catch (err: any) {
-      setError(err?.response?.data?.message || err?.message || "कालसर्प दोष गणना विफल रही।");
+      setError(err?.response?.data?.message || err?.message || s.error);
     } finally {
       setLoading(false);
     }
   };
 
   const isPresent = data?.is_kaal_sarp || data?.is_present || data?.has_kalsarpa || false;
-  const yogaType = data?.type || data?.kalsarpa_type || "अनंत कालसर्प";
+  const yogaType = data?.type || data?.kalsarpa_type || s.defaultType;
   const ketuHouse = data?.ketu_house ?? (data?.rahu_house ? ((data.rahu_house + 5) % 12) + 1 : undefined);
 
   return (
@@ -58,7 +104,7 @@ export default function KaalsarpDoshaClient({ locale }: { locale: Locale }) {
       category="dosha"
       title="Kaal Sarp Dosha Check"
       hindiTitle="कालसर्प दोष परीक्षण"
-      description="अनंत, कुलिक, वासुकि सहित 12 प्रकार के कालसर्प योगों का सम्पूर्ण विश्लेषण।"
+      description={locale === "en" ? "Full analysis of all 12 Kaal Sarp yoga types, including Anant, Kulik, and Vasuki." : "अनंत, कुलिक, वासुकि सहित 12 प्रकार के कालसर्प योगों का सम्पूर्ण विश्लेषण।"}
       icon="🐍"
       locale={locale}
     >
@@ -94,10 +140,10 @@ export default function KaalsarpDoshaClient({ locale }: { locale: Locale }) {
             <SubmitButton loading={loading}>
               {loading ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin" /> राहु-केतु अक्ष का विश्लेषण जारी...
+                  <Loader2 className="w-4 h-4 animate-spin" /> {s.calculating}
                 </>
               ) : (
-                "कालसर्प दोष जांचें"
+                s.submit
               )}
             </SubmitButton>
           </form>
@@ -109,20 +155,20 @@ export default function KaalsarpDoshaClient({ locale }: { locale: Locale }) {
           {!data && !loading && !error && (
             <div className="bg-card rounded-2xl border border-line p-10 text-center text-ink-muted">
               <div className="text-4xl mb-3">🐍</div>
-              <p className="text-sm">राहु-केतु के बीच सभी ग्रहों के घिरे होने की स्थिति का सटीक परीक्षण करें।</p>
+              <p className="text-sm">{s.emptyHint}</p>
             </div>
           )}
 
           {loading && (
             <div className="bg-card rounded-2xl border border-line p-12 text-center text-ink-soft flex flex-col items-center justify-center">
               <Loader2 className="w-8 h-8 text-accent animate-spin mb-3" />
-              <p className="text-sm">राहु-केतु नोडल अक्ष एवं 12 प्रकार के कालसर्प योगों का मिलान हो रहा है...</p>
+              <p className="text-sm">{s.loadingHint}</p>
             </div>
           )}
 
           {data && (
             <div className="space-y-6">
-              <ResultSection title="कालसर्प दोष परीक्षण परिणाम">
+              <ResultSection title={s.resultTitle}>
                 <div
                   className={`p-6 rounded-xl border text-center mb-4 ${
                     isPresent
@@ -131,47 +177,45 @@ export default function KaalsarpDoshaClient({ locale }: { locale: Locale }) {
                   }`}
                 >
                   <div className="text-xs uppercase font-bold tracking-wider mb-1">
-                    परीक्षण निष्कर्ष
+                    {s.verdictLabel}
                   </div>
                   <div className="text-2xl sm:text-3xl font-extrabold">
-                    {isPresent
-                      ? "कालसर्प दोष उपस्थित है"
-                      : "कुंडली में कालसर्प दोष नहीं है"}
+                    {isPresent ? s.present : s.absent}
                   </div>
                   {isPresent && (
                     <div className="text-sm font-semibold mt-2 text-rose-800">
-                      योग प्रकार: {yogaType}
+                      {s.typeLabel} {yogaType}
                     </div>
                   )}
                 </div>
 
                 <ResultRow
-                  label="दोष स्थिति"
+                  label={s.statusLabel}
                   value={
                     isPresent ? (
-                      <ResultBadge tone="bad">सक्रिय ({data.direction || "उदित / अनुदित"})</ResultBadge>
+                      <ResultBadge tone="bad">{locale === "en" ? "Active" : "सक्रिय"} ({data.direction || s.directionFallback})</ResultBadge>
                     ) : (
-                      <ResultBadge tone="good">दोष मुक्त</ResultBadge>
+                      <ResultBadge tone="good">{s.doshaFree}</ResultBadge>
                     )
                   }
                   accent
                 />
                 {data.rahu_house && (
-                  <ResultRow label="राहु भाव" value={`${data.rahu_house}वां भाव`} />
+                  <ResultRow label={s.rahuHouse} value={s.house(data.rahu_house)} />
                 )}
                 {ketuHouse && (
-                  <ResultRow label="केतु भाव" value={`${ketuHouse}वां भाव`} />
+                  <ResultRow label={s.ketuHouse} value={s.house(ketuHouse)} />
                 )}
               </ResultSection>
 
               {data.description && (
-                <ResultSection title="कालसर्प प्रभाव एवं फलादेश">
+                <ResultSection title={s.effectsTitle}>
                   <p className="text-xs text-ink-soft leading-relaxed">{data.description}</p>
                 </ResultSection>
               )}
 
               {data.remedies && data.remedies.length > 0 && (
-                <ResultSection title="शास्त्रसम्मत शांति उपाय">
+                <ResultSection title={s.remediesTitle}>
                   <ul className="space-y-1.5 text-xs text-ink-soft list-disc list-inside">
                     {data.remedies.map((r: any, idx: number) => (
                       <li key={idx}>{typeof r === "string" ? r : r.remedy}</li>

@@ -23,7 +23,7 @@ export function buildSoftwareApplicationSchema(tool: CalculatorTool, locale: Loc
     name,
     applicationCategory: "LifestyleApplication",
     operatingSystem: "Web",
-    description: tool.description,
+    description: locale === "en" ? tool.seo?.en?.description || tool.description : tool.description,
     offers: {
       "@type": "Offer",
       price: "0",

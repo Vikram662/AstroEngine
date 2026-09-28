@@ -8,7 +8,53 @@ import { BirthDataFields, DEFAULT_BIRTH_DATA, BirthDataValue } from "@/component
 import { ResultSection, ResultRow, ResultBadge, SubmitButton, ErrorNote } from "@/components/calculators/ResultRows";
 import { Loader2 } from "lucide-react";
 
+const STRINGS = {
+  hi: {
+    error: "नवांश गणना विफल रही।",
+    calculating: "नवांश तैयार हो रहा है...",
+    submit: "नवांश चक्र निकालें",
+    emptyHint: "जन्म विवरण भरें और नवांश (D9) चक्र का विश्लेषण देखें।",
+    loadingHint: "डी-9 नवांश लग्न एवं भाग्य भावों की गणना जारी है...",
+    chartTitle: "नवांश चक्र (D9 Navamsha SVG)",
+    summaryTitle: "नवांश लग्न सारांश",
+    lagnaLabel: "नवांश लग्न (Navamsha Lagna)",
+    lagnaFallback: "मेष",
+    degreeLabel: "नवांश लग्न अंश",
+    purposeLabel: "उद्देश्य",
+    purposeValue: "विवाह सुख, भाग्य बल एवं उत्तरार्ध जीवन का सटीक दर्पण",
+    planetsTitle: "नवांश में नवग्रह स्थिति",
+    colPlanet: "ग्रह",
+    colSign: "नवांश राशि",
+    colHouse: "भाव",
+    colVargottama: "वर्गोत्तम स्थिति",
+    vargottama: "वर्गोत्तम (अति शुभ)",
+    normal: "सामान्य",
+  },
+  en: {
+    error: "Navamsha calculation failed.",
+    calculating: "Building your Navamsha chart...",
+    submit: "Get Navamsha Chart",
+    emptyHint: "Fill in your birth details to see your Navamsha (D9) chart analysis.",
+    loadingHint: "Calculating the D9 Navamsha ascendant and fortune houses...",
+    chartTitle: "Navamsha Chart (D9 SVG)",
+    summaryTitle: "Navamsha Lagna Summary",
+    lagnaLabel: "Navamsha Lagna",
+    lagnaFallback: "Aries",
+    degreeLabel: "Navamsha Lagna Degree",
+    purposeLabel: "Purpose",
+    purposeValue: "A precise mirror of marital happiness, fortune strength, and the second half of life",
+    planetsTitle: "Planetary Placements in Navamsha",
+    colPlanet: "Planet",
+    colSign: "Navamsha Sign",
+    colHouse: "House",
+    colVargottama: "Vargottama Status",
+    vargottama: "Vargottama (Highly Auspicious)",
+    normal: "Normal",
+  },
+} as const;
+
 export default function NavamshaD9Client({ locale }: { locale: Locale }) {
+  const s = STRINGS[locale];
   const [form, setForm] = useState<BirthDataValue>(DEFAULT_BIRTH_DATA);
   const [lang, setLang] = useState<"hi" | "en">(locale);
   const [loading, setLoading] = useState(false);
@@ -72,7 +118,7 @@ export default function NavamshaD9Client({ locale }: { locale: Locale }) {
       });
       setD1Signs(signMap);
     } catch (err: any) {
-      setError(err?.response?.data?.message || err?.message || "नवांश गणना विफल रही।");
+      setError(err?.response?.data?.message || err?.message || s.error);
     } finally {
       setLoading(false);
     }
@@ -87,7 +133,7 @@ export default function NavamshaD9Client({ locale }: { locale: Locale }) {
       category="kundli"
       title="Navamsha Chart (D9)"
       hindiTitle="नवांश कुंडली (D9)"
-      description="भाग्य, वैवाहिक जीवन, जीवनसाथी का स्वरूप एवं धर्म त्रिकोण विश्लेषण।"
+      description={locale === "en" ? "Fortune, married life, your spouse's nature, and Dharma-trikona analysis." : "भाग्य, वैवाहिक जीवन, जीवनसाथी का स्वरूप एवं धर्म त्रिकोण विश्लेषण।"}
       icon="✨"
       locale={locale}
     >
@@ -123,10 +169,10 @@ export default function NavamshaD9Client({ locale }: { locale: Locale }) {
             <SubmitButton loading={loading}>
               {loading ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin" /> नवांश तैयार हो रहा है...
+                  <Loader2 className="w-4 h-4 animate-spin" /> {s.calculating}
                 </>
               ) : (
-                "नवांश चक्र निकालें"
+                s.submit
               )}
             </SubmitButton>
           </form>
@@ -138,21 +184,21 @@ export default function NavamshaD9Client({ locale }: { locale: Locale }) {
           {!chartData && !loading && !error && (
             <div className="bg-card rounded-2xl border border-line p-10 text-center text-ink-muted">
               <div className="text-4xl mb-3">✨</div>
-              <p className="text-sm">जन्म विवरण भरें और नवांश (D9) चक्र का विश्लेषण देखें।</p>
+              <p className="text-sm">{s.emptyHint}</p>
             </div>
           )}
 
           {loading && (
             <div className="bg-card rounded-2xl border border-line p-12 text-center text-ink-soft flex flex-col items-center justify-center">
               <Loader2 className="w-8 h-8 text-accent animate-spin mb-3" />
-              <p className="text-sm">डी-9 नवांश लग्न एवं भाग्य भावों की गणना जारी है...</p>
+              <p className="text-sm">{s.loadingHint}</p>
             </div>
           )}
 
           {chartData && (
             <div className="space-y-6">
               {svgChart && (
-                <ResultSection title="नवांश चक्र (D9 Navamsha SVG)">
+                <ResultSection title={s.chartTitle}>
                   <div
                     className="w-full max-w-md mx-auto aspect-square flex items-center justify-center bg-surface-alt/50 rounded-xl p-2 border border-line/60"
                     dangerouslySetInnerHTML={{ __html: svgChart }}
@@ -160,31 +206,31 @@ export default function NavamshaD9Client({ locale }: { locale: Locale }) {
                 </ResultSection>
               )}
 
-              <ResultSection title="नवांश लग्न सारांश">
+              <ResultSection title={s.summaryTitle}>
                 <ResultRow
-                  label="नवांश लग्न (Navamsha Lagna)"
-                  value={ascendant?.sign?.name || ascendant?.rashi_name || "मेष"}
+                  label={s.lagnaLabel}
+                  value={ascendant?.sign?.name || ascendant?.rashi_name || s.lagnaFallback}
                   accent
                 />
                 {(ascendant?.norm_degree ?? ascendant?.degree) !== undefined && (
-                  <ResultRow label="नवांश लग्न अंश" value={`${Number(ascendant.norm_degree ?? ascendant.degree).toFixed(2)}°`} />
+                  <ResultRow label={s.degreeLabel} value={`${Number(ascendant.norm_degree ?? ascendant.degree).toFixed(2)}°`} />
                 )}
                 <ResultRow
-                  label="उद्देश्य"
-                  value="विवाह सुख, भाग्य बल एवं उत्तरार्ध जीवन का सटीक दर्पण"
+                  label={s.purposeLabel}
+                  value={s.purposeValue}
                 />
               </ResultSection>
 
               {planets.length > 0 && (
-                <ResultSection title="नवांश में नवग्रह स्थिति">
+                <ResultSection title={s.planetsTitle}>
                   <div className="overflow-x-auto">
                     <table className="w-full text-xs text-left">
                       <thead className="text-[11px] uppercase bg-surface-alt/80 text-ink-soft">
                         <tr>
-                          <th className="py-2 px-3">ग्रह</th>
-                          <th className="py-2 px-3">नवांश राशि</th>
-                          <th className="py-2 px-3">भाव</th>
-                          <th className="py-2 px-3">वर्गोत्तम स्थिति</th>
+                          <th className="py-2 px-3">{s.colPlanet}</th>
+                          <th className="py-2 px-3">{s.colSign}</th>
+                          <th className="py-2 px-3">{s.colHouse}</th>
+                          <th className="py-2 px-3">{s.colVargottama}</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-line/60">
@@ -198,9 +244,9 @@ export default function NavamshaD9Client({ locale }: { locale: Locale }) {
                               <td className="py-2.5 px-3 font-semibold">{p.house || p.bhava || "-"}</td>
                               <td className="py-2.5 px-3">
                                 {isVargottama ? (
-                                  <ResultBadge tone="good">वर्गोत्तम (अति शुभ)</ResultBadge>
+                                  <ResultBadge tone="good">{s.vargottama}</ResultBadge>
                                 ) : (
-                                  <span className="text-ink-muted text-[11px]">सामान्य</span>
+                                  <span className="text-ink-muted text-[11px]">{s.normal}</span>
                                 )}
                               </td>
                             </tr>

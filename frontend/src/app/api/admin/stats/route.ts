@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdminSession } from "@/lib/authGuard";
+import { toMoney } from "@/lib/money";
 
 // GET /api/admin/stats - Live aggregated KPIs directly from MySQL
 export async function GET() {
@@ -21,7 +22,7 @@ export async function GET() {
       where: { status: "SUCCESS" },
       _sum: { amount: true }
     });
-    const totalRevenue = revenueAgg._sum.amount || 0;
+    const totalRevenue = toMoney(revenueAgg._sum.amount);
 
     // 3. API Telemetry logs count & latency
     const totalApiRequests = await prisma.apiRequestLog.count();

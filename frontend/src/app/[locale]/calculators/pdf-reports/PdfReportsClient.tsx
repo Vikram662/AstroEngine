@@ -33,7 +33,7 @@ export default function PdfReportsClient({ locale }: { locale: Locale }) {
   const [form, setForm] = useState<BirthDataValue>(DEFAULT_BIRTH_DATA);
   const [girlForm, setGirlForm] = useState<BirthDataValue>({
     ...DEFAULT_BIRTH_DATA,
-    name: "कन्या",
+    name: locale === "en" ? "Bride" : "कन्या",
     gender: "female",
   });
   const [targetYear, setTargetYear] = useState(String(new Date().getFullYear()));
@@ -135,7 +135,7 @@ export default function PdfReportsClient({ locale }: { locale: Locale }) {
       category="reports"
       title="PDF Kundli Reports"
       hindiTitle="वृहत् कुंडली PDF रिपोर्ट"
-      description="12-60 पृष्ठीय विस्तृत कुंडली, मिलान, वर्षफल एवं लाल किताब PDF रिपोर्ट बनाएं।"
+      description={locale === "en" ? "Generate 12–60 page PDF reports — detailed Kundli, matchmaking, Varshphal, and Lal Kitab." : "12-60 पृष्ठीय विस्तृत कुंडली, मिलान, वर्षफल एवं लाल किताब PDF रिपोर्ट बनाएं।"}
       icon="📄"
       locale={locale}
     >

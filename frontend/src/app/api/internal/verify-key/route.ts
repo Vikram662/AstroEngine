@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
+import { toMoney } from "@/lib/money";
 
 function getInternalSecret(): string {
   const secret = process.env.ASTRO_INTERNAL_SECRET;
@@ -139,7 +140,7 @@ export async function POST(req: NextRequest) {
     // 4. Pay-per-use fallback for PDF reports (₹10/PDF if wallet balance is positive)
     let isPayPerUsePdf = false;
     if (normalizedModule.includes("pdf") && !isWildcardAllowed && !isAddonActive) {
-      if (user.walletBalance >= 10.0) {
+      if (toMoney(user.walletBalance) >= 10.0) {
         isPayPerUsePdf = true;
       }
     }
@@ -175,14 +176,14 @@ export async function POST(req: NextRequest) {
       matchedAddonRecord = null;
     }
 
-    const walletBalance = user.walletBalance || 0;
+    const walletBalance = toMoney(user.walletBalance);
     let deductionType = "QUOTA";
     let creditsDeducted = 0;
 
     // CASE A: Access is through an ADD-ON (Module is covered by AddonPackage)
     if (matchedAddonRecord) {
       const addonQuota = matchedAddonRecord.monthlyQuota !== undefined ? matchedAddonRecord.monthlyQuota : 1000;
-      const addonOverage = matchedAddonRecord.overageCost !== undefined ? matchedAddonRecord.overageCost : 0.05;
+      const addonOverage = matchedAddonRecord.overageCost !== undefined ? toMoney(matchedAddonRecord.overageCost) : 0.05;
       
       const currentAddonUsageMap = (user.addonUsage && typeof user.addonUsage === "object" ? user.addonUsage : {}) as Record<string, number>;
       const currentAddonUsage = Number(currentAddonUsageMap[matchedAddonRecord.id] || 0);
@@ -236,8 +237,10 @@ export async function POST(req: NextRequest) {
     } 
     // CASE B: Standard Plan Quota deduction
     else {
-      let costPerCall = planRecord?.overageCost;
-      if (costPerCall === undefined || costPerCall === null) {
+      let costPerCall = planRecord?.overageCost !== undefined && planRecord?.overageCost !== null
+        ? toMoney(planRecord.overageCost)
+        : null;
+      if (costPerCall === null) {
         const overageSetting = await prisma.systemSetting.findUnique({
           where: { key: "OVERAGE_COST_PER_CALL" }
         });
@@ -318,7 +321,7 @@ export async function POST(req: NextRequest) {
       quota: {
         plan: user.planTier,
         planName: planRecord?.name || user.planTier,
-        priceMonthly: planRecord?.priceMonthly !== undefined ? planRecord.priceMonthly : 4999,
+        priceMonthly: planRecord?.priceMonthly !== undefined ? toMoney(planRecord.priceMonthly) : 4999,
         monthlyQuota: planRecord?.includedQuota || user.monthlyQuota || 35000,
         rateLimitPerMin: planRecord?.rateLimitPerMin || 60,
         monthlyUsage: (user.monthlyUsage || 0) + 1,

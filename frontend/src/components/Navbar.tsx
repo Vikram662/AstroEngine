@@ -85,7 +85,7 @@ function formatHM(hms: string) {
 }
 
 const PromoBanner = ({ t, locale, onDismiss }: { t: Dictionary["navbar"]; locale: "hi" | "en"; onDismiss: () => void }) => (
-  <div className="relative bg-linear-to-r from-accent to-accent-hover text-accent-foreground">
+  <div className="relative bg-accent text-accent-foreground">
     <div className="max-w-6xl mx-auto px-4 sm:px-6 h-9 flex items-center justify-center gap-2 text-xs font-medium text-center">
       <span className="hidden sm:inline-flex items-center gap-1 bg-white/15 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide">
         <Sparkles className="w-3 h-3" />
@@ -346,7 +346,7 @@ export const Navbar = () => {
             </Link>
             <Link
               href="/login"
-              className="text-xs px-3 py-1.5 rounded-md text-ink-soft hover:text-ink hover:bg-surface-alt transition font-medium"
+              className="text-xs px-3.5 py-1.5 rounded-md bg-accent hover:bg-accent-hover text-accent-foreground transition font-semibold"
             >
               {t.signIn}
             </Link>

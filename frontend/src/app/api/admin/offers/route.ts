@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdminSession } from "@/lib/authGuard";
 import { prisma } from "@/lib/prisma";
+import { toJsonSafe } from "@/lib/money";
 
 const badRequest = (message: string) => NextResponse.json({ status: "error", message }, { status: 400 });
 
@@ -17,7 +18,7 @@ export async function GET() {
       },
       orderBy: { createdAt: "desc" },
     });
-    return NextResponse.json({ status: "success", data: offers });
+    return NextResponse.json({ status: "success", data: toJsonSafe(offers) });
   } catch (error) {
     return NextResponse.json({ status: "error", message: error instanceof Error ? error.message : "Offers could not be loaded." }, { status: 500 });
   }
@@ -98,7 +99,7 @@ export async function POST(req: NextRequest) {
         metadata: { code, scope, targetType, targetId: data.targetId },
       },
     });
-    return NextResponse.json({ status: "success", data: offer, message: `Offer ${code} saved successfully.` });
+    return NextResponse.json({ status: "success", data: toJsonSafe(offer), message: `Offer ${code} saved successfully.` });
   } catch (error: any) {
     const duplicate = error?.code === "P2002";
     return NextResponse.json(
@@ -129,7 +130,7 @@ export async function DELETE(req: NextRequest) {
         metadata: { code: current.code },
       },
     });
-    return NextResponse.json({ status: "success", data: offer });
+    return NextResponse.json({ status: "success", data: toJsonSafe(offer) });
   } catch (error) {
     return NextResponse.json({ status: "error", message: error instanceof Error ? error.message : "Offer could not be updated." }, { status: 500 });
   }

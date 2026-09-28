@@ -8,7 +8,49 @@ import { BirthDataFields, DEFAULT_BIRTH_DATA, BirthDataValue } from "@/component
 import { ResultSection, ResultRow, ResultBadge, SubmitButton, ErrorNote } from "@/components/calculators/ResultRows";
 import { Loader2 } from "lucide-react";
 
+const STRINGS = {
+  hi: {
+    error: "विंशोत्तरी दशा गणना विफल रही।",
+    calculating: "दशा चक्र गणना जारी...",
+    submit: "विंशोत्तरी दशा चक्र निकालें",
+    emptyHint: "जन्म समय अनुसार 120 वर्षीय विंशोत्तरी महादशा व वर्तमान अंतर्दशा देखें।",
+    loadingHint: "जन्म नक्षत्र शेष दशा एवं 9 महादशाओं के आरंभ काल की गणना हो रही है...",
+    currentTitle: "वर्तमान सक्रिय दशा (Current Operating Dasha)",
+    mahadashaLordLabel: "वर्तमान महादशा स्वामी",
+    antardashaLabel: "वर्तमान अंतर्दशा",
+    pratyantarLabel: "प्रत्यंतर दशा",
+    mahadashaEndLabel: "महादशा अवधि समाप्ति",
+    tableTitle: "120 वर्षीय विंशोत्तरी महादशा चक्र",
+    colLord: "महादशा स्वामी",
+    colDuration: "अवधि (वर्ष)",
+    colStart: "आरंभ तिथि",
+    colEnd: "समाप्ति तिथि",
+    current: "वर्तमान",
+    years: "वर्ष",
+  },
+  en: {
+    error: "Vimshottari Dasha calculation failed.",
+    calculating: "Calculating the dasha cycle...",
+    submit: "Get Vimshottari Dasha Cycle",
+    emptyHint: "See the 120-year Vimshottari Mahadasha and current Antardasha for your birth time.",
+    loadingHint: "Calculating remaining dasha from your birth nakshatra and the start dates of all 9 Mahadashas...",
+    currentTitle: "Current Operating Dasha",
+    mahadashaLordLabel: "Current Mahadasha Lord",
+    antardashaLabel: "Current Antardasha",
+    pratyantarLabel: "Pratyantar Dasha",
+    mahadashaEndLabel: "Mahadasha End Date",
+    tableTitle: "120-Year Vimshottari Mahadasha Cycle",
+    colLord: "Mahadasha Lord",
+    colDuration: "Duration (yrs)",
+    colStart: "Start Date",
+    colEnd: "End Date",
+    current: "Current",
+    years: "yrs",
+  },
+} as const;
+
 export default function VimshottariDashaClient({ locale }: { locale: Locale }) {
+  const s = STRINGS[locale];
   const [form, setForm] = useState<BirthDataValue>(DEFAULT_BIRTH_DATA);
   const [lang, setLang] = useState<"hi" | "en">(locale);
   const [loading, setLoading] = useState(false);
@@ -61,7 +103,7 @@ export default function VimshottariDashaClient({ locale }: { locale: Locale }) {
       });
       setMahadashas(withCurrentFlag);
     } catch (err: any) {
-      setError(err?.response?.data?.message || err?.message || "विंशोत्तरी दशा गणना विफल रही।");
+      setError(err?.response?.data?.message || err?.message || s.error);
     } finally {
       setLoading(false);
     }
@@ -73,7 +115,7 @@ export default function VimshottariDashaClient({ locale }: { locale: Locale }) {
       category="dasha"
       title="120-Year Vimshottari Dasha"
       hindiTitle="120 वर्षीय विंशोत्तरी महादशा"
-      description="महादशा, अंतर्दशा, प्रत्यंतर, सूक्ष्म एवं प्राण दशा का 5-स्तरीय सूक्ष्म चक्र।"
+      description={locale === "en" ? "The 5-tier Vimshottari cycle — Mahadasha, Antardasha, Pratyantar, Sookshma, and Prana dasha." : "महादशा, अंतर्दशा, प्रत्यंतर, सूक्ष्म एवं प्राण दशा का 5-स्तरीय सूक्ष्म चक्र।"}
       icon="⏳"
       locale={locale}
     >
@@ -109,10 +151,10 @@ export default function VimshottariDashaClient({ locale }: { locale: Locale }) {
             <SubmitButton loading={loading}>
               {loading ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin" /> दशा चक्र गणना जारी...
+                  <Loader2 className="w-4 h-4 animate-spin" /> {s.calculating}
                 </>
               ) : (
-                "विंशोत्तरी दशा चक्र निकालें"
+                s.submit
               )}
             </SubmitButton>
           </form>
@@ -124,29 +166,29 @@ export default function VimshottariDashaClient({ locale }: { locale: Locale }) {
           {!mahadashas.length && !loading && !error && (
             <div className="bg-card rounded-2xl border border-line p-10 text-center text-ink-muted">
               <div className="text-4xl mb-3">⏳</div>
-              <p className="text-sm">जन्म समय अनुसार 120 वर्षीय विंशोत्तरी महादशा व वर्तमान अंतर्दशा देखें।</p>
+              <p className="text-sm">{s.emptyHint}</p>
             </div>
           )}
 
           {loading && (
             <div className="bg-card rounded-2xl border border-line p-12 text-center text-ink-soft flex flex-col items-center justify-center">
               <Loader2 className="w-8 h-8 text-accent animate-spin mb-3" />
-              <p className="text-sm">जन्म नक्षत्र शेष दशा एवं 9 महादशाओं के आरंभ काल की गणना हो रही है...</p>
+              <p className="text-sm">{s.loadingHint}</p>
             </div>
           )}
 
           {currentDasha && (
-            <ResultSection title="वर्तमान सक्रिय दशा (Current Operating Dasha)">
+            <ResultSection title={s.currentTitle}>
               <div className="p-4 bg-accent-soft/40 border border-accent/30 rounded-xl mb-3 flex flex-wrap items-center justify-between gap-2">
                 <div>
-                  <div className="text-xs text-ink-soft">वर्तमान महादशा स्वामी</div>
+                  <div className="text-xs text-ink-soft">{s.mahadashaLordLabel}</div>
                   <div className="text-xl font-bold text-accent">
                     {currentDasha.mahadasha?.planet_name || currentDasha.mahadasha || "-"}
                   </div>
                 </div>
                 {currentDasha.antardasha && (
                   <div>
-                    <div className="text-xs text-ink-soft">वर्तमान अंतर्दशा</div>
+                    <div className="text-xs text-ink-soft">{s.antardashaLabel}</div>
                     <div className="text-base font-bold text-ink">
                       {currentDasha.antardasha?.antardasha_name || currentDasha.antardasha}
                     </div>
@@ -154,7 +196,7 @@ export default function VimshottariDashaClient({ locale }: { locale: Locale }) {
                 )}
                 {currentDasha.pratyantar_dasha && (
                   <div>
-                    <div className="text-xs text-ink-soft">प्रत्यंतर दशा</div>
+                    <div className="text-xs text-ink-soft">{s.pratyantarLabel}</div>
                     <div className="text-sm font-semibold text-ink-soft">
                       {currentDasha.pratyantar_dasha?.pratyantar_name}
                     </div>
@@ -162,21 +204,21 @@ export default function VimshottariDashaClient({ locale }: { locale: Locale }) {
                 )}
               </div>
               {currentDasha.mahadasha?.end_date && (
-                <ResultRow label="महादशा अवधि समाप्ति" value={currentDasha.mahadasha.end_date} />
+                <ResultRow label={s.mahadashaEndLabel} value={currentDasha.mahadasha.end_date} />
               )}
             </ResultSection>
           )}
 
           {mahadashas.length > 0 && (
-            <ResultSection title="120 वर्षीय विंशोत्तरी महादशा चक्र">
+            <ResultSection title={s.tableTitle}>
               <div className="overflow-x-auto">
                 <table className="w-full text-xs text-left">
                   <thead className="text-[11px] uppercase bg-surface-alt/80 text-ink-soft">
                     <tr>
-                      <th className="py-2.5 px-3">महादशा स्वामी</th>
-                      <th className="py-2.5 px-3">अवधि (वर्ष)</th>
-                      <th className="py-2.5 px-3">आरंभ तिथि</th>
-                      <th className="py-2.5 px-3">समाप्ति तिथि</th>
+                      <th className="py-2.5 px-3">{s.colLord}</th>
+                      <th className="py-2.5 px-3">{s.colDuration}</th>
+                      <th className="py-2.5 px-3">{s.colStart}</th>
+                      <th className="py-2.5 px-3">{s.colEnd}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-line/60">
@@ -184,11 +226,11 @@ export default function VimshottariDashaClient({ locale }: { locale: Locale }) {
                       <tr key={idx} className="hover:bg-surface-alt/40 transition">
                         <td className="py-2.5 px-3 font-bold text-ink flex items-center gap-2">
                           <span>{m.planet_name || m.planet || m.lord || m.name}</span>
-                          {m.is_current && <ResultBadge tone="accent">वर्तमान</ResultBadge>}
+                          {m.is_current && <ResultBadge tone="accent">{s.current}</ResultBadge>}
                         </td>
-                        <td className="py-2.5 px-3 font-semibold">{m.duration_years || m.years || "-"} वर्ष</td>
-                        <td className="py-2.5 px-3 font-mono">{m.start_date || m.from || "-"}</td>
-                        <td className="py-2.5 px-3 font-mono">{m.end_date || m.to || "-"}</td>
+                        <td className="py-2.5 px-3 font-semibold">{m.duration_years || m.years || "-"} {s.years}</td>
+                        <td className="py-2.5 px-3 font-mono-brand">{m.start_date || m.from || "-"}</td>
+                        <td className="py-2.5 px-3 font-mono-brand">{m.end_date || m.to || "-"}</td>
                       </tr>
                     ))}
                   </tbody>

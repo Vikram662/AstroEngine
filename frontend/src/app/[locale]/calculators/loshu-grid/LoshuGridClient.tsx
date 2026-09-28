@@ -7,7 +7,55 @@ import type { Locale } from "@/lib/locale";
 import { ResultSection, ResultRow, ResultBadge, SubmitButton, ErrorNote } from "@/components/calculators/ResultRows";
 import { Calendar, Loader2 } from "lucide-react";
 
+const STRINGS = {
+  hi: {
+    error: "लो शू ग्रिड गणना विफल रही।",
+    calculating: "लो शू ग्रिड तैयार हो रहा है...",
+    submit: "3x3 लो शू ग्रिड बनाएं",
+    emptyHint: "जन्मतिथि दर्ज करें और चीनी 3x3 जादुई लो-शू वर्ग के 8 प्लेन्स (मानसिक, इच्छा, कर्म) का फल देखें।",
+    loadingHint: "जन्मतिथि के अंकों का 3x3 मैट्रिक्स में रूपांतरण जारी है...",
+    gridTitle: "3x3 लो शू मैजिक ग्रिड",
+    missingTitle: "अनुपस्थित अंक (Missing Numbers)",
+    missingLabel: "ग्रिड में गायब अंक",
+    planesTitle: "6 योग प्लेन्स का विश्लेषण (Planes of Lo Shu)",
+    numbersPrefix: "अंक:",
+    complete: "पूर्ण (सक्रिय योग)",
+    incomplete: "अपूर्ण",
+    planeLabels: {
+      mental_plane_4_9_2: "मानसिक तल (4-9-2)",
+      emotional_plane_3_5_7: "भावनात्मक तल (3-5-7)",
+      practical_plane_8_1_6: "व्यावहारिक तल (8-1-6)",
+      thought_plane_4_3_8: "विचार तल (4-3-8)",
+      will_plane_9_5_1: "इच्छाशक्ति तल (9-5-1)",
+      action_plane_2_7_6: "कर्म तल (2-7-6)",
+    } as Record<string, string>,
+  },
+  en: {
+    error: "Lo Shu Grid calculation failed.",
+    calculating: "Building your Lo Shu Grid...",
+    submit: "Build 3x3 Lo Shu Grid",
+    emptyHint: "Enter a date of birth to see the reading across all 8 planes (mental, willpower, action) of the Chinese 3x3 magic Lo Shu square.",
+    loadingHint: "Converting the digits of your birth date into a 3x3 matrix...",
+    gridTitle: "3x3 Lo Shu Magic Grid",
+    missingTitle: "Missing Numbers",
+    missingLabel: "Numbers missing from the grid",
+    planesTitle: "Analysis of the 6 Planes of Lo Shu",
+    numbersPrefix: "Numbers:",
+    complete: "Complete (Active Yoga)",
+    incomplete: "Incomplete",
+    planeLabels: {
+      mental_plane_4_9_2: "Mental Plane (4-9-2)",
+      emotional_plane_3_5_7: "Emotional Plane (3-5-7)",
+      practical_plane_8_1_6: "Practical Plane (8-1-6)",
+      thought_plane_4_3_8: "Thought Plane (4-3-8)",
+      will_plane_9_5_1: "Willpower Plane (9-5-1)",
+      action_plane_2_7_6: "Action Plane (2-7-6)",
+    } as Record<string, string>,
+  },
+} as const;
+
 export default function LoshuGridClient({ locale }: { locale: Locale }) {
+  const s = STRINGS[locale];
   const [dob, setDob] = useState("1995-10-05");
   const [lang, setLang] = useState<"hi" | "en">(locale);
   const [loading, setLoading] = useState(false);
@@ -41,7 +89,7 @@ export default function LoshuGridClient({ locale }: { locale: Locale }) {
         setData(res.data);
       }
     } catch (err: any) {
-      setError(err?.response?.data?.message || err?.message || "लो शू ग्रिड गणना विफल रही।");
+      setError(err?.response?.data?.message || err?.message || s.error);
     } finally {
       setLoading(false);
     }
@@ -57,17 +105,9 @@ export default function LoshuGridClient({ locale }: { locale: Locale }) {
   const planesObj = data?.planes;
   const missingNumbers: number[] = data?.missing_numbers || [];
 
-  const PLANE_LABELS: Record<string, string> = {
-    mental_plane_4_9_2: "मानसिक तल (4-9-2)",
-    emotional_plane_3_5_7: "भावनात्मक तल (3-5-7)",
-    practical_plane_8_1_6: "व्यावहारिक तल (8-1-6)",
-    thought_plane_4_3_8: "विचार तल (4-3-8)",
-    will_plane_9_5_1: "इच्छाशक्ति तल (9-5-1)",
-    action_plane_2_7_6: "कर्म तल (2-7-6)",
-  };
   const planes = planesObj && !Array.isArray(planesObj)
     ? Object.entries(planesObj).map(([key, isComplete]) => ({
-        name: PLANE_LABELS[key] || key,
+        name: s.planeLabels[key] || key,
         is_complete: Boolean(isComplete),
       }))
     : Array.isArray(planesObj)
@@ -92,7 +132,7 @@ export default function LoshuGridClient({ locale }: { locale: Locale }) {
       category="numerology"
       title="3x3 Lo Shu Magic Grid"
       hindiTitle="लो शू ग्रिड विश्लेषण"
-      description="मानसिक, भावनात्मक, व्यावहारिक एवं इच्छा शक्ति के 8 योग प्लेन।"
+      description={locale === "en" ? "The 8 Lo Shu planes of mental, emotional, practical, and willpower strength." : "मानसिक, भावनात्मक, व्यावहारिक एवं इच्छा शक्ति के 8 योग प्लेन।"}
       icon="🧮"
       locale={locale}
     >
@@ -141,10 +181,10 @@ export default function LoshuGridClient({ locale }: { locale: Locale }) {
             <SubmitButton loading={loading}>
               {loading ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin" /> लो शू ग्रिड तैयार हो रहा है...
+                  <Loader2 className="w-4 h-4 animate-spin" /> {s.calculating}
                 </>
               ) : (
-                "3x3 लो शू ग्रिड बनाएं"
+                s.submit
               )}
             </SubmitButton>
           </form>
@@ -156,20 +196,20 @@ export default function LoshuGridClient({ locale }: { locale: Locale }) {
           {!data && !loading && !error && (
             <div className="bg-card rounded-2xl border border-line p-10 text-center text-ink-muted">
               <div className="text-4xl mb-3">🧮</div>
-              <p className="text-sm">जन्मतिथि दर्ज करें और चीनी 3x3 जादुई लो-शू वर्ग के 8 प्लेन्स (मानसिक, इच्छा, कर्म) का फल देखें।</p>
+              <p className="text-sm">{s.emptyHint}</p>
             </div>
           )}
 
           {loading && (
             <div className="bg-card rounded-2xl border border-line p-12 text-center text-ink-soft flex flex-col items-center justify-center">
               <Loader2 className="w-8 h-8 text-accent animate-spin mb-3" />
-              <p className="text-sm">जन्मतिथि के अंकों का 3x3 मैट्रिक्स में रूपांतरण जारी है...</p>
+              <p className="text-sm">{s.loadingHint}</p>
             </div>
           )}
 
           {data && (
             <div className="space-y-6">
-              <ResultSection title="3x3 लो शू मैजिक ग्रिड">
+              <ResultSection title={s.gridTitle}>
                 <div className="w-64 mx-auto grid grid-cols-3 gap-2 p-3 bg-surface-alt rounded-2xl border border-line">
                   {GRID_LAYOUT.map((row, rIdx) =>
                     row.map((num, cIdx) => {
@@ -180,8 +220,8 @@ export default function LoshuGridClient({ locale }: { locale: Locale }) {
                           key={num}
                           className={`aspect-square flex flex-col items-center justify-center rounded-xl border font-bold text-sm transition ${
                             hasVal
-                              ? "bg-accent/10 border-accent/40 text-accent font-mono text-base"
-                              : "bg-surface border-line/60 text-ink-muted/40 font-mono"
+                              ? "bg-accent/10 border-accent/40 text-accent font-mono-brand text-base"
+                              : "bg-surface border-line/60 text-ink-muted/40 font-mono-brand"
                           }`}
                         >
                           <span className="text-[10px] text-ink-muted/60">{num}</span>
@@ -194,24 +234,24 @@ export default function LoshuGridClient({ locale }: { locale: Locale }) {
               </ResultSection>
 
               {missingNumbers.length > 0 && (
-                <ResultSection title="अनुपस्थित अंक (Missing Numbers)">
-                  <ResultRow label="ग्रिड में गायब अंक" value={missingNumbers.join(", ")} accent />
+                <ResultSection title={s.missingTitle}>
+                  <ResultRow label={s.missingLabel} value={missingNumbers.join(", ")} accent />
                 </ResultSection>
               )}
 
               {Array.isArray(planes) && planes.length > 0 && (
-                <ResultSection title="6 योग प्लेन्स का विश्लेषण (Planes of Lo Shu)">
+                <ResultSection title={s.planesTitle}>
                   <div className="divide-y divide-line/60">
                     {planes.map((p: any, idx: number) => (
                       <div key={idx} className="py-2.5 flex items-center justify-between text-xs">
                         <div>
                           <div className="font-bold text-ink">{p.name || p.plane}</div>
                           {p.numbers && (
-                            <div className="text-[11px] text-ink-muted font-mono">अंक: {p.numbers}</div>
+                            <div className="text-[11px] text-ink-muted font-mono-brand-brand">{s.numbersPrefix} {p.numbers}</div>
                           )}
                         </div>
                         <ResultBadge tone={p.is_complete || p.status === "complete" ? "good" : "neutral"}>
-                          {p.is_complete || p.status === "complete" ? "पूर्ण (सक्रिय योग)" : "अपूर्ण"}
+                          {p.is_complete || p.status === "complete" ? s.complete : s.incomplete}
                         </ResultBadge>
                       </div>
                     ))}

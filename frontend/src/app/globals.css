@@ -1,34 +1,28 @@
 @import "tailwindcss";
 
 /*
- * Public-site design tokens (frontend redesign Phase 1 — see
- * POST_REVIEW_FIX_LOG.md "Frontend Redesign Plan"). The accent/dark-neutral
- * values reuse #b45309 / #0f172a, the brand colors already established
- * elsewhere in the product (backend/app/schemas/pdf.py BrandingConfig
- * default, the Parashari D1/D9 chart SVGs, dashboard branding defaults) —
- * not vedicrishi.in's orange-500, and not a color invented from scratch.
- *
- * Every name below (accent-*, ink-*, surface-*, line, font-brand,
- * font-display) is new and unused anywhere else in the app today, so
- * nothing renders differently yet — later phases opt individual
- * public-page components into them. Tailwind's own defaults (zinc, slate,
- * indigo, font-sans, border) are untouched, so the dashboard/admin panels
- * are unaffected.
+ * Public-site design tokens — warm off-white neutrals with a single
+ * red-orange accent, paired with a single Inter type system (JetBrains
+ * Mono reserved for code/data). Every consuming component reads these
+ * tokens (bg-surface, text-ink, border-line, bg-accent, ...) rather than
+ * hardcoded colors, so this file is the single place the public-site look
+ * is defined. Tailwind's own defaults (zinc, slate, indigo, font-sans) are
+ * untouched, so the dashboard/admin panels are unaffected.
  */
 :root {
-  --accent: #b45309;
-  --accent-hover: #92400e;
-  --accent-soft: #fdf1de;
+  --accent: #c23400;
+  --accent-hover: #9c2a00;
+  --accent-soft: #fdeee7;
   --accent-foreground: #ffffff;
 
-  --ink: #241a12;
-  --ink-soft: #5b4a3d;
-  --ink-muted: #8a7a6c;
+  --ink: #2c2421;
+  --ink-soft: #6b5e57;
+  --ink-muted: #8a7d76;
 
-  --surface: #fdfaf5;
-  --surface-alt: #f7efe2;
-  --card: #ffffff;
-  --line: #ece1d1;
+  --surface: #fcfaf8;
+  --surface-alt: #f5f1ed;
+  --card: #f7f5f2;
+  --line: #e5e0dc;
 }
 
 @theme inline {
@@ -46,9 +40,10 @@
   --color-card: var(--card);
   --color-line: var(--line);
 
-  /* Figtree/Fraunces loaded via next/font/google in app/layout.tsx */
-  --font-brand: var(--font-figtree), ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --font-display: var(--font-fraunces), Georgia, "Times New Roman", serif;
+  /* Inter / JetBrains Mono loaded via next/font/google in app/layout.tsx */
+  --font-brand: var(--font-inter), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-display: var(--font-inter), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono-brand: var(--font-jetbrains-mono), ui-monospace, "SFMono-Regular", Menlo, monospace;
 }
 
 body {
@@ -57,6 +52,10 @@ body {
   font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
 }
 
 /* Subtle dot grid for clean developer feel (existing dev-console pages) */

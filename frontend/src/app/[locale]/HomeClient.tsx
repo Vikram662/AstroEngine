@@ -11,15 +11,12 @@ import { CalculatorsSection } from "@/components/CalculatorsSection";
 import { PanchangWidget } from "@/components/PanchangWidget";
 import { HoroscopeSection } from "@/components/HoroscopeSection";
 import {
-  Download,
-  ArrowRight,
   Check,
   Terminal,
   Cpu,
   FileText,
   Code2,
-  Loader2,
-  Sparkles
+  Loader2
 } from "lucide-react";
 
 interface PlanItem {
@@ -62,7 +59,7 @@ export default function HomeClient() {
   }, []);
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#fafafa] text-zinc-900 selection:bg-zinc-200 selection:text-zinc-900">
+    <div className="min-h-screen flex flex-col bg-surface text-ink font-brand selection:bg-accent-soft selection:text-accent">
       <Navbar />
 
       {/* Consumer Vedic Hero Section (Phase 3) */}
@@ -81,124 +78,143 @@ export default function HomeClient() {
       <LivePlayground />
 
       {/* Architecture Pillars */}
-      <section className="py-20 border-t border-zinc-200 bg-[#fafafa]">
+      <section className="py-20 border-t border-line bg-surface">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <div className="max-w-xl mb-12">
-            <span className="text-xs font-mono uppercase text-zinc-500 font-semibold tracking-wider">
-              Architecture Overview
-            </span>
-            <h2 className="text-2xl font-bold text-zinc-900 mt-1">
-              Built for High-Throughput Production
-            </h2>
-            <p className="text-zinc-600 text-xs sm:text-sm mt-1">
-              Engineered with clean architectural boundaries and complete typing across all endpoints.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="p-6 rounded-xl border border-zinc-200 bg-white shadow-xs">
-              <Cpu className="w-5 h-5 text-zinc-800 mb-3" />
-              <h3 className="text-sm font-bold text-zinc-900 mb-1.5">Deterministic Calculations</h3>
-              <p className="text-xs text-zinc-600 leading-relaxed">
-                Julian Day UTC conversions and mathematical planetary coordinates computed natively via Swiss Ephemeris C libraries with Lahiri, Raman, and KP ayanamsa support.
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+            <div className="lg:col-span-4">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-accent-soft border border-line text-accent text-xs font-semibold mb-3">
+                <Cpu className="w-3.5 h-3.5" />
+                <span>Architecture Overview</span>
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-extrabold text-ink tracking-tight">
+                Built for high-throughput production
+              </h2>
+              <p className="text-ink-soft text-xs sm:text-sm mt-3 leading-relaxed">
+                Engineered with clean architectural boundaries and complete typing across all 135 endpoints — nothing here is a mocked response.
               </p>
             </div>
 
-            <div className="p-6 rounded-xl border border-zinc-200 bg-white shadow-xs">
-              <FileText className="w-5 h-5 text-zinc-800 mb-3" />
-              <h3 className="text-sm font-bold text-zinc-900 mb-1.5">Asynchronous White-Label PDF</h3>
-              <p className="text-xs text-zinc-600 leading-relaxed">
-                Background worker pipeline rendering 12–60 page custom reports with embedded vector SVG charts, brand headers, and auto-expiring Cloudflare R2 delivery links.
-              </p>
-            </div>
-
-            <div className="p-6 rounded-xl border border-zinc-200 bg-white shadow-xs">
-              <Code2 className="w-5 h-5 text-zinc-800 mb-3" />
-              <h3 className="text-sm font-bold text-zinc-900 mb-1.5">Dual-Key Machine Stability</h3>
-              <p className="text-xs text-zinc-600 leading-relaxed">
-                Every calculation response provides stable English enumeration identifiers alongside localized human translations for English, Hindi, Gujarati, Marathi, Tamil, and Telugu.
-              </p>
+            <div className="lg:col-span-8 divide-y divide-line border-t border-line lg:border-t-0">
+              {[
+                {
+                  n: "01",
+                  icon: Cpu,
+                  title: "Deterministic calculations",
+                  body: "Julian Day UTC conversions and planetary coordinates computed natively via Swiss Ephemeris C libraries, with Lahiri, Raman, and KP ayanamsa support.",
+                },
+                {
+                  n: "02",
+                  icon: FileText,
+                  title: "Asynchronous white-label PDF",
+                  body: "A background worker pipeline renders 12–60 page custom reports with embedded vector SVG charts, brand headers, and auto-expiring Cloudflare R2 delivery links.",
+                },
+                {
+                  n: "03",
+                  icon: Code2,
+                  title: "Dual-key machine stability",
+                  body: "Every response carries a stable English enum identifier alongside a localized human translation, across English, Hindi, Gujarati, Marathi, Tamil, and Telugu.",
+                },
+              ].map((item) => (
+                <div key={item.n} className="flex items-start gap-4 py-6 first:pt-0 last:pb-0">
+                  <span className="font-mono text-xs text-ink-muted pt-1 w-6 shrink-0">{item.n}</span>
+                  <item.icon className="w-4 h-4 text-accent mt-1 shrink-0" />
+                  <div>
+                    <h3 className="text-sm font-bold text-ink mb-1">{item.title}</h3>
+                    <p className="text-xs text-ink-soft leading-relaxed max-w-xl">{item.body}</p>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
       </section>
 
       {/* Dynamic Pricing Section */}
-      <section className="py-20 border-t border-zinc-200 bg-white">
+      <section className="py-20 border-t border-line bg-surface-alt/40">
         <div className="max-w-5xl mx-auto px-4 sm:px-6">
           <div className="text-center max-w-lg mx-auto mb-14">
-            <span className="text-xs font-mono uppercase text-zinc-500 font-semibold tracking-wider">
-              Transparent Pricing
-            </span>
-            <h2 className="text-2xl font-bold text-zinc-900 mt-1">
-              Predictable Developer Plans
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-accent-soft border border-line text-accent text-xs font-semibold mb-3">
+              <Terminal className="w-3.5 h-3.5" />
+              <span>Transparent Pricing</span>
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-ink tracking-tight">
+              Predictable developer plans
             </h2>
-            <p className="text-zinc-600 text-xs sm:text-sm mt-1">
-              Start prototyping with ₹100 free test credits. Scale seamlessly as your platform grows.
+            <p className="text-ink-soft text-xs sm:text-sm mt-2 leading-relaxed">
+              Start prototyping with ₹100 free test credits. Overage is billed per call, not by surprise.
             </p>
           </div>
 
+          {loadingPlans && plans.length === 0 ? (
+            <div className="flex items-center justify-center gap-2 py-16 text-ink-muted text-xs">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span>Loading plans...</span>
+            </div>
+          ) : (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {plans.map((p) => (
               <div
                 key={p.tier}
-                className={`p-6 rounded-xl border flex flex-col justify-between relative shadow-xs ${
+                className={`rounded-2xl border flex flex-col justify-between relative overflow-hidden ${
                   p.isPopular
-                    ? "bg-white border-2 border-zinc-900 shadow-md ring-1 ring-zinc-900"
-                    : "bg-white border-zinc-200"
+                    ? "bg-card border-accent shadow-md"
+                    : "bg-card border-line shadow-xs"
                 }`}
               >
                 {p.isPopular && (
-                  <div className="absolute -top-2.5 right-4 px-2 py-0.5 rounded bg-zinc-900 text-white font-mono text-[10px] font-medium uppercase">
-                    Recommended
+                  <div className="px-5 py-1.5 bg-accent text-accent-foreground font-bold text-[10px] uppercase tracking-wider">
+                    Most teams pick this
                   </div>
                 )}
-                <div>
-                  <div className="text-xs font-mono uppercase font-semibold text-zinc-500">{p.name}</div>
+                <div className="p-6 flex-1">
+                  <div className="text-xs font-mono uppercase font-semibold text-ink-muted">{p.name}</div>
                   <div className="mt-3 flex items-baseline gap-1">
-                    <span className="text-3xl font-bold font-mono text-zinc-900">₹{p.priceMonthly.toLocaleString()}</span>
-                    <span className="text-xs text-zinc-500">/ mo</span>
+                    <span className="text-3xl font-bold font-mono text-ink">₹{p.priceMonthly.toLocaleString()}</span>
+                    <span className="text-xs text-ink-muted">/ mo</span>
                   </div>
-                  <div className="text-[11px] text-zinc-500 mt-1">
+                  <div className="text-[11px] text-ink-soft mt-1">
                     {p.includedQuota.toLocaleString()} calls included • ₹{p.overageCost.toFixed(2)} overage
                   </div>
 
-                  <ul className="mt-6 space-y-2.5 text-xs text-zinc-700 border-t border-zinc-100 pt-6">
+                  <ul className="mt-6 space-y-2.5 text-xs text-ink-soft border-t border-line pt-6">
                     {p.features.map((feat, i) => (
                       <li key={i} className="flex items-center gap-2">
-                        <Check className="w-3.5 h-3.5 text-zinc-900 flex-shrink-0" />
+                        <Check className="w-3.5 h-3.5 text-accent flex-shrink-0" />
                         <span>{feat}</span>
                       </li>
                     ))}
                   </ul>
                 </div>
 
-                <Link
-                  href="/dashboard"
-                  className={`mt-8 w-full py-2 text-center rounded-md font-medium text-xs transition ${
-                    p.isPopular
-                      ? "bg-zinc-900 hover:bg-zinc-800 text-white shadow-sm"
-                      : "bg-zinc-100 hover:bg-zinc-200 text-zinc-900"
-                  }`}
-                >
-                  {p.tier === "ENTERPRISE" ? "Contact Sales" : "Choose " + p.name}
-                </Link>
+                <div className="p-6 pt-0">
+                  <Link
+                    href="/dashboard"
+                    className={`block w-full py-2.5 text-center rounded-lg font-semibold text-xs transition ${
+                      p.isPopular
+                        ? "bg-accent hover:bg-accent-hover text-accent-foreground shadow-sm"
+                        : "bg-surface-alt hover:bg-line/60 text-ink border border-line"
+                    }`}
+                  >
+                    {p.tier === "ENTERPRISE" ? "Contact Sales" : "Choose " + p.name}
+                  </Link>
+                </div>
               </div>
             ))}
           </div>
+          )}
 
           {/* Modular Add-ons Showcase */}
           {addons.length > 0 && (
-            <div className="mt-16 pt-14 border-t border-zinc-200">
+            <div className="mt-16 pt-14 border-t border-line">
               <div className="text-center max-w-lg mx-auto mb-10">
-                <span className="text-xs font-mono uppercase text-purple-700 font-bold tracking-wider px-2.5 py-0.5 rounded-full bg-purple-50 border border-purple-200">
-                  Modular Power-Ups
+                <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-accent-soft border border-line text-accent text-xs font-bold tracking-wider uppercase">
+                  Modular power-ups
                 </span>
-                <h3 className="text-xl font-bold text-zinc-900 mt-2">
-                  Standalone Engine Add-ons
+                <h3 className="text-xl font-bold text-ink mt-3">
+                  Standalone engine add-ons
                 </h3>
-                <p className="text-zinc-600 text-xs mt-1">
-                  Attach specific engines directly to your Starter or Pro plan without purchasing full Enterprise.
+                <p className="text-ink-soft text-xs mt-1.5 leading-relaxed">
+                  Attach a specific engine directly to your Starter or Pro plan without purchasing full Enterprise.
                 </p>
               </div>
 
@@ -206,34 +222,34 @@ export default function HomeClient() {
                 {addons.map((addon) => (
                   <div
                     key={addon.id}
-                    className="p-5 rounded-xl border border-zinc-200 bg-white shadow-xs flex flex-col justify-between hover:border-zinc-300 transition"
+                    className="p-5 rounded-2xl border border-line bg-card shadow-xs flex flex-col justify-between hover:border-accent/50 transition"
                   >
                     <div>
                       <div className="flex items-start justify-between gap-2">
                         <div>
-                          <h4 className="font-bold text-sm text-zinc-900">{addon.name}</h4>
-                          <span className="inline-block mt-0.5 px-1.5 py-0.5 rounded text-[9px] font-mono font-bold uppercase bg-zinc-100 text-zinc-600 border border-zinc-200">
+                          <h4 className="font-bold text-sm text-ink">{addon.name}</h4>
+                          <span className="inline-block mt-0.5 px-1.5 py-0.5 rounded text-[9px] font-mono font-bold uppercase bg-surface-alt text-ink-muted border border-line">
                             {addon.category}
                           </span>
                         </div>
                         <div className="text-right">
-                          <span className="text-lg font-black font-mono text-zinc-900">₹{addon.priceMonthly}</span>
-                          <span className="text-[10px] text-zinc-400 block">/ mo</span>
+                          <span className="text-lg font-black font-mono text-ink">₹{addon.priceMonthly}</span>
+                          <span className="text-[10px] text-ink-muted block">/ mo</span>
                         </div>
                       </div>
 
-                      <p className="mt-2 text-xs text-zinc-600 leading-relaxed line-clamp-2">
+                      <p className="mt-2 text-xs text-ink-soft leading-relaxed line-clamp-2">
                         {addon.description}
                       </p>
 
-                      <div className="mt-2.5 py-1 px-2 rounded bg-zinc-50 border border-zinc-100 text-[10px] font-mono text-zinc-600 flex justify-between">
-                        <span>Limit: <strong className="text-zinc-900">{(addon.monthlyQuota || 1000).toLocaleString()} {addon.category === "REPORTS" ? "PDFs" : "calls"}</strong></span>
-                        <span>Rate: <strong className="text-zinc-900">{addon.rateLimitPerMin || 60} RPM</strong></span>
+                      <div className="mt-2.5 py-1 px-2 rounded-lg bg-surface-alt border border-line text-[10px] font-mono text-ink-soft flex justify-between">
+                        <span>Limit: <strong className="text-ink">{(addon.monthlyQuota || 1000).toLocaleString()} {addon.category === "REPORTS" ? "PDFs" : "calls"}</strong></span>
+                        <span>Rate: <strong className="text-ink">{addon.rateLimitPerMin || 60} RPM</strong></span>
                       </div>
 
                       <div className="mt-3 space-y-1">
                         {(Array.isArray(addon.features) ? addon.features : []).slice(0, 3).map((feat: string, fIdx: number) => (
-                          <div key={fIdx} className="flex items-center gap-1.5 text-[11px] text-zinc-700">
+                          <div key={fIdx} className="flex items-center gap-1.5 text-[11px] text-ink-soft">
                             <Check className="w-3 h-3 text-emerald-600 flex-shrink-0" />
                             <span className="truncate">{feat}</span>
                           </div>
@@ -241,10 +257,10 @@ export default function HomeClient() {
                       </div>
                     </div>
 
-                    <div className="mt-4 pt-3 border-t border-zinc-100">
+                    <div className="mt-4 pt-3 border-t border-line">
                       <Link
                         href="/billing#addons"
-                        className="w-full py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition shadow-xs"
+                        className="w-full py-2 rounded-lg bg-accent hover:bg-accent-hover text-accent-foreground font-semibold text-xs flex items-center justify-center gap-1.5 transition shadow-xs"
                       >
                         <span>Activate in Dashboard</span>
                       </Link>

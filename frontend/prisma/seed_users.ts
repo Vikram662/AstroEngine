@@ -1,22 +1,23 @@
 import { PrismaClient } from "@prisma/client";
 import crypto from "crypto";
+import { hashPassword } from "../src/lib/session";
 
 const prisma = new PrismaClient();
 
-function hashPassword(password: string): string {
-  return crypto.createHash("sha256").update(password).digest("hex");
-}
-
 async function main() {
+  if (process.env.NODE_ENV === "production") {
+    console.error("CRITICAL: prisma/seed_users.ts is disabled in production to prevent credential resets.");
+    process.exit(0);
+  }
+
   console.log("Seeding Admin and Developer User credentials...");
 
-  // 1. Super Admin Account
+  // 1. Super Admin Account (do NOT overwrite existing password on update)
   const adminEmail = "admin@astroengine.io";
-  const adminPassword = "Admin@12345";
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD || "Admin@12345";
   const admin = await prisma.user.upsert({
     where: { email: adminEmail },
     update: {
-      password: hashPassword(adminPassword),
       role: "ADMIN",
       planTier: "ENTERPRISE",
       isBlocked: false,
@@ -37,13 +38,12 @@ async function main() {
   });
   console.log(`✓ Admin seeded successfully: ${admin.email}`);
 
-  // 2. Demo Customer / Developer User Account
+  // 2. Demo Customer / Developer User Account (do NOT overwrite existing password on update)
   const userEmail = "developer@astroengine.io";
-  const userPassword = "User@12345";
+  const userPassword = process.env.SEED_DEV_PASSWORD || "User@12345";
   const devUser = await prisma.user.upsert({
     where: { email: userEmail },
     update: {
-      password: hashPassword(userPassword),
       role: "USER",
       planTier: "STARTER",
       isBlocked: false,

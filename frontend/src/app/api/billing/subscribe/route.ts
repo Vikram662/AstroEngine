@@ -4,6 +4,7 @@ import { getVerifiedSession } from "@/lib/authGuard";
 import { Prisma } from "@prisma/client";
 import crypto from "crypto";
 import { OfferValidationError, recordOfferRedemption, resolveOfferForUser } from "@/lib/offers";
+import { toMoney, toJsonSafe } from "@/lib/money";
 
 export async function POST(req: NextRequest) {
   try {
@@ -40,7 +41,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ status: "error", message: "User not found" }, { status: 404 });
     }
 
-    const newPlanPrice = plan.priceMonthly || 0;
+    const newPlanPrice = toMoney(plan.priceMonthly);
 
     // Free plan (e.g. STARTER)
     if (newPlanPrice === 0) {
@@ -78,8 +79,9 @@ export async function POST(req: NextRequest) {
           where: { tier: user.planTier }
         });
 
-        if (currentPlan && currentPlan.priceMonthly > 0) {
-          const dailyRate = currentPlan.priceMonthly / 30;
+        const currentPlanPrice = toMoney(currentPlan?.priceMonthly);
+        if (currentPlanPrice > 0) {
+          const dailyRate = currentPlanPrice / 30;
           // Unused value for the remaining days
           proratedDiscount = Math.round(dailyRate * remainingDays * 100) / 100;
         }
@@ -99,13 +101,14 @@ export async function POST(req: NextRequest) {
 
     // Option A: Pay using live Wallet Balance
     if (paymentMethod === "WALLET") {
-      if (user.walletBalance < netPayablePrice) {
+      const currentWalletBalance = toMoney(user.walletBalance);
+      if (currentWalletBalance < netPayablePrice) {
         return NextResponse.json({
           status: "error",
           insufficientBalance: true,
           requiredAmount: netPayablePrice,
-          currentBalance: user.walletBalance,
-          message: `Insufficient wallet balance (₹${user.walletBalance.toFixed(2)}). Adjusted plan price after ₹${proratedDiscount.toFixed(2)} prorated credit is ₹${netPayablePrice.toFixed(2)}. Please recharge your wallet or choose Payment Gateway checkout.`
+          currentBalance: currentWalletBalance,
+          message: `Insufficient wallet balance (₹${currentWalletBalance.toFixed(2)}). Adjusted plan price after ₹${proratedDiscount.toFixed(2)} prorated credit is ₹${netPayablePrice.toFixed(2)}. Please recharge your wallet or choose Payment Gateway checkout.`
         }, { status: 400 });
       }
 
@@ -158,8 +161,8 @@ export async function POST(req: NextRequest) {
         offerDiscount: appliedOffer?.discountAmount || 0,
         offerCode: appliedOffer?.code || null,
         netPaid: netPayablePrice,
-        subscription: walletResult.sub,
-        transaction: walletResult.transaction,
+        subscription: toJsonSafe(walletResult.sub),
+        transaction: toJsonSafe(walletResult.transaction),
       });
     }
 
@@ -239,10 +242,11 @@ export async function POST(req: NextRequest) {
         }, { status: 400 });
       }
 
-      if (pendingOrder.amount < netPayablePrice) {
+      const pendingOrderAmount = toMoney(pendingOrder.amount);
+      if (pendingOrderAmount < netPayablePrice) {
         return NextResponse.json({
           status: "error",
-          message: `Order amount (₹${pendingOrder.amount}) does not match net payable price (₹${netPayablePrice}).`
+          message: `Order amount (₹${pendingOrderAmount.toFixed(2)}) does not match net payable price (₹${netPayablePrice.toFixed(2)}).`
         }, { status: 400 });
       }
 
@@ -322,8 +326,8 @@ export async function POST(req: NextRequest) {
         offerDiscount: appliedOffer?.discountAmount || 0,
         offerCode: appliedOffer?.code || null,
         netPaid: netPayablePrice,
-        subscription: subResult.sub,
-        transaction: subResult.settledTx
+        subscription: toJsonSafe(subResult.sub),
+        transaction: toJsonSafe(subResult.settledTx)
       });
     }
 

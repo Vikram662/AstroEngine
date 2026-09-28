@@ -44,12 +44,15 @@ export const CalculatorsSection: React.FC = () => {
     { id: "advanced", label: "विशेष योग" },
   ];
 
+  const getToolDescription = (tool: (typeof CALCULATOR_TOOLS)[number]) =>
+    locale === "en" ? tool.seo?.en?.description || tool.description : tool.description;
+
   const filteredTools = CALCULATOR_TOOLS.filter(tool => {
     const matchesCategory = activeCategory === "all" || tool.category === activeCategory;
-    const matchesSearch = 
+    const matchesSearch =
       tool.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       tool.hindiTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      tool.description.toLowerCase().includes(searchQuery.toLowerCase());
+      getToolDescription(tool).toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCategory && matchesSearch;
   });
 
@@ -142,7 +145,7 @@ export const CalculatorsSection: React.FC = () => {
 
                 {/* Description */}
                 <p className="mt-2.5 text-xs text-ink-soft leading-relaxed line-clamp-2">
-                  {tool.description}
+                  {getToolDescription(tool)}
                 </p>
               </div>
 

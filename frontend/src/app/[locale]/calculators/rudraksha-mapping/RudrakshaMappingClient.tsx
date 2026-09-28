@@ -8,7 +8,37 @@ import { BirthDataFields, DEFAULT_BIRTH_DATA, BirthDataValue } from "@/component
 import { ResultSection, ResultRow, ResultBadge, SubmitButton, ErrorNote } from "@/components/calculators/ResultRows";
 import { Loader2 } from "lucide-react";
 
+const STRINGS = {
+  hi: {
+    error: "रुद्राक्ष सुझाव गणना विफल रही।",
+    calculating: "ग्रह बल एवं रुद्राक्ष चयन जारी...",
+    submit: "रुद्राक्ष परामर्श प्राप्त करें",
+    emptyHint: "अपनी जन्म कुंडली के कमजोर ग्रहों के निवारण हेतु 1 से 14 मुखी रुद्राक्ष की सिफारिश देखें।",
+    loadingHint: "ग्रह युति, दृष्टि एवं षड्बल आधार पर रुद्राक्ष मैपिंग जारी है...",
+    resultTitle: "अनुशंसित रुद्राक्ष (Recommended Rudraksha)",
+    karakaFallback: "कारक ग्रह",
+    deityLabel: "अधिष्ठाता देवता:",
+    deityFallback: "भगवान शिव",
+    rulesTitle: "धारण नियम",
+    rulesBody: "रुद्राक्ष को गंगाजल और कच्चे दूध से शुद्ध करके \"ॐ नमः शिवाय\" मंत्र का 108 बार जाप करके लाल धागे या चांदी की चेन में सोमवार या शिवरात्रि के दिन धारण करना परम कल्याणकारी होता है।",
+  },
+  en: {
+    error: "Rudraksha recommendation calculation failed.",
+    calculating: "Selecting Rudraksha by planetary strength...",
+    submit: "Get Rudraksha Recommendations",
+    emptyHint: "See the recommended 1 to 14 Mukhi Rudraksha to remedy the weak planets in your birth chart.",
+    loadingHint: "Mapping Rudraksha per planetary conjunctions, aspects, and Shadbala...",
+    resultTitle: "Recommended Rudraksha",
+    karakaFallback: "Significator Planet",
+    deityLabel: "Presiding Deity:",
+    deityFallback: "Lord Shiva",
+    rulesTitle: "How to Wear It",
+    rulesBody: "Purify the Rudraksha with Ganga water and raw milk, chant \"Om Namah Shivaya\" 108 times, and wear it on a red thread or silver chain on a Monday or Shivratri for the best results.",
+  },
+} as const;
+
 export default function RudrakshaMappingClient({ locale }: { locale: Locale }) {
+  const s = STRINGS[locale];
   const [form, setForm] = useState<BirthDataValue>(DEFAULT_BIRTH_DATA);
   const [lang, setLang] = useState<"hi" | "en">(locale);
   const [loading, setLoading] = useState(false);
@@ -39,7 +69,7 @@ export default function RudrakshaMappingClient({ locale }: { locale: Locale }) {
       const list = res.data?.data?.rudraksha_recommendations || res.data?.rudraksha_recommendations || res.data?.data || [];
       setRudrakshaList(Array.isArray(list) ? list : []);
     } catch (err: any) {
-      setError(err?.response?.data?.message || err?.message || "रुद्राक्ष सुझाव गणना विफल रही।");
+      setError(err?.response?.data?.message || err?.message || s.error);
     } finally {
       setLoading(false);
     }
@@ -51,7 +81,7 @@ export default function RudrakshaMappingClient({ locale }: { locale: Locale }) {
       category="remedies"
       title="1 to 14 Mukhi Rudraksha"
       hindiTitle="रुद्राक्ष सुझाव"
-      description="जन्म कुंडली के कमजोर एवं पीड़ित ग्रहों को बल देने हेतु शास्त्रीय रुद्राक्ष।"
+      description={locale === "en" ? "Classical Rudraksha prescriptions to strengthen the weak and afflicted planets in your birth chart." : "जन्म कुंडली के कमजोर एवं पीड़ित ग्रहों को बल देने हेतु शास्त्रीय रुद्राक्ष।"}
       icon="📿"
       locale={locale}
     >

@@ -8,15 +8,32 @@ import { BirthDataFields, DEFAULT_BIRTH_DATA, BirthDataValue } from "@/component
 import { ResultSection, ResultRow, ResultBadge, SubmitButton, ErrorNote } from "@/components/calculators/ResultRows";
 import { Loader2 } from "lucide-react";
 
-const DEFAULT_GIRL_DATA: BirthDataValue = {
-  name: "कन्या",
-  gender: "female",
-  dob: "1996-03-24",
-  tob: "18:45",
-  cityName: "मुंबई, भारत",
-  lat: 19.076,
-  lon: 72.8777,
-  tz: 5.5,
+const KOOT_LABELS: Record<Locale, Record<string, string>> = {
+  hi: {
+    varna: "वर्ण",
+    vashya: "वश्य",
+    tara: "तारा",
+    yoni: "योनि",
+    graha_maitri: "ग्रह मैत्री",
+    gana: "गण",
+    bhakoot: "भकूट",
+    nadi: "नाड़ी",
+  },
+  en: {
+    varna: "Varna",
+    vashya: "Vashya",
+    tara: "Tara",
+    yoni: "Yoni",
+    graha_maitri: "Graha Maitri",
+    gana: "Gana",
+    bhakoot: "Bhakoot",
+    nadi: "Nadi",
+  },
+};
+
+const ERROR_TEXT: Record<Locale, string> = {
+  hi: "कुंडली मिलान गणना विफल रही।",
+  en: "Kundli matching calculation failed.",
 };
 
 export default function KundliMatchingClient({ locale }: { locale: Locale }) {
@@ -75,21 +92,10 @@ export default function KundliMatchingClient({ locale }: { locale: Locale }) {
         setData(res.data);
       }
     } catch (err: any) {
-      setError(err?.response?.data?.message || err?.message || "कुंडली मिलान गणना विफल रही।");
+      setError(err?.response?.data?.message || err?.message || ERROR_TEXT[locale]);
     } finally {
       setLoading(false);
     }
-  };
-
-  const KOOT_LABELS: Record<string, string> = {
-    varna: "वर्ण",
-    vashya: "वश्य",
-    tara: "तारा",
-    yoni: "योनि",
-    graha_maitri: "ग्रह मैत्री",
-    gana: "गण",
-    bhakoot: "भकूट",
-    nadi: "नाड़ी",
   };
 
   const totalScore = data?.total_score ?? data?.total_obtained ?? data?.score ?? 0;
@@ -98,7 +104,7 @@ export default function KundliMatchingClient({ locale }: { locale: Locale }) {
   const gunas = Array.isArray(data?.gunas)
     ? data.gunas
     : Object.entries(kootas).map(([key, val]: [string, any]) => ({
-        koot: KOOT_LABELS[key] || key,
+        koot: KOOT_LABELS[locale][key] || key,
         obtained: val.points,
         max: val.max,
       }));

@@ -8,7 +8,33 @@ import { BirthDataFields, DEFAULT_BIRTH_DATA, BirthDataValue } from "@/component
 import { ResultSection, ResultRow, ResultBadge, SubmitButton, ErrorNote } from "@/components/calculators/ResultRows";
 import { Loader2 } from "lucide-react";
 
+const STRINGS = {
+  hi: {
+    error: "राज व धन योग खोज विफल रही।",
+    calculating: "योग संयोजन स्कैन हो रहे हैं...",
+    submit: "राज व धन योग खोजें",
+    emptyHint: "जन्म विवरण भरें और केंद्र-त्रिकोण स्वामियों के संयोग से बनने वाले दुर्लभ राजयोग व धनयोग देखें।",
+    loadingHint: "बृहत् पाराशर होराशास्त्र अनुसार योग सूत्रों का मिलान जारी है...",
+    resultTitle: (n: number) => `सक्रिय शुभ योग (${n} योग प्राप्त)`,
+    yogaFallback: "शुभ योग",
+    planetsLabel: "संबंधित ग्रह:",
+    houseSuffix: (n: number) => ` (भाव ${n})`,
+  },
+  en: {
+    error: "Raja & Dhan Yoga search failed.",
+    calculating: "Scanning yoga combinations...",
+    submit: "Find Raja & Dhan Yogas",
+    emptyHint: "Fill in your birth details to see the rare Raja and Dhan yogas formed by Kendra-Trikona lord combinations.",
+    loadingHint: "Matching yoga formulas per Brihat Parashara Hora Shastra...",
+    resultTitle: (n: number) => `Active Auspicious Yogas (${n} found)`,
+    yogaFallback: "Auspicious Yoga",
+    planetsLabel: "Involved Planets:",
+    houseSuffix: (n: number) => ` (House ${n})`,
+  },
+} as const;
+
 export default function DhanYogasClient({ locale }: { locale: Locale }) {
+  const s = STRINGS[locale];
   const [form, setForm] = useState<BirthDataValue>(DEFAULT_BIRTH_DATA);
   const [lang, setLang] = useState<"hi" | "en">(locale);
   const [loading, setLoading] = useState(false);
@@ -39,7 +65,7 @@ export default function DhanYogasClient({ locale }: { locale: Locale }) {
       const list = res.data?.data?.yogas || res.data?.yogas || res.data?.data || [];
       setYogasList(Array.isArray(list) ? list : []);
     } catch (err: any) {
-      setError(err?.response?.data?.message || err?.message || "राज व धन योग खोज विफल रही।");
+      setError(err?.response?.data?.message || err?.message || s.error);
     } finally {
       setLoading(false);
     }
@@ -51,7 +77,7 @@ export default function DhanYogasClient({ locale }: { locale: Locale }) {
       category="advanced"
       title="Raja & Dhan Yoga Finder"
       hindiTitle="राजयोग एवं धन योग स्कैनर"
-      description="गजकेसरी, बुधादित्य एवं पंचमहापुरुष सहित 10 प्रमुख शास्त्रीय राज व धन योगों का पता लगाएं।"
+      description={locale === "en" ? "Detect 10 major classical Raj and Dhan yogas, including Gajakesari, Budhaditya, and the Panch Mahapurush yogas." : "गजकेसरी, बुधादित्य एवं पंचमहापुरुष सहित 10 प्रमुख शास्त्रीय राज व धन योगों का पता लगाएं।"}
       icon="👑"
       locale={locale}
     >
@@ -87,10 +113,10 @@ export default function DhanYogasClient({ locale }: { locale: Locale }) {
             <SubmitButton loading={loading}>
               {loading ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin" /> योग संयोजन स्कैन हो रहे हैं...
+                  <Loader2 className="w-4 h-4 animate-spin" /> {s.calculating}
                 </>
               ) : (
-                "राज व धन योग खोजें"
+                s.submit
               )}
             </SubmitButton>
           </form>
@@ -102,27 +128,27 @@ export default function DhanYogasClient({ locale }: { locale: Locale }) {
           {!yogasList.length && !loading && !error && (
             <div className="bg-card rounded-2xl border border-line p-10 text-center text-ink-muted">
               <div className="text-4xl mb-3">👑</div>
-              <p className="text-sm">जन्म विवरण भरें और केंद्र-त्रिकोण स्वामियों के संयोग से बनने वाले दुर्लभ राजयोग व धनयोग देखें।</p>
+              <p className="text-sm">{s.emptyHint}</p>
             </div>
           )}
 
           {loading && (
             <div className="bg-card rounded-2xl border border-line p-12 text-center text-ink-soft flex flex-col items-center justify-center">
               <Loader2 className="w-8 h-8 text-accent animate-spin mb-3" />
-              <p className="text-sm">बृहत् पाराशर होराशास्त्र अनुसार योग सूत्रों का मिलान जारी है...</p>
+              <p className="text-sm">{s.loadingHint}</p>
             </div>
           )}
 
           {yogasList.length > 0 && (
             <div className="space-y-6">
-              <ResultSection title={`सक्रिय शुभ योग (${yogasList.length} योग प्राप्त)`}>
+              <ResultSection title={s.resultTitle(yogasList.length)}>
                 <div className="space-y-3">
                   {yogasList.map((y: any, idx: number) => (
                     <div key={idx} className="p-4 bg-surface-alt/70 border border-line rounded-xl">
                       <div className="flex items-center justify-between mb-1.5">
                         <span className="font-bold text-sm text-ink">{y.name || y.yoga_name}</span>
                         <ResultBadge tone={y.category === "raja" ? "accent" : "good"}>
-                          {y.category || "शुभ योग"}
+                          {y.category || s.yogaFallback}
                         </ResultBadge>
                       </div>
                       <p className="text-xs text-ink-soft leading-relaxed mb-2">
@@ -130,11 +156,11 @@ export default function DhanYogasClient({ locale }: { locale: Locale }) {
                       </p>
                       {(y.planets || y.planets_involved) && (
                         <div className="text-[11px] text-ink-muted">
-                          <span className="font-semibold text-ink">संबंधित ग्रह:</span>{" "}
+                          <span className="font-semibold text-ink">{s.planetsLabel}</span>{" "}
                           {Array.isArray(y.planets || y.planets_involved)
                             ? (y.planets || y.planets_involved).join(", ")
                             : String(y.planets || y.planets_involved)}
-                          {y.house ? ` (भाव ${y.house})` : ""}
+                          {y.house ? s.houseSuffix(y.house) : ""}
                         </div>
                       )}
                     </div>

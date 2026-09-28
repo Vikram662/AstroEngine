@@ -42,7 +42,7 @@ export const CalculatorPageShell: React.FC<Props> = ({
     locale === "hi" && isMigratedPath(r.href) ? `/hi${r.href}` : r.href;
 
   return (
-    <div className="min-h-screen flex flex-col bg-surface text-ink">
+    <div className="min-h-screen flex flex-col bg-surface text-ink font-brand">
       <Navbar />
       <main className="flex-1">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
@@ -60,7 +60,7 @@ export const CalculatorPageShell: React.FC<Props> = ({
 
           <div className="mb-8">
             {icon && <div className="text-3xl mb-2">{icon}</div>}
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-ink tracking-tight">
+            <h1 className="font-display text-2xl sm:text-3xl font-medium text-ink tracking-tight">
               {locale === "en" ? title : hindiTitle}
             </h1>
             <p className="mt-2 text-sm text-ink-soft max-w-2xl leading-relaxed">{description}</p>

@@ -8,21 +8,69 @@ import { BirthDataFields, DEFAULT_BIRTH_DATA, BirthDataValue } from "@/component
 import { ResultSection, ResultRow, ResultBadge, SubmitButton, ErrorNote } from "@/components/calculators/ResultRows";
 import { Loader2 } from "lucide-react";
 
+const STRINGS = {
+  hi: {
+    error: "नाड़ी अपवाद विश्लेषण विफल रहा।",
+    groomLabel: "वर विवरण (Groom Details)",
+    brideLabel: "कन्या विवरण (Bride Details)",
+    calculating: "अपवाद नियमों की जांच जारी...",
+    submit: "नाड़ी अपवाद नियम जांचें",
+    emptyHint: "यदि अष्टकूट में नाड़ी दोष आ रहा हो, तो शास्त्रोक्त 10 अपवादों द्वारा उसका निरस्तीकरण जांचें।",
+    loadingHint: "एक नक्षत्र भिन्न चरण, राशि एकता एवं स्वामी मैत्री अपवादों की जांच हो रही है...",
+    resultTitle: "नाड़ी दोष अपवाद निष्कर्ष",
+    finalStatus: "अंतिम स्थिति",
+    noDosha: "नाड़ी दोष है ही नहीं (No Nadi Dosha)",
+    cancelled: "नाड़ी दोष शास्त्रीय नियमों से निरस्त है",
+    active: "कोई अपवाद लागू नहीं / नाड़ी दोष मान्य",
+    noDoshaSub: "दोनों की जन्म नाड़ी भिन्न है, कोई शांति उपाय आवश्यक नहीं",
+    cancelledSub: "विवाह में नाड़ी दोष का प्रतिकूल प्रभाव नहीं माना जाएगा",
+    activeSub: "नाड़ी शांति अनुष्ठान या महामृत्युंजय जप की सलाह दी जाती है",
+    exceptionStatus: "अपवाद स्थिति",
+    notApplicable: "लागू नहीं (दोष अनुपस्थित)",
+    doshaCancelled: "दोष निरस्त (Parihara Active)",
+    activeBadge: "सक्रिय",
+    rulesTitle: "लागू हुए शास्त्रीय अपवाद नियम",
+  },
+  en: {
+    error: "Nadi exceptions analysis failed.",
+    groomLabel: "Groom Details",
+    brideLabel: "Bride Details",
+    calculating: "Checking cancellation rules...",
+    submit: "Check Nadi Dosha Cancellations",
+    emptyHint: "If your Ashtakoot shows a Nadi dosha, check whether it's cancelled by one of the 10 classical exception rules.",
+    loadingHint: "Checking same-nakshatra-different-pada, sign unity, and sign-lord friendship exceptions...",
+    resultTitle: "Nadi Dosha Cancellation Result",
+    finalStatus: "Final Verdict",
+    noDosha: "No Nadi Dosha at All",
+    cancelled: "Nadi Dosha Cancelled by Classical Rules",
+    active: "No Exception Applies / Nadi Dosha Stands",
+    noDoshaSub: "Both charts have different birth Nadi — no remedy needed",
+    cancelledSub: "The Nadi dosha will not be treated as adverse for this marriage",
+    activeSub: "A Nadi Shanti ritual or Maha Mrityunjaya Japa is recommended",
+    exceptionStatus: "Exception Status",
+    notApplicable: "Not Applicable (No Dosha)",
+    doshaCancelled: "Cancelled (Parihara Active)",
+    activeBadge: "Active",
+    rulesTitle: "Classical Exception Rules Applied",
+  },
+} as const;
+
 export default function NadiExceptionsClient({ locale }: { locale: Locale }) {
+  const s = STRINGS[locale];
   const [boyForm, setBoyForm] = useState<BirthDataValue>({
     ...DEFAULT_BIRTH_DATA,
-    name: "वर",
+    name: locale === "en" ? "Groom" : "वर",
     gender: "male",
     dob: "1994-08-12",
     tob: "10:15",
   });
   const [girlForm, setGirlForm] = useState<BirthDataValue>({
     ...DEFAULT_BIRTH_DATA,
-    name: "कन्या",
+    name: locale === "en" ? "Bride" : "कन्या",
     gender: "female",
     dob: "1996-03-24",
     tob: "18:45",
-    cityName: "मुंबई, भारत",
+    cityName: locale === "en" ? "Mumbai, India" : "मुंबई, भारत",
     lat: 19.076,
     lon: 72.8777,
   });
@@ -63,7 +111,7 @@ export default function NadiExceptionsClient({ locale }: { locale: Locale }) {
         setData(res.data);
       }
     } catch (err: any) {
-      setError(err?.response?.data?.message || err?.message || "नाड़ी अपवाद विश्लेषण विफल रहा।");
+      setError(err?.response?.data?.message || err?.message || s.error);
     } finally {
       setLoading(false);
     }
@@ -80,7 +128,7 @@ export default function NadiExceptionsClient({ locale }: { locale: Locale }) {
       category="matching"
       title="Nadi Dosha Cancellations"
       hindiTitle="नाड़ी दोष निरस्तीकरण"
-      description="एक ही नक्षत्र भिन्न चरण, राशि स्वामी मैत्री आदि 10 शास्त्रीय अपवाद नियम।"
+      description={locale === "en" ? "10 classical cancellation rules for Nadi dosha — same nakshatra different pada, sign-lord friendship, and more." : "एक ही नक्षत्र भिन्न चरण, राशि स्वामी मैत्री आदि 10 शास्त्रीय अपवाद नियम।"}
       icon="🧬"
       locale={locale}
     >
@@ -115,7 +163,7 @@ export default function NadiExceptionsClient({ locale }: { locale: Locale }) {
               <BirthDataFields
                 value={boyForm}
                 onChange={setBoyForm}
-                personLabel="वर विवरण (Groom Details)"
+                personLabel={s.groomLabel}
                 idPrefix="boy_"
               />
             </div>
@@ -124,7 +172,7 @@ export default function NadiExceptionsClient({ locale }: { locale: Locale }) {
               <BirthDataFields
                 value={girlForm}
                 onChange={setGirlForm}
-                personLabel="कन्या विवरण (Bride Details)"
+                personLabel={s.brideLabel}
                 idPrefix="girl_"
               />
             </div>
@@ -132,10 +180,10 @@ export default function NadiExceptionsClient({ locale }: { locale: Locale }) {
             <SubmitButton loading={loading}>
               {loading ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin" /> अपवाद नियमों की जांच जारी...
+                  <Loader2 className="w-4 h-4 animate-spin" /> {s.calculating}
                 </>
               ) : (
-                "नाड़ी अपवाद नियम जांचें"
+                s.submit
               )}
             </SubmitButton>
           </form>
@@ -147,20 +195,20 @@ export default function NadiExceptionsClient({ locale }: { locale: Locale }) {
           {!data && !loading && !error && (
             <div className="bg-card rounded-2xl border border-line p-10 text-center text-ink-muted">
               <div className="text-4xl mb-3">🧬</div>
-              <p className="text-sm">यदि अष्टकूट में नाड़ी दोष आ रहा हो, तो शास्त्रोक्त 10 अपवादों द्वारा उसका निरस्तीकरण जांचें।</p>
+              <p className="text-sm">{s.emptyHint}</p>
             </div>
           )}
 
           {loading && (
             <div className="bg-card rounded-2xl border border-line p-12 text-center text-ink-soft flex flex-col items-center justify-center">
               <Loader2 className="w-8 h-8 text-accent animate-spin mb-3" />
-              <p className="text-sm">एक नक्षत्र भिन्न चरण, राशि एकता एवं स्वामी मैत्री अपवादों की जांच हो रही है...</p>
+              <p className="text-sm">{s.loadingHint}</p>
             </div>
           )}
 
           {data && (
             <div className="space-y-6">
-              <ResultSection title="नाड़ी दोष अपवाद निष्कर्ष">
+              <ResultSection title={s.resultTitle}>
                 <div
                   className={`p-6 rounded-xl border text-center mb-4 ${
                     !hasBaseDosha || isCancelled
@@ -169,33 +217,25 @@ export default function NadiExceptionsClient({ locale }: { locale: Locale }) {
                   }`}
                 >
                   <div className="text-xs uppercase font-bold tracking-wider mb-1">
-                    अंतिम स्थिति
+                    {s.finalStatus}
                   </div>
                   <div className="text-2xl font-extrabold">
-                    {!hasBaseDosha
-                      ? "नाड़ी दोष है ही नहीं (No Nadi Dosha)"
-                      : isCancelled
-                      ? "नाड़ी दोष शास्त्रीय नियमों से निरस्त है"
-                      : "कोई अपवाद लागू नहीं / नाड़ी दोष मान्य"}
+                    {!hasBaseDosha ? s.noDosha : isCancelled ? s.cancelled : s.active}
                   </div>
                   <div className="text-xs mt-2 opacity-80">
-                    {!hasBaseDosha
-                      ? "दोनों की जन्म नाड़ी भिन्न है, कोई शांति उपाय आवश्यक नहीं"
-                      : isCancelled
-                      ? "विवाह में नाड़ी दोष का प्रतिकूल प्रभाव नहीं माना जाएगा"
-                      : "नाड़ी शांति अनुष्ठान या महामृत्युंजय जप की सलाह दी जाती है"}
+                    {!hasBaseDosha ? s.noDoshaSub : isCancelled ? s.cancelledSub : s.activeSub}
                   </div>
                 </div>
 
                 <ResultRow
-                  label="अपवाद स्थिति"
+                  label={s.exceptionStatus}
                   value={
                     !hasBaseDosha ? (
-                      <ResultBadge tone="good">लागू नहीं (दोष अनुपस्थित)</ResultBadge>
+                      <ResultBadge tone="good">{s.notApplicable}</ResultBadge>
                     ) : isCancelled ? (
-                      <ResultBadge tone="good">दोष निरस्त (Parihara Active)</ResultBadge>
+                      <ResultBadge tone="good">{s.doshaCancelled}</ResultBadge>
                     ) : (
-                      <ResultBadge tone="bad">सक्रिय</ResultBadge>
+                      <ResultBadge tone="bad">{s.activeBadge}</ResultBadge>
                     )
                   }
                   accent
@@ -203,7 +243,7 @@ export default function NadiExceptionsClient({ locale }: { locale: Locale }) {
               </ResultSection>
 
               {Array.isArray(exceptions) && exceptions.length > 0 && (
-                <ResultSection title="लागू हुए शास्त्रीय अपवाद नियम">
+                <ResultSection title={s.rulesTitle}>
                   <ul className="space-y-2 text-xs">
                     {exceptions.map((ex: any, idx: number) => (
                       <li key={idx} className="p-3 bg-surface-alt rounded-lg border border-line text-ink">

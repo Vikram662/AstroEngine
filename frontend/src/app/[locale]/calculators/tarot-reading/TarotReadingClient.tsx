@@ -7,8 +7,52 @@ import type { Locale } from "@/lib/locale";
 import { ResultSection, ResultRow, ResultBadge, SubmitButton, ErrorNote } from "@/components/calculators/ResultRows";
 import { Sparkles, HelpCircle, Loader2 } from "lucide-react";
 
+const STRINGS = {
+  hi: {
+    defaultQuestion: "मेरे करियर और भविष्य में आगे क्या संभावनाएं हैं?",
+    error: "टैरो कार्ड परामर्श विफल रहा।",
+    modeLabel: "स्प्रेड प्रकार (Spread Mode)",
+    modeDaily: "दैनिक कार्ड (Single Daily Card)",
+    modeTime: "3-कार्ड: अतीत, वर्तमान, भविष्य (Time Spread)",
+    modeMind: "3-कार्ड: मन, शरीर, आत्मा (Mind-Body-Spirit)",
+    modeCeltic: "10-कार्ड सेल्टिक क्रॉस (Celtic Cross Comprehensive)",
+    questionLabel: "आपका प्रश्न (Your Question)",
+    questionPlaceholder: "उदा. क्या मुझे नई नौकरी में सफलता मिलेगी?",
+    calculating: "कार्ड निकाले जा रहे हैं...",
+    submit: "टैरो कार्ड ड्रा करें",
+    emptyHint: "अपना प्रश्न सोचें, स्प्रेड चुनें और रहस्यमयी राइडर-वेट टैरो डेक से मार्गदर्शन प्राप्त करें।",
+    loadingHint: "78 टैरो आर्काना कार्डों का फेरबदल एवं स्प्रेड मैपिंग जारी है...",
+    interpretationTitle: "समग्र फलादेश (Overall Interpretation)",
+    reversed: "उल्टा (Reversed)",
+    upright: "सीधा (Upright)",
+    positionLabel: "स्थिति:",
+    keywordsLabel: "मुख्य संकेत:",
+  },
+  en: {
+    defaultQuestion: "What possibilities lie ahead for my career and future?",
+    error: "Tarot reading failed.",
+    modeLabel: "Spread Mode",
+    modeDaily: "Single Daily Card",
+    modeTime: "3-Card: Past, Present, Future (Time Spread)",
+    modeMind: "3-Card: Mind, Body, Spirit",
+    modeCeltic: "10-Card Celtic Cross (Comprehensive)",
+    questionLabel: "Your Question",
+    questionPlaceholder: "e.g. Will I succeed in my new job?",
+    calculating: "Drawing your cards...",
+    submit: "Draw Tarot Cards",
+    emptyHint: "Think of your question, choose a spread, and get guidance from the mystical Rider-Waite tarot deck.",
+    loadingHint: "Shuffling all 78 tarot arcana and mapping the spread...",
+    interpretationTitle: "Overall Interpretation",
+    reversed: "Reversed",
+    upright: "Upright",
+    positionLabel: "Position:",
+    keywordsLabel: "Key Signs:",
+  },
+} as const;
+
 export default function TarotReadingClient({ locale }: { locale: Locale }) {
-  const [question, setQuestion] = useState("मेरे करियर और भविष्य में आगे क्या संभावनाएं हैं?");
+  const s = STRINGS[locale];
+  const [question, setQuestion] = useState<string>(s.defaultQuestion);
   const [mode, setMode] = useState<"daily" | "3_card_time" | "3_card_mind" | "celtic_cross">("daily");
   const [lang, setLang] = useState<"hi" | "en">(locale);
   const [loading, setLoading] = useState(false);
@@ -46,7 +90,7 @@ export default function TarotReadingClient({ locale }: { locale: Locale }) {
         setData(res.data);
       }
     } catch (err: any) {
-      setError(err?.response?.data?.message || err?.message || "टैरो कार्ड परामर्श विफल रहा।");
+      setError(err?.response?.data?.message || err?.message || s.error);
     } finally {
       setLoading(false);
     }
@@ -60,7 +104,7 @@ export default function TarotReadingClient({ locale }: { locale: Locale }) {
       category="tarot"
       title="Tarot Card Reading"
       hindiTitle="टैरो कार्ड परामर्श"
-      description="दैनिक कार्ड, 3-कार्ड स्प्रेड एवं सेल्टिक क्रॉस से अपने प्रश्न का उत्तर पाएं।"
+      description={locale === "en" ? "Get an answer to your question through a daily card, 3-card spread, or Celtic Cross." : "दैनिक कार्ड, 3-कार्ड स्प्रेड एवं सेल्टिक क्रॉस से अपने प्रश्न का उत्तर पाएं।"}
       icon="🔮"
       locale={locale}
     >
@@ -94,7 +138,7 @@ export default function TarotReadingClient({ locale }: { locale: Locale }) {
             <div>
               <label htmlFor="tarot_mode" className="block text-xs font-semibold text-ink-soft mb-1.5 flex items-center gap-1.5">
                 <Sparkles className="w-3.5 h-3.5 text-accent" />
-                <span>स्प्रेड प्रकार (Spread Mode)</span>
+                <span>{s.modeLabel}</span>
               </label>
               <select
                 id="tarot_mode"
@@ -102,17 +146,17 @@ export default function TarotReadingClient({ locale }: { locale: Locale }) {
                 onChange={(e) => setMode(e.target.value as any)}
                 className="w-full px-3 py-2.5 rounded-xl border border-line bg-surface text-ink text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition"
               >
-                <option value="daily">दैनिक कार्ड (Single Daily Card)</option>
-                <option value="3_card_time">3-कार्ड: अतीत, वर्तमान, भविष्य (Time Spread)</option>
-                <option value="3_card_mind">3-कार्ड: मन, शरीर, आत्मा (Mind-Body-Spirit)</option>
-                <option value="celtic_cross">10-कार्ड सेल्टिक क्रॉस (Celtic Cross Comprehensive)</option>
+                <option value="daily">{s.modeDaily}</option>
+                <option value="3_card_time">{s.modeTime}</option>
+                <option value="3_card_mind">{s.modeMind}</option>
+                <option value="celtic_cross">{s.modeCeltic}</option>
               </select>
             </div>
 
             <div>
               <label htmlFor="tarot_q" className="block text-xs font-semibold text-ink-soft mb-1.5 flex items-center gap-1.5">
                 <HelpCircle className="w-3.5 h-3.5 text-accent" />
-                <span>आपका प्रश्न (Your Question)</span>
+                <span>{s.questionLabel}</span>
               </label>
               <textarea
                 id="tarot_q"
@@ -120,7 +164,7 @@ export default function TarotReadingClient({ locale }: { locale: Locale }) {
                 required
                 value={question}
                 onChange={(e) => setQuestion(e.target.value)}
-                placeholder="उदा. क्या मुझे नई नौकरी में सफलता मिलेगी?"
+                placeholder={s.questionPlaceholder}
                 className="w-full px-3.5 py-2.5 rounded-xl border border-line bg-surface text-ink text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition resize-none"
               />
             </div>
@@ -128,10 +172,10 @@ export default function TarotReadingClient({ locale }: { locale: Locale }) {
             <SubmitButton loading={loading}>
               {loading ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin" /> कार्ड निकाले जा रहे हैं...
+                  <Loader2 className="w-4 h-4 animate-spin" /> {s.calculating}
                 </>
               ) : (
-                "टैरो कार्ड ड्रा करें"
+                s.submit
               )}
             </SubmitButton>
           </form>
@@ -143,21 +187,21 @@ export default function TarotReadingClient({ locale }: { locale: Locale }) {
           {!data && !loading && !error && (
             <div className="bg-card rounded-2xl border border-line p-10 text-center text-ink-muted">
               <div className="text-4xl mb-3">🔮</div>
-              <p className="text-sm">अपना प्रश्न सोचें, स्प्रेड चुनें और रहस्यमयी राइडर-वेट टैरो डेक से मार्गदर्शन प्राप्त करें।</p>
+              <p className="text-sm">{s.emptyHint}</p>
             </div>
           )}
 
           {loading && (
             <div className="bg-card rounded-2xl border border-line p-12 text-center text-ink-soft flex flex-col items-center justify-center">
               <Loader2 className="w-8 h-8 text-accent animate-spin mb-3" />
-              <p className="text-sm">78 टैरो आर्काना कार्डों का फेरबदल एवं स्प्रेड मैपिंग जारी है...</p>
+              <p className="text-sm">{s.loadingHint}</p>
             </div>
           )}
 
           {data && (
             <div className="space-y-6">
               {data.interpretation && (
-                <ResultSection title="समग्र फलादेश (Overall Interpretation)">
+                <ResultSection title={s.interpretationTitle}>
                   <p className="text-xs text-ink-soft leading-relaxed">{data.interpretation}</p>
                 </ResultSection>
               )}
@@ -171,12 +215,12 @@ export default function TarotReadingClient({ locale }: { locale: Locale }) {
                         <div className="flex items-center justify-between mb-2">
                           <span className="font-bold text-base text-ink">{c.name || c.card_name}</span>
                           <ResultBadge tone={isRev ? "bad" : "good"}>
-                            {isRev ? "उल्टा (Reversed)" : "सीधा (Upright)"}
+                            {isRev ? s.reversed : s.upright}
                           </ResultBadge>
                         </div>
                         {c.position && (
                           <div className="text-xs font-semibold text-accent mb-2">
-                            स्थिति: {c.position}
+                            {s.positionLabel} {c.position}
                           </div>
                         )}
                         <p className="text-xs text-ink-soft leading-relaxed mb-2">
@@ -184,7 +228,7 @@ export default function TarotReadingClient({ locale }: { locale: Locale }) {
                         </p>
                         {c.keywords && (
                           <div className="text-[11px] text-ink-muted">
-                            <span className="font-semibold text-ink">मुख्य संकेत:</span>{" "}
+                            <span className="font-semibold text-ink">{s.keywordsLabel}</span>{" "}
                             {Array.isArray(c.keywords) ? c.keywords.join(", ") : c.keywords}
                           </div>
                         )}

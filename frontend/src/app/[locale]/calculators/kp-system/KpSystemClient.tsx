@@ -8,7 +8,45 @@ import { BirthDataFields, DEFAULT_BIRTH_DATA, BirthDataValue } from "@/component
 import { ResultSection, ResultRow, ResultBadge, SubmitButton, ErrorNote } from "@/components/calculators/ResultRows";
 import { Loader2 } from "lucide-react";
 
+const STRINGS = {
+  hi: {
+    error: "केपी पद्धति गणना विफल रही।",
+    calculating: "केपी सब-लॉर्ड गणना जारी...",
+    submit: "केपी सारिणी निकालें",
+    emptyHint: "कृष्णमूर्ति पद्धति अनुसार 12 भाव कस्प और 9 ग्रहों के साइन, स्टार और सब-लॉर्ड का सूक्ष्म विभाजन देखें।",
+    loadingHint: "प्लैसिडस भाव संधि एवं 249 सब-डिवीजनों की गणना जारी है...",
+    planetsTitle: "ग्रह केपी स्वामी (Planets Sub-Lords)",
+    cuspsTitle: "12 भाव कस्प स्वामी (Placidus Cuspal Sub-Lords)",
+    colPlanet: "ग्रह",
+    colSign: "राशि (Sign)",
+    colSignLord: "साइन स्वामी",
+    colStarLord: "स्टार स्वामी",
+    colSubLord: "सब लॉर्ड",
+    colCusp: "भाव (Cusp)",
+    colDegree: "अंश (Degree)",
+    cuspPrefix: "भाव",
+  },
+  en: {
+    error: "KP system calculation failed.",
+    calculating: "Calculating KP sub-lords...",
+    submit: "Get KP Sub-Lord Table",
+    emptyHint: "See the fine-grained sign, star, and sub-lord breakdown for all 12 house cusps and 9 planets per the Krishnamurti Paddhati.",
+    loadingHint: "Calculating Placidus house cusps and all 249 sub-divisions...",
+    planetsTitle: "Planet Sub-Lords",
+    cuspsTitle: "12 House Cuspal Sub-Lords (Placidus)",
+    colPlanet: "Planet",
+    colSign: "Sign",
+    colSignLord: "Sign Lord",
+    colStarLord: "Star Lord",
+    colSubLord: "Sub Lord",
+    colCusp: "Cusp",
+    colDegree: "Degree",
+    cuspPrefix: "Cusp",
+  },
+} as const;
+
 export default function KpSystemClient({ locale }: { locale: Locale }) {
+  const s = STRINGS[locale];
   const [form, setForm] = useState<BirthDataValue>(DEFAULT_BIRTH_DATA);
   const [lang, setLang] = useState<"hi" | "en">(locale);
   const [loading, setLoading] = useState(false);
@@ -50,7 +88,7 @@ export default function KpSystemClient({ locale }: { locale: Locale }) {
       setKpPlanets(Array.isArray(pList) ? pList : []);
       setKpCusps(Array.isArray(cList) ? cList : []);
     } catch (err: any) {
-      setError(err?.response?.data?.message || err?.message || "केपी पद्धति गणना विफल रही।");
+      setError(err?.response?.data?.message || err?.message || s.error);
     } finally {
       setLoading(false);
     }
@@ -62,7 +100,7 @@ export default function KpSystemClient({ locale }: { locale: Locale }) {
       category="kp"
       title="KP Sub-Lord Table"
       hindiTitle="केपी पद्धति (सब-लॉर्ड)"
-      description="कृष्णमूर्ति पद्धति अनुसार ग्रहों एवं भाव कस्प के नक्षत्र, सब व सब-सब स्वामी।"
+      description={locale === "en" ? "Nakshatra, sub-lord, and sub-sub-lord for every planet and house cusp, per the KP system." : "कृष्णमूर्ति पद्धति अनुसार ग्रहों एवं भाव कस्प के नक्षत्र, सब व सब-सब स्वामी।"}
       icon="🎯"
       locale={locale}
     >
@@ -98,10 +136,10 @@ export default function KpSystemClient({ locale }: { locale: Locale }) {
             <SubmitButton loading={loading}>
               {loading ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin" /> केपी सब-लॉर्ड गणना जारी...
+                  <Loader2 className="w-4 h-4 animate-spin" /> {s.calculating}
                 </>
               ) : (
-                "केपी सारिणी निकालें"
+                s.submit
               )}
             </SubmitButton>
           </form>
@@ -113,29 +151,29 @@ export default function KpSystemClient({ locale }: { locale: Locale }) {
           {!kpPlanets.length && !loading && !error && (
             <div className="bg-card rounded-2xl border border-line p-10 text-center text-ink-muted">
               <div className="text-4xl mb-3">🎯</div>
-              <p className="text-sm">कृष्णमूर्ति पद्धति अनुसार 12 भाव कस्प और 9 ग्रहों के साइन, स्टार और सब-लॉर्ड का सूक्ष्म विभाजन देखें।</p>
+              <p className="text-sm">{s.emptyHint}</p>
             </div>
           )}
 
           {loading && (
             <div className="bg-card rounded-2xl border border-line p-12 text-center text-ink-soft flex flex-col items-center justify-center">
               <Loader2 className="w-8 h-8 text-accent animate-spin mb-3" />
-              <p className="text-sm">प्लैसिडस भाव संधि एवं 249 सब-डिवीजनों की गणना जारी है...</p>
+              <p className="text-sm">{s.loadingHint}</p>
             </div>
           )}
 
           {kpPlanets.length > 0 && (
             <div className="space-y-6">
-              <ResultSection title="ग्रह केपी स्वामी (Planets Sub-Lords)">
+              <ResultSection title={s.planetsTitle}>
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs text-left">
                     <thead className="text-[11px] uppercase bg-surface-alt/80 text-ink-soft">
                       <tr>
-                        <th className="py-2 px-2.5">ग्रह</th>
-                        <th className="py-2 px-2.5">राशि (Sign)</th>
-                        <th className="py-2 px-2.5">साइन स्वामी</th>
-                        <th className="py-2 px-2.5">स्टार स्वामी</th>
-                        <th className="py-2 px-2.5 font-bold text-accent">सब लॉर्ड</th>
+                        <th className="py-2 px-2.5">{s.colPlanet}</th>
+                        <th className="py-2 px-2.5">{s.colSign}</th>
+                        <th className="py-2 px-2.5">{s.colSignLord}</th>
+                        <th className="py-2 px-2.5">{s.colStarLord}</th>
+                        <th className="py-2 px-2.5 font-bold text-accent">{s.colSubLord}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-line/60">
@@ -154,23 +192,23 @@ export default function KpSystemClient({ locale }: { locale: Locale }) {
               </ResultSection>
 
               {kpCusps.length > 0 && (
-                <ResultSection title="12 भाव कस्प स्वामी (Placidus Cuspal Sub-Lords)">
+                <ResultSection title={s.cuspsTitle}>
                   <div className="overflow-x-auto">
                     <table className="w-full text-xs text-left">
                       <thead className="text-[11px] uppercase bg-surface-alt/80 text-ink-soft">
                         <tr>
-                          <th className="py-2 px-2.5">भाव (Cusp)</th>
-                          <th className="py-2 px-2.5">अंश (Degree)</th>
-                          <th className="py-2 px-2.5">साइन स्वामी</th>
-                          <th className="py-2 px-2.5">स्टार स्वामी</th>
-                          <th className="py-2 px-2.5 font-bold text-accent">सब लॉर्ड</th>
+                          <th className="py-2 px-2.5">{s.colCusp}</th>
+                          <th className="py-2 px-2.5">{s.colDegree}</th>
+                          <th className="py-2 px-2.5">{s.colSignLord}</th>
+                          <th className="py-2 px-2.5">{s.colStarLord}</th>
+                          <th className="py-2 px-2.5 font-bold text-accent">{s.colSubLord}</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-line/60">
                         {kpCusps.map((c: any, idx: number) => (
                           <tr key={idx} className="hover:bg-surface-alt/40 transition">
-                            <td className="py-2.5 px-2.5 font-bold text-ink">भाव {c.cusp || c.house || idx + 1}</td>
-                            <td className="py-2.5 px-2.5 font-mono">{Number(c.degree_in_sign ?? c.degree ?? 0).toFixed(2)}°</td>
+                            <td className="py-2.5 px-2.5 font-bold text-ink">{s.cuspPrefix} {c.cusp || c.house || idx + 1}</td>
+                            <td className="py-2.5 px-2.5 font-mono-brand">{Number(c.degree_in_sign ?? c.degree ?? 0).toFixed(2)}°</td>
                             <td className="py-2.5 px-2.5">{c.sign_lord || c.rashi_lord}</td>
                             <td className="py-2.5 px-2.5">{c.star_lord || c.nakshatra_lord}</td>
                             <td className="py-2.5 px-2.5 font-bold text-accent">{c.sub_lord || c.sub}</td>

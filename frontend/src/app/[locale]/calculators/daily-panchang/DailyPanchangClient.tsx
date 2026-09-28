@@ -129,14 +129,14 @@ export default function DailyPanchangClient({ locale }: { locale: Locale }) {
           {!data && !loading && !error && (
             <div className="bg-card rounded-2xl border border-line p-10 text-center text-ink-muted">
               <div className="text-4xl mb-3">📜</div>
-              <p className="text-sm">तारीख एवं स्थान चुनें और 5 शास्त्रीय अंग (वार, तिथि, नक्षत्र, योग, करण) व शुभ-अशुभ मुहूर्त देखें।</p>
+              <p className="text-sm">{lang === "en" ? "Choose a date and place to see the 5 classical limbs (Vaar, Tithi, Nakshatra, Yoga, Karana) and auspicious/inauspicious muhurats." : "तारीख एवं स्थान चुनें और 5 शास्त्रीय अंग (वार, तिथि, नक्षत्र, योग, करण) व शुभ-अशुभ मुहूर्त देखें।"}</p>
             </div>
           )}
 
           {loading && (
             <div className="bg-card rounded-2xl border border-line p-12 text-center text-ink-soft flex flex-col items-center justify-center">
               <Loader2 className="w-8 h-8 text-accent animate-spin mb-3" />
-              <p className="text-sm">सूर्य सिद्धांत एवं दृक गणित अनुसार पंचांग अवयवों की गणना हो रही है...</p>
+              <p className="text-sm">{lang === "en" ? "Calculating Panchang elements per Surya Siddhanta and Drik Ganita..." : "सूर्य सिद्धांत एवं दृक गणित अनुसार पंचांग अवयवों की गणना हो रही है..."}</p>
             </div>
           )}
 
@@ -223,25 +223,6 @@ export default function DailyPanchangClient({ locale }: { locale: Locale }) {
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {horas.map((hora, index) => <div key={index} className="rounded-lg border border-line bg-surface-alt/50 p-2.5 text-xs"><div className="font-bold text-ink">{String(hora.lord || "-")}</div><div className="mt-1 text-ink-muted">{String(hora.start_time || "-")} - {String(hora.end_time || "-")}</div></div>)}
                   </div>
-                </ResultSection>
-              )}
-
-              {(data.sunrise || data.sunset || data.rahukaal) && (
-                <ResultSection title="सूर्योदय एवं शुभ-अशुभ काल">
-                  {data.sunrise && <ResultRow label="सूर्योदय" value={data.sunrise} />}
-                  {data.sunset && <ResultRow label="सूर्यास्त" value={data.sunset} />}
-                  {data.rahukaal && (
-                    <ResultRow
-                      label="राहुकाल (अशुभ)"
-                      value={<ResultBadge tone="bad">{typeof data.rahukaal === "object" ? `${data.rahukaal.start} - ${data.rahukaal.end}` : data.rahukaal}</ResultBadge>}
-                    />
-                  )}
-                  {data.abhijit && (
-                    <ResultRow
-                      label="अभिजित मुहूर्त (अति शुभ)"
-                      value={<ResultBadge tone="good">{typeof data.abhijit === "object" ? `${data.abhijit.start} - ${data.abhijit.end}` : data.abhijit}</ResultBadge>}
-                    />
-                  )}
                 </ResultSection>
               )}
             </div>

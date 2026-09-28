@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdminSession } from "@/lib/authGuard";
 import { REPORT_ENDPOINTS, buildPdfPayload, dispatchPdfJob } from "@/lib/pdfEngine";
+import { toJsonSafe } from "@/lib/money";
 
 // Actually resubmits a failed PDF job to the backend using its originally stored
 // birth-data payload — jobs created before `requestPayload` was added have no
@@ -72,7 +73,7 @@ export async function POST(req: NextRequest) {
       }
     });
 
-    return NextResponse.json({ status: "success", data: updatedJob });
+    return NextResponse.json({ status: "success", data: toJsonSafe(updatedJob) });
   } catch (error: unknown) {
     const err = error as { message?: string };
     return NextResponse.json({ status: "error", message: err.message || "Retry failed" }, { status: 500 });

@@ -65,9 +65,10 @@ const STRINGS = {
     rateLimit: "रेट लिमिट:",
     overage: "अतिरिक्त कॉल (Overage):",
     perCall: "/ call",
-    mostPopular: "सर्वाधिक लोकप्रिय (Recommended)",
+    mostPopular: "सर्वाधिक लोकप्रिय",
     enterpriseContact: "एंटरप्राइज संपर्क करें",
     choosePlan: (name: string) => `${name} चुनें`,
+    included: "शामिल सुविधाएं",
     addonsBadge: "मॉड्यूलर पावर-अप्स",
     addonsTitle: "स्टैंडअलोन इंजन",
     addonsTitleAccent: "ऐड-ऑन्स (Add-ons)",
@@ -92,9 +93,10 @@ const STRINGS = {
     rateLimit: "Rate limit:",
     overage: "Overage:",
     perCall: "/ call",
-    mostPopular: "Most Popular (Recommended)",
+    mostPopular: "Most Popular",
     enterpriseContact: "Contact Enterprise",
     choosePlan: (name: string) => `Choose ${name}`,
+    included: "What's included",
     addonsBadge: "Modular Power-ups",
     addonsTitle: "Standalone Engine",
     addonsTitleAccent: "Add-ons",
@@ -171,7 +173,7 @@ export default function PricingClient({ locale }: { locale: Locale }) {
             <Compass className="w-3.5 h-3.5" />
             <span>{t.badge}</span>
           </div>
-          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-ink">
+          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-ink">
             {t.headingPrefix} <span className="font-display italic text-accent font-normal">{t.headingAccent}</span>
           </h1>
           <p className="text-ink-soft text-xs sm:text-sm mt-3 leading-relaxed">
@@ -186,79 +188,98 @@ export default function PricingClient({ locale }: { locale: Locale }) {
           </div>
         ) : (
           <>
-            {/* Core Subscription Plans Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {plans.map((p) => {
-                const offer = bestOffer("PLAN", p.tier, p.priceMonthly);
-                return (
-                <div
-                  key={p.id || p.tier}
-                  className={`p-6 sm:p-7 rounded-2xl border flex flex-col justify-between relative transition shadow-xs ${
-                    p.isPopular
-                      ? "bg-card border-2 border-accent shadow-md ring-2 ring-accent/20"
-                      : "bg-card border-line hover:border-accent/40"
-                  }`}
-                >
-                  {p.isPopular && (
-                    <div className="absolute -top-3 right-6 px-3 py-0.5 rounded-full bg-accent text-white text-[10px] font-bold uppercase tracking-wider shadow-xs">
-                      {t.mostPopular}
-                    </div>
-                  )}
-
-                  <div>
-                    <div className="text-xs font-bold text-accent uppercase tracking-wider">{p.name}</div>
-                    {offer && (
-                      <div className="mt-3 flex items-center justify-between gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-amber-900">
-                        <span className="text-[10px] font-extrabold uppercase tracking-wide">{t.offer}: {offer.title}</span>
-                        <span className="rounded-md bg-white px-2 py-1 font-mono text-[10px] font-bold">{t.useCode}: {offer.code}</span>
-                      </div>
-                    )}
-                    <div className="mt-3 flex items-baseline gap-2">
-                      {offer && <span className="text-sm font-bold font-mono text-ink-muted line-through">₹{formatInr(p.priceMonthly)}</span>}
-                      <span className="text-3xl sm:text-4xl font-black font-mono text-ink">₹{formatInr(offer?.finalAmount ?? p.priceMonthly, Boolean(offer))}</span>
-                      <span className="text-xs text-ink-muted">{t.perMonth}</span>
-                    </div>
-                    {offer && <div className="mt-1 text-[11px] font-semibold text-emerald-700">{t.save} ₹{formatInr(offer.discountAmount, true)}</div>}
-
-                    <div className="mt-4 py-3 border-y border-line text-[11px] text-ink-soft space-y-1.5">
-                      <div className="flex justify-between">
-                        <span>{t.monthlyQuota}</span>
-                        <strong className="text-ink font-mono">{p.includedQuota.toLocaleString()} {t.calls}</strong>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>{t.rateLimit}</span>
-                        <strong className="text-ink font-mono">{p.rateLimitPerMin} req / min</strong>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>{t.overage}</span>
-                        <strong className="text-ink font-mono">₹{p.overageCost.toFixed(2)} {t.perCall}</strong>
-                      </div>
-                    </div>
-
-                    <ul className="mt-6 space-y-2.5 text-xs text-ink-soft">
-                      {(Array.isArray(p.features) ? p.features : []).map((feat, i) => (
-                        <li key={i} className="flex items-center gap-2">
-                          <Check className="w-3.5 h-3.5 text-accent flex-shrink-0" />
-                          <span>{feat}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  <div className="mt-8 pt-6 border-t border-line">
-                    <Link
-                      href={p.tier === "ENTERPRISE" && !offer ? "/dashboard" : `/billing?plan=${encodeURIComponent(p.tier)}${offer ? `&offer=${encodeURIComponent(offer.code)}` : ""}`}
-                      className={`w-full py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition ${
-                        p.isPopular
-                          ? "bg-accent hover:bg-accent-hover text-white shadow-md shadow-accent/20"
-                          : "bg-surface-alt hover:bg-line text-ink"
-                      }`}
-                    >
-                      <span>{p.tier === "ENTERPRISE" ? t.enterpriseContact : t.choosePlan(p.name)}</span>
-                    </Link>
-                  </div>
-                </div>
-              )})}
+            {/* Core Subscription Plans — comparison table */}
+            <div className="overflow-x-auto rounded-2xl border border-line bg-card shadow-xs">
+              <table className="w-full min-w-[720px] text-left text-sm border-collapse">
+                <thead>
+                  <tr className="border-b border-line">
+                    <th className="w-1/4 px-5 py-5 align-bottom"></th>
+                    {plans.map((p) => {
+                      const offer = bestOffer("PLAN", p.tier, p.priceMonthly);
+                      return (
+                        <th
+                          key={p.id || p.tier}
+                          className={`px-5 py-5 align-bottom ${p.isPopular ? "border-x border-accent/30 bg-accent-soft" : ""}`}
+                        >
+                          {p.isPopular && (
+                            <p className="text-[10px] font-bold uppercase tracking-wide text-accent mb-1">{t.mostPopular}</p>
+                          )}
+                          <p className="text-xs font-bold text-ink-soft uppercase tracking-wider">{p.name}</p>
+                          {offer && (
+                            <p className="mt-1 text-[10px] font-semibold text-emerald-700">{t.offer}: {offer.code} · {t.save} ₹{formatInr(offer.discountAmount, true)}</p>
+                          )}
+                          <div className="mt-1 flex items-baseline gap-1.5">
+                            {offer && <span className="text-xs font-mono-brand text-ink-muted line-through">₹{formatInr(p.priceMonthly)}</span>}
+                            <span className="font-display text-2xl font-medium text-ink">₹{formatInr(offer?.finalAmount ?? p.priceMonthly, Boolean(offer))}</span>
+                            <span className="text-xs text-ink-muted font-brand">{t.perMonth}</span>
+                          </div>
+                        </th>
+                      );
+                    })}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-line text-ink-soft">
+                  <tr>
+                    <td className="px-5 py-3.5 text-ink-muted">{t.monthlyQuota}</td>
+                    {plans.map((p) => (
+                      <td key={p.id || p.tier} className={`px-5 py-3.5 font-mono-brand text-ink ${p.isPopular ? "border-x border-accent/30 bg-accent-soft/40" : ""}`}>
+                        {p.includedQuota.toLocaleString()} {t.calls}
+                      </td>
+                    ))}
+                  </tr>
+                  <tr>
+                    <td className="px-5 py-3.5 text-ink-muted">{t.rateLimit}</td>
+                    {plans.map((p) => (
+                      <td key={p.id || p.tier} className={`px-5 py-3.5 font-mono-brand text-ink ${p.isPopular ? "border-x border-accent/30 bg-accent-soft/40" : ""}`}>
+                        {p.rateLimitPerMin} req/min
+                      </td>
+                    ))}
+                  </tr>
+                  <tr>
+                    <td className="px-5 py-3.5 text-ink-muted">{t.overage}</td>
+                    {plans.map((p) => (
+                      <td key={p.id || p.tier} className={`px-5 py-3.5 font-mono-brand text-ink ${p.isPopular ? "border-x border-accent/30 bg-accent-soft/40" : ""}`}>
+                        ₹{p.overageCost.toFixed(2)} {t.perCall}
+                      </td>
+                    ))}
+                  </tr>
+                  <tr>
+                    <td className="px-5 py-4 align-top text-ink-muted">{t.included}</td>
+                    {plans.map((p) => (
+                      <td key={p.id || p.tier} className={`px-5 py-4 align-top ${p.isPopular ? "border-x border-accent/30 bg-accent-soft/40" : ""}`}>
+                        <ul className="space-y-2">
+                          {(Array.isArray(p.features) ? p.features : []).map((feat, i) => (
+                            <li key={i} className="flex items-start gap-2 text-xs">
+                              <Check className="w-3.5 h-3.5 text-accent flex-shrink-0 mt-0.5" />
+                              <span>{feat}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </td>
+                    ))}
+                  </tr>
+                  <tr>
+                    <td className="px-5 py-4"></td>
+                    {plans.map((p) => {
+                      const offer = bestOffer("PLAN", p.tier, p.priceMonthly);
+                      return (
+                        <td key={p.id || p.tier} className={`px-5 py-4 ${p.isPopular ? "border-x border-accent/30 bg-accent-soft/40" : ""}`}>
+                          <Link
+                            href={p.tier === "ENTERPRISE" && !offer ? "/dashboard" : `/billing?plan=${encodeURIComponent(p.tier)}${offer ? `&offer=${encodeURIComponent(offer.code)}` : ""}`}
+                            className={`inline-flex w-full items-center justify-center gap-1.5 rounded-lg py-2.5 text-xs font-bold transition ${
+                              p.isPopular
+                                ? "bg-accent hover:bg-accent-hover text-accent-foreground shadow-sm"
+                                : "bg-surface-alt hover:bg-line text-ink border border-line"
+                            }`}
+                          >
+                            <span>{p.tier === "ENTERPRISE" ? t.enterpriseContact : t.choosePlan(p.name)}</span>
+                          </Link>
+                        </td>
+                      );
+                    })}
+                  </tr>
+                </tbody>
+              </table>
             </div>
 
             {/* Modular Engine Add-ons Showcase */}
@@ -294,19 +315,19 @@ export default function PricingClient({ locale }: { locale: Locale }) {
                             </span>
                           </div>
                           <div className="text-right">
-                            {offer && <span className="block text-[10px] font-bold font-mono text-ink-muted line-through">₹{formatInr(addon.priceMonthly)}</span>}
-                            <span className="text-xl font-black font-mono text-ink">₹{formatInr(offer?.finalAmount ?? addon.priceMonthly, Boolean(offer))}</span>
+                            {offer && <span className="block text-[10px] font-bold font-mono-brand text-ink-muted line-through">₹{formatInr(addon.priceMonthly)}</span>}
+                            <span className="text-xl font-black font-mono-brand text-ink">₹{formatInr(offer?.finalAmount ?? addon.priceMonthly, Boolean(offer))}</span>
                             <span className="text-[10px] text-ink-muted block">{t.perMonth}</span>
                           </div>
                         </div>
 
                         {offer && (
-                          <div className="mt-3 flex items-center justify-between gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-amber-900">
+                          <div className="mt-3 flex items-center justify-between gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-emerald-900">
                             <div>
                               <div className="text-[10px] font-extrabold uppercase">{t.offer}: {offer.title}</div>
                               <div className="text-[10px] text-emerald-700">{t.save} ₹{formatInr(offer.discountAmount, true)}</div>
                             </div>
-                            <span className="rounded-md bg-white px-2 py-1 font-mono text-[10px] font-bold">{offer.code}</span>
+                            <span className="rounded-md bg-white px-2 py-1 font-mono-brand text-[10px] font-bold">{offer.code}</span>
                           </div>
                         )}
 
@@ -315,7 +336,7 @@ export default function PricingClient({ locale }: { locale: Locale }) {
                         </p>
 
                         {/* Quota & Limits Badge */}
-                        <div className="mt-3 py-2 px-3 rounded-xl bg-surface border border-line flex items-center justify-between text-[10px] font-mono text-ink-soft">
+                        <div className="mt-3 py-2 px-3 rounded-xl bg-surface border border-line flex items-center justify-between text-[10px] font-mono-brand text-ink-soft">
                           <span>
                             {t.limit} <strong className="text-ink">{(addon.monthlyQuota || 1000).toLocaleString()} {addon.category === "REPORTS" ? t.pdfs : t.calls}</strong>
                           </span>
@@ -339,7 +360,7 @@ export default function PricingClient({ locale }: { locale: Locale }) {
                           href={`/billing?addon=${encodeURIComponent(addon.id)}${offer ? `&offer=${encodeURIComponent(offer.code)}` : ""}`}
                           className="w-full py-2.5 rounded-xl bg-accent hover:bg-accent-hover text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition shadow-xs"
                         >
-                          <Zap className="w-3.5 h-3.5 text-amber-200" />
+                          <Zap className="w-3.5 h-3.5 text-accent-foreground/70" />
                           <span>{t.activateInDashboard}</span>
                         </Link>
                       </div>

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getVerifiedSession } from "@/lib/authGuard";
+import { toMoney } from "@/lib/money";
 
 export async function GET(req: NextRequest) {
   try {
@@ -55,11 +56,11 @@ export async function GET(req: NextRequest) {
       })
     ]);
 
-    const serialized = logs.map((l: { id: bigint; createdAt: Date; responseTime: number; statusCode: number; creditsCost: number; [key: string]: unknown }) => ({
+    const serialized = logs.map((l: { id: bigint; createdAt: Date; responseTime: number; statusCode: number; creditsCost: unknown; [key: string]: unknown }) => ({
       ...l,
       id: l.id.toString(),
       responseTime: l.responseTime || 0,
-      creditsCost: l.creditsCost || 0,
+      creditsCost: toMoney(l.creditsCost as never),
       createdAt: l.createdAt.toISOString().replace("T", " ").substring(0, 19)
     }));
 
@@ -79,7 +80,7 @@ export async function GET(req: NextRequest) {
     const successRate = sampleCount > 0
       ? ((successCount / sampleCount) * 100).toFixed(1)
       : "100.0";
-    const totalCreditsDeducted = recentMetricsSample.reduce((acc, curr) => acc + (curr.creditsCost || 0), 0);
+    const totalCreditsDeducted = recentMetricsSample.reduce((acc, curr) => acc + toMoney(curr.creditsCost), 0);
 
     const totalPages = Math.ceil(totalFilteredCount / limit) || 1;
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getVerifiedSession } from "@/lib/authGuard";
+import { toMoney } from "@/lib/money";
 
 // GET /api/billing/invoice/[id] - Generates a printable Tax Invoice / GST Invoice HTML
 export async function GET(
@@ -96,7 +97,8 @@ export async function GET(
       customerState.toLowerCase().includes(sellerState.toLowerCase()) || 
       customerGstin.startsWith(sellerStateCode);
     
-    const grossAmount = Number(tx.amount);
+    const grossAmount = toMoney(tx.amount);
+    const creditsAdded = toMoney(tx.creditsAdded);
     const taxableValue = grossAmount / 1.18;
     const totalGst = grossAmount - taxableValue;
     const cgst = isIntraState ? totalGst / 2 : 0;
@@ -327,9 +329,9 @@ export async function GET(
         <tr>
           <td>1</td>
           <td>
-            <strong>${tx.creditsAdded > 0 ? "Prepaid API Compute Credits Top-up" : "Monthly SaaS Platform Subscription"}</strong>
+            <strong>${creditsAdded > 0 ? "Prepaid API Compute Credits Top-up" : "Monthly SaaS Platform Subscription"}</strong>
             <div style="font-size: 11px; color: #64748b; margin-top: 2px;">
-              ${tx.creditsAdded > 0 ? `Dispatched ${tx.creditsAdded.toLocaleString()} computational wallet credits for calculations & PDFs` : "Tiered developer license & quota"}
+              ${creditsAdded > 0 ? `Dispatched ${creditsAdded.toLocaleString()} computational wallet credits for calculations & PDFs` : "Tiered developer license & quota"}
             </div>
           </td>
           <td class="num-col">998313</td>

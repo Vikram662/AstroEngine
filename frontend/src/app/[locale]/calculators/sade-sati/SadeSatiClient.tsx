@@ -8,7 +8,59 @@ import { BirthDataFields, DEFAULT_BIRTH_DATA, BirthDataValue } from "@/component
 import { ResultSection, ResultRow, ResultBadge, SubmitButton, ErrorNote } from "@/components/calculators/ResultRows";
 import { Loader2 } from "lucide-react";
 
+const STRINGS = {
+  hi: {
+    error: "शनि साढ़े साती गणना विफल रही।",
+    calculating: "शनि गोचर ट्रैक हो रहा है...",
+    submit: "साढ़े साती स्थिति जांचें",
+    emptyHint: "जन्म विवरण दर्ज करें और वर्तमान साढ़े साती चरण या ढैया का विश्लेषण प्राप्त करें।",
+    loadingHint: "गोचर शनि एवं जन्म चंद्र के 12वें, 1ले व 2रे भावों की गणना जारी है...",
+    resultTitle: "वर्तमान साढ़े साती स्थिति",
+    transitLabel: "वर्तमान गोचर प्रभाव",
+    sadeSatiOn: "शनि साढ़े साती चल रही है",
+    dhaiyaOn: "शनि की ढैया चल रही है",
+    neither: "साढ़े साती या ढैया का प्रभाव नहीं है",
+    phaseLabel: "चरण:",
+    natalMoonLabel: "जन्म चंद्र राशि",
+    transitSaturnLabel: "वर्तमान गोचर शनि राशि",
+    phaseStatusLabel: "शनि साढ़े साती चरण",
+    activeFallback: "सक्रिय",
+    free: "मुक्त",
+    timelineTitle: "जीवनपर्यन्त साढ़े साती चक्र (Timeline)",
+    colStage: "जीवन चरण",
+    colPhase: "चरण",
+    colDuration: "अवधि",
+    colSaturnSign: "शनि राशि",
+    remediesTitle: "शनि शांति उपाय",
+  },
+  en: {
+    error: "Shani Sade Sati calculation failed.",
+    calculating: "Tracking Saturn's transit...",
+    submit: "Check Sade Sati Status",
+    emptyHint: "Enter your birth details to see your current Sade Sati phase or Dhaiya analysis.",
+    loadingHint: "Calculating transiting Saturn against the 12th, 1st, and 2nd houses from your natal Moon...",
+    resultTitle: "Current Sade Sati Status",
+    transitLabel: "Current Transit Effect",
+    sadeSatiOn: "Shani Sade Sati is active",
+    dhaiyaOn: "Shani Dhaiya is active",
+    neither: "No Sade Sati or Dhaiya effect",
+    phaseLabel: "Phase:",
+    natalMoonLabel: "Natal Moon Sign",
+    transitSaturnLabel: "Current Transit Saturn Sign",
+    phaseStatusLabel: "Sade Sati Phase",
+    activeFallback: "Active",
+    free: "Free",
+    timelineTitle: "Lifetime Sade Sati Cycle (Timeline)",
+    colStage: "Life Stage",
+    colPhase: "Phase",
+    colDuration: "Duration",
+    colSaturnSign: "Saturn Sign",
+    remediesTitle: "Shani Shanti Remedies",
+  },
+} as const;
+
 export default function SadeSatiClient({ locale }: { locale: Locale }) {
+  const s = STRINGS[locale];
   const [form, setForm] = useState<BirthDataValue>(DEFAULT_BIRTH_DATA);
   const [lang, setLang] = useState<"hi" | "en">(locale);
   const [loading, setLoading] = useState(false);
@@ -63,7 +115,7 @@ export default function SadeSatiClient({ locale }: { locale: Locale }) {
         : [];
       setTimelineData(flatRows);
     } catch (err: any) {
-      setError(err?.response?.data?.message || err?.message || "शनि साढ़े साती गणना विफल रही।");
+      setError(err?.response?.data?.message || err?.message || s.error);
     } finally {
       setLoading(false);
     }
@@ -78,7 +130,7 @@ export default function SadeSatiClient({ locale }: { locale: Locale }) {
       category="dosha"
       title="Shani Sade Sati Timeline"
       hindiTitle="शनि साढ़े साती चक्र"
-      description="उदय, शिखर एवं अस्त चरण, ढैया एवं जीवनपर्यंत शनि गोचर की समय सारिणी।"
+      description={locale === "en" ? "The rising, peak, and setting phases, Dhaiya, and a lifetime timeline of Saturn's transit." : "उदय, शिखर एवं अस्त चरण, ढैया एवं जीवनपर्यंत शनि गोचर की समय सारिणी।"}
       icon="🪐"
       locale={locale}
     >
@@ -114,10 +166,10 @@ export default function SadeSatiClient({ locale }: { locale: Locale }) {
             <SubmitButton loading={loading}>
               {loading ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin" /> शनि गोचर ट्रैक हो रहा है...
+                  <Loader2 className="w-4 h-4 animate-spin" /> {s.calculating}
                 </>
               ) : (
-                "साढ़े साती स्थिति जांचें"
+                s.submit
               )}
             </SubmitButton>
           </form>
@@ -129,74 +181,70 @@ export default function SadeSatiClient({ locale }: { locale: Locale }) {
           {!statusData && !loading && !error && (
             <div className="bg-card rounded-2xl border border-line p-10 text-center text-ink-muted">
               <div className="text-4xl mb-3">🪐</div>
-              <p className="text-sm">जन्म विवरण दर्ज करें और वर्तमान साढ़े साती चरण या ढैया का विश्लेषण प्राप्त करें।</p>
+              <p className="text-sm">{s.emptyHint}</p>
             </div>
           )}
 
           {loading && (
             <div className="bg-card rounded-2xl border border-line p-12 text-center text-ink-soft flex flex-col items-center justify-center">
               <Loader2 className="w-8 h-8 text-accent animate-spin mb-3" />
-              <p className="text-sm">गोचर शनि एवं जन्म चंद्र के 12वें, 1ले व 2रे भावों की गणना जारी है...</p>
+              <p className="text-sm">{s.loadingHint}</p>
             </div>
           )}
 
           {statusData && (
             <div className="space-y-6">
-              <ResultSection title="वर्तमान साढ़े साती स्थिति">
+              <ResultSection title={s.resultTitle}>
                 <div
                   className={`p-6 rounded-xl border text-center mb-4 ${
                     isUnderSadeSati
-                      ? "bg-amber-50 border-amber-200 text-amber-950"
+                      ? "bg-rose-50 border-rose-200 text-rose-950"
                       : isDhaiya
-                      ? "bg-indigo-50 border-indigo-200 text-indigo-950"
+                      ? "bg-amber-50 border-amber-200 text-amber-950"
                       : "bg-emerald-50 border-emerald-200 text-emerald-900"
                   }`}
                 >
                   <div className="text-xs uppercase font-bold tracking-wider mb-1">
-                    वर्तमान गोचर प्रभाव
+                    {s.transitLabel}
                   </div>
                   <div className="text-2xl sm:text-3xl font-extrabold">
-                    {isUnderSadeSati
-                      ? "शनि साढ़े साती चल रही है"
-                      : isDhaiya
-                      ? "शनि की ढैया चल रही है"
-                      : "साढ़े साती या ढैया का प्रभाव नहीं है"}
+                    {isUnderSadeSati ? s.sadeSatiOn : isDhaiya ? s.dhaiyaOn : s.neither}
                   </div>
                   {statusData.phase && (
                     <div className="text-sm font-semibold mt-2">
-                      चरण: {statusData.phase}
+                      {s.phaseLabel} {statusData.phase}
                     </div>
                   )}
                 </div>
 
                 {statusData.natal_moon_sign && (
-                  <ResultRow label="जन्म चंद्र राशि" value={statusData.natal_moon_sign} accent />
+                  <ResultRow label={s.natalMoonLabel} value={statusData.natal_moon_sign} accent />
                 )}
                 {statusData.transit_saturn_sign && (
-                  <ResultRow label="वर्तमान गोचर शनि राशि" value={statusData.transit_saturn_sign} />
+                  <ResultRow label={s.transitSaturnLabel} value={statusData.transit_saturn_sign} />
                 )}
                 <ResultRow
-                  label="शनि साढ़े साती चरण"
+                  label={s.phaseStatusLabel}
                   value={
                     isUnderSadeSati ? (
-                      <ResultBadge tone="bad">{statusData.phase || "सक्रिय"}</ResultBadge>
+                      <ResultBadge tone="bad">{statusData.phase || s.activeFallback}</ResultBadge>
                     ) : (
-                      <ResultBadge tone="good">मुक्त</ResultBadge>
+                      <ResultBadge tone="good">{s.free}</ResultBadge>
                     )
                   }
                 />
               </ResultSection>
 
               {timelineData.length > 0 && (
-                <ResultSection title="जीवनपर्यन्त साढ़े साती चक्र (Timeline)">
+                <ResultSection title={s.timelineTitle}>
                   <div className="overflow-x-auto">
                     <table className="w-full text-xs text-left">
                       <thead className="text-[11px] uppercase bg-surface-alt/80 text-ink-soft">
                         <tr>
-                          <th className="py-2 px-3">जीवन चरण</th>
-                          <th className="py-2 px-3">चरण</th>
-                          <th className="py-2 px-3">अवधि</th>
-                          <th className="py-2 px-3">शनि राशि</th>
+                          <th className="py-2 px-3">{s.colStage}</th>
+                          <th className="py-2 px-3">{s.colPhase}</th>
+                          <th className="py-2 px-3">{s.colDuration}</th>
+                          <th className="py-2 px-3">{s.colSaturnSign}</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-line/60">
@@ -204,7 +252,7 @@ export default function SadeSatiClient({ locale }: { locale: Locale }) {
                           <tr key={idx} className="hover:bg-surface-alt/40 transition">
                             <td className="py-2.5 px-3 font-semibold text-ink">{item.stage}</td>
                             <td className="py-2.5 px-3">{item.phase}</td>
-                            <td className="py-2.5 px-3 font-mono">{item.years}</td>
+                            <td className="py-2.5 px-3 font-mono-brand">{item.years}</td>
                             <td className="py-2.5 px-3">{item.sign || "-"}</td>
                           </tr>
                         ))}
@@ -215,7 +263,7 @@ export default function SadeSatiClient({ locale }: { locale: Locale }) {
               )}
 
               {statusData.remedies && statusData.remedies.length > 0 && (
-                <ResultSection title="शनि शांति उपाय">
+                <ResultSection title={s.remediesTitle}>
                   <ul className="space-y-1.5 text-xs text-ink-soft list-disc list-inside">
                     {statusData.remedies.map((r: any, idx: number) => (
                       <li key={idx}>{typeof r === "string" ? r : r.remedy}</li>

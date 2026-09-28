@@ -8,7 +8,59 @@ import { BirthDataFields, DEFAULT_BIRTH_DATA, BirthDataValue } from "@/component
 import { ResultSection, ResultRow, ResultBadge, SubmitButton, ErrorNote } from "@/components/calculators/ResultRows";
 import { Loader2 } from "lucide-react";
 
+const STRINGS = {
+  hi: {
+    error: "मांगलिक दोष गणना विफल रही।",
+    calculating: "मंगल स्थिति विश्लेषित हो रही है...",
+    submit: "मांगलिक दोष जांचें",
+    emptyHint: "जन्म विवरण भरें और 1, 4, 7, 8, 12 भावों में मंगल दोष व परिहार नियम देखें।",
+    loadingHint: "लग्न, चंद्र एवं शुक्र से कुज दोष एवं 12 शास्त्रीय अपवादों की गणना जारी है...",
+    resultTitle: "मांगलिक दोष परिणाम",
+    finalStatus: "अंतिम स्थिति",
+    noDosha: "मांगलिक दोष नहीं है (No Manglik Dosha)",
+    cancelled: "दोष प्रभावहीन / निरस्त (Cancelled by Exceptions)",
+    present: "मांगलिक दोष उपस्थित है (Manglik Dosha Present)",
+    highSeverity: "उच्च तीव्रता",
+    normalCancelled: "सामान्य / निरस्त",
+    marsHouseLabel: "मंगल भाव, लग्न से (Mars House from Lagna)",
+    house: (n: number) => `${n}वां भाव`,
+    houseOutside: (n: number) => `${n}वां भाव (1, 4, 7, 8, 12 से बाहर)`,
+    outsideFallback: "1, 4, 7, 8, 12 से बाहर",
+    severityPercent: "दोष तीव्रता प्रतिशत",
+    exceptionApplied: "अपवाद लागू",
+    yesCancelled: "हाँ (दोष निरस्त)",
+    no: "नहीं",
+    cancellationsTitle: "लागू हुए शास्त्रीय अपवाद (Cancellations)",
+    remediesTitle: "शास्त्रसम्मत उपाय (Remedies)",
+  },
+  en: {
+    error: "Manglik Dosha calculation failed.",
+    calculating: "Analyzing Mars placement...",
+    submit: "Check Manglik Dosha",
+    emptyHint: "Fill in your birth details to see Manglik Dosha from houses 1, 4, 7, 8, 12 and its cancellation rules.",
+    loadingHint: "Calculating Kuja Dosha from Lagna, Moon, and Venus, and checking all 12 classical exceptions...",
+    resultTitle: "Manglik Dosha Result",
+    finalStatus: "Final Verdict",
+    noDosha: "No Manglik Dosha",
+    cancelled: "Neutralized / Cancelled by Exceptions",
+    present: "Manglik Dosha Present",
+    highSeverity: "High Severity",
+    normalCancelled: "Normal / Cancelled",
+    marsHouseLabel: "Mars House from Lagna",
+    house: (n: number) => `House ${n}`,
+    houseOutside: (n: number) => `House ${n} (outside 1, 4, 7, 8, 12)`,
+    outsideFallback: "Outside houses 1, 4, 7, 8, 12",
+    severityPercent: "Dosha Severity %",
+    exceptionApplied: "Exception Applied",
+    yesCancelled: "Yes (Dosha Cancelled)",
+    no: "No",
+    cancellationsTitle: "Classical Cancellations Applied",
+    remediesTitle: "Classical Remedies",
+  },
+} as const;
+
 export default function ManglikDoshaClient({ locale }: { locale: Locale }) {
+  const s = STRINGS[locale];
   const [form, setForm] = useState<BirthDataValue>(DEFAULT_BIRTH_DATA);
   const [lang, setLang] = useState<"hi" | "en">(locale);
   const [loading, setLoading] = useState(false);
@@ -42,7 +94,7 @@ export default function ManglikDoshaClient({ locale }: { locale: Locale }) {
         setData(res.data);
       }
     } catch (err: any) {
-      setError(err?.response?.data?.message || err?.message || "मांगलिक दोष गणना विफल रही।");
+      setError(err?.response?.data?.message || err?.message || s.error);
     } finally {
       setLoading(false);
     }
@@ -59,7 +111,7 @@ export default function ManglikDoshaClient({ locale }: { locale: Locale }) {
       category="dosha"
       title="Manglik Dosha Analyser"
       hindiTitle="मांगलिक दोष विश्लेषण"
-      description="लग्न, चंद्र व शुक्र से 1, 4, 7, 8, 12 भावों में मंगल की स्थिति और 12 शास्त्रीय अपवाद।"
+      description={locale === "en" ? "Mars in houses 1, 4, 7, 8, or 12 from Lagna, Moon, and Venus — plus all 12 classical cancellation rules." : "लग्न, चंद्र व शुक्र से 1, 4, 7, 8, 12 भावों में मंगल की स्थिति और 12 शास्त्रीय अपवाद।"}
       icon="🔥"
       locale={locale}
     >
@@ -95,10 +147,10 @@ export default function ManglikDoshaClient({ locale }: { locale: Locale }) {
             <SubmitButton loading={loading}>
               {loading ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin" /> मंगल स्थिति विश्लेषित हो रही है...
+                  <Loader2 className="w-4 h-4 animate-spin" /> {s.calculating}
                 </>
               ) : (
-                "मांगलिक दोष जांचें"
+                s.submit
               )}
             </SubmitButton>
           </form>
@@ -110,20 +162,20 @@ export default function ManglikDoshaClient({ locale }: { locale: Locale }) {
           {!data && !loading && !error && (
             <div className="bg-card rounded-2xl border border-line p-10 text-center text-ink-muted">
               <div className="text-4xl mb-3">🔥</div>
-              <p className="text-sm">जन्म विवरण भरें और 1, 4, 7, 8, 12 भावों में मंगल दोष व परिहार नियम देखें।</p>
+              <p className="text-sm">{s.emptyHint}</p>
             </div>
           )}
 
           {loading && (
             <div className="bg-card rounded-2xl border border-line p-12 text-center text-ink-soft flex flex-col items-center justify-center">
               <Loader2 className="w-8 h-8 text-accent animate-spin mb-3" />
-              <p className="text-sm">लग्न, चंद्र एवं शुक्र से कुज दोष एवं 12 शास्त्रीय अपवादों की गणना जारी है...</p>
+              <p className="text-sm">{s.loadingHint}</p>
             </div>
           )}
 
           {data && (
             <div className="space-y-6">
-              <ResultSection title="मांगलिक दोष परिणाम">
+              <ResultSection title={s.resultTitle}>
                 <div
                   className={`p-6 rounded-xl border text-center mb-4 ${
                     !isManglik || isCancelled
@@ -132,51 +184,47 @@ export default function ManglikDoshaClient({ locale }: { locale: Locale }) {
                   }`}
                 >
                   <div className="text-xs uppercase font-bold tracking-wider mb-1">
-                    अंतिम स्थिति
+                    {s.finalStatus}
                   </div>
                   <div className="text-2xl sm:text-3xl font-extrabold">
-                    {!isManglik
-                      ? "मांगलिक दोष नहीं है (No Manglik Dosha)"
-                      : isCancelled
-                      ? "दोष प्रभावहीन / निरस्त (Cancelled by Exceptions)"
-                      : "मांगलिक दोष उपस्थित है (Manglik Dosha Present)"}
+                    {!isManglik ? s.noDosha : isCancelled ? s.cancelled : s.present}
                   </div>
                   <div className="text-xs mt-2 opacity-90">
-                    {data.severity || (isManglik && !isCancelled ? "उच्च तीव्रता" : "सामान्य / निरस्त")}
+                    {data.severity || (isManglik && !isCancelled ? s.highSeverity : s.normalCancelled)}
                   </div>
                 </div>
 
                 <ResultRow
-                  label="मंगल भाव, लग्न से (Mars House from Lagna)"
+                  label={s.marsHouseLabel}
                   value={
                     marsHouseFromLagna !== undefined && [1, 4, 7, 8, 12].includes(Number(marsHouseFromLagna))
-                      ? `${marsHouseFromLagna}वां भाव`
+                      ? s.house(marsHouseFromLagna)
                       : marsHouseFromLagna !== undefined
-                      ? `${marsHouseFromLagna}वां भाव (1, 4, 7, 8, 12 से बाहर)`
-                      : "1, 4, 7, 8, 12 से बाहर"
+                      ? s.houseOutside(marsHouseFromLagna)
+                      : s.outsideFallback
                   }
                   accent
                 />
                 {data.percentage !== undefined && (
                   <ResultRow
-                    label="दोष तीव्रता प्रतिशत"
+                    label={s.severityPercent}
                     value={<ResultBadge tone={data.percentage > 50 ? "bad" : "neutral"}>{data.percentage}%</ResultBadge>}
                   />
                 )}
                 <ResultRow
-                  label="अपवाद लागू"
+                  label={s.exceptionApplied}
                   value={
                     isCancelled ? (
-                      <ResultBadge tone="good">हाँ (दोष निरस्त)</ResultBadge>
+                      <ResultBadge tone="good">{s.yesCancelled}</ResultBadge>
                     ) : (
-                      <ResultBadge tone="neutral">नहीं</ResultBadge>
+                      <ResultBadge tone="neutral">{s.no}</ResultBadge>
                     )
                   }
                 />
               </ResultSection>
 
               {exceptions.length > 0 && (
-                <ResultSection title="लागू हुए शास्त्रीय अपवाद (Cancellations)">
+                <ResultSection title={s.cancellationsTitle}>
                   <ul className="space-y-2 text-xs">
                     {exceptions.map((ex: any, idx: number) => (
                       <li key={idx} className="p-3 bg-emerald-50/70 border border-emerald-200 rounded-lg text-emerald-900">
@@ -188,7 +236,7 @@ export default function ManglikDoshaClient({ locale }: { locale: Locale }) {
               )}
 
               {data.remedies && data.remedies.length > 0 && (
-                <ResultSection title="शास्त्रसम्मत उपाय (Remedies)">
+                <ResultSection title={s.remediesTitle}>
                   <ul className="space-y-1.5 text-xs text-ink-soft list-disc list-inside">
                     {data.remedies.map((rem: any, idx: number) => (
                       <li key={idx}>{typeof rem === "string" ? rem : rem.remedy || rem.name}</li>

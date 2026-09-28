@@ -8,7 +8,41 @@ import { BirthDataFields, DEFAULT_BIRTH_DATA, BirthDataValue } from "@/component
 import { ResultSection, ResultRow, SubmitButton, ErrorNote } from "@/components/calculators/ResultRows";
 import { Loader2 } from "lucide-react";
 
+const STRINGS = {
+  hi: {
+    error: "जैमिनी चर दशा गणना विफल रही।",
+    calculating: "चर दशा क्रम गणना जारी...",
+    submit: "जैमिनी चर दशा निकालें",
+    emptyHint: "महर्षि जैमिनी प्रतिपादित राशि दशा एवं 7 चर कारकों (आत्मकारक आदि) का फल देखें।",
+    loadingHint: "चर दशा वर्ष एवं जैमिनी कारक अंशों की गणना जारी है...",
+    karakasTitle: "जैमिनी 7 चर कारक (Jaimini Karakas)",
+    tableTitle: "जैमिनी चर दशा क्रम (Rashi Dasha Timeline)",
+    colSign: "दशा राशि",
+    colLord: "स्वामी",
+    colDuration: "अवधि (वर्ष)",
+    colStart: "आरंभ काल",
+    colEnd: "समाप्ति काल",
+    years: "वर्ष",
+  },
+  en: {
+    error: "Jaimini Chara Dasha calculation failed.",
+    calculating: "Calculating the Chara Dasha sequence...",
+    submit: "Get Jaimini Chara Dasha",
+    emptyHint: "See Maharishi Jaimini's sign-based dasha and the reading from all 7 Chara Karakas (Atmakaraka and others).",
+    loadingHint: "Calculating Chara Dasha years and Jaimini Karaka degrees...",
+    karakasTitle: "Jaimini's 7 Chara Karakas",
+    tableTitle: "Jaimini Chara Dasha Timeline (Rashi Dasha)",
+    colSign: "Dasha Sign",
+    colLord: "Lord",
+    colDuration: "Duration (yrs)",
+    colStart: "Start",
+    colEnd: "End",
+    years: "yrs",
+  },
+} as const;
+
 export default function CharDashaClient({ locale }: { locale: Locale }) {
+  const s = STRINGS[locale];
   const [form, setForm] = useState<BirthDataValue>(DEFAULT_BIRTH_DATA);
   const [lang, setLang] = useState<"hi" | "en">(locale);
   const [loading, setLoading] = useState(false);
@@ -42,7 +76,7 @@ export default function CharDashaClient({ locale }: { locale: Locale }) {
         setData(res.data);
       }
     } catch (err: any) {
-      setError(err?.response?.data?.message || err?.message || "जैमिनी चर दशा गणना विफल रही।");
+      setError(err?.response?.data?.message || err?.message || s.error);
     } finally {
       setLoading(false);
     }
@@ -57,7 +91,7 @@ export default function CharDashaClient({ locale }: { locale: Locale }) {
       category="dasha"
       title="Jaimini Chara Dasha"
       hindiTitle="जैमिनी चर दशा"
-      description="राशि-आधारित दशा क्रम एवं आत्मकारक, अमात्यकारक ग्रहों के आधार पर फलादेश।"
+      description={locale === "en" ? "Jaimini's sign-based dasha sequence, read through the Atmakaraka and Amatyakaraka significators." : "राशि-आधारित दशा क्रम एवं आत्मकारक, अमात्यकारक ग्रहों के आधार पर फलादेश।"}
       icon="🧭"
       locale={locale}
     >
@@ -93,10 +127,10 @@ export default function CharDashaClient({ locale }: { locale: Locale }) {
             <SubmitButton loading={loading}>
               {loading ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin" /> चर दशा क्रम गणना जारी...
+                  <Loader2 className="w-4 h-4 animate-spin" /> {s.calculating}
                 </>
               ) : (
-                "जैमिनी चर दशा निकालें"
+                s.submit
               )}
             </SubmitButton>
           </form>
@@ -108,21 +142,21 @@ export default function CharDashaClient({ locale }: { locale: Locale }) {
           {!data && !loading && !error && (
             <div className="bg-card rounded-2xl border border-line p-10 text-center text-ink-muted">
               <div className="text-4xl mb-3">🧭</div>
-              <p className="text-sm">महर्षि जैमिनी प्रतिपादित राशि दशा एवं 7 चर कारकों (आत्मकारक आदि) का फल देखें।</p>
+              <p className="text-sm">{s.emptyHint}</p>
             </div>
           )}
 
           {loading && (
             <div className="bg-card rounded-2xl border border-line p-12 text-center text-ink-soft flex flex-col items-center justify-center">
               <Loader2 className="w-8 h-8 text-accent animate-spin mb-3" />
-              <p className="text-sm">चर दशा वर्ष एवं जैमिनी कारक अंशों की गणना जारी है...</p>
+              <p className="text-sm">{s.loadingHint}</p>
             </div>
           )}
 
           {data && (
             <div className="space-y-6">
               {karakas.length > 0 && (
-                <ResultSection title="जैमिनी 7 चर कारक (Jaimini Karakas)">
+                <ResultSection title={s.karakasTitle}>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                     {karakas.map((k: any, idx: number) => (
                       <div key={idx} className="p-3 bg-surface-alt rounded-xl border border-line/60">
@@ -133,7 +167,7 @@ export default function CharDashaClient({ locale }: { locale: Locale }) {
                           {k.planet || k.graha}
                         </div>
                         {k.degree && (
-                          <div className="text-[11px] text-ink-soft font-mono mt-0.5">
+                          <div className="text-[11px] text-ink-soft font-mono-brand mt-0.5">
                             {Number(k.degree).toFixed(2)}°
                           </div>
                         )}
@@ -144,16 +178,16 @@ export default function CharDashaClient({ locale }: { locale: Locale }) {
               )}
 
               {Array.isArray(charDashaList) && charDashaList.length > 0 && (
-                <ResultSection title="जैमिनी चर दशा क्रम (Rashi Dasha Timeline)">
+                <ResultSection title={s.tableTitle}>
                   <div className="overflow-x-auto">
                     <table className="w-full text-xs text-left">
                       <thead className="text-[11px] uppercase bg-surface-alt/80 text-ink-soft">
                         <tr>
-                          <th className="py-2.5 px-3">दशा राशि</th>
-                          <th className="py-2.5 px-3">स्वामी</th>
-                          <th className="py-2.5 px-3">अवधि (वर्ष)</th>
-                          <th className="py-2.5 px-3">आरंभ काल</th>
-                          <th className="py-2.5 px-3">समाप्ति काल</th>
+                          <th className="py-2.5 px-3">{s.colSign}</th>
+                          <th className="py-2.5 px-3">{s.colLord}</th>
+                          <th className="py-2.5 px-3">{s.colDuration}</th>
+                          <th className="py-2.5 px-3">{s.colStart}</th>
+                          <th className="py-2.5 px-3">{s.colEnd}</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-line/60">
@@ -163,9 +197,9 @@ export default function CharDashaClient({ locale }: { locale: Locale }) {
                               {d.sign || d.rashi || d.name}
                             </td>
                             <td className="py-2.5 px-3">{d.ruler || d.lord || "-"}</td>
-                            <td className="py-2.5 px-3 font-semibold">{d.duration_years || d.years || "-"} वर्ष</td>
-                            <td className="py-2.5 px-3 font-mono">{d.start_date || d.from || "-"}</td>
-                            <td className="py-2.5 px-3 font-mono">{d.end_date || d.to || "-"}</td>
+                            <td className="py-2.5 px-3 font-semibold">{d.duration_years || d.years || "-"} {s.years}</td>
+                            <td className="py-2.5 px-3 font-mono-brand">{d.start_date || d.from || "-"}</td>
+                            <td className="py-2.5 px-3 font-mono-brand">{d.end_date || d.to || "-"}</td>
                           </tr>
                         ))}
                       </tbody>

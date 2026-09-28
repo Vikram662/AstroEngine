@@ -8,7 +8,37 @@ import { BirthDataFields, DEFAULT_BIRTH_DATA, BirthDataValue } from "@/component
 import { ResultSection, ResultRow, ResultBadge, SubmitButton, ErrorNote } from "@/components/calculators/ResultRows";
 import { Loader2 } from "lucide-react";
 
+const STRINGS = {
+  hi: {
+    error: "चौघड़िया गणना विफल रही।",
+    dateLabel: "तारीख (Select Date)",
+    calculating: "चौघड़िया समय निकाला जा रहा है...",
+    submit: "चौघड़िया मुहूर्त देखें",
+    emptyHint: "तिथि व शहर चुनें और दिन व रात के 16 चौघड़िया मुहूर्त (शुभ, लाभ, अमृत आदि) देखें।",
+    loadingHint: "दिनमान एवं रात्रिमान के 8-8 समान खंडों की गणना जारी है...",
+    dayTitle: "दिन का चौघड़िया (Day Choghadiya)",
+    nightTitle: "रात्रि का चौघड़िया (Night Choghadiya)",
+    colMuhurat: "मुहूर्त",
+    colTime: "समय (Time)",
+    colNature: "प्रकृति",
+  },
+  en: {
+    error: "Choghadiya calculation failed.",
+    dateLabel: "Select Date",
+    calculating: "Calculating Choghadiya timings...",
+    submit: "View Choghadiya Muhurats",
+    emptyHint: "Choose a date and city to see all 16 day and night Choghadiya muhurats (Shubh, Labh, Amrit, and more).",
+    loadingHint: "Calculating the 8 equal segments each for day and night...",
+    dayTitle: "Day Choghadiya",
+    nightTitle: "Night Choghadiya",
+    colMuhurat: "Muhurat",
+    colTime: "Time",
+    colNature: "Nature",
+  },
+} as const;
+
 export default function ChoghadiyaClient({ locale }: { locale: Locale }) {
+  const s = STRINGS[locale];
   const [form, setForm] = useState<BirthDataValue>({
     ...DEFAULT_BIRTH_DATA,
     dob: new Date().toISOString().split("T")[0],
@@ -46,7 +76,7 @@ export default function ChoghadiyaClient({ locale }: { locale: Locale }) {
         setData(res.data);
       }
     } catch (err: any) {
-      setError(err?.response?.data?.message || err?.message || "चौघड़िया गणना विफल रही।");
+      setError(err?.response?.data?.message || err?.message || s.error);
     } finally {
       setLoading(false);
     }
@@ -72,7 +102,7 @@ export default function ChoghadiyaClient({ locale }: { locale: Locale }) {
       category="panchang"
       title="Day & Night Choghadiya"
       hindiTitle="दिन एवं रात्रि चौघड़िया"
-      description="शुभ, अमृत, लाभ, चर, रोग, काल एवं उद्वेग के 16 दैनिक समय खंड।"
+      description={locale === "en" ? "The day's 16 time segments — Shubh, Amrit, Labh, Char, Rog, Kaal, and Udveg." : "शुभ, अमृत, लाभ, चर, रोग, काल एवं उद्वेग के 16 दैनिक समय खंड।"}
       icon="⏱️"
       locale={locale}
     >
@@ -108,16 +138,16 @@ export default function ChoghadiyaClient({ locale }: { locale: Locale }) {
               onChange={setForm}
               requireName={false}
               requireGender={false}
-              dateLabel="तारीख (Select Date)"
+              dateLabel={s.dateLabel}
             />
 
             <SubmitButton loading={loading}>
               {loading ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin" /> चौघड़िया समय निकाला जा रहा है...
+                  <Loader2 className="w-4 h-4 animate-spin" /> {s.calculating}
                 </>
               ) : (
-                "चौघड़िया मुहूर्त देखें"
+                s.submit
               )}
             </SubmitButton>
           </form>
@@ -129,28 +159,28 @@ export default function ChoghadiyaClient({ locale }: { locale: Locale }) {
           {!data && !loading && !error && (
             <div className="bg-card rounded-2xl border border-line p-10 text-center text-ink-muted">
               <div className="text-4xl mb-3">⏱️</div>
-              <p className="text-sm">तिथि व शहर चुनें और दिन व रात के 16 चौघड़िया मुहूर्त (शुभ, लाभ, अमृत आदि) देखें।</p>
+              <p className="text-sm">{s.emptyHint}</p>
             </div>
           )}
 
           {loading && (
             <div className="bg-card rounded-2xl border border-line p-12 text-center text-ink-soft flex flex-col items-center justify-center">
               <Loader2 className="w-8 h-8 text-accent animate-spin mb-3" />
-              <p className="text-sm">दिनमान एवं रात्रिमान के 8-8 समान खंडों की गणना जारी है...</p>
+              <p className="text-sm">{s.loadingHint}</p>
             </div>
           )}
 
           {data && (
             <div className="space-y-6">
               {Array.isArray(dayChoghadiya) && dayChoghadiya.length > 0 && (
-                <ResultSection title="दिन का चौघड़िया (Day Choghadiya)">
+                <ResultSection title={s.dayTitle}>
                   <div className="overflow-x-auto">
                     <table className="w-full text-xs text-left">
                       <thead className="text-[11px] uppercase bg-surface-alt/80 text-ink-soft">
                         <tr>
-                          <th className="py-2 px-3">मुहूर्त</th>
-                          <th className="py-2 px-3">समय (Time)</th>
-                          <th className="py-2 px-3">प्रकृति</th>
+                          <th className="py-2 px-3">{s.colMuhurat}</th>
+                          <th className="py-2 px-3">{s.colTime}</th>
+                          <th className="py-2 px-3">{s.colNature}</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-line/60">
@@ -159,7 +189,7 @@ export default function ChoghadiyaClient({ locale }: { locale: Locale }) {
                           return (
                             <tr key={idx} className="hover:bg-surface-alt/40 transition">
                               <td className="py-2.5 px-3 font-bold text-ink">{name}</td>
-                              <td className="py-2.5 px-3 font-mono">{c.start_time || c.start || c.from} - {c.end_time || c.end || c.to}</td>
+                              <td className="py-2.5 px-3 font-mono-brand">{c.start_time || c.start || c.from} - {c.end_time || c.end || c.to}</td>
                               <td className="py-2.5 px-3">
                                 <ResultBadge tone={getTone(name)}>{c.nature || c.type || name}</ResultBadge>
                               </td>
@@ -173,14 +203,14 @@ export default function ChoghadiyaClient({ locale }: { locale: Locale }) {
               )}
 
               {Array.isArray(nightChoghadiya) && nightChoghadiya.length > 0 && (
-                <ResultSection title="रात्रि का चौघड़िया (Night Choghadiya)">
+                <ResultSection title={s.nightTitle}>
                   <div className="overflow-x-auto">
                     <table className="w-full text-xs text-left">
                       <thead className="text-[11px] uppercase bg-surface-alt/80 text-ink-soft">
                         <tr>
-                          <th className="py-2 px-3">मुहूर्त</th>
-                          <th className="py-2 px-3">समय (Time)</th>
-                          <th className="py-2 px-3">प्रकृति</th>
+                          <th className="py-2 px-3">{s.colMuhurat}</th>
+                          <th className="py-2 px-3">{s.colTime}</th>
+                          <th className="py-2 px-3">{s.colNature}</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-line/60">
@@ -189,7 +219,7 @@ export default function ChoghadiyaClient({ locale }: { locale: Locale }) {
                           return (
                             <tr key={idx} className="hover:bg-surface-alt/40 transition">
                               <td className="py-2.5 px-3 font-bold text-ink">{name}</td>
-                              <td className="py-2.5 px-3 font-mono">{c.start_time || c.start || c.from} - {c.end_time || c.end || c.to}</td>
+                              <td className="py-2.5 px-3 font-mono-brand">{c.start_time || c.start || c.from} - {c.end_time || c.end || c.to}</td>
                               <td className="py-2.5 px-3">
                                 <ResultBadge tone={getTone(name)}>{c.nature || c.type || name}</ResultBadge>
                               </td>

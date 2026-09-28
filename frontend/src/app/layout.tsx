@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Figtree, Fraunces } from "next/font/google";
+import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { buildOrganizationSchema } from "@/lib/schema";
@@ -12,21 +12,20 @@ export const metadata: Metadata = {
 
 import Script from "next/script";
 
-// Public-site brand fonts (redesign Phase 1 — see POST_REVIEW_FIX_LOG.md). Exposed
-// as --font-figtree/--font-fraunces on <html> and mapped to the new font-brand /
-// font-display utilities in globals.css; the existing font-sans utility used across
-// the dashboard/admin panels is untouched, so this doesn't change anything visually
-// until a public-page component opts into font-brand/font-display.
-const figtree = Figtree({
+// Public-site brand fonts — exposed as CSS custom properties on <html> and mapped
+// to the font-brand / font-display / font-mono-brand utilities in globals.css.
+const inter = Inter({
   subsets: ["latin"],
-  variable: "--font-figtree",
+  style: ["normal", "italic"],
+  weight: ["400", "500", "600", "700", "800"],
+  variable: "--font-inter",
   display: "swap",
 });
 
-const fraunces = Fraunces({
+const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
-  style: ["normal", "italic"],
-  variable: "--font-fraunces",
+  weight: ["400", "500"],
+  variable: "--font-jetbrains-mono",
   display: "swap",
 });
 
@@ -36,7 +35,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`h-full antialiased font-sans ${figtree.variable} ${fraunces.variable}`}>
+    <html lang="en" className={`h-full antialiased font-sans ${inter.variable} ${jetbrainsMono.variable}`}>
       <body className="min-h-full flex flex-col bg-white text-slate-900">
         <JsonLd data={buildOrganizationSchema()} />
         {children}

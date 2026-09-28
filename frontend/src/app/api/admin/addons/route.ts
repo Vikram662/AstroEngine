@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdminSession } from "@/lib/authGuard";
+import { toJsonSafe } from "@/lib/money";
 
 // GET /api/admin/addons - Admin gets all addons directly from MySQL
 export async function GET() {
@@ -16,7 +17,7 @@ export async function GET() {
 
     return NextResponse.json({
       status: "success",
-      data: addons || []
+      data: toJsonSafe(addons || [])
     });
   } catch (error: unknown) {
     const err = error as { message?: string };
@@ -80,7 +81,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       status: "success",
       message: `Addon ${upserted.name} successfully saved to MySQL!`,
-      data: upserted
+      data: toJsonSafe(upserted)
     });
   } catch (error: unknown) {
     const err = error as { message?: string };

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdminSession } from "@/lib/authGuard";
+import { toJsonSafe } from "@/lib/money";
 
 export async function GET(req: NextRequest) {
   try {
@@ -34,7 +35,7 @@ export async function GET(req: NextRequest) {
           updatedAt: true
         }
       });
-      return NextResponse.json({ status: "success", data: users });
+      return NextResponse.json({ status: "success", data: toJsonSafe(users) });
     }
 
     if (type === "billing") {
@@ -47,7 +48,7 @@ export async function GET(req: NextRequest) {
         orderBy: { createdAt: "desc" },
         take: 50
       });
-      return NextResponse.json({ status: "success", data: txs });
+      return NextResponse.json({ status: "success", data: toJsonSafe(txs) });
     }
 
     if (type === "audit") {
@@ -100,7 +101,7 @@ export async function GET(req: NextRequest) {
         id: l.id.toString(),
         userEmail: l.user?.email || "anonymous"
       }));
-      return NextResponse.json({ status: "success", data: serialized });
+      return NextResponse.json({ status: "success", data: toJsonSafe(serialized) });
     }
 
     if (type === "pdf_jobs" || type === "pdf_queue") {
@@ -117,7 +118,7 @@ export async function GET(req: NextRequest) {
         ...j,
         userEmail: j.user?.email || "unknown"
       }));
-      return NextResponse.json({ status: "success", data: serialized });
+      return NextResponse.json({ status: "success", data: toJsonSafe(serialized) });
     }
 
     return NextResponse.json({ status: "error", message: "Invalid type" }, { status: 400 });
@@ -179,7 +180,7 @@ export async function PATCH(req: NextRequest) {
       }
     });
 
-    return NextResponse.json({ status: "success", data: updatedUser });
+    return NextResponse.json({ status: "success", data: toJsonSafe(updatedUser) });
   } catch (err: unknown) {
     const error = err as { message?: string };
     return NextResponse.json({ status: "error", message: error.message }, { status: 500 });

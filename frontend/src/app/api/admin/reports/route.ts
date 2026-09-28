@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdminSession } from "@/lib/authGuard";
+import { toMoney } from "@/lib/money";
 
 // GET /api/admin/reports - Live module popularity & CSV generator from MySQL
 export async function GET(req: NextRequest) {
@@ -42,9 +43,10 @@ export async function GET(req: NextRequest) {
 
       let csv = "InvoiceNumber,Date,UserEmail,Amount,TaxableValue,CGST,SGST,Status\n";
       for (const t of txs) {
-        const taxable = (t.amount / 1.18).toFixed(2);
-        const gst = ((t.amount - parseFloat(taxable)) / 2).toFixed(2);
-        csv += `${t.id.substring(0, 8)},${t.createdAt.toISOString().substring(0, 10)},${t.user.email},${t.amount},${taxable},${gst},${gst},${t.status}\n`;
+        const amount = toMoney(t.amount);
+        const taxable = (amount / 1.18).toFixed(2);
+        const gst = ((amount - parseFloat(taxable)) / 2).toFixed(2);
+        csv += `${t.id.substring(0, 8)},${t.createdAt.toISOString().substring(0, 10)},${t.user.email},${amount},${taxable},${gst},${gst},${t.status}\n`;
       }
       return new NextResponse(csv, {
         headers: {
@@ -62,7 +64,7 @@ export async function GET(req: NextRequest) {
 
       let csv = "UserId,Email,PlanTier,MonthlyUsage,MonthlyQuota,WalletBalance\n";
       for (const u of users) {
-        csv += `${u.id},${u.email},${u.planTier},${u.monthlyUsage},${u.monthlyQuota},${u.walletBalance}\n`;
+        csv += `${u.id},${u.email},${u.planTier},${u.monthlyUsage},${u.monthlyQuota},${toMoney(u.walletBalance)}\n`;
       }
       return new NextResponse(csv, {
         headers: {

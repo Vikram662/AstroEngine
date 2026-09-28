@@ -21,7 +21,55 @@ const DEFAULT_ROOMS: VastuRoom[] = [
   { room_type: "living_room", zone: "E", color: "White" },
 ];
 
+const STRINGS = {
+  hi: {
+    error: "वास्तु मूल्यांकन विफल रहा।",
+    propertyTypeLabel: "भवन प्रकार (Property)",
+    propertyTypes: { residential: "आवासीय (Residential)", commercial: "व्यावसायिक (Commercial)", industrial: "औद्योगिक (Industrial)" },
+    facingLabel: "मुख्य द्वार दिशा (Facing)",
+    directions: { North: "उत्तर (North)", East: "पूर्व (East)", South: "दक्षिण (South)", West: "पश्चिम (West)", NE: "ईशान (North-East)", SE: "आग्नेय (South-East)", SW: "नैऋत्य (South-West)", NW: "वायव्य (North-West)" },
+    roomsLabel: "कमरों की सूची (Room Mapping)",
+    addRoom: "कमरा जोड़ें",
+    roomTypes: { pooja_mandir: "पूजा घर (Pooja)", kitchen: "रसोई (Kitchen)", master_bedroom: "मास्टर बेडरूम", toilet: "शौचालय (Toilet)", living_room: "ड्राइंग रूम (Living)", locker: "तिजोरी (Locker)" },
+    zones: { N: "उत्तर North (N)", NE: "उत्तर-पूर्व North-East (NE)", E: "पूर्व East (E)", SE: "दक्षिण-पूर्व South-East (SE)", S: "दक्षिण South (S)", SSW: "दक्षिण-दक्षिण-पश्चिम", SW: "दक्षिण-पश्चिम South-West (SW)", W: "पश्चिम West (W)", NW: "उत्तर-पश्चिम North-West (NW)" },
+    calculating: "16 वास्तु ज़ोन का विश्लेषण जारी...",
+    submit: "वास्तु स्कोर जांचें",
+    emptyHint: "मुख्य द्वार दिशा व कमरों की ज़ोन मैपिंग दर्ज करें और 100 में से वैदिक वास्तु स्कोर प्राप्त करें।",
+    loadingHint: "पंचतत्व संतुलन (अग्नि, जल, वायु, पृथ्वी, आकाश) का विश्लेषण जारी है...",
+    scoreTitle: "वास्तु मूल्यांकन स्कोर",
+    scoreLabel: "समग्र वास्तु स्कोर (Vastu Score)",
+    gradeExcellent: "अत्यंत शुभ एवं ऊर्जावान भवन (Excellent)",
+    gradeModerate: "मध्यम / कुछ कमरों में दोष सुधार आवश्यक",
+    roomReportTitle: "कमरा-वार वास्तु रिपोर्ट",
+    favorable: "अनुकूल",
+    faulty: "दोषपूर्ण",
+  },
+  en: {
+    error: "Vastu evaluation failed.",
+    propertyTypeLabel: "Property Type",
+    propertyTypes: { residential: "Residential", commercial: "Commercial", industrial: "Industrial" },
+    facingLabel: "Main Entrance Facing",
+    directions: { North: "North", East: "East", South: "South", West: "West", NE: "North-East", SE: "South-East", SW: "South-West", NW: "North-West" },
+    roomsLabel: "Room Mapping",
+    addRoom: "Add Room",
+    roomTypes: { pooja_mandir: "Pooja Room", kitchen: "Kitchen", master_bedroom: "Master Bedroom", toilet: "Toilet", living_room: "Living Room", locker: "Locker / Safe" },
+    zones: { N: "North (N)", NE: "North-East (NE)", E: "East (E)", SE: "South-East (SE)", S: "South (S)", SSW: "South-South-West", SW: "South-West (SW)", W: "West (W)", NW: "North-West (NW)" },
+    calculating: "Analyzing all 16 Vastu zones...",
+    submit: "Check Vastu Score",
+    emptyHint: "Enter the main entrance direction and each room's zone mapping to get a Vedic Vastu score out of 100.",
+    loadingHint: "Analyzing the balance of the five elements (Fire, Water, Air, Earth, Space)...",
+    scoreTitle: "Vastu Evaluation Score",
+    scoreLabel: "Overall Vastu Score",
+    gradeExcellent: "Highly auspicious and energetically balanced building",
+    gradeModerate: "Moderate — some rooms need correction",
+    roomReportTitle: "Room-by-Room Vastu Report",
+    favorable: "Favorable",
+    faulty: "Flawed",
+  },
+} as const;
+
 export default function VastuShastraClient({ locale }: { locale: Locale }) {
+  const s = STRINGS[locale];
   const [propertyType, setPropertyType] = useState("residential");
   const [facing, setFacing] = useState("East");
   const [rooms, setRooms] = useState<VastuRoom[]>(DEFAULT_ROOMS);
@@ -69,7 +117,7 @@ export default function VastuShastraClient({ locale }: { locale: Locale }) {
         setData(res.data);
       }
     } catch (err: any) {
-      setError(err?.response?.data?.message || err?.message || "वास्तु मूल्यांकन विफल रहा।");
+      setError(err?.response?.data?.message || err?.message || s.error);
     } finally {
       setLoading(false);
     }
@@ -84,7 +132,7 @@ export default function VastuShastraClient({ locale }: { locale: Locale }) {
       category="vastu"
       title="Vastu Shastra Evaluator"
       hindiTitle="16-जोन वास्तु विश्लेषण"
-      description="भवन दिशा एवं कमरों की स्थिति अनुसार 16 वास्तु ज़ोन का संपूर्ण मूल्यांकन।"
+      description={locale === "en" ? "A full evaluation of all 16 Vastu zones based on your building's direction and room placement." : "भवन दिशा एवं कमरों की स्थिति अनुसार 16 वास्तु ज़ोन का संपूर्ण मूल्यांकन।"}
       icon="🏠"
       locale={locale}
     >
@@ -119,7 +167,7 @@ export default function VastuShastraClient({ locale }: { locale: Locale }) {
               <div>
                 <label htmlFor="prop_type" className="block text-xs font-semibold text-ink-soft mb-1.5 flex items-center gap-1.5">
                   <Home className="w-3.5 h-3.5 text-accent" />
-                  <span>भवन प्रकार (Property)</span>
+                  <span>{s.propertyTypeLabel}</span>
                 </label>
                 <select
                   id="prop_type"
@@ -127,16 +175,16 @@ export default function VastuShastraClient({ locale }: { locale: Locale }) {
                   onChange={(e) => setPropertyType(e.target.value)}
                   className="w-full px-3 py-2.5 rounded-xl border border-line bg-surface text-ink text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition"
                 >
-                  <option value="residential">आवासीय (Residential)</option>
-                  <option value="commercial">व्यावसायिक (Commercial)</option>
-                  <option value="industrial">औद्योगिक (Industrial)</option>
+                  <option value="residential">{s.propertyTypes.residential}</option>
+                  <option value="commercial">{s.propertyTypes.commercial}</option>
+                  <option value="industrial">{s.propertyTypes.industrial}</option>
                 </select>
               </div>
 
               <div>
                 <label htmlFor="prop_facing" className="block text-xs font-semibold text-ink-soft mb-1.5 flex items-center gap-1.5">
                   <Compass className="w-3.5 h-3.5 text-accent" />
-                  <span>मुख्य द्वार दिशा (Facing)</span>
+                  <span>{s.facingLabel}</span>
                 </label>
                 <select
                   id="prop_facing"
@@ -144,27 +192,27 @@ export default function VastuShastraClient({ locale }: { locale: Locale }) {
                   onChange={(e) => setFacing(e.target.value)}
                   className="w-full px-3 py-2.5 rounded-xl border border-line bg-surface text-ink text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition"
                 >
-                  <option value="North">उत्तर (North)</option>
-                  <option value="East">पूर्व (East)</option>
-                  <option value="South">दक्षिण (South)</option>
-                  <option value="West">पश्चिम (West)</option>
-                  <option value="NE">ईशान (North-East)</option>
-                  <option value="SE">आग्नेय (South-East)</option>
-                  <option value="SW">नैऋत्य (South-West)</option>
-                  <option value="NW">वायव्य (North-West)</option>
+                  <option value="North">{s.directions.North}</option>
+                  <option value="East">{s.directions.East}</option>
+                  <option value="South">{s.directions.South}</option>
+                  <option value="West">{s.directions.West}</option>
+                  <option value="NE">{s.directions.NE}</option>
+                  <option value="SE">{s.directions.SE}</option>
+                  <option value="SW">{s.directions.SW}</option>
+                  <option value="NW">{s.directions.NW}</option>
                 </select>
               </div>
             </div>
 
             <div>
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-semibold text-ink-soft">कमरों की सूची (Room Mapping)</span>
+                <span className="text-xs font-semibold text-ink-soft">{s.roomsLabel}</span>
                 <button
                   type="button"
                   onClick={handleAddRoom}
                   className="text-xs font-bold text-accent hover:text-accent-hover flex items-center gap-1"
                 >
-                  <Plus className="w-3.5 h-3.5" /> कमरा जोड़ें
+                  <Plus className="w-3.5 h-3.5" /> {s.addRoom}
                 </button>
               </div>
 
@@ -176,12 +224,12 @@ export default function VastuShastraClient({ locale }: { locale: Locale }) {
                       onChange={(e) => handleUpdateRoom(idx, "room_type", e.target.value)}
                       className="flex-1 px-2 py-1.5 rounded-lg border border-line bg-card text-ink"
                     >
-                      <option value="pooja_mandir">पूजा घर (Pooja)</option>
-                      <option value="kitchen">रसोई (Kitchen)</option>
-                      <option value="master_bedroom">मास्टर बेडरूम</option>
-                      <option value="toilet">शौचालय (Toilet)</option>
-                      <option value="living_room">ड्राइंग रूम (Living)</option>
-                      <option value="locker">तिजोरी (Locker)</option>
+                      <option value="pooja_mandir">{s.roomTypes.pooja_mandir}</option>
+                      <option value="kitchen">{s.roomTypes.kitchen}</option>
+                      <option value="master_bedroom">{s.roomTypes.master_bedroom}</option>
+                      <option value="toilet">{s.roomTypes.toilet}</option>
+                      <option value="living_room">{s.roomTypes.living_room}</option>
+                      <option value="locker">{s.roomTypes.locker}</option>
                     </select>
 
                     <select
@@ -189,15 +237,15 @@ export default function VastuShastraClient({ locale }: { locale: Locale }) {
                       onChange={(e) => handleUpdateRoom(idx, "zone", e.target.value)}
                       className="w-24 px-2 py-1.5 rounded-lg border border-line bg-card text-ink font-semibold"
                     >
-                      <option value="N">North (N)</option>
-                      <option value="NE">North-East (NE)</option>
-                      <option value="E">East (E)</option>
-                      <option value="SE">South-East (SE)</option>
-                      <option value="S">South (S)</option>
-                      <option value="SSW">South-South-West</option>
-                      <option value="SW">South-West (SW)</option>
-                      <option value="W">West (W)</option>
-                      <option value="NW">North-West (NW)</option>
+                      <option value="N">{s.zones.N}</option>
+                      <option value="NE">{s.zones.NE}</option>
+                      <option value="E">{s.zones.E}</option>
+                      <option value="SE">{s.zones.SE}</option>
+                      <option value="S">{s.zones.S}</option>
+                      <option value="SSW">{s.zones.SSW}</option>
+                      <option value="SW">{s.zones.SW}</option>
+                      <option value="W">{s.zones.W}</option>
+                      <option value="NW">{s.zones.NW}</option>
                     </select>
 
                     <button
@@ -215,10 +263,10 @@ export default function VastuShastraClient({ locale }: { locale: Locale }) {
             <SubmitButton loading={loading}>
               {loading ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin" /> 16 वास्तु ज़ोन का विश्लेषण जारी...
+                  <Loader2 className="w-4 h-4 animate-spin" /> {s.calculating}
                 </>
               ) : (
-                "वास्तु स्कोर जांचें"
+                s.submit
               )}
             </SubmitButton>
           </form>
@@ -230,20 +278,20 @@ export default function VastuShastraClient({ locale }: { locale: Locale }) {
           {!data && !loading && !error && (
             <div className="bg-card rounded-2xl border border-line p-10 text-center text-ink-muted">
               <div className="text-4xl mb-3">🏠</div>
-              <p className="text-sm">मुख्य द्वार दिशा व कमरों की ज़ोन मैपिंग दर्ज करें और 100 में से वैदिक वास्तु स्कोर प्राप्त करें।</p>
+              <p className="text-sm">{s.emptyHint}</p>
             </div>
           )}
 
           {loading && (
             <div className="bg-card rounded-2xl border border-line p-12 text-center text-ink-soft flex flex-col items-center justify-center">
               <Loader2 className="w-8 h-8 text-accent animate-spin mb-3" />
-              <p className="text-sm">पंचतत्व संतुलन (अग्नि, जल, वायु, पृथ्वी, आकाश) का विश्लेषण जारी है...</p>
+              <p className="text-sm">{s.loadingHint}</p>
             </div>
           )}
 
           {data && (
             <div className="space-y-6">
-              <ResultSection title="वास्तु मूल्यांकन स्कोर">
+              <ResultSection title={s.scoreTitle}>
                 <div
                   className={`p-6 rounded-xl border text-center mb-4 ${
                     score >= 70
@@ -254,17 +302,17 @@ export default function VastuShastraClient({ locale }: { locale: Locale }) {
                   }`}
                 >
                   <div className="text-xs uppercase font-bold tracking-wider mb-1">
-                    समग्र वास्तु स्कोर (Vastu Score)
+                    {s.scoreLabel}
                   </div>
                   <div className="text-4xl font-extrabold">{score} / 100</div>
                   <div className="text-sm font-semibold mt-2">
-                    {data.grade || (score >= 75 ? "अत्यंत शुभ एवं ऊर्जावान भवन (Excellent)" : "मध्यम / कुछ कमरों में दोष सुधार आवश्यक")}
+                    {data.grade || (score >= 75 ? s.gradeExcellent : s.gradeModerate)}
                   </div>
                 </div>
               </ResultSection>
 
               {Array.isArray(roomEvaluations) && roomEvaluations.length > 0 && (
-                <ResultSection title="कमरा-वार वास्तु रिपोर्ट">
+                <ResultSection title={s.roomReportTitle}>
                   <div className="divide-y divide-line/60">
                     {roomEvaluations.map((re: any, idx: number) => {
                       const isFavorable = re.is_favorable || re.status === "good";
@@ -275,7 +323,7 @@ export default function VastuShastraClient({ locale }: { locale: Locale }) {
                             {re.remark && <div className="text-[11px] text-ink-muted">{re.remark}</div>}
                           </div>
                           <ResultBadge tone={isFavorable ? "good" : "bad"}>
-                            {isFavorable ? "अनुकूल" : "दोषपूर्ण"}
+                            {isFavorable ? s.favorable : s.faulty}
                           </ResultBadge>
                         </div>
                       );

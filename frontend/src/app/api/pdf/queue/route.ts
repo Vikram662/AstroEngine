@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getVerifiedSession } from "@/lib/authGuard";
 import { buildPdfPayload, dispatchPdfJob } from "@/lib/pdfEngine";
+import { toJsonSafe } from "@/lib/money";
 
 export async function GET() {
   try {
@@ -24,7 +25,7 @@ export async function GET() {
       take: 20
     });
 
-    return NextResponse.json({ status: "success", jobs });
+    return NextResponse.json({ status: "success", jobs: toJsonSafe(jobs) });
   } catch (err) {
     return NextResponse.json({ status: "success", jobs: [] });
   }

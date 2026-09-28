@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { toJsonSafe } from "@/lib/money";
 
 // Public add-on catalogue used by the pricing page. Account-specific activation
 // state remains available only from /api/user/addons.
@@ -10,7 +11,7 @@ export async function GET() {
       orderBy: { priceMonthly: "asc" },
     });
 
-    return NextResponse.json({ status: "success", data: addons });
+    return NextResponse.json({ status: "success", data: toJsonSafe(addons) });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to load add-ons.";
     return NextResponse.json({ status: "error", message, data: [] }, { status: 500 });

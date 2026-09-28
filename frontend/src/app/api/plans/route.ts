@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdminSession } from "@/lib/authGuard";
+import { toJsonSafe } from "@/lib/money";
 
 export async function GET() {
   try {
@@ -33,7 +34,7 @@ export async function GET() {
 
     return NextResponse.json({
       status: "success",
-      data: plansWithPerms
+      data: toJsonSafe(plansWithPerms)
     });
   } catch (err: unknown) {
     const error = err as { message?: string };
@@ -125,7 +126,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    return NextResponse.json({ status: "success", plan, allowedModules });
+    return NextResponse.json({ status: "success", plan: toJsonSafe(plan), allowedModules });
   } catch (error: unknown) {
     const err = error as { message?: string };
     return NextResponse.json({ status: "error", message: err.message }, { status: 500 });
