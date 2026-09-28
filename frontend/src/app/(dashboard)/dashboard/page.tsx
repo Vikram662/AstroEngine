@@ -62,7 +62,7 @@ export default function DashboardOverviewPage() {
       .finally(() => setLoading(false));
   }, [router]);
 
-  const walletBalance = userData?.walletBalance ?? 0.0;
+  const walletBalance = Number(userData?.walletBalance ?? 0);
   const monthlyUsage = userData?.monthlyUsage ?? 0;
   const monthlyQuota = userData?.monthlyQuota ?? (userData?.planDetails?.includedQuota ?? 0);
   const usagePercentage = monthlyQuota > 0 ? Math.min(100, Math.round((monthlyUsage / monthlyQuota) * 100)) : 0;

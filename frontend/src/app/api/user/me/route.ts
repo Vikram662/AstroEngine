@@ -49,7 +49,7 @@ export async function GET() {
 
     return NextResponse.json({
       status: "success",
-      data: {
+      data: toJsonSafe({
         ...safeUser,
         apiLogs: formattedLogs,
         planDetails: planDetails || {
@@ -58,7 +58,7 @@ export async function GET() {
           includedQuota: user.monthlyQuota,
           features: ["All Standard Endpoints"]
         }
-      }
+      })
     });
   } catch (error: unknown) {
     const err = error as { message?: string };
