@@ -16,7 +16,10 @@ interface Props {
   category: string;
   icon?: string;
   locale?: Locale;
-  children: React.ReactNode;
+  form?: React.ReactNode;
+  results?: React.ReactNode;
+  layout?: "4-8" | "5-7" | "6-6";
+  children?: React.ReactNode;
 }
 
 const STRINGS = {
@@ -32,6 +35,9 @@ export const CalculatorPageShell: React.FC<Props> = ({
   category,
   icon,
   locale = "en",
+  form,
+  results,
+  layout = "4-8",
   children,
 }) => {
   const related = CALCULATOR_TOOLS.filter((t) => t.category === category && t.id !== slug).slice(0, 3);
@@ -40,6 +46,9 @@ export const CalculatorPageShell: React.FC<Props> = ({
   const calculatorsHref = locale === "hi" ? "/hi/#calculators" : "/#calculators";
   const relatedHref = (r: (typeof related)[number]) =>
     locale === "hi" && isMigratedPath(r.href) ? `/hi${r.href}` : r.href;
+
+  const leftColSpan = layout === "6-6" ? "lg:col-span-6" : layout === "5-7" ? "lg:col-span-5" : "lg:col-span-4";
+  const rightColSpan = layout === "6-6" ? "lg:col-span-6" : layout === "5-7" ? "lg:col-span-7" : "lg:col-span-8";
 
   return (
     <div className="min-h-screen flex flex-col bg-surface text-ink font-brand">
@@ -66,7 +75,22 @@ export const CalculatorPageShell: React.FC<Props> = ({
             <p className="mt-2 text-sm text-ink-soft max-w-2xl leading-relaxed">{description}</p>
           </div>
 
-          {children}
+          {form || results ? (
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+              {form && (
+                <div className={`${leftColSpan} bg-card p-6 rounded-2xl border border-line h-fit lg:sticky lg:top-24`}>
+                  {form}
+                </div>
+              )}
+              {results && (
+                <div className={`${rightColSpan} space-y-6`}>
+                  {results}
+                </div>
+              )}
+            </div>
+          ) : (
+            children
+          )}
 
           <aside className="mt-8 rounded-2xl border border-line bg-card p-5 sm:p-6">
             <h2 className="text-sm font-bold text-ink">{t.guide}</h2>

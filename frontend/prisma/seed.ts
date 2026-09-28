@@ -76,7 +76,7 @@ async function main() {
     {
       tier: "PRO" as const,
       name: "PRO",
-      priceMonthly: 4999,
+      priceMonthly: 14999,
       includedQuota: 300000,
       rateLimitPerMin: 300,
       overageCost: 0.015,
@@ -86,7 +86,7 @@ async function main() {
     {
       tier: "ENTERPRISE" as const,
       name: "ENTERPRISE",
-      priceMonthly: 14999,
+      priceMonthly: 39999,
       includedQuota: 1500000,
       rateLimitPerMin: 1200,
       overageCost: 0.01,

@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import axios from "axios";
 import { CalculatorPageShell } from "@/components/calculators/CalculatorPageShell";
 import type { Locale } from "@/lib/locale";
+import { fetchParallelSettled } from "@/lib/calculatorApi";
 import { BirthDataFields, DEFAULT_BIRTH_DATA, BirthDataValue } from "@/components/calculators/BirthDataFields";
 import { ResultSection, ResultRow, ResultBadge, SubmitButton, ErrorNote } from "@/components/calculators/ResultRows";
 import { Loader2 } from "lucide-react";
@@ -62,6 +63,7 @@ export default function NavamshaD9Client({ locale }: { locale: Locale }) {
   const [chartData, setChartData] = useState<any>(null);
   const [svgChart, setSvgChart] = useState<string>("");
   const [d1Signs, setD1Signs] = useState<Record<string, string>>({});
+  const [specialPoints, setSpecialPoints] = useState<any>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,7 +80,7 @@ export default function NavamshaD9Client({ locale }: { locale: Locale }) {
     };
 
     try {
-      const [resData, resSvg, resD1] = await Promise.all([
+      const [resData, resSvg, resD1, resSpecial] = await fetchParallelSettled([
         axios.post("/api/proxy", {
           endpoint: "/api/v1/parashari/chart/d9",
           payload,
@@ -99,19 +101,26 @@ export default function NavamshaD9Client({ locale }: { locale: Locale }) {
           payload,
           method: "POST",
         }),
+        axios.post("/api/proxy", {
+          endpoint: "/api/v1/parashari/special-points",
+          payload,
+          method: "POST",
+        }),
       ]);
 
-      if (resData.data?.data) {
-        setChartData(resData.data.data);
-      } else {
-        setChartData(resData.data);
+      if (!resData) throw new Error(s.error);
+
+      setChartData(resData);
+
+      if (resSvg && typeof resSvg === "string" && resSvg.includes("<svg")) {
+        setSvgChart(resSvg);
       }
 
-      if (resSvg.data && typeof resSvg.data === "string" && resSvg.data.includes("<svg")) {
-        setSvgChart(resSvg.data);
+      if (resSpecial) {
+        setSpecialPoints(resSpecial);
       }
 
-      const d1Planets = resD1.data?.data?.planets || resD1.data?.planets || [];
+      const d1Planets = resD1?.planets || [];
       const signMap: Record<string, string> = {};
       d1Planets.forEach((p: any) => {
         if (p?.id && p?.sign?.id) signMap[p.id] = p.sign.id;
@@ -127,76 +136,66 @@ export default function NavamshaD9Client({ locale }: { locale: Locale }) {
   const ascendant = chartData?.ascendant || chartData?.lagna;
   const planets = chartData?.planets || [];
 
-  return (
-    <CalculatorPageShell
-      slug="navamsha-d9"
-      category="kundli"
-      title="Navamsha Chart (D9)"
-      hindiTitle="नवांश कुंडली (D9)"
-      description={locale === "en" ? "Fortune, married life, your spouse's nature, and Dharma-trikona analysis." : "भाग्य, वैवाहिक जीवन, जीवनसाथी का स्वरूप एवं धर्म त्रिकोण विश्लेषण।"}
-      icon="✨"
-      locale={locale}
-    >
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        <div className="lg:col-span-5 bg-card p-6 rounded-2xl border border-line h-fit">
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="flex items-center justify-between pb-3 border-b border-line">
-              <span className="text-xs font-bold text-ink">भाषा / Language</span>
-              <div className="flex rounded-lg bg-surface-alt p-1 border border-line text-xs">
-                <button
-                  type="button"
-                  onClick={() => setLang("hi")}
-                  className={`px-3 py-1 rounded font-medium transition ${
-                    lang === "hi" ? "bg-accent text-white shadow" : "text-ink-soft hover:text-ink"
-                  }`}
-                >
-                  हिन्दी
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setLang("en")}
-                  className={`px-3 py-1 rounded font-medium transition ${
-                    lang === "en" ? "bg-accent text-white shadow" : "text-ink-soft hover:text-ink"
-                  }`}
-                >
-                  English
-                </button>
-              </div>
-            </div>
-
-            <BirthDataFields value={form} onChange={setForm} />
-
-            <SubmitButton loading={loading}>
-              {loading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" /> {s.calculating}
-                </>
-              ) : (
-                s.submit
-              )}
-            </SubmitButton>
-          </form>
+  const formContent = (
+    <form onSubmit={handleSubmit} className="space-y-5">
+      <div className="flex items-center justify-between pb-3 border-b border-line">
+        <span className="text-xs font-bold text-ink">भाषा / Language</span>
+        <div className="flex rounded-lg bg-surface-alt p-1 border border-line text-xs">
+          <button
+            type="button"
+            onClick={() => setLang("hi")}
+            className={`px-3 py-1 rounded font-medium transition ${
+              lang === "hi" ? "bg-accent text-white shadow" : "text-ink-soft hover:text-ink"
+            }`}
+          >
+            हिन्दी
+          </button>
+          <button
+            type="button"
+            onClick={() => setLang("en")}
+            className={`px-3 py-1 rounded font-medium transition ${
+              lang === "en" ? "bg-accent text-white shadow" : "text-ink-soft hover:text-ink"
+            }`}
+          >
+            English
+          </button>
         </div>
+      </div>
 
-        <div className="lg:col-span-7 space-y-6">
-          {error && <ErrorNote message={error} />}
+      <BirthDataFields value={form} onChange={setForm} />
 
-          {!chartData && !loading && !error && (
-            <div className="bg-card rounded-2xl border border-line p-10 text-center text-ink-muted">
-              <div className="text-4xl mb-3">✨</div>
-              <p className="text-sm">{s.emptyHint}</p>
-            </div>
-          )}
+      <SubmitButton loading={loading}>
+        {loading ? (
+          <>
+            <Loader2 className="w-4 h-4 animate-spin" /> {s.calculating}
+          </>
+        ) : (
+          s.submit
+        )}
+      </SubmitButton>
+    </form>
+  );
 
-          {loading && (
-            <div className="bg-card rounded-2xl border border-line p-12 text-center text-ink-soft flex flex-col items-center justify-center">
-              <Loader2 className="w-8 h-8 text-accent animate-spin mb-3" />
-              <p className="text-sm">{s.loadingHint}</p>
-            </div>
-          )}
+  const resultsContent = (
+    <>
+      {error && <ErrorNote message={error} />}
 
-          {chartData && (
-            <div className="space-y-6">
+      {!chartData && !loading && !error && (
+        <div className="bg-card rounded-2xl border border-line p-10 text-center text-ink-muted">
+          <div className="text-4xl mb-3">✨</div>
+          <p className="text-sm">{s.emptyHint}</p>
+        </div>
+      )}
+
+      {loading && (
+        <div className="bg-card rounded-2xl border border-line p-12 text-center text-ink-soft flex flex-col items-center justify-center">
+          <Loader2 className="w-8 h-8 text-accent animate-spin mb-3" />
+          <p className="text-sm">{s.loadingHint}</p>
+        </div>
+      )}
+
+      {chartData && (
+        <div className="space-y-6">
               {svgChart && (
                 <ResultSection title={s.chartTitle}>
                   <div
@@ -220,6 +219,30 @@ export default function NavamshaD9Client({ locale }: { locale: Locale }) {
                   value={s.purposeValue}
                 />
               </ResultSection>
+
+              {/* Pushkar Navamsha & Special Sensitive Points */}
+              {specialPoints && (
+                <ResultSection title={lang === "hi" ? "पुष्कर नवांश एवं गंडान्त विश्लेषण" : "Pushkar Navamsha & Sensitive Points"}>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                    <div className="p-3 bg-surface-alt rounded-xl border border-line">
+                      <span className="font-bold text-ink block mb-1">पुष्कर नवांश (Pushkar Navamsha)</span>
+                      <p className="text-ink-soft">
+                        {specialPoints.pushkar_navamsha?.planets && specialPoints.pushkar_navamsha.planets.length > 0
+                          ? `पुष्कर नवांश में स्थित ग्रह: ${specialPoints.pushkar_navamsha.planets.join(", ")} (अति शुभ व फलदायी)`
+                          : "कोई भी ग्रह पुष्कर नवांश में नहीं है।"}
+                      </p>
+                    </div>
+                    <div className="p-3 bg-surface-alt rounded-xl border border-line">
+                      <span className="font-bold text-ink block mb-1">नक्षत्र गंडान्त (Gandanta Degree)</span>
+                      <p className="text-ink-soft">
+                        {specialPoints.gandanta?.is_gandanta
+                          ? `लग्न या चंद्र गंडान्त संधि में स्थित है (${specialPoints.gandanta.type})`
+                          : "कुंडली गंडान्त दोष से मुक्त है।"}
+                      </p>
+                    </div>
+                  </div>
+                </ResultSection>
+              )}
 
               {planets.length > 0 && (
                 <ResultSection title={s.planetsTitle}>
@@ -259,8 +282,20 @@ export default function NavamshaD9Client({ locale }: { locale: Locale }) {
               )}
             </div>
           )}
-        </div>
-      </div>
-    </CalculatorPageShell>
+    </>
+  );
+
+  return (
+    <CalculatorPageShell
+      slug="navamsha-d9"
+      category="kundli"
+      title="Navamsha Chart (D9)"
+      hindiTitle="नवांश कुंडली (D9 Dharma, Spouse & Fortune)"
+      description={locale === "en" ? "Fortune, married life, spouse nature, Pushkar Navamsha, and Vargottama planets." : "भाग्य, वैवाहिक जीवन, जीवनसाथी का स्वरूप, पुष्कर नवांश एवं वर्गोत्तम ग्रहों का सूक्ष्म विश्लेषण।"}
+      icon="✨"
+      locale={locale}
+      form={formContent}
+      results={resultsContent}
+    />
   );
 }

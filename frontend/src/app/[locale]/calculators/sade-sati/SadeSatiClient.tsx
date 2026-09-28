@@ -5,6 +5,7 @@ import axios from "axios";
 import { CalculatorPageShell } from "@/components/calculators/CalculatorPageShell";
 import type { Locale } from "@/lib/locale";
 import { BirthDataFields, DEFAULT_BIRTH_DATA, BirthDataValue } from "@/components/calculators/BirthDataFields";
+import { fetchParallelSettled } from "@/lib/calculatorApi";
 import { ResultSection, ResultRow, ResultBadge, SubmitButton, ErrorNote } from "@/components/calculators/ResultRows";
 import { Loader2 } from "lucide-react";
 
@@ -67,6 +68,8 @@ export default function SadeSatiClient({ locale }: { locale: Locale }) {
   const [error, setError] = useState<string | null>(null);
   const [statusData, setStatusData] = useState<any>(null);
   const [timelineData, setTimelineData] = useState<any[]>([]);
+  const [mantraData, setMantraData] = useState<any>(null);
+  const [fastingData, setFastingData] = useState<any>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -83,7 +86,7 @@ export default function SadeSatiClient({ locale }: { locale: Locale }) {
     };
 
     try {
-      const [resStatus, resTimeline] = await Promise.all([
+      const [status, timeline, mantras, fasting] = await fetchParallelSettled([
         axios.post("/api/proxy", {
           endpoint: "/api/v1/dosha-matching/sade-sati/status",
           payload,
@@ -93,16 +96,25 @@ export default function SadeSatiClient({ locale }: { locale: Locale }) {
           endpoint: "/api/v1/dosha-matching/sade-sati/timeline",
           payload,
           method: "POST",
-        }).catch(() => null),
+        }),
+        axios.post("/api/proxy", {
+          endpoint: "/api/v1/remedies/mantras",
+          payload,
+          method: "POST",
+        }),
+        axios.post("/api/proxy", {
+          endpoint: "/api/v1/remedies/fasting",
+          payload,
+          method: "POST",
+        }),
       ]);
 
-      if (resStatus.data?.data) {
-        setStatusData(resStatus.data.data);
-      } else {
-        setStatusData(resStatus.data);
-      }
+      if (!status) throw new Error(s.error);
+      setStatusData(status);
+      if (mantras) setMantraData(mantras);
+      if (fasting) setFastingData(fasting);
 
-      const cycles = resTimeline?.data?.data?.lifetime_cycles || resTimeline?.data?.lifetime_cycles || [];
+      const cycles = timeline?.lifetime_cycles || [];
       const flatRows = Array.isArray(cycles)
         ? cycles.flatMap((cycle: any) =>
             (cycle.phases || []).map((ph: any) => ({
@@ -123,77 +135,68 @@ export default function SadeSatiClient({ locale }: { locale: Locale }) {
 
   const isUnderSadeSati = statusData?.is_sadesati_active || statusData?.is_active || false;
   const isDhaiya = statusData?.is_dhaiya_active || false;
+  const saturnMantra = mantraData?.mantras?.SATURN;
 
-  return (
-    <CalculatorPageShell
-      slug="sade-sati"
-      category="dosha"
-      title="Shani Sade Sati Timeline"
-      hindiTitle="शनि साढ़े साती चक्र"
-      description={locale === "en" ? "The rising, peak, and setting phases, Dhaiya, and a lifetime timeline of Saturn's transit." : "उदय, शिखर एवं अस्त चरण, ढैया एवं जीवनपर्यंत शनि गोचर की समय सारिणी।"}
-      icon="🪐"
-      locale={locale}
-    >
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        <div className="lg:col-span-5 bg-card p-6 rounded-2xl border border-line h-fit">
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="flex items-center justify-between pb-3 border-b border-line">
-              <span className="text-xs font-bold text-ink">भाषा / Language</span>
-              <div className="flex rounded-lg bg-surface-alt p-1 border border-line text-xs">
-                <button
-                  type="button"
-                  onClick={() => setLang("hi")}
-                  className={`px-3 py-1 rounded font-medium transition ${
-                    lang === "hi" ? "bg-accent text-white shadow" : "text-ink-soft hover:text-ink"
-                  }`}
-                >
-                  हिन्दी
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setLang("en")}
-                  className={`px-3 py-1 rounded font-medium transition ${
-                    lang === "en" ? "bg-accent text-white shadow" : "text-ink-soft hover:text-ink"
-                  }`}
-                >
-                  English
-                </button>
-              </div>
-            </div>
-
-            <BirthDataFields value={form} onChange={setForm} />
-
-            <SubmitButton loading={loading}>
-              {loading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" /> {s.calculating}
-                </>
-              ) : (
-                s.submit
-              )}
-            </SubmitButton>
-          </form>
+  const formContent = (
+    <form onSubmit={handleSubmit} className="space-y-5">
+      <div className="flex items-center justify-between pb-3 border-b border-line">
+        <span className="text-xs font-bold text-ink">भाषा / Language</span>
+        <div className="flex rounded-lg bg-surface-alt p-1 border border-line text-xs">
+          <button
+            type="button"
+            onClick={() => setLang("hi")}
+            className={`px-3 py-1 rounded font-medium transition ${
+              lang === "hi" ? "bg-accent text-white shadow" : "text-ink-soft hover:text-ink"
+            }`}
+          >
+            हिन्दी
+          </button>
+          <button
+            type="button"
+            onClick={() => setLang("en")}
+            className={`px-3 py-1 rounded font-medium transition ${
+              lang === "en" ? "bg-accent text-white shadow" : "text-ink-soft hover:text-ink"
+            }`}
+          >
+            English
+          </button>
         </div>
+      </div>
 
-        <div className="lg:col-span-7 space-y-6">
-          {error && <ErrorNote message={error} />}
+      <BirthDataFields value={form} onChange={setForm} />
 
-          {!statusData && !loading && !error && (
-            <div className="bg-card rounded-2xl border border-line p-10 text-center text-ink-muted">
-              <div className="text-4xl mb-3">🪐</div>
-              <p className="text-sm">{s.emptyHint}</p>
-            </div>
-          )}
+      <SubmitButton loading={loading}>
+        {loading ? (
+          <>
+            <Loader2 className="w-4 h-4 animate-spin" /> {s.calculating}
+          </>
+        ) : (
+          s.submit
+        )}
+      </SubmitButton>
+    </form>
+  );
 
-          {loading && (
-            <div className="bg-card rounded-2xl border border-line p-12 text-center text-ink-soft flex flex-col items-center justify-center">
-              <Loader2 className="w-8 h-8 text-accent animate-spin mb-3" />
-              <p className="text-sm">{s.loadingHint}</p>
-            </div>
-          )}
+  const resultsContent = (
+    <>
+      {error && <ErrorNote message={error} />}
 
-          {statusData && (
-            <div className="space-y-6">
+      {!statusData && !loading && !error && (
+        <div className="bg-card rounded-2xl border border-line p-10 text-center text-ink-muted">
+          <div className="text-4xl mb-3">🪐</div>
+          <p className="text-sm">{s.emptyHint}</p>
+        </div>
+      )}
+
+      {loading && (
+        <div className="bg-card rounded-2xl border border-line p-12 text-center text-ink-soft flex flex-col items-center justify-center">
+          <Loader2 className="w-8 h-8 text-accent animate-spin mb-3" />
+          <p className="text-sm">{s.loadingHint}</p>
+        </div>
+      )}
+
+      {statusData && (
+        <div className="space-y-6">
               <ResultSection title={s.resultTitle}>
                 <div
                   className={`p-6 rounded-xl border text-center mb-4 ${
@@ -271,10 +274,53 @@ export default function SadeSatiClient({ locale }: { locale: Locale }) {
                   </ul>
                 </ResultSection>
               )}
+
+              {/* Saturn Beej Mantra & Chanting */}
+              {saturnMantra && (
+                <ResultSection title={lang === "hi" ? "शनि बीज मंत्र एवं जप संख्या" : "Saturn Beej Mantra & Japa Frequency"}>
+                  <div className="p-4 bg-surface-alt/70 border border-line rounded-xl space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-ink">Shani Tantrik Mantra</span>
+                      <span className="text-[10px] font-mono-brand bg-accent/10 text-accent px-2 py-0.5 rounded font-bold">
+                        {saturnMantra.recitations?.toLocaleString()} Japa
+                      </span>
+                    </div>
+                    <div className="text-sm font-bold text-accent font-mono">{saturnMantra.beej_mantra}</div>
+                    <div className="text-xs text-ink-soft">{saturnMantra.mantra}</div>
+                  </div>
+                </ResultSection>
+              )}
+
+              {/* Saturday Vrat & Fasting Rules */}
+              {fastingData?.recommended_weekly_vrat && (
+                <ResultSection title={lang === "hi" ? "शनि शांति व्रत एवं दान विधि" : "Saturday Shani Shanti Vrat & Daan"}>
+                  <div className="p-4 bg-card border border-line rounded-xl space-y-2 text-xs">
+                    <div className="font-bold text-ink text-sm">शनिवार व्रत नियम (Saturday Fasting Discipline)</div>
+                    <p className="text-ink-soft leading-relaxed">
+                      सूर्यास्त तक निर्जल अथवा फलाहार व्रत रखें। शाम को पीपल के वृक्ष के नीचे सरसों के तेल का चौमुखा दीपक जलाएं तथा काले तिल व उड़द की खिचड़ी का सेवन करें या जरूरतमंदों को दान करें।
+                    </p>
+                    <div className="p-2.5 bg-surface-alt rounded-lg text-ink-soft text-[11px]">
+                      <span className="font-bold text-ink">दान सामग्री:</span> काला वस्त्र, सरसों का तेल, काला छाता, चमड़े के जूते अथवा लोहे का तवा।
+                    </div>
+                  </div>
+                </ResultSection>
+              )}
             </div>
           )}
-        </div>
-      </div>
-    </CalculatorPageShell>
+    </>
+  );
+
+  return (
+    <CalculatorPageShell
+      slug="sade-sati"
+      category="dosha"
+      title="Shani Sade Sati Timeline"
+      hindiTitle="शनि साढ़े साती चक्र"
+      description={locale === "en" ? "The rising, peak, and setting phases, Dhaiya, and a lifetime timeline of Saturn's transit." : "उदय, शिखर एवं अस्त चरण, ढैया एवं जीवनपर्यंत शनि गोचर की समय सारिणी।"}
+      icon="🪐"
+      locale={locale}
+      form={formContent}
+      results={resultsContent}
+    />
   );
 }

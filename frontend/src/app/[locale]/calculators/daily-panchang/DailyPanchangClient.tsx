@@ -6,16 +6,11 @@ import axios from "axios";
 import { CalculatorPageShell } from "@/components/calculators/CalculatorPageShell";
 import type { Locale } from "@/lib/locale";
 import { BirthDataFields, DEFAULT_BIRTH_DATA, BirthDataValue } from "@/components/calculators/BirthDataFields";
+import { fetchParallelSettled } from "@/lib/calculatorApi";
 import { ResultSection, ResultRow, ResultBadge, SubmitButton, ErrorNote } from "@/components/calculators/ResultRows";
 import { Loader2 } from "lucide-react";
 
 type ApiData = Record<string, unknown>;
-
-const unwrap = (response: { data?: { data?: ApiData } | ApiData }): ApiData => {
-  const outer = response.data;
-  if (outer && "data" in outer && outer.data) return outer.data as ApiData;
-  return (outer || {}) as ApiData;
-};
 
 const timeRange = (value: unknown) => {
   if (!value || typeof value !== "object") return String(value || "-");
@@ -60,10 +55,10 @@ export default function DailyPanchangClient({ locale }: { locale: Locale }) {
         panchak: "/api/v1/panchang/panchak",
       } as const;
       const entries = Object.entries(endpoints);
-      const results = await Promise.allSettled(entries.map(([, endpoint]) => axios.post("/api/proxy", { endpoint, payload, method: "POST" })));
+      const results = await fetchParallelSettled(entries.map(([, endpoint]) => axios.post("/api/proxy", { endpoint, payload, method: "POST" })));
       const combined: Record<string, ApiData> = {};
-      results.forEach((result, index) => {
-        if (result.status === "fulfilled") combined[entries[index][0]] = unwrap(result.value);
+      results.forEach((res, index) => {
+        if (res) combined[entries[index][0]] = res as ApiData;
       });
       if (!combined.daily) throw new Error(lang === "en" ? "Daily Panchang data is unavailable." : "दैनिक पंचांग डेटा उपलब्ध नहीं है।");
       setData(combined.daily);
@@ -90,44 +85,34 @@ export default function DailyPanchangClient({ locale }: { locale: Locale }) {
   const dayChoghadiya = Array.isArray(choghadiya.day_choghadiya) ? choghadiya.day_choghadiya as Array<Record<string, unknown>> : [];
   const nightChoghadiya = Array.isArray(choghadiya.night_choghadiya) ? choghadiya.night_choghadiya as Array<Record<string, unknown>> : [];
 
-  return (
-    <CalculatorPageShell
-      slug="daily-panchang"
-      category="panchang"
-      title="Today's Panchang"
-      hindiTitle="दैनिक पंचांग"
-      description={lang === "en" ? "Complete daily Panchang with the five limbs, Sun-Moon timings, muhurtas, Choghadiya, Hora, Bhadra, and Panchak." : "पंचांग के पाँच अंग, सूर्य-चंद्र समय, मुहूर्त, चौघड़िया, होरा, भद्रा एवं पंचक की संपूर्ण दैनिक गणना।"}
-      icon="📜"
-      locale={locale}
-    >
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        <div className={`${data ? "lg:col-span-12" : "lg:col-span-4"} bg-card p-6 rounded-2xl border border-line h-fit`}>
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <BirthDataFields
-              value={form}
-              onChange={setForm}
-              requireName={false}
-              requireGender={false}
-              dateLabel={lang === "en" ? "Panchang date" : "पंचांग तिथि"}
-            />
+  const formContent = (
+    <form onSubmit={handleSubmit} className="space-y-5">
+      <BirthDataFields
+        value={form}
+        onChange={setForm}
+        requireName={false}
+        requireGender={false}
+        dateLabel={lang === "en" ? "Panchang date" : "पंचांग तिथि"}
+      />
 
-            <SubmitButton loading={loading}>
-              {loading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" /> {lang === "en" ? "Calculating complete Panchang..." : "संपूर्ण पंचांग गणना जारी..."}
-                </>
-              ) : (
-                lang === "en" ? "Calculate complete Panchang" : "संपूर्ण पंचांग निकालें"
-              )}
-            </SubmitButton>
-          </form>
-        </div>
+      <SubmitButton loading={loading}>
+        {loading ? (
+          <>
+            <Loader2 className="w-4 h-4 animate-spin" /> {lang === "en" ? "Calculating complete Panchang..." : "संपूर्ण पंचांग गणना जारी..."}
+          </>
+        ) : (
+          lang === "en" ? "Calculate complete Panchang" : "संपूर्ण पंचांग निकालें"
+        )}
+      </SubmitButton>
+    </form>
+  );
 
-        <div className={`${data ? "lg:col-span-12" : "lg:col-span-8"} space-y-6`}>
-          {error && <ErrorNote message={error} />}
+  const resultsContent = (
+    <>
+      {error && <ErrorNote message={error} />}
 
-          {!data && !loading && !error && (
-            <div className="bg-card rounded-2xl border border-line p-10 text-center text-ink-muted">
+      {!data && !loading && !error && (
+        <div className="bg-card rounded-2xl border border-line p-10 text-center text-ink-muted">
               <div className="text-4xl mb-3">📜</div>
               <p className="text-sm">{lang === "en" ? "Choose a date and place to see the 5 classical limbs (Vaar, Tithi, Nakshatra, Yoga, Karana) and auspicious/inauspicious muhurats." : "तारीख एवं स्थान चुनें और 5 शास्त्रीय अंग (वार, तिथि, नक्षत्र, योग, करण) व शुभ-अशुभ मुहूर्त देखें।"}</p>
             </div>
@@ -227,8 +212,20 @@ export default function DailyPanchangClient({ locale }: { locale: Locale }) {
               )}
             </div>
           )}
-        </div>
-      </div>
-    </CalculatorPageShell>
+    </>
+  );
+
+  return (
+    <CalculatorPageShell
+      slug="daily-panchang"
+      category="panchang"
+      title="Today's Panchang"
+      hindiTitle="दैनिक पंचांग"
+      description={lang === "en" ? "Complete daily Panchang with the five limbs, Sun-Moon timings, muhurtas, Choghadiya, Hora, Bhadra, and Panchak." : "पंचांग के पाँच अंग, सूर्य-चंद्र समय, मुहूर्त, चौघड़िया, होरा, भद्रा एवं पंचक की संपूर्ण दैनिक गणना।"}
+      icon="📜"
+      locale={locale}
+      form={formContent}
+      results={resultsContent}
+    />
   );
 }

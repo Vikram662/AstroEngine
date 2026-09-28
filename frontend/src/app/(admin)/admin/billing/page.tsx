@@ -150,7 +150,7 @@ export default function AdminBillingPage() {
                   </td>
                   <td className="px-6 py-4 font-sans">
                     <div className="font-semibold text-slate-900">{tx.user?.name || "B2B Tenant"}</div>
-                    <div className="text-slate-500 text-[11px] font-mono">{tx.user?.email || "dev@client.com"}</div>
+                    <div className="text-slate-500 text-[11px] font-mono">{tx.user?.email || "N/A"}</div>
                   </td>
                   <td className="px-6 py-4 font-bold text-slate-900 font-sans">
                     ₹{tx.amount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}

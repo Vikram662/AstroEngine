@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import axios from "axios";
 import { CalculatorPageShell } from "@/components/calculators/CalculatorPageShell";
 import type { Locale } from "@/lib/locale";
+import { fetchParallelSettled } from "@/lib/calculatorApi";
 import { ResultSection, ResultRow, ResultBadge, SubmitButton, ErrorNote } from "@/components/calculators/ResultRows";
 import { Calendar, Loader2 } from "lucide-react";
 
@@ -62,6 +63,9 @@ export default function LoshuGridClient({ locale }: { locale: Locale }) {
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<any>(null);
 
+  const [remediesData, setRemediesData] = useState<any>(null);
+  const [coreData, setCoreData] = useState<any>(null);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -77,17 +81,29 @@ export default function LoshuGridClient({ locale }: { locale: Locale }) {
     };
 
     try {
-      const res = await axios.post("/api/proxy", {
-        endpoint: "/api/v1/numerology/loshu-grid",
-        payload,
-        method: "POST",
-      });
+      const [resGrid, resRemedies, resCore] = await fetchParallelSettled([
+        axios.post("/api/proxy", {
+          endpoint: "/api/v1/numerology/loshu-grid",
+          payload,
+          method: "POST",
+        }),
+        axios.post("/api/proxy", {
+          endpoint: "/api/v1/numerology/missing-numbers",
+          payload,
+          method: "POST",
+        }),
+        axios.post("/api/proxy", {
+          endpoint: "/api/v1/numerology/core-numbers",
+          payload,
+          method: "POST",
+        }),
+      ]);
 
-      if (res.data?.data) {
-        setData(res.data.data);
-      } else {
-        setData(res.data);
-      }
+      if (!resGrid) throw new Error(s.error);
+
+      setData(resGrid);
+      if (resRemedies) setRemediesData(resRemedies);
+      if (resCore) setCoreData(resCore);
     } catch (err: any) {
       setError(err?.response?.data?.message || err?.message || s.error);
     } finally {
@@ -126,91 +142,113 @@ export default function LoshuGridClient({ locale }: { locale: Locale }) {
     return String(val);
   };
 
-  return (
-    <CalculatorPageShell
-      slug="loshu-grid"
-      category="numerology"
-      title="3x3 Lo Shu Magic Grid"
-      hindiTitle="लो शू ग्रिड विश्लेषण"
-      description={locale === "en" ? "The 8 Lo Shu planes of mental, emotional, practical, and willpower strength." : "मानसिक, भावनात्मक, व्यावहारिक एवं इच्छा शक्ति के 8 योग प्लेन।"}
-      icon="🧮"
-      locale={locale}
-    >
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        <div className="lg:col-span-5 bg-card p-6 rounded-2xl border border-line h-fit">
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="flex items-center justify-between pb-3 border-b border-line">
-              <span className="text-xs font-bold text-ink">भाषा / Language</span>
-              <div className="flex rounded-lg bg-surface-alt p-1 border border-line text-xs">
-                <button
-                  type="button"
-                  onClick={() => setLang("hi")}
-                  className={`px-3 py-1 rounded font-medium transition ${
-                    lang === "hi" ? "bg-accent text-white shadow" : "text-ink-soft hover:text-ink"
-                  }`}
-                >
-                  हिन्दी
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setLang("en")}
-                  className={`px-3 py-1 rounded font-medium transition ${
-                    lang === "en" ? "bg-accent text-white shadow" : "text-ink-soft hover:text-ink"
-                  }`}
-                >
-                  English
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <label htmlFor="grid_dob" className="block text-xs font-semibold text-ink-soft mb-1.5 flex items-center gap-1.5">
-                <Calendar className="w-3.5 h-3.5 text-accent" />
-                <span>{lang === "en" ? "Date of Birth" : "जन्म तिथि"}</span>
-              </label>
-              <input
-                id="grid_dob"
-                type="date"
-                required
-                value={dob}
-                onChange={(e) => setDob(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-line bg-surface text-ink text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition"
-              />
-            </div>
-
-            <SubmitButton loading={loading}>
-              {loading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" /> {s.calculating}
-                </>
-              ) : (
-                s.submit
-              )}
-            </SubmitButton>
-          </form>
+  const formContent = (
+    <form onSubmit={handleSubmit} className="space-y-5">
+      <div className="flex items-center justify-between pb-3 border-b border-line">
+        <span className="text-xs font-bold text-ink">भाषा / Language</span>
+        <div className="flex rounded-lg bg-surface-alt p-1 border border-line text-xs">
+          <button
+            type="button"
+            onClick={() => setLang("hi")}
+            className={`px-3 py-1 rounded font-medium transition ${
+              lang === "hi" ? "bg-accent text-white shadow" : "text-ink-soft hover:text-ink"
+            }`}
+          >
+            हिन्दी
+          </button>
+          <button
+            type="button"
+            onClick={() => setLang("en")}
+            className={`px-3 py-1 rounded font-medium transition ${
+              lang === "en" ? "bg-accent text-white shadow" : "text-ink-soft hover:text-ink"
+            }`}
+          >
+            English
+          </button>
         </div>
+      </div>
 
-        <div className="lg:col-span-7 space-y-6">
-          {error && <ErrorNote message={error} />}
+      <div>
+        <label htmlFor="grid_dob" className="block text-xs font-semibold text-ink-soft mb-1.5 flex items-center gap-1.5">
+          <Calendar className="w-3.5 h-3.5 text-accent" />
+          <span>{lang === "en" ? "Date of Birth" : "जन्म तिथि"}</span>
+        </label>
+        <input
+          id="grid_dob"
+          type="date"
+          required
+          value={dob}
+          onChange={(e) => setDob(e.target.value)}
+          className="w-full px-3.5 py-2.5 rounded-xl border border-line bg-surface text-ink text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition"
+        />
+      </div>
 
-          {!data && !loading && !error && (
-            <div className="bg-card rounded-2xl border border-line p-10 text-center text-ink-muted">
-              <div className="text-4xl mb-3">🧮</div>
-              <p className="text-sm">{s.emptyHint}</p>
-            </div>
-          )}
+      <SubmitButton loading={loading}>
+        {loading ? (
+          <>
+            <Loader2 className="w-4 h-4 animate-spin" /> {s.calculating}
+          </>
+        ) : (
+          s.submit
+        )}
+      </SubmitButton>
+    </form>
+  );
 
-          {loading && (
-            <div className="bg-card rounded-2xl border border-line p-12 text-center text-ink-soft flex flex-col items-center justify-center">
-              <Loader2 className="w-8 h-8 text-accent animate-spin mb-3" />
-              <p className="text-sm">{s.loadingHint}</p>
-            </div>
-          )}
+  const resultsContent = (
+    <>
+      {error && <ErrorNote message={error} />}
 
-          {data && (
-            <div className="space-y-6">
+      {!data && !loading && !error && (
+        <div className="bg-card rounded-2xl border border-line p-12 text-center text-ink-muted">
+          <div className="text-5xl mb-4">🧮</div>
+          <h3 className="text-base font-bold text-ink mb-1">
+            {lang === "en" ? "Ready to Build Your Lo Shu Grid" : "लो-शू चक्र निर्माण हेतु तैयार"}
+          </h3>
+          <p className="text-sm max-w-md mx-auto text-ink-soft">{s.emptyHint}</p>
+        </div>
+      )}
+
+      {loading && (
+        <div className="bg-card rounded-2xl border border-line p-14 text-center text-ink-soft flex flex-col items-center justify-center">
+          <Loader2 className="w-9 h-9 text-accent animate-spin mb-3" />
+          <p className="text-sm font-semibold text-ink">{s.loadingHint}</p>
+        </div>
+      )}
+
+      {data && (
+        <div className="space-y-6">
+              {/* Core Driver & Conductor Banner */}
+              {coreData && (
+                <div className="grid grid-cols-2 gap-3 p-1">
+                  <div className="p-3.5 bg-card border border-line rounded-xl text-center">
+                    <span className="text-[11px] uppercase font-bold text-ink-muted block">
+                      {lang === "en" ? "Driver (Mulank)" : "मूलांक (Driver)"}
+                    </span>
+                    <span className="text-3xl font-extrabold text-accent block my-1">
+                      {coreData.mulank?.number}
+                    </span>
+                    <span className="text-xs text-ink-soft">
+                      {coreData.mulank?.ruler} ({coreData.mulank?.traits?.split(",")[0]})
+                    </span>
+                  </div>
+                  <div className="p-3.5 bg-card border border-line rounded-xl text-center">
+                    <span className="text-[11px] uppercase font-bold text-ink-muted block">
+                      {lang === "en" ? "Conductor (Bhagyank)" : "भाग्यांक (Conductor)"}
+                    </span>
+                    <span className="text-3xl font-extrabold text-accent block my-1">
+                      {coreData.bhagyank?.number}
+                    </span>
+                    <span className="text-xs text-ink-soft">
+                      {coreData.bhagyank?.ruler} ({coreData.bhagyank?.traits?.split(",")[0]})
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* 3x3 Magic Grid Visual */}
               <ResultSection title={s.gridTitle}>
-                <div className="w-64 mx-auto grid grid-cols-3 gap-2 p-3 bg-surface-alt rounded-2xl border border-line">
+                <div className="w-72 mx-auto grid grid-cols-3 gap-2.5 p-4 bg-surface-alt/50 rounded-2xl border border-line">
                   {GRID_LAYOUT.map((row, rIdx) =>
                     row.map((num, cIdx) => {
                       const displayVal = getCellDigits(num, rIdx, cIdx);
@@ -218,13 +256,13 @@ export default function LoshuGridClient({ locale }: { locale: Locale }) {
                       return (
                         <div
                           key={num}
-                          className={`aspect-square flex flex-col items-center justify-center rounded-xl border font-bold text-sm transition ${
+                          className={`aspect-square flex flex-col items-center justify-center rounded-xl border font-bold transition ${
                             hasVal
-                              ? "bg-accent/10 border-accent/40 text-accent font-mono-brand text-base"
-                              : "bg-surface border-line/60 text-ink-muted/40 font-mono-brand"
+                              ? "bg-accent text-white border-accent shadow-xs text-lg font-mono"
+                              : "bg-card border-line/70 text-ink-muted/30 text-sm font-mono"
                           }`}
                         >
-                          <span className="text-[10px] text-ink-muted/60">{num}</span>
+                          <span className={`text-[10px] ${hasVal ? "text-white/80" : "text-ink-muted/50"}`}>{num}</span>
                           <span>{displayVal}</span>
                         </div>
                       );
@@ -233,12 +271,37 @@ export default function LoshuGridClient({ locale }: { locale: Locale }) {
                 </div>
               </ResultSection>
 
+              {/* Missing Numbers & Practical Remedies */}
               {missingNumbers.length > 0 && (
                 <ResultSection title={s.missingTitle}>
-                  <ResultRow label={s.missingLabel} value={missingNumbers.join(", ")} accent />
+                  <ResultRow
+                    label={s.missingLabel}
+                    value={
+                      <div className="flex flex-wrap gap-1.5">
+                        {missingNumbers.map((num) => (
+                          <ResultBadge key={num} tone="bad">{num}</ResultBadge>
+                        ))}
+                      </div>
+                    }
+                    accent
+                  />
+                  {remediesData?.remedies && (
+                    <div className="mt-3 space-y-2 pt-2 border-t border-line/60">
+                      <span className="text-xs font-bold text-ink block">
+                        {lang === "en" ? "Balancing Remedies for Missing Numbers" : "अनुपस्थित अंकों के निवारक उपाय"}
+                      </span>
+                      {missingNumbers.map((num, idx) => (
+                        <div key={num} className="p-2.5 rounded-lg bg-surface-alt/40 border border-line text-xs">
+                          <span className="font-bold text-accent">अंक {num}: </span>
+                          <span className="text-ink-soft">{remediesData.remedies[idx] || "संतुलन हेतु संबंधित ग्रह मंत्र का जप करें।"}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </ResultSection>
               )}
 
+              {/* 6 Planes of Life */}
               {Array.isArray(planes) && planes.length > 0 && (
                 <ResultSection title={s.planesTitle}>
                   <div className="divide-y divide-line/60">
@@ -247,7 +310,7 @@ export default function LoshuGridClient({ locale }: { locale: Locale }) {
                         <div>
                           <div className="font-bold text-ink">{p.name || p.plane}</div>
                           {p.numbers && (
-                            <div className="text-[11px] text-ink-muted font-mono-brand-brand">{s.numbersPrefix} {p.numbers}</div>
+                            <div className="text-[11px] text-ink-muted font-mono">{s.numbersPrefix} {p.numbers}</div>
                           )}
                         </div>
                         <ResultBadge tone={p.is_complete || p.status === "complete" ? "good" : "neutral"}>
@@ -260,8 +323,20 @@ export default function LoshuGridClient({ locale }: { locale: Locale }) {
               )}
             </div>
           )}
-        </div>
-      </div>
-    </CalculatorPageShell>
+    </>
+  );
+
+  return (
+    <CalculatorPageShell
+      slug="loshu-grid"
+      category="numerology"
+      title="3x3 Lo Shu Magic Grid"
+      hindiTitle="लो शू ग्रिड विश्लेषण"
+      description={locale === "en" ? "The 8 Lo Shu planes of mental, emotional, practical, and willpower strength." : "मानसिक, भावनात्मक, व्यावहारिक एवं इच्छा शक्ति के 8 योग प्लेन।"}
+      icon="🧮"
+      locale={locale}
+      form={formContent}
+      results={resultsContent}
+    />
   );
 }

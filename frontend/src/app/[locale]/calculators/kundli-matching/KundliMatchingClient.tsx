@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import axios from "axios";
 import { CalculatorPageShell } from "@/components/calculators/CalculatorPageShell";
 import type { Locale } from "@/lib/locale";
+import { fetchParallelSettled } from "@/lib/calculatorApi";
 import { BirthDataFields, DEFAULT_BIRTH_DATA, BirthDataValue } from "@/components/calculators/BirthDataFields";
 import { ResultSection, ResultRow, ResultBadge, SubmitButton, ErrorNote } from "@/components/calculators/ResultRows";
 import { Loader2 } from "lucide-react";
@@ -59,6 +60,8 @@ export default function KundliMatchingClient({ locale }: { locale: Locale }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<any>(null);
+  const [groomManglik, setGroomManglik] = useState<any>(null);
+  const [brideManglik, setBrideManglik] = useState<any>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,17 +83,29 @@ export default function KundliMatchingClient({ locale }: { locale: Locale }) {
     };
 
     try {
-      const res = await axios.post("/api/proxy", {
-        endpoint: "/api/v1/dosha-matching/matchmaking/ashtakoot",
-        payload,
-        method: "POST",
-      });
+      const [resMatch, resGroomM, resBrideM] = await fetchParallelSettled([
+        axios.post("/api/proxy", {
+          endpoint: "/api/v1/dosha-matching/matchmaking/ashtakoot",
+          payload,
+          method: "POST",
+        }),
+        axios.post("/api/proxy", {
+          endpoint: "/api/v1/dosha-matching/manglik",
+          payload: { dob: boyForm.dob, tob: boyForm.tob, lat: boyForm.lat, lon: boyForm.lon, tz: boyForm.tz, lang },
+          method: "POST",
+        }),
+        axios.post("/api/proxy", {
+          endpoint: "/api/v1/dosha-matching/manglik",
+          payload: { dob: girlForm.dob, tob: girlForm.tob, lat: girlForm.lat, lon: girlForm.lon, tz: girlForm.tz, lang },
+          method: "POST",
+        }),
+      ]);
 
-      if (res.data?.data) {
-        setData(res.data.data);
-      } else {
-        setData(res.data);
-      }
+      if (!resMatch) throw new Error(ERROR_TEXT[locale]);
+
+      setData(resMatch);
+      if (resGroomM) setGroomManglik(resGroomM);
+      if (resBrideM) setBrideManglik(resBrideM);
     } catch (err: any) {
       setError(err?.response?.data?.message || err?.message || ERROR_TEXT[locale]);
     } finally {
@@ -114,63 +129,52 @@ export default function KundliMatchingClient({ locale }: { locale: Locale }) {
       ? "Precise 8/8 Ashtakoot matching — Varna, Vashya, Tara, Yoni, Graha Maitri, Gana, Bhakoot and Nadi dosha."
       : "वर्ण, वश्य, तारा, योनि, ग्रह मैत्री, गण, भकूट एवं नाड़ी दोष का 8/8 सटीक मिलान।";
 
-  return (
-    <CalculatorPageShell
-      slug="kundli-matching"
-      category="matching"
-      title="36 Guna Ashtakoot Milan"
-      hindiTitle="अष्टकूट 36 गुण मिलान"
-      description={description}
-      icon="💍"
-      locale={locale}
-    >
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        <div className="lg:col-span-6 bg-card p-6 rounded-2xl border border-line h-fit">
-          <form onSubmit={handleSubmit} className="space-y-6">
+  const formContent = (
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="p-4 rounded-xl bg-surface border border-line">
+        <BirthDataFields
+          value={boyForm}
+          onChange={setBoyForm}
+          personLabel={lang === "en" ? "Groom Details" : "वर विवरण"}
+          idPrefix="boy_"
+        />
+      </div>
 
-            <div className="p-4 rounded-xl bg-surface border border-line">
-              <BirthDataFields
-                value={boyForm}
-                onChange={setBoyForm}
-                personLabel={lang === "en" ? "Groom Details" : "वर विवरण"}
-                idPrefix="boy_"
-              />
-            </div>
+      <div className="p-4 rounded-xl bg-surface border border-line">
+        <BirthDataFields
+          value={girlForm}
+          onChange={setGirlForm}
+          personLabel={lang === "en" ? "Bride Details" : "कन्या विवरण"}
+          idPrefix="girl_"
+        />
+      </div>
 
-            <div className="p-4 rounded-xl bg-surface border border-line">
-              <BirthDataFields
-                value={girlForm}
-                onChange={setGirlForm}
-                personLabel={lang === "en" ? "Bride Details" : "कन्या विवरण"}
-                idPrefix="girl_"
-              />
-            </div>
+      <SubmitButton loading={loading}>
+        {loading ? (
+          <>
+            <Loader2 className="w-4 h-4 animate-spin" /> {lang === "en" ? "Matching 36 Gunas..." : "36 गुणों का मिलान जारी..."}
+          </>
+        ) : (
+          lang === "en" ? "Check Compatibility" : "36 गुण मिलान करें"
+        )}
+      </SubmitButton>
+    </form>
+  );
 
-            <SubmitButton loading={loading}>
-              {loading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" /> {lang === "en" ? "Matching 36 Gunas..." : "36 गुणों का मिलान जारी..."}
-                </>
-              ) : (
-                lang === "en" ? "Check Compatibility" : "36 गुण मिलान करें"
-              )}
-            </SubmitButton>
-          </form>
+  const resultsContent = (
+    <>
+      {error && <ErrorNote message={error} />}
+
+      {!data && !loading && !error && (
+        <div className="bg-card rounded-2xl border border-line p-10 text-center text-ink-muted">
+          <div className="text-4xl mb-3">💍</div>
+          <p className="text-sm">
+            {lang === "en"
+              ? "Enter birth details for Groom and Bride and click 'Check Compatibility'."
+              : "वर एवं कन्या का जन्म विवरण भरें और 8 कूटों में से प्राप्त अंकों का संपूर्ण विवरण देखें।"}
+          </p>
         </div>
-
-        <div className="lg:col-span-6 space-y-6">
-          {error && <ErrorNote message={error} />}
-
-          {!data && !loading && !error && (
-            <div className="bg-card rounded-2xl border border-line p-10 text-center text-ink-muted">
-              <div className="text-4xl mb-3">💍</div>
-              <p className="text-sm">
-                {lang === "en"
-                  ? "Enter birth details for Groom and Bride and click 'Check Compatibility'."
-                  : "वर एवं कन्या का जन्म विवरण भरें और 8 कूटों में से प्राप्त अंकों का संपूर्ण विवरण देखें।"}
-              </p>
-            </div>
-          )}
+      )}
 
           {loading && (
             <div className="bg-card rounded-2xl border border-line p-12 text-center text-ink-soft flex flex-col items-center justify-center">
@@ -234,6 +238,47 @@ export default function KundliMatchingClient({ locale }: { locale: Locale }) {
                 )}
               </ResultSection>
 
+              {/* Groom and Bride Astro Profile & Manglik Comparison */}
+              {(groomManglik || brideManglik) && (
+                <ResultSection title={lang === "en" ? "Manglik Dosha Analysis" : "मांगलिक दोष तुलना"}>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="p-3.5 rounded-xl border border-line bg-surface-alt/40">
+                      <span className="text-xs font-bold text-ink block">{lang === "en" ? "Groom (वर)" : "वर"}</span>
+                      <div className="mt-1 flex items-center justify-between">
+                        <span className="text-xs text-ink-soft">{lang === "en" ? "Manglik Status" : "मांगलिक स्थिति"}</span>
+                        {groomManglik && (
+                          <ResultBadge tone={groomManglik.is_manglik ? (groomManglik.is_cancelled ? "neutral" : "bad") : "good"}>
+                            {groomManglik.is_manglik ? (groomManglik.is_cancelled ? (lang === "en" ? "Cancelled" : "परिहार") : (lang === "en" ? "Manglik" : "मांगलिक")) : (lang === "en" ? "No Dosha" : "अमांगलिक")}
+                          </ResultBadge>
+                        )}
+                      </div>
+                      {groomManglik?.mars_house && (
+                        <div className="mt-1 text-[11px] text-ink-muted">
+                          {lang === "en" ? "Mars in House" : "मंगल भाव"}: {groomManglik.mars_house}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="p-3.5 rounded-xl border border-line bg-surface-alt/40">
+                      <span className="text-xs font-bold text-ink block">{lang === "en" ? "Bride (कन्या)" : "कन्या"}</span>
+                      <div className="mt-1 flex items-center justify-between">
+                        <span className="text-xs text-ink-soft">{lang === "en" ? "Manglik Status" : "मांगलिक स्थिति"}</span>
+                        {brideManglik && (
+                          <ResultBadge tone={brideManglik.is_manglik ? (brideManglik.is_cancelled ? "neutral" : "bad") : "good"}>
+                            {brideManglik.is_manglik ? (brideManglik.is_cancelled ? (lang === "en" ? "Cancelled" : "परिहार") : (lang === "en" ? "Manglik" : "मांगलिक")) : (lang === "en" ? "No Dosha" : "अमांगलिक")}
+                          </ResultBadge>
+                        )}
+                      </div>
+                      {brideManglik?.mars_house && (
+                        <div className="mt-1 text-[11px] text-ink-muted">
+                          {lang === "en" ? "Mars in House" : "मंगल भाव"}: {brideManglik.mars_house}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </ResultSection>
+              )}
+
               {Array.isArray(gunas) && gunas.length > 0 && (
                 <ResultSection title={lang === "en" ? "8 Koot Breakdown" : "8 कूटों का विस्तृत विभाजन"}>
                   <div className="divide-y divide-line/60">
@@ -253,8 +298,21 @@ export default function KundliMatchingClient({ locale }: { locale: Locale }) {
               )}
             </div>
           )}
-        </div>
-      </div>
-    </CalculatorPageShell>
+    </>
+  );
+
+  return (
+    <CalculatorPageShell
+      slug="kundli-matching"
+      category="matching"
+      title="36 Guna Ashtakoot Milan"
+      hindiTitle="अष्टकूट 36 गुण मिलान"
+      description={description}
+      icon="💍"
+      locale={locale}
+      layout="5-7"
+      form={formContent}
+      results={resultsContent}
+    />
   );
 }
