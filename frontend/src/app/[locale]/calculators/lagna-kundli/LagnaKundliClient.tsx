@@ -210,11 +210,11 @@ export default function LagnaKundliClient({ locale }: { locale: Locale }) {
                         {lang === "en" ? "Active Mahadasha > Antardasha > Pratyantar" : "सक्रिय महादशा > अंतर्दशा > प्रत्यंतर"}
                       </div>
                       <div className="text-base sm:text-lg font-bold text-ink mt-1 flex items-center gap-2">
-                        <span>{runningDasha.mahadasha?.lord || runningDasha.mahadasha}</span>
+                        <span>{runningDasha.mahadasha?.planet_name || runningDasha.mahadasha?.planet_id || (typeof runningDasha.mahadasha === "string" ? runningDasha.mahadasha : "-")}</span>
                         <span className="text-ink-muted">→</span>
-                        <span>{runningDasha.antardasha?.lord || runningDasha.antardasha}</span>
+                        <span>{runningDasha.antardasha?.antardasha_name || runningDasha.antardasha?.antardasha || (typeof runningDasha.antardasha === "string" ? runningDasha.antardasha : "-")}</span>
                         <span className="text-ink-muted">→</span>
-                        <span className="text-accent">{runningDasha.pratyantar?.lord || runningDasha.pratyantar}</span>
+                        <span className="text-accent">{runningDasha.pratyantar_dasha?.pratyantar_name || runningDasha.pratyantar_dasha?.pratyantar_planet || runningDasha.pratyantar?.pratyantar_name || (typeof runningDasha.pratyantar === "string" ? runningDasha.pratyantar : "-")}</span>
                       </div>
                     </div>
                     {runningDasha.antardasha?.end_date && (

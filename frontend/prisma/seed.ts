@@ -70,7 +70,14 @@ async function main() {
       includedQuota: 35000,
       rateLimitPerMin: 60,
       overageCost: 0.02,
-      features: ["All 135 Endpoints Active", "Kundli & Panchang Calculations", "Community Support"],
+      features: [
+        "35,000 Requests / Month",
+        "60 RPM Rate Limit",
+        "Core Astronomy (Planets, Cusps, Retrograde)",
+        "Panchang & Muhurat (5 Limbs & Choghadiya)",
+        "Basic Kundli (D1 Lagna & D9 Navamsha)",
+        "Vedic Astrological Remedies"
+      ],
       isPopular: false
     },
     {
@@ -80,7 +87,17 @@ async function main() {
       includedQuota: 300000,
       rateLimitPerMin: 300,
       overageCost: 0.015,
-      features: ["300,000 Requests / Mo", "300 RPM Burst Limit", "Full D1-D60 Divisional Charts", "99.9% SLA & Priority Email Support"],
+      features: [
+        "300,000 Requests / Month",
+        "300 RPM Rate Limit",
+        "Full D1–D60 Divisional Vargas (Harmonics)",
+        "120-Yr Vimshottari Dasha Hierarchy (MD/AD/PD)",
+        "KP Stellar Astrology & Sub-Lords 1–249",
+        "36-Guna Kundli Matchmaking & Dosha Engine",
+        "Lal Kitab Debts (Rin) & Varshphal Returns",
+        "Numerology Engine & Western Tropical Synastry",
+        "99.9% Production SLA & Priority Support"
+      ],
       isPopular: true
     },
     {
@@ -90,7 +107,15 @@ async function main() {
       includedQuota: 1500000,
       rateLimitPerMin: 1200,
       overageCost: 0.01,
-      features: ["1,500,000 Requests / Mo", "1,200 RPM High Throughput", "Whitelabel PDF Engine with Custom Logo", "Dedicated Slack Channel & 24/7 SLA"],
+      features: [
+        "1,500,000 Requests / Month",
+        "1,200 RPM High-Volume Burst Capacity",
+        "ALL 117 Production Calculation APIs Unlocked",
+        "Full Automated 12–60 Page PDF Report Engine",
+        "Whitelabel Branding, Custom Logo & Watermark",
+        "Multi-User Team Sub-Accounts & API Keys",
+        "Custom Ephemeris & Dedicated Slack 24/7 SLA"
+      ],
       isPopular: false
     }
   ];
@@ -98,7 +123,15 @@ async function main() {
   for (const p of plans) {
     await prisma.subscriptionPlan.upsert({
       where: { tier: p.tier },
-      update: {},
+      update: {
+        name: p.name,
+        priceMonthly: p.priceMonthly,
+        includedQuota: p.includedQuota,
+        rateLimitPerMin: p.rateLimitPerMin,
+        overageCost: p.overageCost,
+        features: p.features,
+        isPopular: p.isPopular
+      },
       create: p
     });
   }

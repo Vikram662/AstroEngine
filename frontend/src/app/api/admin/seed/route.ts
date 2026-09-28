@@ -111,7 +111,7 @@ export async function POST(req: NextRequest) {
       {
         tier: "STARTER" as const,
         name: "STARTER",
-        priceMonthly: 0,
+        priceMonthly: 4999,
         includedQuota: 35000,
         rateLimitPerMin: 60,
         overageCost: 0.02,
@@ -128,7 +128,7 @@ export async function POST(req: NextRequest) {
       {
         tier: "PRO" as const,
         name: "PRO",
-        priceMonthly: 4999,
+        priceMonthly: 14999,
         includedQuota: 300000,
         rateLimitPerMin: 300,
         overageCost: 0.015,
@@ -148,7 +148,7 @@ export async function POST(req: NextRequest) {
       {
         tier: "ENTERPRISE" as const,
         name: "ENTERPRISE",
-        priceMonthly: 14999,
+        priceMonthly: 39999,
         includedQuota: 1500000,
         rateLimitPerMin: 1200,
         overageCost: 0.01,

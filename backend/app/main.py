@@ -115,9 +115,9 @@ def get_dynamic_plans_markdown() -> str:
     return (
         "| Subscription Plan | Monthly Price | Monthly Included Quota | Rate Limit (RPM) | Overage Cost / Call | Key Features |\n"
         "| :--- | :--- | :--- | :--- | :--- | :--- |\n"
-        "| **Starter Tier** | **₹4,999 / mo** | **35,000 calls** | 60 req / min | ₹0.02 / call | All 135 Endpoints, Full Kundli & Panchang, Community Support |\n"
-        "| **Pro Tier** | **₹14,999 / mo** | **300,000 calls** | 300 req / min | ₹0.015 / call | Full D1–D60 Divisional Charts, High Throughput, 99.9% SLA & Priority Support |\n"
-        "| **Enterprise Tier** | **₹39,999 / mo** | **1,500,000 calls** | 1,200 req / min | ₹0.01 / call | White-label PDF Engine, Dedicated Cache, Custom Branding & 24/7 SLA |"
+        "| **Starter Tier** | **₹4,999 / mo** | **35,000 calls** | 60 req / min | ₹0.02 / call | 35,000 Requests / Month, 60 RPM Rate Limit, Core Astronomy (Planets, Cusps, Retrograde) |\n"
+        "| **Pro Tier** | **₹14,999 / mo** | **300,000 calls** | 300 req / min | ₹0.015 / call | 300,000 Requests / Month, 300 RPM Rate Limit, Full D1–D60 Divisional Vargas (Harmonics) |\n"
+        "| **Enterprise Tier** | **₹39,999 / mo** | **1,500,000 calls** | 1,200 req / min | ₹0.01 / call | 1,500,000 Requests / Month, 1,200 RPM High-Volume Burst Capacity, ALL 117 Production Calculation APIs Unlocked |"
     )
 
 def build_api_description(plans_table_markdown: str) -> str:
@@ -792,7 +792,7 @@ async def custom_redoc_html():
     table {{
       border-collapse: collapse !important;
       width: 100% !important;
-      margin: 18px 0 !important;
+      margin: 24px 0 !important;
       border: 1px solid var(--border-color) !important;
       border-radius: 8px !important;
       background: #ffffff !important;
@@ -816,6 +816,49 @@ async def custom_redoc_html():
 
     tr:nth-child(even) {{
       background-color: #fcfaf8 !important;
+    }}
+
+    /* Heading & Divider Spacing Fix */
+    hr, [data-section-id] hr {{
+      margin: 40px 0 32px 0 !important;
+      border: 0 !important;
+      border-top: 1px solid var(--border-color) !important;
+      clear: both !important;
+    }}
+
+    h1, h2, h3, h4, [data-section-id] h2, [data-section-id] h3 {{
+      margin-top: 36px !important;
+      margin-bottom: 16px !important;
+      padding-top: 8px !important;
+      line-height: 1.4 !important;
+      color: #2c2421 !important;
+    }}
+
+    p, [data-section-id] p {{
+      margin-top: 8px !important;
+      margin-bottom: 14px !important;
+      line-height: 1.65 !important;
+    }}
+
+    ol, ul, [data-section-id] ol, [data-section-id] ul {{
+      margin-top: 14px !important;
+      margin-bottom: 24px !important;
+      padding-left: 24px !important;
+    }}
+
+    ol li, ul li, [data-section-id] li {{
+      margin-bottom: 10px !important;
+      line-height: 1.7 !important;
+    }}
+
+    /* Inline code pill styling */
+    code:not(pre code) {{
+      padding: 2px 6px !important;
+      border-radius: 4px !important;
+      background-color: #f5f1ed !important;
+      border: 1px solid #e5e0dc !important;
+      font-size: 12px !important;
+      font-family: 'JetBrains Mono', monospace !important;
     }}
   </style>
 </head>
@@ -1120,8 +1163,7 @@ def custom_openapi():
                 if "content" in resp_500 and "application/json" in resp_500["content"]:
                     resp_500["content"]["application/json"]["example"] = error_500_example
 
-    app.openapi_schema = openapi_schema
-    return app.openapi_schema
+    return openapi_schema
 
 app.openapi = custom_openapi
 

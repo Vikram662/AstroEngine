@@ -583,7 +583,18 @@ export const HeroSection: React.FC = () => {
                         : "bg-card border border-line text-ink rounded-tl-xs"
                     }`}
                   >
-                    <p className="whitespace-pre-line">{msg.text}</p>
+                    <div className="whitespace-pre-line">
+                      {msg.text.split(/(\*\*[^*]+\*\*)/g).map((part, pIdx) => {
+                        if (part.startsWith("**") && part.endsWith("**")) {
+                          return (
+                            <strong key={pIdx} className="font-bold text-ink">
+                              {part.slice(2, -2)}
+                            </strong>
+                          );
+                        }
+                        return <React.Fragment key={pIdx}>{part}</React.Fragment>;
+                      })}
+                    </div>
                     <span className={`block text-[9px] mt-1 text-right ${msg.sender === "user" ? "text-white/70" : "text-ink-muted"}`}>
                       {msg.timestamp}
                     </span>

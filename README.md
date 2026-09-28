@@ -209,7 +209,7 @@ The old docs disagreed with each other on several numbers. Resolutions:
 
 - **Endpoint count:** don't trust 37, ~115, or 135 — check `/openapi.json` directly.
 - **Test count:** "37 passed, 100%" (old install guide) was wrong; an independent count found 39 tests collected (38 pass + 1 fail on a clean clone missing `NEXT_APP_URL`).
-- **Pricing:** three different tables existed (design spec vs. DB seed vs. backend fallback) — needs a single source of truth, not yet reconciled.
+- **Pricing:** Unified across DB seeds, docs, and backend fallback: Starter ₹4,999/mo (35k calls), Pro ₹14,999/mo (300k calls), Enterprise ₹39,999/mo (1.5M calls).
 - **Frontend redesign phase count:** confirmed via `git log` that all 9 phases are actually committed on `main` (Phases 1–2 have descriptive commit messages `945bcee`/`24d89a6`; Phases 3–9 landed in later, generically-messaged commits) — not just claimed in the fix log.
 
 ## 10. Where things live
