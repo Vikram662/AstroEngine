@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { amount, action } = body;
+    const { amount, action, planTier } = body;
 
     // Action: create_order (Creates real server-side order with verified amount)
     if (action === "create_order") {
@@ -97,7 +97,8 @@ export async function POST(req: NextRequest) {
           notes: {
             userId: user.id,
             userEmail: user.email,
-            purpose: "wallet_recharge"
+            purpose: planTier ? "subscription_upgrade" : "wallet_recharge",
+            ...(planTier ? { planTier } : {})
           }
         };
 
@@ -302,6 +303,22 @@ export async function POST(req: NextRequest) {
         transaction: toJsonSafe(result.settledTx),
         newBalance: toMoney(result.updatedUser.walletBalance)
       });
+    }
+
+    // Action: mark_failed (When payment modal is dismissed or gateway payment fails on frontend)
+    if (action === "mark_failed") {
+      const { razorpayOrderId, razorpayPaymentId, reason } = body;
+      if (razorpayOrderId) {
+        await prisma.transaction.updateMany({
+          where: { gatewayOrderId: razorpayOrderId, userId: user.id, status: "PENDING" },
+          data: {
+            status: "FAILED",
+            gatewayPaymentId: razorpayPaymentId || null,
+            webhookVerified: true
+          }
+        });
+      }
+      return NextResponse.json({ status: "success", message: "Transaction marked as failed." });
     }
 
     return NextResponse.json({ status: "error", message: "Invalid action" }, { status: 400 });

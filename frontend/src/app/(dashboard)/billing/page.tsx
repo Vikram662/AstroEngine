@@ -1007,6 +1007,75 @@ export default function BillingPage() {
           <ArrowUpRight className="w-4 h-4" />
         </Link>
       </div>
+
+      {/* Transaction & Payment History (SUCCESS, PENDING, FAILED) */}
+      <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+          <div>
+            <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Payment & Recharge History</h3>
+            <p className="text-xs text-slate-500 mt-0.5">All wallet recharge and subscription payments with real-time status</p>
+          </div>
+          <span className="text-[11px] font-mono text-slate-500">
+            Total Records: <strong>{transactions.length}</strong>
+          </span>
+        </div>
+
+        {transactions.length === 0 ? (
+          <div className="text-center py-8 text-xs text-slate-400">
+            No transactions found yet. Recharge your wallet or upgrade a plan to see payment logs here.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs text-left">
+              <thead className="bg-slate-50 text-[11px] font-bold uppercase text-slate-500 border-b border-slate-200">
+                <tr>
+                  <th className="py-2.5 px-3">Order / Payment ID</th>
+                  <th className="py-2.5 px-3">Amount</th>
+                  <th className="py-2.5 px-3">Credits Added</th>
+                  <th className="py-2.5 px-3">Date</th>
+                  <th className="py-2.5 px-3">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {transactions.map((t) => (
+                  <tr key={t.id} className="hover:bg-slate-50/60 transition">
+                    <td className="py-2.5 px-3 font-mono font-medium text-slate-900">
+                      {t.orderId}
+                    </td>
+                    <td className="py-2.5 px-3 font-semibold text-slate-900">
+                      ₹{Number(t.amount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                    </td>
+                    <td className="py-2.5 px-3 text-emerald-700 font-bold">
+                      {Number(t.creditsAdded || 0) > 0 ? `+₹${Number(t.creditsAdded).toLocaleString("en-IN")}` : "—"}
+                    </td>
+                    <td className="py-2.5 px-3 text-slate-500 text-[11px]">
+                      {t.date}
+                    </td>
+                    <td className="py-2.5 px-3">
+                      {t.status === "SUCCESS" ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                          <span>SUCCESS</span>
+                        </span>
+                      ) : t.status === "FAILED" ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800">
+                          <AlertCircle className="w-3 h-3 text-rose-600" />
+                          <span>FAILED</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                          <span>PENDING</span>
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
       {/* Upgrade Plan Modal: Choose Payment Method (Wallet vs Gateway) */}
       {selectedPlanForUpgrade && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-in fade-in duration-150">
