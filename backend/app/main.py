@@ -511,25 +511,25 @@ async def custom_redoc_html():
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>AstroEngine B2B API Suite — Documentation</title>
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23c23400'><path d='M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z'/></svg>" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23c96442'><path d='M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z'/></svg>" />
   
-  <!-- Next.js Typography: Inter & JetBrains Mono -->
+  <!-- Next.js Typography: Bricolage Grotesque, DM Sans & JetBrains Mono -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;600;700&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
 
   <style>
     :root {{
-      --bg-page: #fcfaf8;
+      --bg-page: #faf9f5;
       --bg-card: #ffffff;
-      --border-color: #e5e0dc;
-      --border-muted: #f5f1ed;
-      --primary: #c23400;
-      --primary-hover: #9c2a00;
-      --text-main: #2c2421;
-      --text-muted: #8a7d76;
-      --code-panel-bg: #2c2421;
-      --code-panel-text: #fdeee7;
+      --border-color: #e8e6dc;
+      --border-muted: #f0eee6;
+      --primary: #c96442;
+      --primary-hover: #b0553a;
+      --text-main: #141413;
+      --text-muted: #5e5d59;
+      --code-panel-bg: #141413;
+      --code-panel-text: #f6e8e1;
     }}
 
     * {{
@@ -543,7 +543,7 @@ async def custom_redoc_html():
       padding: 0;
       background-color: var(--bg-page);
       color: var(--text-main);
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
       overflow-x: hidden;
@@ -577,7 +577,7 @@ async def custom_redoc_html():
       width: 32px;
       height: 32px;
       border-radius: 8px;
-      background: #2c2421;
+      background: #141413;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -591,7 +591,7 @@ async def custom_redoc_html():
       font-size: 15px;
       font-weight: 700;
       letter-spacing: -0.02em;
-      color: #2c2421;
+      color: #141413;
       display: flex;
       align-items: center;
       gap: 8px;
@@ -602,9 +602,9 @@ async def custom_redoc_html():
       font-weight: 600;
       padding: 2px 8px;
       border-radius: 9999px;
-      background: #f5f1ed;
+      background: #f0eee6;
       border: 1px solid var(--border-color);
-      color: #6b5e57;
+      color: #5e5d59;
       letter-spacing: 0.04em;
     }}
 
@@ -646,7 +646,7 @@ async def custom_redoc_html():
       gap: 6px;
       font-size: 13px;
       font-weight: 500;
-      color: #6b5e57;
+      color: #5e5d59;
       text-decoration: none;
       padding: 6px 13px;
       border-radius: 7px;
@@ -657,20 +657,20 @@ async def custom_redoc_html():
     }}
 
     .nav-btn:hover {{
-      color: #2c2421;
-      background: #f5f1ed;
-      border-color: #e5e0dc;
+      color: #141413;
+      background: #f0eee6;
+      border-color: #e8e6dc;
     }}
 
     .nav-btn-primary {{
-      background: #c23400;
+      background: #c96442;
       color: #ffffff;
-      border: 1px solid #c23400;
-      box-shadow: 0 1px 3px rgba(194, 52, 0, 0.2);
+      border: 1px solid #c96442;
+      box-shadow: 0 1px 3px rgba(201, 100, 66, 0.2);
     }}
 
     .nav-btn-primary:hover {{
-      background: #9c2a00;
+      background: #b0553a;
       color: #ffffff;
     }}
 
@@ -696,10 +696,10 @@ async def custom_redoc_html():
       justify-content: center !important;
       margin: auto !important;
       text-align: center !important;
-      font-family: 'Inter', sans-serif !important;
+      font-family: 'DM Sans', sans-serif !important;
       font-size: 14px !important;
       font-weight: 600 !important;
-      color: #c23400 !important;
+      color: #c96442 !important;
     }}
 
     /* ReDoc Overrides matching Next.js Light Theme */
@@ -714,18 +714,18 @@ async def custom_redoc_html():
     }}
 
     .menu-item-title {{
-      font-family: 'Inter', sans-serif !important;
+      font-family: 'Bricolage Grotesque', sans-serif !important;
       font-size: 13px !important;
       font-weight: 500 !important;
-      color: #6b5e57 !important;
+      color: #5e5d59 !important;
     }}
 
     .menu-item-title:hover {{
-      color: #2c2421 !important;
+      color: #141413 !important;
     }}
 
     .active .menu-item-title {{
-      color: #c23400 !important;
+      color: #c96442 !important;
       font-weight: 600 !important;
     }}
 
@@ -778,14 +778,14 @@ async def custom_redoc_html():
       height: 6px;
     }}
     ::-webkit-scrollbar-track {{
-      background: #f5f1ed;
+      background: #f0eee6;
     }}
     ::-webkit-scrollbar-thumb {{
-      background: #e5e0dc;
+      background: #e8e6dc;
       border-radius: 3px;
     }}
     ::-webkit-scrollbar-thumb:hover {{
-      background: #8a7d76;
+      background: #5e5d59;
     }}
 
     /* Markdown Tables in Light Mode */
@@ -799,8 +799,8 @@ async def custom_redoc_html():
     }}
 
     th {{
-      background-color: #f5f1ed !important;
-      color: #2c2421 !important;
+      background-color: #f0eee6 !important;
+      color: #141413 !important;
       font-weight: 600 !important;
       font-size: 13px !important;
       padding: 12px 16px !important;
@@ -811,11 +811,11 @@ async def custom_redoc_html():
       padding: 11px 16px !important;
       border-bottom: 1px solid var(--border-color) !important;
       font-size: 13px !important;
-      color: #6b5e57 !important;
+      color: #5e5d59 !important;
     }}
 
     tr:nth-child(even) {{
-      background-color: #fcfaf8 !important;
+      background-color: #faf9f5 !important;
     }}
 
     /* Heading & Divider Spacing Fix */
@@ -831,7 +831,7 @@ async def custom_redoc_html():
       margin-bottom: 16px !important;
       padding-top: 8px !important;
       line-height: 1.4 !important;
-      color: #2c2421 !important;
+      color: #141413 !important;
     }}
 
     p, [data-section-id] p {{
@@ -855,8 +855,8 @@ async def custom_redoc_html():
     code:not(pre code) {{
       padding: 2px 6px !important;
       border-radius: 4px !important;
-      background-color: #f5f1ed !important;
-      border: 1px solid #e5e0dc !important;
+      background-color: #f0eee6 !important;
+      border: 1px solid #e8e6dc !important;
       font-size: 12px !important;
       font-family: 'JetBrains Mono', monospace !important;
     }}
@@ -899,8 +899,8 @@ async def custom_redoc_html():
   <!-- ReDoc Container with Centered Next.js Loader -->
   <div id="redoc-container">
     <div id="init-loader" style="min-height: calc(100vh - 120px); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; margin: auto;">
-      <div style="width: 32px; height: 32px; border: 3px solid #e5e0dc; border-top-color: #c23400; border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
-      <div style="font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 500; color: #8a7d76;">Loading Documentation...</div>
+      <div style="width: 32px; height: 32px; border: 3px solid #e8e6dc; border-top-color: #c96442; border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
+      <div style="font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; color: #5e5d59;">Loading Documentation...</div>
     </div>
   </div>
 
@@ -922,9 +922,9 @@ async def custom_redoc_html():
         colors: {{
           tonalOffset: 0.2,
           primary: {{
-            main: '#c23400',
-            light: '#e2551f',
-            dark: '#9c2a00'
+            main: '#c96442',
+            light: '#d97757',
+            dark: '#b0553a'
           }},
           success: {{
             main: '#16a34a',
@@ -934,7 +934,7 @@ async def custom_redoc_html():
           warning: {{
             main: '#d97706',
             light: '#f59e0b',
-            dark: '#9c2a00'
+            dark: '#b0553a'
           }},
           error: {{
             main: '#dc2626',
@@ -942,12 +942,12 @@ async def custom_redoc_html():
             dark: '#b91c1c'
           }},
           text: {{
-            primary: '#2c2421',
-            secondary: '#8a7d76'
+            primary: '#141413',
+            secondary: '#5e5d59'
           }},
           border: {{
-            dark: '#e5e0dc',
-            light: '#f5f1ed'
+            dark: '#e8e6dc',
+            light: '#f0eee6'
           }},
           http: {{
             get: '#2563eb',
@@ -957,7 +957,7 @@ async def custom_redoc_html():
             patch: '#0891b2',
             delete: '#dc2626',
             basic: '#52525b',
-            link: '#c23400',
+            link: '#c96442',
             head: '#9333ea'
           }},
           responses: {{
@@ -980,9 +980,9 @@ async def custom_redoc_html():
           lineHeight: '1.65em',
           fontWeightRegular: '400',
           fontWeightBold: '600',
-          fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+          fontFamily: "'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
           headings: {{
-            fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+            fontFamily: "'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
             fontWeight: '700',
             lineHeight: '1.4em'
           }},
@@ -990,32 +990,32 @@ async def custom_redoc_html():
             fontSize: '13px',
             fontFamily: "'JetBrains Mono', 'Fira Code', Menlo, Monaco, Consolas, monospace",
             lineHeight: '1.6em',
-            backgroundColor: '#f5f1ed',
-            color: '#2c2421'
+            backgroundColor: '#f0eee6',
+            color: '#141413'
           }}
         }},
         sidebar: {{
           width: '280px',
           backgroundColor: '#ffffff',
-          textColor: '#6b5e57',
-          activeTextColor: '#2c2421',
+          textColor: '#5e5d59',
+          activeTextColor: '#141413',
           groupItems: {{
-            activeBackgroundColor: '#f5f1ed',
-            activeTextColor: '#2c2421'
+            activeBackgroundColor: '#f0eee6',
+            activeTextColor: '#141413'
           }},
           level1Items: {{
-            activeBackgroundColor: '#fdeee7',
-            activeTextColor: '#c23400'
+            activeBackgroundColor: '#f6e8e1',
+            activeTextColor: '#c96442'
           }}
         }},
         rightPanel: {{
-          backgroundColor: '#2c2421',
+          backgroundColor: '#141413',
           width: '42%',
-          textColor: '#fdeee7'
+          textColor: '#f6e8e1'
         }},
         schema: {{
-          nestedBackground: '#f5f1ed',
-          linesColor: '#e5e0dc',
+          nestedBackground: '#f0eee6',
+          linesColor: '#e8e6dc',
           defaultDetailsWidth: '75%'
         }}
       }},

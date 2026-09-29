@@ -15,6 +15,7 @@ import {
   Filter,
   Check
 } from "lucide-react";
+import { toApiError } from "@/lib/apiTypes";
 
 interface TicketMessage {
   id: string;
@@ -71,7 +72,7 @@ export default function AdminSupportPage() {
   };
 
   useEffect(() => {
-    fetchTickets();
+    void Promise.resolve().then(fetchTickets);
   }, []);
 
   const handleSendReply = async (e: React.FormEvent) => {
@@ -87,7 +88,7 @@ export default function AdminSupportPage() {
         setSelectedTicket(res.data.data);
         fetchTickets();
       }
-    } catch (err: any) {
+    } catch (errCaught) { const err = toApiError(errCaught);
       alert(err.response?.data?.message || "Failed to send message");
     } finally {
       setSendingReply(false);
@@ -105,7 +106,7 @@ export default function AdminSupportPage() {
         setSelectedTicket(res.data.data);
         fetchTickets();
       }
-    } catch (err: any) {
+    } catch (errCaught) { const err = toApiError(errCaught);
       alert("Failed to update status");
     } finally {
       setUpdatingStatus(false);
@@ -122,13 +123,13 @@ export default function AdminSupportPage() {
       case "OPEN":
         return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">OPEN</span>;
       case "IN_PROGRESS":
-        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">IN PROGRESS</span>;
+        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-accent-soft text-accent-hover border border-accent/30">IN PROGRESS</span>;
       case "RESOLVED":
         return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">RESOLVED</span>;
       case "CLOSED":
-        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">CLOSED</span>;
+        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-surface-alt text-ink-soft border border-line">CLOSED</span>;
       default:
-        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700">{status}</span>;
+        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-surface-alt text-ink">{status}</span>;
     }
   };
 
@@ -139,9 +140,9 @@ export default function AdminSupportPage() {
       case "HIGH":
         return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700">HIGH</span>;
       case "MEDIUM":
-        return <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-600">MEDIUM</span>;
+        return <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-surface-alt text-ink-soft">MEDIUM</span>;
       default:
-        return <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-50 text-slate-400">LOW</span>;
+        return <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-surface text-ink-muted">LOW</span>;
     }
   };
 
@@ -150,37 +151,37 @@ export default function AdminSupportPage() {
       {/* Header */}
       <div>
         <div className="flex items-center gap-2">
-          <h1 className="text-xl font-bold tracking-tight text-slate-900">
+          <h1 className="text-xl font-bold tracking-tight text-ink">
             Developer Support Desk (§8.3.12)
           </h1>
-          <span className="px-2 py-0.5 text-[10px] font-mono font-bold bg-slate-900 text-white rounded">
+          <span className="px-2 py-0.5 text-[10px] font-mono font-bold bg-console text-white rounded">
             ADMIN
           </span>
         </div>
-        <p className="text-xs text-slate-500 mt-1">
+        <p className="text-xs text-ink-soft mt-1">
           Review developer help tickets, debug calculation questions, and dispatch resolution updates directly to users.
         </p>
       </div>
 
       {selectedTicket ? (
         /* Conversation Thread View */
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
+        <div className="bg-white rounded-md border border-line shadow-sm p-6 space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-line">
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setSelectedTicket(null)}
-                className="p-1.5 border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-600"
+                className="p-1.5 border border-line rounded-lg hover:bg-surface text-ink-soft"
               >
                 <ArrowLeft className="w-4 h-4" />
               </button>
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-mono font-bold text-slate-500">{selectedTicket.ticketNumber}</span>
-                  <h2 className="text-base font-bold text-slate-900">{selectedTicket.subject}</h2>
+                  <span className="text-xs font-mono font-bold text-ink-soft">{selectedTicket.ticketNumber}</span>
+                  <h2 className="text-base font-bold text-ink">{selectedTicket.subject}</h2>
                 </div>
-                <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-0.5">
-                  <span className="font-semibold text-slate-700">{selectedTicket.user.email}</span>
-                  <span className="px-1.5 py-0.2 rounded bg-slate-100 font-mono text-[10px]">{selectedTicket.user.planTier}</span>
+                <div className="flex items-center gap-2 text-[11px] text-ink-soft mt-0.5">
+                  <span className="font-semibold text-ink">{selectedTicket.user.email}</span>
+                  <span className="px-1.5 py-0.2 rounded bg-surface-alt font-mono text-[10px]">{selectedTicket.user.planTier}</span>
                   <span>•</span>
                   <span>Category: {selectedTicket.category.replace(/_/g, " ")}</span>
                   <span>•</span>
@@ -194,7 +195,7 @@ export default function AdminSupportPage() {
               <button
                 onClick={() => handleUpdateStatus("IN_PROGRESS")}
                 disabled={updatingStatus || selectedTicket.status === "IN_PROGRESS"}
-                className="px-2.5 py-1 text-[11px] font-semibold rounded-lg border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition"
+                className="px-2.5 py-1 text-[11px] font-semibold rounded-lg border border-accent/30 bg-accent-soft text-accent-hover hover:bg-accent-soft transition"
               >
                 Mark In Progress
               </button>
@@ -208,7 +209,7 @@ export default function AdminSupportPage() {
               <button
                 onClick={() => handleUpdateStatus("CLOSED")}
                 disabled={updatingStatus || selectedTicket.status === "CLOSED"}
-                className="px-2.5 py-1 text-[11px] font-semibold rounded-lg border border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200 transition"
+                className="px-2.5 py-1 text-[11px] font-semibold rounded-lg border border-line bg-surface-alt text-ink hover:bg-line transition"
               >
                 Close
               </button>
@@ -222,17 +223,17 @@ export default function AdminSupportPage() {
               return (
                 <div
                   key={msg.id}
-                  className={`p-4 rounded-xl text-xs space-y-1.5 ${
+                  className={`p-4 rounded-md text-xs space-y-1.5 ${
                     isAdmin 
-                      ? "bg-slate-900 text-slate-100 ml-8 shadow-xs" 
-                      : "bg-slate-50 border border-slate-200 mr-8 text-slate-800"
+                      ? "bg-console text-slate-100 ml-8 shadow-xs" 
+                      : "bg-surface border border-line mr-8 text-ink"
                   }`}
                 >
                   <div className="flex items-center justify-between">
-                    <span className={`font-bold ${isAdmin ? "text-white flex items-center gap-1.5" : "text-slate-900"}`}>
+                    <span className={`font-bold ${isAdmin ? "text-white flex items-center gap-1.5" : "text-ink"}`}>
                       {isAdmin ? "⚡ Support Engineer (Admin)" : `${selectedTicket.user.name || selectedTicket.user.email} (User)`}
                     </span>
-                    <span className={`text-[10px] ${isAdmin ? "text-slate-400" : "text-slate-400"}`}>
+                    <span className={`text-[10px] ${isAdmin ? "text-ink-muted" : "text-ink-muted"}`}>
                       {new Date(msg.createdAt).toLocaleString("en-IN", {
                         month: "short",
                         day: "numeric",
@@ -250,18 +251,18 @@ export default function AdminSupportPage() {
           </div>
 
           {/* Admin Reply Form */}
-          <form onSubmit={handleSendReply} className="pt-2 border-t border-slate-100 flex gap-2">
+          <form onSubmit={handleSendReply} className="pt-2 border-t border-line flex gap-2">
             <input
               type="text"
               placeholder="Type official support reply to the developer..."
               value={replyText}
               onChange={(e) => setReplyText(e.target.value)}
-              className="flex-1 px-3 py-2 text-xs border border-slate-300 rounded-lg text-slate-900 focus:outline-hidden"
+              className="flex-1 px-3 py-2 text-xs border border-line rounded-lg text-ink focus:outline-hidden"
             />
             <button
               type="submit"
               disabled={sendingReply || !replyText.trim()}
-              className="px-5 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold flex items-center gap-1.5 shadow-xs transition"
+              className="px-5 py-2 rounded-lg bg-console hover:bg-console-line text-white text-xs font-semibold flex items-center gap-1.5 shadow-xs transition"
             >
               {sendingReply ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
               <span>Reply as Admin</span>
@@ -270,17 +271,17 @@ export default function AdminSupportPage() {
         </div>
       ) : (
         /* Admin Ticket List Table */
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="p-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-700">
+        <div className="bg-white rounded-md border border-line shadow-sm overflow-hidden">
+          <div className="p-4 border-b border-line flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-ink">
               Developer Tickets ({filteredTickets.length})
             </h2>
             <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-400 font-medium">Filter Status:</span>
+              <span className="text-xs text-ink-muted font-medium">Filter Status:</span>
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="px-2.5 py-1 text-xs border border-slate-200 rounded-lg bg-white text-slate-700 focus:outline-hidden"
+                className="px-2.5 py-1 text-xs border border-line rounded-lg bg-white text-ink focus:outline-hidden"
               >
                 <option value="ALL">All Statuses</option>
                 <option value="OPEN">Open Only</option>
@@ -292,19 +293,19 @@ export default function AdminSupportPage() {
           </div>
 
           {loading ? (
-            <div className="p-12 text-center text-slate-400 text-xs flex items-center justify-center gap-2">
+            <div className="p-12 text-center text-ink-muted text-xs flex items-center justify-center gap-2">
               <Loader2 className="w-4 h-4 animate-spin" />
               <span>Loading tickets...</span>
             </div>
           ) : filteredTickets.length === 0 ? (
-            <div className="p-12 text-center text-slate-400 text-xs">
+            <div className="p-12 text-center text-ink-muted text-xs">
               <MessageSquare className="w-8 h-8 text-slate-300 mx-auto mb-2" />
               <span>No tickets matching the selected status.</span>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 uppercase font-semibold text-[11px]">
+                <thead className="bg-surface border-b border-line text-ink-soft uppercase font-semibold text-[11px]">
                   <tr>
                     <th className="py-3 px-4">Ticket</th>
                     <th className="py-3 px-4">User</th>
@@ -316,28 +317,28 @@ export default function AdminSupportPage() {
                     <th className="py-3 px-4 text-right">Action</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 text-slate-700">
+                <tbody className="divide-y divide-line text-ink">
                   {filteredTickets.map((t) => (
                     <tr 
                       key={t.id} 
                       onClick={() => setSelectedTicket(t)}
-                      className="hover:bg-slate-50/80 transition cursor-pointer"
+                      className="hover:bg-surface/80 transition cursor-pointer"
                     >
-                      <td className="py-3 px-4 font-mono font-bold text-slate-900">{t.ticketNumber}</td>
-                      <td className="py-3 px-4 font-medium text-slate-900">
+                      <td className="py-3 px-4 font-mono font-bold text-ink">{t.ticketNumber}</td>
+                      <td className="py-3 px-4 font-medium text-ink">
                         <div>{t.user.email}</div>
-                        <span className="text-[10px] font-mono text-slate-400">{t.user.planTier}</span>
+                        <span className="text-[10px] font-mono text-ink-muted">{t.user.planTier}</span>
                       </td>
-                      <td className="py-3 px-4 font-medium text-slate-900">
+                      <td className="py-3 px-4 font-medium text-ink">
                         {t.subject}
-                        <div className="text-[11px] text-slate-400">
+                        <div className="text-[11px] text-ink-muted">
                           {t.messages.length} message{t.messages.length > 1 ? "s" : ""}
                         </div>
                       </td>
-                      <td className="py-3 px-4 text-slate-600">{t.category.replace(/_/g, " ")}</td>
+                      <td className="py-3 px-4 text-ink-soft">{t.category.replace(/_/g, " ")}</td>
                       <td className="py-3 px-4">{getPriorityBadge(t.priority)}</td>
                       <td className="py-3 px-4">{getStatusBadge(t.status)}</td>
-                      <td className="py-3 px-4 text-slate-400 text-[11px]">
+                      <td className="py-3 px-4 text-ink-muted text-[11px]">
                         {new Date(t.updatedAt).toLocaleDateString("en-IN", {
                           month: "short",
                           day: "numeric",
@@ -345,7 +346,7 @@ export default function AdminSupportPage() {
                           minute: "2-digit"
                         })}
                       </td>
-                      <td className="py-3 px-4 text-right font-semibold text-blue-600 hover:text-blue-800">
+                      <td className="py-3 px-4 text-right font-semibold text-accent hover:text-accent-hover">
                         Resolve / Reply →
                       </td>
                     </tr>

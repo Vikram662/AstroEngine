@@ -5,6 +5,7 @@ import { Prisma } from "@prisma/client";
 import crypto from "crypto";
 import { OfferValidationError, recordOfferRedemption, resolveOfferForUser } from "@/lib/offers";
 import { toMoney, toJsonSafe } from "@/lib/money";
+import { toApiError } from "@/lib/apiTypes";
 
 export async function POST(req: NextRequest) {
   try {
@@ -64,7 +65,7 @@ export async function POST(req: NextRequest) {
 
     // Proration logic: calculate remaining days and unused value of current active plan
     let proratedDiscount = 0;
-    let currentPlanName = user.planTier;
+    const currentPlanName = user.planTier;
     let remainingDays = 0;
 
     if (user.subscription && user.subscription.currentPeriodEnd) {
@@ -307,7 +308,7 @@ export async function POST(req: NextRequest) {
 
           return { updatedUser, sub, settledTx };
         });
-      } catch (txErr: any) {
+      } catch (txErrCaught) { const txErr = toApiError(txErrCaught);
         if (txErr?.message === "ORDER_ALREADY_SETTLED") {
           return NextResponse.json({
             status: "error",

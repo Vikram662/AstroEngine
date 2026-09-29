@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdminSession } from "@/lib/authGuard";
 import { prisma } from "@/lib/prisma";
 import { toJsonSafe } from "@/lib/money";
+import { ApiData, toApiError } from "@/lib/apiTypes";
 
 const badRequest = (message: string) => NextResponse.json({ status: "error", message }, { status: 400 });
 
@@ -11,7 +12,7 @@ export async function GET() {
     if (!admin) {
       return NextResponse.json({ status: "error", message: "Forbidden: Admin authorization required." }, { status: 403 });
     }
-    const offers = await (prisma as any).offer.findMany({
+    const offers = await (prisma as ApiData).offer.findMany({
       include: {
         assignedUser: { select: { id: true, email: true, name: true } },
         _count: { select: { redemptions: true } },
@@ -86,13 +87,13 @@ export async function POST(req: NextRequest) {
     };
 
     const offer = id
-      ? await (prisma as any).offer.update({ where: { id }, data })
-      : await (prisma as any).offer.create({ data });
+      ? await (prisma as ApiData).offer.update({ where: { id }, data })
+      : await (prisma as ApiData).offer.create({ data });
 
     await prisma.auditLog.create({
       data: {
         actorUserId: admin.userId,
-        actorRole: admin.role as any,
+        actorRole: admin.role as ApiData,
         action: id ? "OFFER_UPDATED" : "OFFER_CREATED",
         targetType: "Offer",
         targetId: offer.id,
@@ -100,7 +101,7 @@ export async function POST(req: NextRequest) {
       },
     });
     return NextResponse.json({ status: "success", data: toJsonSafe(offer), message: `Offer ${code} saved successfully.` });
-  } catch (error: any) {
+  } catch (errorCaught) { const error = toApiError(errorCaught);
     const duplicate = error?.code === "P2002";
     return NextResponse.json(
       { status: "error", message: duplicate ? "That offer code already exists." : (error?.message || "Offer could not be saved.") },
@@ -117,13 +118,13 @@ export async function DELETE(req: NextRequest) {
     }
     const id = new URL(req.url).searchParams.get("id");
     if (!id) return badRequest("Offer id is required.");
-    const current = await (prisma as any).offer.findUnique({ where: { id }, select: { isActive: true, code: true } });
+    const current = await (prisma as ApiData).offer.findUnique({ where: { id }, select: { isActive: true, code: true } });
     if (!current) return badRequest("Offer not found.");
-    const offer = await (prisma as any).offer.update({ where: { id }, data: { isActive: !current.isActive } });
+    const offer = await (prisma as ApiData).offer.update({ where: { id }, data: { isActive: !current.isActive } });
     await prisma.auditLog.create({
       data: {
         actorUserId: admin.userId,
-        actorRole: admin.role as any,
+        actorRole: admin.role as ApiData,
         action: offer.isActive ? "OFFER_ACTIVATED" : "OFFER_DEACTIVATED",
         targetType: "Offer",
         targetId: id,

@@ -7,7 +7,7 @@ export const ResultSection: React.FC<{ title?: string; children: React.ReactNode
   children,
   className = "",
 }) => (
-  <div className={`bg-card rounded-2xl border border-line p-5 sm:p-6 ${className}`}>
+  <div className={`bg-card rounded-lg border border-line p-5 sm:p-6 ${className}`}>
     {title && <h3 className="text-sm font-bold text-ink mb-3">{title}</h3>}
     {children}
   </div>
@@ -51,7 +51,7 @@ export const SubmitButton: React.FC<
     disabled={loading || rest.disabled}
     className={
       className ||
-      "w-full py-3.5 px-6 rounded-xl bg-accent hover:bg-accent-hover text-white font-bold text-sm transition shadow-md shadow-accent/20 flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+      "w-full py-3.5 px-6 rounded-md bg-accent hover:bg-accent-hover text-white font-bold text-sm transition  shadow-accent/20 flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
     }
     {...rest}
   >
@@ -60,5 +60,5 @@ export const SubmitButton: React.FC<
 );
 
 export const ErrorNote: React.FC<{ message: string }> = ({ message }) => (
-  <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs">{message}</div>
+  <div className="p-3.5 rounded-md bg-rose-50 border border-rose-200 text-rose-800 text-xs">{message}</div>
 );

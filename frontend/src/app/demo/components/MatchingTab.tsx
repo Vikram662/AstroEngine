@@ -2,16 +2,17 @@
 
 import React from "react";
 import { HeartHandshake } from "lucide-react";
+import type { ApiData } from "@/lib/apiTypes";
 
 interface MatchingTabProps {
   runMatchmaking: () => void;
   matchingLoading: boolean;
-  profile: any;
-  partnerProfile: any;
-  matchmakingResult: any;
-  dashakootaData: any;
-  papasamyaData: any;
-  matchExceptions: any;
+  profile: ApiData;
+  partnerProfile: ApiData;
+  matchmakingResult: ApiData;
+  dashakootaData: ApiData;
+  papasamyaData: ApiData;
+  matchExceptions: ApiData;
 }
 
 export const MatchingTab: React.FC<MatchingTabProps> = ({
@@ -25,18 +26,18 @@ export const MatchingTab: React.FC<MatchingTabProps> = ({
   matchExceptions,
 }) => {
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-6 space-y-6 animate-in fade-in duration-200">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-4">
+    <div className="bg-white rounded-lg border border-line shadow-xs p-6 space-y-6 animate-in fade-in duration-200">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-line pb-4">
         <div>
-          <h3 className="font-bold text-base text-slate-900">Ashtakoot Kundli Milan (36 Guna Matchmaking)</h3>
-          <p className="text-xs text-slate-500">
+          <h3 className="font-bold text-base text-ink">Ashtakoot Kundli Milan (36 Guna Matchmaking)</h3>
+          <p className="text-xs text-ink-soft">
             Varna, Vashya, Tara, Yoni, Graha Maitri, Gana, Bhakoot, and Nadi matching
           </p>
         </div>
         <button
           onClick={runMatchmaking}
           disabled={matchingLoading}
-          className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center gap-2 transition shadow-xs self-start sm:self-auto disabled:opacity-50"
+          className="px-4 py-2 rounded-md bg-console hover:bg-console-line text-white font-bold text-xs flex items-center gap-2 transition shadow-xs self-start sm:self-auto disabled:opacity-50"
         >
           <HeartHandshake className="w-4 h-4 text-rose-400" />
           <span>{matchingLoading ? "Matching..." : "Calculate 36 Guna Score"}</span>
@@ -45,30 +46,30 @@ export const MatchingTab: React.FC<MatchingTabProps> = ({
 
       {/* 2 Profiles Summary */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-        <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Boy's Profile</span>
-          <div className="text-sm font-black text-slate-900">{profile.name}</div>
-          <div className="text-slate-500 font-mono">
+        <div className="p-4 rounded-md bg-surface border border-line space-y-1">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-ink-muted">Boy&apos;s Profile</span>
+          <div className="text-sm font-semibold text-ink">{profile.name}</div>
+          <div className="text-ink-soft font-mono">
             {profile.dob} {profile.tob} • {profile.cityName}
           </div>
         </div>
 
-        <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Girl's Profile</span>
-          <div className="text-sm font-black text-slate-900">{partnerProfile.name}</div>
-          <div className="text-slate-500 font-mono">
+        <div className="p-4 rounded-md bg-surface border border-line space-y-1">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-ink-muted">Girl&apos;s Profile</span>
+          <div className="text-sm font-semibold text-ink">{partnerProfile.name}</div>
+          <div className="text-ink-soft font-mono">
             {partnerProfile.dob} {partnerProfile.tob} • {partnerProfile.cityName}
           </div>
         </div>
       </div>
 
       {/* Matchmaking Score Banner */}
-      <div className="p-6 rounded-2xl bg-linear-to-r from-rose-50 to-pink-50 border border-rose-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div className="p-6 rounded-lg bg-accent-soft border border-rose-200 flex flex-col sm:flex-row items-center justify-between gap-4">
         <div>
           <span className="text-[10px] font-bold uppercase tracking-wider text-rose-700">
             Total Matchmaking Score
           </span>
-          <div className="text-4xl font-black text-rose-950 font-mono mt-1">
+          <div className="text-4xl font-semibold text-rose-950 font-mono mt-1">
             {matchmakingResult?.total_score || 28.5} <span className="text-xl text-rose-500 font-normal">/ 36</span>
           </div>
           <p className="text-xs text-rose-800 mt-1">
@@ -146,31 +147,31 @@ export const MatchingTab: React.FC<MatchingTabProps> = ({
               { koot: "Bhakoot", score: 0.5, max: 7, desc: "Family Welfare" },
               { koot: "Nadi", score: 8, max: 8, desc: "Physiological Bond" },
             ]
-        ).map((k: any, idx: number) => (
+        ).map((k: ApiData, idx: number) => (
           <div
             key={idx}
-            className="p-3 rounded-xl bg-slate-50 border border-slate-200 shadow-xs flex flex-col justify-between"
+            className="p-3 rounded-md bg-surface border border-line shadow-xs flex flex-col justify-between"
           >
             <div className="flex justify-between items-center">
-              <span className="font-semibold text-slate-700">{k.koot}</span>
-              <span className="font-mono font-bold text-slate-900 bg-white px-2 py-0.5 rounded border border-slate-200">
+              <span className="font-semibold text-ink">{k.koot}</span>
+              <span className="font-mono font-bold text-ink bg-white px-2 py-0.5 rounded border border-line">
                 {k.score} / {k.max}
               </span>
             </div>
-            <span className="text-[10px] text-slate-400 mt-1">{k.desc}</span>
+            <span className="text-[10px] text-ink-muted mt-1">{k.desc}</span>
           </div>
         ))}
       </div>
 
       {/* South Indian 10-Porutham (Dashakoota) Matching */}
-      <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+      <div className="p-6 rounded-lg bg-white border border-line shadow-xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-line pb-3">
           <div>
-            <h4 className="font-bold text-sm text-slate-900 flex items-center gap-2">
+            <h4 className="font-bold text-sm text-ink flex items-center gap-2">
               <span>🟩</span>
               <span>South Indian Dashakoota (10 Porutham / कूट मिलान - Module 8)</span>
             </h4>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="text-xs text-ink-soft mt-0.5">
               Classical 10-Porutham marital longevity evaluation: Dina, Gana, Mahendra, Rajju, Vedha
             </p>
           </div>
@@ -189,7 +190,7 @@ export const MatchingTab: React.FC<MatchingTabProps> = ({
 
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-xs">
           {(dashakootaData?.poruthams_breakdown
-            ? Object.entries(dashakootaData.poruthams_breakdown).map(([name, data]: [string, any]) => ({
+            ? Object.entries(dashakootaData.poruthams_breakdown).map(([name, data]: [string, ApiData]) => ({
                 name: name.replace("_", " ").toUpperCase(),
                 passed: data?.passed ?? true,
                 meaning: data?.significance || data?.meaning || "Marital Harmony",
@@ -206,15 +207,15 @@ export const MatchingTab: React.FC<MatchingTabProps> = ({
                 { name: "Rajju Porutham", passed: true, meaning: "Mangalya & Spouse Longevity (Vital)" },
                 { name: "Vedha Porutham", passed: true, meaning: "Absence of Mutual Affliction" },
               ]
-          ).map((p: any, idx: number) => (
+          ).map((p: ApiData, idx: number) => (
             <div
               key={idx}
-              className={`p-3 rounded-xl border transition ${
+              className={`p-3 rounded-md border transition ${
                 p.passed ? "bg-emerald-50/50 border-emerald-200" : "bg-rose-50/50 border-rose-200"
               }`}
             >
               <div className="flex items-center justify-between">
-                <span className="font-bold text-slate-800 text-[11px] truncate">{p.name}</span>
+                <span className="font-bold text-ink text-[11px] truncate">{p.name}</span>
                 <span
                   className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
                     p.passed ? "bg-emerald-200 text-emerald-900" : "bg-rose-200 text-rose-900"
@@ -223,7 +224,7 @@ export const MatchingTab: React.FC<MatchingTabProps> = ({
                   {p.passed ? "✓ Pass" : "✗ Fail"}
                 </span>
               </div>
-              <span className="text-[10px] text-slate-500 block mt-1 leading-tight">{p.meaning}</span>
+              <span className="text-[10px] text-ink-soft block mt-1 leading-tight">{p.meaning}</span>
             </div>
           ))}
         </div>
@@ -232,38 +233,38 @@ export const MatchingTab: React.FC<MatchingTabProps> = ({
       {/* Papasamya Malefic Balance & Dosha Exceptions */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Papasamya Balance Card */}
-        <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div className="p-6 rounded-lg bg-white border border-line shadow-xs space-y-4">
+          <div className="flex items-center justify-between border-b border-line pb-3">
             <div>
-              <h4 className="font-bold text-sm text-slate-900">Papasamya Malefic Point Balance</h4>
-              <p className="text-xs text-slate-500">
+              <h4 className="font-bold text-sm text-ink">Papasamya Malefic Point Balance</h4>
+              <p className="text-xs text-ink-soft">
                 Mars, Saturn, Sun, Rahu affliction points from Lagna, Moon &amp; Venus
               </p>
             </div>
-            <span className="px-2.5 py-1 rounded bg-indigo-50 text-indigo-700 font-mono text-xs font-bold">
+            <span className="px-2.5 py-1 rounded bg-accent-soft text-accent-hover font-mono text-xs font-bold">
               {papasamyaData?.balance_status || "Balanced (संतुलित)"}
             </span>
           </div>
 
           <div className="grid grid-cols-2 gap-4 text-center">
-            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
-              <span className="text-slate-400 text-[10px] uppercase font-bold block">Groom Papa Points</span>
-              <strong className="text-2xl font-black text-slate-900 font-mono mt-1 block">
+            <div className="p-4 rounded-md bg-surface border border-line">
+              <span className="text-ink-muted text-[10px] uppercase font-bold block">Groom Papa Points</span>
+              <strong className="text-2xl font-semibold text-ink font-mono mt-1 block">
                 {papasamyaData?.groom_total_papa ?? 4.5}
               </strong>
-              <span className="text-[10px] text-slate-500">Afflictions from 1,2,4,7,8,12</span>
+              <span className="text-[10px] text-ink-soft">Afflictions from 1,2,4,7,8,12</span>
             </div>
 
-            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
-              <span className="text-slate-400 text-[10px] uppercase font-bold block">Bride Papa Points</span>
-              <strong className="text-2xl font-black text-slate-900 font-mono mt-1 block">
+            <div className="p-4 rounded-md bg-surface border border-line">
+              <span className="text-ink-muted text-[10px] uppercase font-bold block">Bride Papa Points</span>
+              <strong className="text-2xl font-semibold text-ink font-mono mt-1 block">
                 {papasamyaData?.bride_total_papa ?? 4.0}
               </strong>
-              <span className="text-[10px] text-slate-500">Afflictions from 1,2,4,7,8,12</span>
+              <span className="text-[10px] text-ink-soft">Afflictions from 1,2,4,7,8,12</span>
             </div>
           </div>
 
-          <p className="text-xs text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-200 leading-relaxed">
+          <p className="text-xs text-ink-soft bg-surface p-3 rounded-md border border-line leading-relaxed">
             ⚖️ <strong>Classical Papasamya Rule:</strong>{" "}
             {papasamyaData?.rule_verdict ||
               "The groom's malefic points equal or moderately exceed the bride's points, ensuring protective marital balance."}
@@ -271,11 +272,11 @@ export const MatchingTab: React.FC<MatchingTabProps> = ({
         </div>
 
         {/* Dosha Exceptions & Cancellations */}
-        <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div className="p-6 rounded-lg bg-white border border-line shadow-xs space-y-4">
+          <div className="flex items-center justify-between border-b border-line pb-3">
             <div>
-              <h4 className="font-bold text-sm text-slate-900">Dosha Cancellation &amp; Parihara Exceptions</h4>
-              <p className="text-xs text-slate-500">
+              <h4 className="font-bold text-sm text-ink">Dosha Cancellation &amp; Parihara Exceptions</h4>
+              <p className="text-xs text-ink-soft">
                 Shastric exemption rules nullifying Nadi, Bhakoot, and Gana Doshas
               </p>
             </div>
@@ -303,15 +304,15 @@ export const MatchingTab: React.FC<MatchingTabProps> = ({
                   status: "NEUTRALIZED",
                 },
               ]
-            ).map((exc: any, idx: number) => (
-              <div key={idx} className="p-3 rounded-xl bg-emerald-50/40 border border-emerald-100 space-y-1">
+            ).map((exc: ApiData, idx: number) => (
+              <div key={idx} className="p-3 rounded-md bg-emerald-50/40 border border-emerald-100 space-y-1">
                 <div className="flex items-center justify-between">
                   <strong className="text-emerald-950 font-bold">{exc.title}</strong>
                   <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">
                     {exc.status}
                   </span>
                 </div>
-                <p className="text-slate-600 text-[11px] leading-relaxed">{exc.rule}</p>
+                <p className="text-ink-soft text-[11px] leading-relaxed">{exc.rule}</p>
               </div>
             ))}
           </div>

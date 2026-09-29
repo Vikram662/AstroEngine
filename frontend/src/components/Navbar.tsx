@@ -300,7 +300,7 @@ export const Navbar = () => {
                       <ChevronDown className={`w-3 h-3 transition-transform ${openGroup === group.label ? "rotate-180" : ""}`} />
                     </button>
                     {openGroup === group.label && (
-                      <div className="absolute left-0 top-full mt-1 w-64 bg-card border border-line rounded-lg shadow-lg py-1.5 z-50">
+                      <div className="absolute left-0 top-full mt-1 w-64 bg-card border border-line rounded-lg py-1.5 z-50">
                         {group.items.map((item) => {
                           const targetHref = locale === "hi" && isMigratedPath(item.href) ? `/hi${item.href}` : item.href;
                           return (

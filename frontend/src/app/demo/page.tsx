@@ -58,6 +58,7 @@ import { HoroscopeTab } from "./components/HoroscopeTab";
 import { TarotTab } from "./components/TarotTab";
 import { VastuTab } from "./components/VastuTab";
 import { DEMO_TRANSLATIONS, SupportedLang } from "./i18n";
+import { ApiData, toApiError } from "@/lib/apiTypes";
 
 // Kept in sync with the `id` of every entry in the two tab-definition arrays
 // further down this file — used to validate the ?tab= deep link from the
@@ -128,109 +129,109 @@ export default function LiveDemoApp() {
   const [error, setError] = useState<string | null>(null);
 
   // Stored API Data from 135 Engines
-  const [d1Chart, setD1Chart] = useState<any>(null);
-  const [d9Chart, setD9Chart] = useState<any>(null);
+  const [d1Chart, setD1Chart] = useState<ApiData>(null);
+  const [d9Chart, setD9Chart] = useState<ApiData>(null);
   const [svgChartD1, setSvgChartD1] = useState<string>("");
   const [svgChartD9, setSvgChartD9] = useState<string>("");
   const [chartStyle, setChartStyle] = useState<"NORTH_INDIAN" | "SOUTH_INDIAN">("NORTH_INDIAN");
   const [selectedVarga, setSelectedVarga] = useState<string>("D1");
   const [vargaSvgMap, setVargaSvgMap] = useState<Record<string, string>>({});
   const [vargaLoading, setVargaLoading] = useState<boolean>(false);
-  const [sarvashtakData, setSarvashtakData] = useState<any>(null);
-  const [bhinnashtakData, setBhinnashtakData] = useState<any>(null);
-  const [planets, setPlanets] = useState<any[]>([]);
-  const [panchang, setPanchang] = useState<any>(null);
-  const [choghadiya, setChoghadiya] = useState<any>(null);
-  const [currentDasha, setCurrentDasha] = useState<any>(null);
-  const [fullMahadashas, setFullMahadashas] = useState<any[]>([]);
-  const [antardashas, setAntardashas] = useState<any[]>([]);
+  const [sarvashtakData, setSarvashtakData] = useState<ApiData>(null);
+  const [bhinnashtakData, setBhinnashtakData] = useState<ApiData>(null);
+  const [planets, setPlanets] = useState<ApiData[]>([]);
+  const [panchang, setPanchang] = useState<ApiData>(null);
+  const [choghadiya, setChoghadiya] = useState<ApiData>(null);
+  const [currentDasha, setCurrentDasha] = useState<ApiData>(null);
+  const [fullMahadashas, setFullMahadashas] = useState<ApiData[]>([]);
+  const [antardashas, setAntardashas] = useState<ApiData[]>([]);
   const [selectedMdForAd, setSelectedMdForAd] = useState<string>("JUPITER");
 
   // 5-Level Interactive Drilldown (MD -> AD -> PD -> SD -> PR)
   const [dashaDrillLevel, setDashaDrillLevel] = useState<number>(1); // 1: MD, 2: AD, 3: PD, 4: SD, 5: PR
-  const [selectedMdObj, setSelectedMdObj] = useState<any>(null);
-  const [selectedAdObj, setSelectedAdObj] = useState<any>(null);
-  const [selectedPdObj, setSelectedPdObj] = useState<any>(null);
-  const [selectedSdObj, setSelectedSdObj] = useState<any>(null);
+  const [selectedMdObj, setSelectedMdObj] = useState<ApiData>(null);
+  const [selectedAdObj, setSelectedAdObj] = useState<ApiData>(null);
+  const [selectedPdObj, setSelectedPdObj] = useState<ApiData>(null);
+  const [selectedSdObj, setSelectedSdObj] = useState<ApiData>(null);
 
-  const [currentLevelList, setCurrentLevelList] = useState<any[]>([]);
+  const [currentLevelList, setCurrentLevelList] = useState<ApiData[]>([]);
   const [drillLoading, setDrillLoading] = useState<boolean>(false);
-  const [yoginiDasha, setYoginiDasha] = useState<any>(null);
-  const [parashariYogas, setParashariYogas] = useState<any[]>([]);
-  const [shadbalaDetails, setShadbalaDetails] = useState<any>(null);
-  const [sadeSatiStatus, setSadeSatiStatus] = useState<any>(null);
-  const [pitraDosha, setPitraDosha] = useState<any>(null);
-  const [guruChandal, setGuruChandal] = useState<any>(null);
-  const [manglikData, setManglikData] = useState<any>(null);
-  const [kaalSarpData, setKaalSarpData] = useState<any>(null);
-  const [numerology, setNumerology] = useState<any>(null);
-  const [loshuGrid, setLoshuGrid] = useState<any>(null);
-  const [gemstones, setGemstones] = useState<any>(null);
-  const [rudrakshaList, setRudrakshaList] = useState<any[]>([]);
-  const [mantrasList, setMantrasList] = useState<any[]>([]);
-  const [fastingRecs, setFastingRecs] = useState<any>(null);
-  const [donationsRecs, setDonationsRecs] = useState<any>(null);
-  const [westernData, setWesternData] = useState<any>(null);
+  const [yoginiDasha, setYoginiDasha] = useState<ApiData>(null);
+  const [parashariYogas, setParashariYogas] = useState<ApiData[]>([]);
+  const [shadbalaDetails, setShadbalaDetails] = useState<ApiData>(null);
+  const [sadeSatiStatus, setSadeSatiStatus] = useState<ApiData>(null);
+  const [pitraDosha, setPitraDosha] = useState<ApiData>(null);
+  const [guruChandal, setGuruChandal] = useState<ApiData>(null);
+  const [manglikData, setManglikData] = useState<ApiData>(null);
+  const [kaalSarpData, setKaalSarpData] = useState<ApiData>(null);
+  const [numerology, setNumerology] = useState<ApiData>(null);
+  const [loshuGrid, setLoshuGrid] = useState<ApiData>(null);
+  const [gemstones, setGemstones] = useState<ApiData>(null);
+  const [rudrakshaList, setRudrakshaList] = useState<ApiData[]>([]);
+  const [mantrasList, setMantrasList] = useState<ApiData[]>([]);
+  const [fastingRecs, setFastingRecs] = useState<ApiData>(null);
+  const [donationsRecs, setDonationsRecs] = useState<ApiData>(null);
+  const [westernData, setWesternData] = useState<ApiData>(null);
   const [westernWheelSvg, setWesternWheelSvg] = useState<string>("");
-  const [kpPlanets, setKpPlanets] = useState<any[]>([]);
-  const [kpCusps, setKpCusps] = useState<any[]>([]);
+  const [kpPlanets, setKpPlanets] = useState<ApiData[]>([]);
+  const [kpCusps, setKpCusps] = useState<ApiData[]>([]);
   const [kpChartSvg, setKpChartSvg] = useState<string>("");
-  const [kpSignificators, setKpSignificators] = useState<any[]>([]);
-  const [kpRulingPlanets, setKpRulingPlanets] = useState<any>(null);
-  const [lalKitabData, setLalKitabData] = useState<any>(null);
+  const [kpSignificators, setKpSignificators] = useState<ApiData[]>([]);
+  const [kpRulingPlanets, setKpRulingPlanets] = useState<ApiData>(null);
+  const [lalKitabData, setLalKitabData] = useState<ApiData>(null);
   const [lalKitabChartSvg, setLalKitabChartSvg] = useState<string>("");
-  const [lalKitabRemedies, setLalKitabRemedies] = useState<any[]>([]);
-  const [jaiminiKarakas, setJaiminiKarakas] = useState<any[]>([]);
-  const [tajikVarshphal, setTajikVarshphal] = useState<any>(null);
-  const [vargaD10, setVargaD10] = useState<any>(null);
-  const [chandraKundli, setChandraKundli] = useState<any>(null);
+  const [lalKitabRemedies, setLalKitabRemedies] = useState<ApiData[]>([]);
+  const [jaiminiKarakas, setJaiminiKarakas] = useState<ApiData[]>([]);
+  const [tajikVarshphal, setTajikVarshphal] = useState<ApiData>(null);
+  const [vargaD10, setVargaD10] = useState<ApiData>(null);
+  const [chandraKundli, setChandraKundli] = useState<ApiData>(null);
 
   // ── NEW: All remaining pending API states ──
   // Core Astronomy extras
-  const [retrogradeData, setRetrogradeData] = useState<any>(null);
-  const [sunMoonTimings, setSunMoonTimings] = useState<any>(null);
-  const [ayanamsaData, setAyanamsaData] = useState<any>(null);
-  const [houseCusps, setHouseCusps] = useState<any>(null);
+  const [retrogradeData, setRetrogradeData] = useState<ApiData>(null);
+  const [sunMoonTimings, setSunMoonTimings] = useState<ApiData>(null);
+  const [ayanamsaData, setAyanamsaData] = useState<ApiData>(null);
+  const [houseCusps, setHouseCusps] = useState<ApiData>(null);
   // Panchang extras
-  const [panchangAdvanced, setPanchangAdvanced] = useState<any>(null);
-  const [horaData, setHoraData] = useState<any>(null);
-  const [bhadraData, setBhadraData] = useState<any>(null);
-  const [panchakData, setPanchakData] = useState<any>(null);
-  const [monthlyCalendar, setMonthlyCalendar] = useState<any>(null);
-  const [marriageMuhurat, setMarriageMuhurat] = useState<any>(null);
-  const [grihaProveshMuhurat, setGrihaPraveshMuhurat] = useState<any>(null);
-  const [propertyMuhurat, setPropertyMuhurat] = useState<any>(null);
+  const [panchangAdvanced, setPanchangAdvanced] = useState<ApiData>(null);
+  const [horaData, setHoraData] = useState<ApiData>(null);
+  const [bhadraData, setBhadraData] = useState<ApiData>(null);
+  const [panchakData, setPanchakData] = useState<ApiData>(null);
+  const [monthlyCalendar, setMonthlyCalendar] = useState<ApiData>(null);
+  const [marriageMuhurat, setMarriageMuhurat] = useState<ApiData>(null);
+  const [grihaProveshMuhurat, setGrihaPraveshMuhurat] = useState<ApiData>(null);
+  const [propertyMuhurat, setPropertyMuhurat] = useState<ApiData>(null);
   // Parashari extras
-  const [bhavChalit, setBhavChalit] = useState<any>(null);
-  const [avasthasData, setAvasthasData] = useState<any>(null);
-  const [bhavabalaData, setBhavabalaData] = useState<any>(null);
-  const [specialPoints, setSpecialPoints] = useState<any>(null);
+  const [bhavChalit, setBhavChalit] = useState<ApiData>(null);
+  const [avasthasData, setAvasthasData] = useState<ApiData>(null);
+  const [bhavabalaData, setBhavabalaData] = useState<ApiData>(null);
+  const [specialPoints, setSpecialPoints] = useState<ApiData>(null);
   // KP extras
-  const [kpSignificatorsData, setKpSignificatorsData] = useState<any>(null);
+  const [kpSignificatorsData, setKpSignificatorsData] = useState<ApiData>(null);
   // Jaimini extras
-  const [jaiminiPadas, setJaiminiPadas] = useState<any>(null);
-  const [charaDasha, setCharaDasha] = useState<any>(null);
+  const [jaiminiPadas, setJaiminiPadas] = useState<ApiData>(null);
+  const [charaDasha, setCharaDasha] = useState<ApiData>(null);
   // Tajik extras
-  const [tajikYogas, setTajikYogas] = useState<any>(null);
+  const [tajikYogas, setTajikYogas] = useState<ApiData>(null);
   // Western extras
-  const [westernTropicalPlanets, setWesternTropicalPlanets] = useState<any>(null);
-  const [westernAspects, setWesternAspects] = useState<any>(null);
-  const [westernSynastry, setWesternSynastry] = useState<any>(null);
-  const [westernTransits, setWesternTransits] = useState<any>(null);
-  const [westernSolarReturn, setWesternSolarReturn] = useState<any>(null);
+  const [westernTropicalPlanets, setWesternTropicalPlanets] = useState<ApiData>(null);
+  const [westernAspects, setWesternAspects] = useState<ApiData>(null);
+  const [westernSynastry, setWesternSynastry] = useState<ApiData>(null);
+  const [westernTransits, setWesternTransits] = useState<ApiData>(null);
+  const [westernSolarReturn, setWesternSolarReturn] = useState<ApiData>(null);
   // Dosha extras
-  const [grahaMaitri, setGrahaMaitri] = useState<any>(null);
-  const [compatibilityScore, setCompatibilityScore] = useState<any>(null);
+  const [grahaMaitri, setGrahaMaitri] = useState<ApiData>(null);
+  const [compatibilityScore, setCompatibilityScore] = useState<ApiData>(null);
   // Remedies extras
-  const [yantraData, setYantraData] = useState<any>(null);
-  const [gemRestrictions, setGemRestrictions] = useState<any>(null);
+  const [yantraData, setYantraData] = useState<ApiData>(null);
+  const [gemRestrictions, setGemRestrictions] = useState<ApiData>(null);
 
   // Numerology extras (Module 10)
-  const [missingNumbersData, setMissingNumbersData] = useState<any>(null);
-  const [nameAnalysisData, setNameAnalysisData] = useState<any>(null);
-  const [numerologyForecastData, setNumerologyForecastData] = useState<any>(null);
-  const [pinnaclesData, setPinnaclesData] = useState<any>(null);
-  const [favorableData, setFavorableData] = useState<any>(null);
+  const [missingNumbersData, setMissingNumbersData] = useState<ApiData>(null);
+  const [nameAnalysisData, setNameAnalysisData] = useState<ApiData>(null);
+  const [numerologyForecastData, setNumerologyForecastData] = useState<ApiData>(null);
+  const [pinnaclesData, setPinnaclesData] = useState<ApiData>(null);
+  const [favorableData, setFavorableData] = useState<ApiData>(null);
 
   // ── PDF Engine (Module 12) state ──
   const [pdfJobs, setPdfJobs] = useState<Record<string, {
@@ -242,44 +243,44 @@ export default function LiveDemoApp() {
   // ── Horoscope Tab state ──
   const [selectedRashi, setSelectedRashi] = useState<string>("mesh");
   const [rashiPeriod, setRashiPeriod] = useState<"daily" | "weekly" | "monthly" | "yearly">("daily");
-  const [apiHoroscopeData, setApiHoroscopeData] = useState<Record<string, any>>({});
+  const [apiHoroscopeData, setApiHoroscopeData] = useState<Record<string, ApiData>>({});
   const [horoscopeApiLoading, setHoroscopeApiLoading] = useState<boolean>(false);
-  const [housePredictions, setHousePredictions] = useState<any>(null);
-  const [namaksharData, setNamaksharData] = useState<any>(null);
+  const [housePredictions, setHousePredictions] = useState<ApiData>(null);
+  const [namaksharData, setNamaksharData] = useState<ApiData>(null);
 
   // ── Option 1: Advanced Astrological Engine States ──
-  const [sadeSatiTimeline, setSadeSatiTimeline] = useState<any>(null);
-  const [dashakootaData, setDashakootaData] = useState<any>(null);
-  const [papasamyaData, setPapasamyaData] = useState<any>(null);
-  const [matchExceptions, setMatchExceptions] = useState<any>(null);
+  const [sadeSatiTimeline, setSadeSatiTimeline] = useState<ApiData>(null);
+  const [dashakootaData, setDashakootaData] = useState<ApiData>(null);
+  const [papasamyaData, setPapasamyaData] = useState<ApiData>(null);
+  const [matchExceptions, setMatchExceptions] = useState<ApiData>(null);
   const [kpHorarySeed, setKpHorarySeed] = useState<number>(108);
-  const [kpHoraryData, setKpHoraryData] = useState<any>(null);
+  const [kpHoraryData, setKpHoraryData] = useState<ApiData>(null);
   const [kpHoraryLoading, setKpHoraryLoading] = useState<boolean>(false);
-  const [kpLevel4Significators, setKpLevel4Significators] = useState<any>(null);
-  const [lalKitabBlind, setLalKitabBlind] = useState<any>(null);
-  const [jaiminiKarakamsha, setJaiminiKarakamsha] = useState<any>(null);
-  const [upagrahasData, setUpagrahasData] = useState<any>(null);
-  const [tajikSahams, setTajikSahams] = useState<any>(null);
+  const [kpLevel4Significators, setKpLevel4Significators] = useState<ApiData>(null);
+  const [lalKitabBlind, setLalKitabBlind] = useState<ApiData>(null);
+  const [jaiminiKarakamsha, setJaiminiKarakamsha] = useState<ApiData>(null);
+  const [upagrahasData, setUpagrahasData] = useState<ApiData>(null);
+  const [tajikSahams, setTajikSahams] = useState<ApiData>(null);
 
   // ── AI Astrologer Chat Engine States ──
   const [aiQuestion, setAiQuestion] = useState<string>("मेरी नौकरी में पदोन्नति और करियर में आगे क्या योग हैं?");
-  const [aiChatHistory, setAiChatHistory] = useState<any[]>([]);
+  const [aiChatHistory, setAiChatHistory] = useState<ApiData[]>([]);
   const [aiChatLoading, setAiChatLoading] = useState<boolean>(false);
-  const [aiQuickInsights, setAiQuickInsights] = useState<any>(null);
+  const [aiQuickInsights, setAiQuickInsights] = useState<ApiData>(null);
   const [aiInsightsLoading, setAiInsightsLoading] = useState<boolean>(false);
 
   // ── Tarot Card Reading Suite States ──
   const [tarotQuestion, setTarotQuestion] = useState<string>("What energy is surrounding my career and life right now?");
   const [tarotSpreadMode, setTarotSpreadMode] = useState<"daily" | "3_card_time" | "3_card_mind" | "celtic_cross">("3_card_time");
   const [tarotLoading, setTarotLoading] = useState<boolean>(false);
-  const [tarotDailyResult, setTarotDailyResult] = useState<any>(null);
-  const [tarot3CardResult, setTarot3CardResult] = useState<any>(null);
-  const [tarotCelticResult, setTarotCelticResult] = useState<any>(null);
+  const [tarotDailyResult, setTarotDailyResult] = useState<ApiData>(null);
+  const [tarot3CardResult, setTarot3CardResult] = useState<ApiData>(null);
+  const [tarotCelticResult, setTarotCelticResult] = useState<ApiData>(null);
 
   // ── Vastu Shastra Energy Engine States ──
   const [vastuPropertyFacing, setVastuPropertyFacing] = useState<string>("East");
   const [vastuPropertyType, setVastuPropertyType] = useState<string>("residential");
-  const [vastuRooms, setVastuRooms] = useState<any[]>([
+  const [vastuRooms, setVastuRooms] = useState<ApiData[]>([
     { room_type: "pooja_mandir", zone: "NE", color: "White" },
     { room_type: "kitchen", zone: "SE", color: "Orange" },
     { room_type: "master_bedroom", zone: "SW", color: "Cream" },
@@ -288,11 +289,11 @@ export default function LiveDemoApp() {
     { room_type: "living_room", zone: "E", color: "White" }
   ]);
   const [vastuLoading, setVastuLoading] = useState<boolean>(false);
-  const [vastuEvaluationResult, setVastuEvaluationResult] = useState<any>(null);
+  const [vastuEvaluationResult, setVastuEvaluationResult] = useState<ApiData>(null);
 
   // Dynamic City Geo API Search (Module 1 — Endpoint 6 & 7)
   const [citySearchQuery, setCitySearchQuery] = useState<string>(DEFAULT_PROFILE.cityName);
-  const [citySearchResults, setCitySearchResults] = useState<any[]>([]);
+  const [citySearchResults, setCitySearchResults] = useState<ApiData[]>([]);
   const [isSearchingCity, setIsSearchingCity] = useState<boolean>(false);
   const [showCityDropdown, setShowCityDropdown] = useState<boolean>(false);
 
@@ -333,7 +334,7 @@ export default function LiveDemoApp() {
   };
 
   // Select city from autocomplete dropdown
-  const handleSelectGeoCity = (geoCity: any) => {
+  const handleSelectGeoCity = (geoCity: ApiData) => {
     const fullName = `${geoCity.city}, ${geoCity.country || "India"}`;
     setCitySearchQuery(fullName);
     setShowCityDropdown(false);
@@ -360,7 +361,7 @@ export default function LiveDemoApp() {
     cityName: "New Delhi, India",
     lang: "hi"
   });
-  const [matchmakingResult, setMatchmakingResult] = useState<any>(null);
+  const [matchmakingResult, setMatchmakingResult] = useState<ApiData>(null);
   const [matchingLoading, setMatchingLoading] = useState<boolean>(false);
 
   // Fetch SVG for any selected Varga Chart
@@ -396,7 +397,7 @@ export default function LiveDemoApp() {
   };
 
   // 5-Level Dasha Drilldown Functions (MD -> AD -> PD -> SD -> PR)
-  const drillIntoAd = async (md: any) => {
+  const drillIntoAd = async (md: ApiData) => {
     setSelectedMdObj(md);
     setSelectedAdObj(null);
     setSelectedPdObj(null);
@@ -429,7 +430,7 @@ export default function LiveDemoApp() {
     }
   };
 
-  const drillIntoPd = async (ad: any) => {
+  const drillIntoPd = async (ad: ApiData) => {
     setSelectedAdObj(ad);
     setSelectedPdObj(null);
     setSelectedSdObj(null);
@@ -462,7 +463,7 @@ export default function LiveDemoApp() {
     }
   };
 
-  const drillIntoSd = async (pd: any) => {
+  const drillIntoSd = async (pd: ApiData) => {
     setSelectedPdObj(pd);
     setSelectedSdObj(null);
     setDashaDrillLevel(4);
@@ -496,7 +497,7 @@ export default function LiveDemoApp() {
     }
   };
 
-  const drillIntoPr = async (sd: any) => {
+  const drillIntoPr = async (sd: ApiData) => {
     setSelectedSdObj(sd);
     setDashaDrillLevel(5);
     setDrillLoading(true);
@@ -550,7 +551,7 @@ export default function LiveDemoApp() {
   };
 
   // Helper to call backend via secure proxy
-  const callProxy = async (endpoint: string, payload: any = {}, queryParams: any = null, method: string = "POST") => {
+  const callProxy = async (endpoint: string, payload: ApiData = {}, queryParams: ApiData = null, method: string = "POST") => {
     const res = await axios.post("/api/proxy", {
       endpoint,
       payload,
@@ -694,7 +695,7 @@ export default function LiveDemoApp() {
         if (Array.isArray(rawM)) {
           setMantrasList(rawM);
         } else if (typeof rawM === "object") {
-          const arr = Object.entries(rawM).map(([pName, mData]: [string, any]) => ({
+          const arr = Object.entries(rawM).map(([pName, mData]: [string, ApiData]) => ({
             planet: pName,
             mantra: mData.mantra || mData.beej_mantra,
             counts: `${mData.recitations || 10000} times`
@@ -828,7 +829,7 @@ export default function LiveDemoApp() {
           callProxy("/api/v1/panchang/horoscope/monthly", payload),
           callProxy("/api/v1/panchang/horoscope/yearly", payload)
         ]);
-        const hData: Record<string, any> = {};
+        const hData: Record<string, ApiData> = {};
         if (dailyH.status === "fulfilled" && dailyH.value?.data) hData.daily = dailyH.value.data;
         if (weeklyH.status === "fulfilled" && weeklyH.value?.data) hData.weekly = weeklyH.value.data;
         if (monthlyH.status === "fulfilled" && monthlyH.value?.data) hData.monthly = monthlyH.value.data;
@@ -896,7 +897,7 @@ export default function LiveDemoApp() {
         if (sahamsRes?.data) setTajikSahams(sahamsRes.data);
       } catch (e) { }
 
-    } catch (err: any) {
+    } catch (errCaught) { const err = toApiError(errCaught);
       setError(err.response?.data?.message || err.message || "Failed to calculate some horoscope engines.");
     } finally {
       setLoading(false);
@@ -914,7 +915,7 @@ export default function LiveDemoApp() {
   useEffect(() => {
     const requested = new URLSearchParams(window.location.search).get("tab");
     if (requested && VALID_DEMO_TABS.has(requested)) {
-      setActiveTab(requested);
+      void Promise.resolve().then(() => setActiveTab(requested));
     }
   }, []);
 
@@ -948,7 +949,7 @@ export default function LiveDemoApp() {
       if (resPapa.status === "fulfilled" && resPapa.value?.data) setPapasamyaData(resPapa.value.data);
       if (resExc.status === "fulfilled" && resExc.value?.data) setMatchExceptions(resExc.value.data);
 
-    } catch (e: any) {
+    } catch (eCaught) { const e = toApiError(eCaught);
       setError("Matchmaking calculation failed.");
     } finally {
       setMatchingLoading(false);
@@ -999,7 +1000,7 @@ export default function LiveDemoApp() {
         setAiChatHistory(prev => [res.data, ...prev]);
         setAiQuestion("");
       }
-    } catch (e: any) {
+    } catch (eCaught) { const e = toApiError(eCaught);
       console.error("AI Astrologer error", e);
     } finally {
       setAiChatLoading(false);
@@ -1048,7 +1049,7 @@ export default function LiveDemoApp() {
         });
         if (res?.data) setTarot3CardResult(res.data);
       }
-    } catch (e: any) {
+    } catch (eCaught) { const e = toApiError(eCaught);
       console.error("Tarot draw error", e);
     } finally {
       setTarotLoading(false);
@@ -1069,7 +1070,7 @@ export default function LiveDemoApp() {
       if (res?.data) {
         setVastuEvaluationResult(res.data);
       }
-    } catch (e: any) {
+    } catch (eCaught) { const e = toApiError(eCaught);
       console.error("Vastu evaluation error", e);
     } finally {
       setVastuLoading(false);
@@ -1115,7 +1116,7 @@ export default function LiveDemoApp() {
             if (part.startsWith("**") && part.endsWith("**")) {
               const cleanBold = part.slice(2, -2);
               return (
-                <strong key={i} className="font-bold text-slate-900 bg-amber-50 text-indigo-950 px-1 py-0.5 rounded border border-amber-200/60 mx-0.5">
+                <strong key={i} className="font-bold text-ink bg-amber-50 text-ink px-1 py-0.5 rounded border border-amber-200/60 mx-0.5">
                   {cleanBold}
                 </strong>
               );
@@ -1162,7 +1163,7 @@ export default function LiveDemoApp() {
     setPdfLoading(prev => ({ ...prev, [reportType]: false }));
   };
 
-  const generatePdf = async (endpoint: string, reportType: string, extraPayload: any = {}) => {
+  const generatePdf = async (endpoint: string, reportType: string, extraPayload: ApiData = {}) => {
     setPdfLoading(prev => ({ ...prev, [reportType]: true }));
     setPdfJobs(prev => ({
       ...prev,
@@ -1194,7 +1195,7 @@ export default function LiveDemoApp() {
       } else {
         throw new Error("No job_id returned");
       }
-    } catch (e: any) {
+    } catch (eCaught) { const e = toApiError(eCaught);
       setPdfJobs(prev => ({
         ...prev,
         [reportType]: { jobId: "", status: "FAILED", reportType, error: e.message || "Failed to start PDF job" }
@@ -1224,13 +1225,13 @@ export default function LiveDemoApp() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50/50 pb-20">
+    <div className="min-h-screen bg-surface/50 pb-20">
       {/* Top App Bar with clean, calm styling */}
-      <div className="bg-slate-900 text-white border-b border-slate-800">
+      <div className="bg-console text-white border-b border-console-line">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-slate-800 text-indigo-300 border border-indigo-500/20">
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-console-line text-orange-300 border border-accent/20">
                 {t.enginesLiveBadge}
               </span>
               <span className="px-2 py-0.5 rounded text-[10px] font-mono text-emerald-400 bg-emerald-950/40 border border-emerald-800/40 flex items-center gap-1">
@@ -1238,10 +1239,10 @@ export default function LiveDemoApp() {
                 {t.securityBadge}
               </span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white mt-2">
+            <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-white mt-2">
               {t.appTitle}
             </h1>
-            <p className="text-slate-400 text-xs sm:text-sm mt-1 max-w-2xl">
+            <p className="text-ink-muted text-xs sm:text-sm mt-1 max-w-2xl">
               {t.appSubtitle}
             </p>
           </div>
@@ -1250,7 +1251,7 @@ export default function LiveDemoApp() {
             <button
               onClick={() => calculateAllData(profile)}
               disabled={loading}
-              className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs transition flex items-center gap-2 shadow-sm disabled:opacity-50"
+              className="px-4 py-2.5 rounded-md bg-accent hover:bg-accent text-white font-semibold text-xs transition flex items-center gap-2 shadow-sm disabled:opacity-50"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
               <span>{loading ? t.recalculatingBtn : t.recalculateBtn}</span>
@@ -1260,67 +1261,67 @@ export default function LiveDemoApp() {
       </div>
 
       {/* Birth Profile Customizer Bar (Relative layout, no overlapping sticky) */}
-      <div className="bg-white border-b border-slate-200 z-20 shadow-2xs">
+      <div className="bg-white border-b border-line z-20 shadow-2xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3">
           {/* Mode Context Badge */}
-          <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-100 text-xs">
+          <div className="flex items-center justify-between pb-2 mb-2 border-b border-line text-xs">
             {["panchang", "horoscope", "tarot", "vastu"].includes(activeTab) ? (
-              <div className="flex items-center gap-2 text-slate-800">
+              <div className="flex items-center gap-2 text-ink">
                 <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
                 <span className="font-bold">🌐 {t.universalModeTitle}</span>
-                <span className="text-slate-500">{t.universalModeDescPrefix}<strong>{profile.cityName}</strong>{t.universalModeDescSuffix}</span>
+                <span className="text-ink-soft">{t.universalModeDescPrefix}<strong>{profile.cityName}</strong>{t.universalModeDescSuffix}</span>
               </div>
             ) : (
-              <div className="flex items-center gap-2 text-slate-800">
-                <span className="w-2 h-2 rounded-full bg-indigo-600"></span>
+              <div className="flex items-center gap-2 text-ink">
+                <span className="w-2 h-2 rounded-full bg-accent"></span>
                 <span className="font-bold">👤 {t.personalModeTitle}</span>
-                <span className="text-slate-500">{t.personalModeDescPrefix}<strong>{profile.name}</strong> ({profile.dob} • {profile.tob} • {profile.cityName}).</span>
+                <span className="text-ink-soft">{t.personalModeDescPrefix}<strong>{profile.name}</strong> ({profile.dob} • {profile.tob} • {profile.cityName}).</span>
               </div>
             )}
-            <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700">
+            <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-surface-alt text-ink">
               {getLangBadgeName(profile.lang)}
             </span>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 items-end">
             <div>
-              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-ink-soft block mb-1">
                 {t.nameLabel}
               </label>
               <input
                 type="text"
                 value={profile.name}
                 onChange={(e) => setProfile({ ...profile, name: e.target.value })}
-                className="w-full text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-slate-900 focus:bg-white focus:border-indigo-500 outline-hidden"
+                className="w-full text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-line bg-surface text-ink focus:bg-white focus:border-accent outline-hidden"
               />
             </div>
 
             <div>
-              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-ink-soft block mb-1">
                 {t.dobLabel}
               </label>
               <input
                 type="date"
                 value={profile.dob}
                 onChange={(e) => setProfile({ ...profile, dob: e.target.value })}
-                className="w-full text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-slate-900 focus:bg-white focus:border-indigo-500 outline-hidden font-mono"
+                className="w-full text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-line bg-surface text-ink focus:bg-white focus:border-accent outline-hidden font-mono"
               />
             </div>
 
             <div>
-              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-ink-soft block mb-1">
                 {t.tobLabel}
               </label>
               <input
                 type="time"
                 value={profile.tob}
                 onChange={(e) => setProfile({ ...profile, tob: e.target.value })}
-                className="w-full text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-slate-900 focus:bg-white focus:border-indigo-500 outline-hidden font-mono"
+                className="w-full text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-line bg-surface text-ink focus:bg-white focus:border-accent outline-hidden font-mono"
               />
             </div>
 
             <div className="relative">
-              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-ink-soft block mb-1">
                 {t.cityLabel}
               </label>
               <div className="relative flex items-center">
@@ -1332,7 +1333,7 @@ export default function LiveDemoApp() {
                     if (citySearchResults.length > 0) setShowCityDropdown(true);
                   }}
                   placeholder={t.cityPlaceholder}
-                  className="w-full text-xs font-semibold pl-2.5 pr-8 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-slate-900 focus:bg-white focus:border-indigo-500 outline-hidden"
+                  className="w-full text-xs font-semibold pl-2.5 pr-8 py-1.5 rounded-lg border border-line bg-surface text-ink focus:bg-white focus:border-accent outline-hidden"
                 />
                 {citySearchQuery && (
                   <button
@@ -1342,32 +1343,32 @@ export default function LiveDemoApp() {
                       setCitySearchResults([]);
                       setShowCityDropdown(false);
                     }}
-                    className="absolute right-2 text-slate-400 hover:text-slate-600 p-0.5 rounded"
+                    className="absolute right-2 text-ink-muted hover:text-ink-soft p-0.5 rounded"
                     title="Clear city"
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
                 )}
                 {isSearchingCity && (
-                  <Loader2 className="w-3 h-3 animate-spin absolute right-6 text-indigo-500" />
+                  <Loader2 className="w-3 h-3 animate-spin absolute right-6 text-accent" />
                 )}
               </div>
 
               {/* Dynamic Auto-complete Dropdown */}
               {showCityDropdown && citySearchResults.length > 0 && (
-                <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-48 overflow-y-auto divide-y divide-slate-100">
+                <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-white border border-line rounded-md max-h-48 overflow-y-auto divide-y divide-line">
                   {citySearchResults.map((c, idx) => (
                     <button
                       key={idx}
                       type="button"
                       onClick={() => handleSelectGeoCity(c)}
-                      className="w-full px-3 py-2 text-left hover:bg-indigo-50 flex items-center justify-between text-xs transition"
+                      className="w-full px-3 py-2 text-left hover:bg-accent-soft flex items-center justify-between text-xs transition"
                     >
                       <div>
-                        <span className="font-bold text-slate-900">{c.city}</span>
-                        <span className="text-slate-500 ml-1">({c.country})</span>
+                        <span className="font-bold text-ink">{c.city}</span>
+                        <span className="text-ink-soft ml-1">({c.country})</span>
                       </div>
-                      <span className="text-[10px] font-mono text-indigo-600 font-semibold">
+                      <span className="text-[10px] font-mono text-accent font-semibold">
                         {c.lat?.toFixed(2)}°, {c.lon?.toFixed(2)}°
                       </span>
                     </button>
@@ -1377,7 +1378,7 @@ export default function LiveDemoApp() {
             </div>
 
             <div>
-              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-ink-soft block mb-1">
                 {t.langLabel}
               </label>
               <select
@@ -1388,7 +1389,7 @@ export default function LiveDemoApp() {
                   setProfile(updatedProfile);
                   calculateAllData(updatedProfile);
                 }}
-                className="w-full text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-slate-900 focus:bg-white focus:border-indigo-500 outline-hidden"
+                className="w-full text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-line bg-surface text-ink focus:bg-white focus:border-accent outline-hidden"
               >
                 <option value="en">English (English)</option>
                 <option value="hi">हिंदी (Hindi)</option>
@@ -1404,9 +1405,9 @@ export default function LiveDemoApp() {
               <button
                 onClick={() => calculateAllData(profile)}
                 disabled={loading}
-                className="w-full py-1.5 px-3 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition"
+                className="w-full py-1.5 px-3 rounded-lg bg-console hover:bg-console-line text-white font-bold text-xs flex items-center justify-center gap-1.5 transition"
               >
-                <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+                <Sparkles className="w-3.5 h-3.5 text-orange-300" />
                 <span>{t.applyBtn}</span>
               </button>
             </div>
@@ -1417,15 +1418,15 @@ export default function LiveDemoApp() {
       {/* Main App Container */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 mt-6">
         {/* Categorized Navigation Tabs */}
-        <div className="space-y-3 pb-3 border-b border-slate-200">
+        <div className="space-y-3 pb-3 border-b border-line">
           {/* Category 1: Personal Birth Profile APIs (DOB, TOB, Lat, Lon, Name) */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between px-1">
-              <span className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-indigo-600"></span>
+              <span className="text-[11px] font-bold text-ink flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-accent"></span>
                 <span>{t.cat1Title}</span>
               </span>
-              <span className="text-[10px] font-semibold text-slate-400">{t.cat1Count}</span>
+              <span className="text-[10px] font-semibold text-ink-muted">{t.cat1Count}</span>
             </div>
             <div className="flex items-center gap-1 overflow-x-auto pb-1 scrollbar-none">
               {[
@@ -1453,11 +1454,11 @@ export default function LiveDemoApp() {
                     onClick={() => setActiveTab(tab.id)}
                     title={`${tab.endpoint} — ${tab.work}`}
                     className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap flex items-center gap-1.5 transition ${isActive
-                        ? "bg-slate-900 text-white shadow-2xs"
-                        : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                        ? "bg-console text-white shadow-2xs"
+                        : "text-ink-soft hover:text-ink hover:bg-surface-alt"
                       }`}
                   >
-                    <Icon className={`w-3.5 h-3.5 ${isActive ? "text-indigo-400" : "text-slate-400"}`} />
+                    <Icon className={`w-3.5 h-3.5 ${isActive ? "text-orange-300" : "text-ink-muted"}`} />
                     <span>{tab.label}</span>
                   </button>
                 );
@@ -1466,13 +1467,13 @@ export default function LiveDemoApp() {
           </div>
 
           {/* Category 2: Universal & Daily Services (Panchang, Choghadiya, Muhurat, Rashifal, Tarot, Vastu) */}
-          <div className="space-y-1.5 pt-2 border-t border-slate-100">
+          <div className="space-y-1.5 pt-2 border-t border-line">
             <div className="flex items-center justify-between px-1">
-              <span className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
+              <span className="text-[11px] font-bold text-ink flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
                 <span>{t.cat2Title}</span>
               </span>
-              <span className="text-[10px] font-semibold text-slate-400 font-mono">{t.cat2Count}</span>
+              <span className="text-[10px] font-semibold text-ink-muted font-mono">{t.cat2Count}</span>
             </div>
             <div className="flex items-center gap-1 overflow-x-auto pb-1 scrollbar-none">
               {[
@@ -1489,11 +1490,11 @@ export default function LiveDemoApp() {
                     onClick={() => setActiveTab(tab.id)}
                     title={`${tab.endpoint} — ${tab.work}`}
                     className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap flex items-center gap-1.5 transition ${isActive
-                        ? "bg-slate-900 text-white shadow-2xs"
-                        : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                        ? "bg-console text-white shadow-2xs"
+                        : "text-ink-soft hover:text-ink hover:bg-surface-alt"
                       }`}
                   >
-                    <Icon className={`w-3.5 h-3.5 ${isActive ? "text-emerald-400" : "text-slate-400"}`} />
+                    <Icon className={`w-3.5 h-3.5 ${isActive ? "text-emerald-400" : "text-ink-muted"}`} />
                     <span>{tab.label}</span>
                   </button>
                 );
@@ -1629,18 +1630,18 @@ export default function LiveDemoApp() {
           };
 
           return (
-            <div className="mt-4 p-4 rounded-xl bg-white border border-slate-200 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <div className="mt-4 p-4 rounded-md bg-white border border-line shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-3">
               <div className="space-y-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                  <span className="text-xs font-bold text-ink flex items-center gap-1.5">
                     <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
                     {currentMeta.title}
                   </span>
-                  <span className="font-mono text-[11px] px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-medium">
+                  <span className="font-mono text-[11px] px-2 py-0.5 rounded bg-surface-alt text-ink font-medium">
                     {currentMeta.endpoint}
                   </span>
                   {currentMeta.requiresBirth ? (
-                    <span className="text-[10px] font-medium px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-100">
+                    <span className="text-[10px] font-medium px-2 py-0.5 rounded bg-accent-soft text-accent-hover border border-accent/20">
                       {t.birthProfileBadge}
                     </span>
                   ) : (
@@ -1649,8 +1650,8 @@ export default function LiveDemoApp() {
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-slate-600 leading-relaxed max-w-4xl">
-                  <strong className="text-slate-900 font-semibold">{t.metaScopeLabel}</strong>
+                <p className="text-xs text-ink-soft leading-relaxed max-w-4xl">
+                  <strong className="text-ink font-semibold">{t.metaScopeLabel}</strong>
                   {currentMeta.purpose}
                 </p>
               </div>
@@ -1661,7 +1662,7 @@ export default function LiveDemoApp() {
                   className="px-2.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white font-medium flex items-center gap-1 transition text-[11px]"
                 >
                   <span>{t.apiSpecsBtn}</span>
-                  <ExternalLink className="w-3 h-3 text-slate-400" />
+                  <ExternalLink className="w-3 h-3 text-ink-muted" />
                 </a>
               </div>
             </div>

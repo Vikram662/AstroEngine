@@ -6,6 +6,7 @@ import { CalculatorPageShell } from "@/components/calculators/CalculatorPageShel
 import type { Locale } from "@/lib/locale";
 import { ResultSection, ResultRow, ResultBadge, SubmitButton, ErrorNote } from "@/components/calculators/ResultRows";
 import { Sparkles, HelpCircle, Loader2 } from "lucide-react";
+import { ApiData, toApiError } from "@/lib/apiTypes";
 
 const STRINGS = {
   hi: {
@@ -57,7 +58,7 @@ export default function TarotReadingClient({ locale }: { locale: Locale }) {
   const [lang, setLang] = useState<"hi" | "en">(locale);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<ApiData>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,7 +66,7 @@ export default function TarotReadingClient({ locale }: { locale: Locale }) {
     setError(null);
 
     let endpoint = "/api/v1/tarot/daily-card";
-    const payload: any = { question, lang };
+    const payload: ApiData = { question, lang };
 
     if (mode === "celtic_cross") {
       endpoint = "/api/v1/tarot/spread/celtic-cross";
@@ -89,7 +90,7 @@ export default function TarotReadingClient({ locale }: { locale: Locale }) {
       } else {
         setData(res.data);
       }
-    } catch (err: any) {
+    } catch (errCaught) { const err = toApiError(errCaught);
       setError(err?.response?.data?.message || err?.message || s.error);
     } finally {
       setLoading(false);
@@ -109,7 +110,7 @@ export default function TarotReadingClient({ locale }: { locale: Locale }) {
       locale={locale}
     >
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        <div className="lg:col-span-5 bg-card p-6 rounded-2xl border border-line h-fit">
+        <div className="lg:col-span-5 bg-card p-6 rounded-lg border border-line h-fit">
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="flex items-center justify-between pb-3 border-b border-line">
               <span className="text-xs font-bold text-ink">भाषा / Language</span>
@@ -143,8 +144,8 @@ export default function TarotReadingClient({ locale }: { locale: Locale }) {
               <select
                 id="tarot_mode"
                 value={mode}
-                onChange={(e) => setMode(e.target.value as any)}
-                className="w-full px-3 py-2.5 rounded-xl border border-line bg-surface text-ink text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition"
+                onChange={(e) => setMode(e.target.value as ApiData)}
+                className="w-full px-3 py-2.5 rounded-md border border-line bg-surface text-ink text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition"
               >
                 <option value="daily">{s.modeDaily}</option>
                 <option value="3_card_time">{s.modeTime}</option>
@@ -165,7 +166,7 @@ export default function TarotReadingClient({ locale }: { locale: Locale }) {
                 value={question}
                 onChange={(e) => setQuestion(e.target.value)}
                 placeholder={s.questionPlaceholder}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-line bg-surface text-ink text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition resize-none"
+                className="w-full px-3.5 py-2.5 rounded-md border border-line bg-surface text-ink text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition resize-none"
               />
             </div>
 
@@ -185,14 +186,14 @@ export default function TarotReadingClient({ locale }: { locale: Locale }) {
           {error && <ErrorNote message={error} />}
 
           {!data && !loading && !error && (
-            <div className="bg-card rounded-2xl border border-line p-10 text-center text-ink-muted">
+            <div className="bg-card rounded-lg border border-line p-10 text-center text-ink-muted">
               <div className="text-4xl mb-3">🔮</div>
               <p className="text-sm">{s.emptyHint}</p>
             </div>
           )}
 
           {loading && (
-            <div className="bg-card rounded-2xl border border-line p-12 text-center text-ink-soft flex flex-col items-center justify-center">
+            <div className="bg-card rounded-lg border border-line p-12 text-center text-ink-soft flex flex-col items-center justify-center">
               <Loader2 className="w-8 h-8 text-accent animate-spin mb-3" />
               <p className="text-sm">{s.loadingHint}</p>
             </div>
@@ -208,10 +209,10 @@ export default function TarotReadingClient({ locale }: { locale: Locale }) {
 
               {Array.isArray(cards) && cards.length > 0 && (
                 <div className="space-y-4">
-                  {cards.map((c: any, idx: number) => {
+                  {cards.map((c: ApiData, idx: number) => {
                     const isRev = c.is_reversed || c.reversed;
                     return (
-                      <div key={idx} className="p-5 bg-card rounded-2xl border border-line shadow-sm">
+                      <div key={idx} className="p-5 bg-card rounded-lg border border-line shadow-sm">
                         <div className="flex items-center justify-between mb-2">
                           <span className="font-bold text-base text-ink">{c.name || c.card_name}</span>
                           <ResultBadge tone={isRev ? "bad" : "good"}>

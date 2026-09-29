@@ -87,7 +87,7 @@ export default function UsagePage() {
   }, [page, limit, searchTerm]);
 
   useEffect(() => {
-    fetchLogs();
+    void Promise.resolve().then(fetchLogs);
   }, [fetchLogs]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -101,55 +101,55 @@ export default function UsagePage() {
   return (
     <div className="space-y-6 max-w-5xl">
       {/* Header */}
-      <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">API Usage & Request Logs</h1>
-        <p className="text-slate-600 text-xs sm:text-sm mt-1">
+      <div className="bg-white p-6 rounded-md border border-line shadow-sm">
+        <h1 className="text-2xl font-bold tracking-tight text-ink">API Usage & Request Logs</h1>
+        <p className="text-ink-soft text-xs sm:text-sm mt-1">
           Real-time telemetry, status codes, response times, and wallet credit deduction audit trail.
         </p>
       </div>
 
       {/* 4 Dynamic Metric Cards from MySQL */}
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-          <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Calls</div>
-          <div className="text-2xl font-extrabold text-slate-900 font-mono mt-2">
+        <div className="bg-white p-5 rounded-md border border-line shadow-sm">
+          <div className="text-xs font-semibold text-ink-soft uppercase tracking-wider">Total Calls</div>
+          <div className="text-2xl font-extrabold text-ink font-mono mt-2">
             {metrics.totalCalls.toLocaleString()}
           </div>
         </div>
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-          <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Avg Latency</div>
-          <div className="text-2xl font-extrabold text-blue-600 font-mono mt-2">
+        <div className="bg-white p-5 rounded-md border border-line shadow-sm">
+          <div className="text-xs font-semibold text-ink-soft uppercase tracking-wider">Avg Latency</div>
+          <div className="text-2xl font-extrabold text-accent font-mono mt-2">
             {metrics.avgLatency} ms
           </div>
         </div>
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-          <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Success Rate</div>
+        <div className="bg-white p-5 rounded-md border border-line shadow-sm">
+          <div className="text-xs font-semibold text-ink-soft uppercase tracking-wider">Success Rate</div>
           <div className="text-2xl font-extrabold text-emerald-600 font-mono mt-2">
             {metrics.successRate}
           </div>
         </div>
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-          <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Credits Deducted</div>
-          <div className="text-2xl font-extrabold text-slate-900 font-mono mt-2">
+        <div className="bg-white p-5 rounded-md border border-line shadow-sm">
+          <div className="text-xs font-semibold text-ink-soft uppercase tracking-wider">Credits Deducted</div>
+          <div className="text-2xl font-extrabold text-ink font-mono mt-2">
             ₹{metrics.creditsDeducted.toFixed(2)}
           </div>
         </div>
       </div>
 
       {/* Search & Filter Controls */}
-      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div className="bg-white p-4 rounded-md border border-line shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3">
         <div className="relative w-full sm:w-96">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+          <Search className="w-4 h-4 text-ink-muted absolute left-3 top-2.5" />
           <input
             type="text"
             value={searchTerm}
             onChange={handleSearchChange}
             placeholder="Search by endpoint path or module name..."
-            className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-4 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-slate-400 transition"
+            className="w-full bg-surface border border-line rounded-lg pl-9 pr-4 py-2 text-xs text-ink placeholder:text-ink-muted focus:outline-none focus:bg-white focus:border-ink-muted transition"
           />
         </div>
 
-        <div className="flex items-center gap-2 text-xs text-slate-600 w-full sm:w-auto justify-end">
+        <div className="flex items-center gap-2 text-xs text-ink-soft w-full sm:w-auto justify-end">
           <label htmlFor="perPage" className="whitespace-nowrap">Rows per page:</label>
           <select
             id="perPage"
@@ -158,7 +158,7 @@ export default function UsagePage() {
               setLimit(Number(e.target.value));
               setPage(1);
             }}
-            className="bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 font-medium focus:outline-none focus:border-slate-400 cursor-pointer"
+            className="bg-surface border border-line rounded-lg px-2.5 py-1.5 text-xs text-ink font-medium focus:outline-none focus:border-ink-muted cursor-pointer"
           >
             <option value={10}>10</option>
             <option value={15}>15</option>
@@ -169,10 +169,10 @@ export default function UsagePage() {
       </div>
 
       {/* Logs Table with Pagination */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
+      <div className="bg-white rounded-md border border-line shadow-sm overflow-hidden flex flex-col">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs font-mono">
-            <thead className="bg-slate-50 text-slate-600 border-b border-slate-200 font-sans font-bold">
+            <thead className="bg-surface text-ink-soft border-b border-line font-sans font-bold">
               <tr>
                 <th className="px-6 py-3.5">Timestamp</th>
                 <th className="px-6 py-3.5">Endpoint</th>
@@ -182,25 +182,25 @@ export default function UsagePage() {
                 <th className="px-6 py-3.5">Credits</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 text-slate-800">
+            <tbody className="divide-y divide-line text-ink">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center font-sans text-xs text-slate-500">
-                    <Loader2 className="w-5 h-5 animate-spin inline mr-2 text-indigo-600" />
+                  <td colSpan={6} className="px-6 py-12 text-center font-sans text-xs text-ink-soft">
+                    <Loader2 className="w-5 h-5 animate-spin inline mr-2 text-accent" />
                     Fetching live telemetry logs from MySQL...
                   </td>
                 </tr>
               ) : logs.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-10 text-center text-slate-400 font-sans text-xs">
+                  <td colSpan={6} className="px-6 py-10 text-center text-ink-muted font-sans text-xs">
                     {searchTerm ? "No logs match your search query." : "No API request logs recorded yet for your account."}
                   </td>
                 </tr>
               ) : logs.map((log) => (
-                <tr key={log.id} className="hover:bg-slate-50/70 transition">
-                  <td className="px-6 py-3.5 text-slate-500 font-sans whitespace-nowrap">{log.createdAt}</td>
-                  <td className="px-6 py-3.5 text-slate-900 font-semibold">{log.endpoint}</td>
-                  <td className="px-6 py-3.5 text-slate-700 font-sans font-medium">{log.module || "General"}</td>
+                <tr key={log.id} className="hover:bg-surface/70 transition">
+                  <td className="px-6 py-3.5 text-ink-soft font-sans whitespace-nowrap">{log.createdAt}</td>
+                  <td className="px-6 py-3.5 text-ink font-semibold">{log.endpoint}</td>
+                  <td className="px-6 py-3.5 text-ink font-sans font-medium">{log.module || "General"}</td>
                   <td className="px-6 py-3.5">
                     <span className={`px-2 py-0.5 rounded border text-[11px] font-semibold ${
                       log.statusCode >= 200 && log.statusCode < 300
@@ -210,8 +210,8 @@ export default function UsagePage() {
                       {log.statusCode} {log.statusCode === 200 ? "OK" : "ERROR"}
                     </span>
                   </td>
-                  <td className="px-6 py-3.5 text-slate-600">{log.responseTime}ms</td>
-                  <td className="px-6 py-3.5 text-slate-900 font-bold font-sans">₹{log.creditsCost.toFixed(2)}</td>
+                  <td className="px-6 py-3.5 text-ink-soft">{log.responseTime}ms</td>
+                  <td className="px-6 py-3.5 text-ink font-bold font-sans">₹{log.creditsCost.toFixed(2)}</td>
                 </tr>
               ))}
             </tbody>
@@ -219,18 +219,18 @@ export default function UsagePage() {
         </div>
 
         {/* Pagination Footer */}
-        <div className="bg-slate-50 px-6 py-3.5 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 font-sans text-xs">
-          <div className="text-slate-500">
-            Showing <span className="font-semibold text-slate-800">{startRecord}</span> to{" "}
-            <span className="font-semibold text-slate-800">{endRecord}</span> of{" "}
-            <span className="font-semibold text-slate-800">{pagination.totalItems}</span> total logs
+        <div className="bg-surface px-6 py-3.5 border-t border-line flex flex-col sm:flex-row items-center justify-between gap-3 font-sans text-xs">
+          <div className="text-ink-soft">
+            Showing <span className="font-semibold text-ink">{startRecord}</span> to{" "}
+            <span className="font-semibold text-ink">{endRecord}</span> of{" "}
+            <span className="font-semibold text-ink">{pagination.totalItems}</span> total logs
           </div>
 
           <div className="flex items-center gap-1.5">
             <button
               onClick={() => setPage(1)}
               disabled={page <= 1 || loading}
-              className="p-1.5 rounded-lg border border-slate-300 hover:bg-white text-slate-600 disabled:opacity-40 disabled:cursor-not-allowed transition"
+              className="p-1.5 rounded-lg border border-line hover:bg-white text-ink-soft disabled:opacity-40 disabled:cursor-not-allowed transition"
               title="First Page"
             >
               <ChevronsLeft className="w-4 h-4" />
@@ -238,20 +238,20 @@ export default function UsagePage() {
             <button
               onClick={() => setPage(p => Math.max(1, p - 1))}
               disabled={!pagination.hasPrev || loading}
-              className="px-2.5 py-1.5 rounded-lg border border-slate-300 hover:bg-white text-slate-700 font-medium disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 transition"
+              className="px-2.5 py-1.5 rounded-lg border border-line hover:bg-white text-ink font-medium disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 transition"
             >
               <ChevronLeft className="w-3.5 h-3.5" />
               <span>Previous</span>
             </button>
 
-            <span className="px-3 py-1 font-semibold text-slate-800 bg-white border border-slate-200 rounded-lg">
+            <span className="px-3 py-1 font-semibold text-ink bg-white border border-line rounded-lg">
               Page {pagination.page} of {pagination.totalPages}
             </span>
 
             <button
               onClick={() => setPage(p => Math.min(pagination.totalPages, p + 1))}
               disabled={!pagination.hasNext || loading}
-              className="px-2.5 py-1.5 rounded-lg border border-slate-300 hover:bg-white text-slate-700 font-medium disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 transition"
+              className="px-2.5 py-1.5 rounded-lg border border-line hover:bg-white text-ink font-medium disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 transition"
             >
               <span>Next</span>
               <ChevronRight className="w-3.5 h-3.5" />
@@ -259,7 +259,7 @@ export default function UsagePage() {
             <button
               onClick={() => setPage(pagination.totalPages)}
               disabled={page >= pagination.totalPages || loading}
-              className="p-1.5 rounded-lg border border-slate-300 hover:bg-white text-slate-600 disabled:opacity-40 disabled:cursor-not-allowed transition"
+              className="p-1.5 rounded-lg border border-line hover:bg-white text-ink-soft disabled:opacity-40 disabled:cursor-not-allowed transition"
               title="Last Page"
             >
               <ChevronsRight className="w-4 h-4" />

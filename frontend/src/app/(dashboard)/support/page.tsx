@@ -14,6 +14,7 @@ import {
   ArrowLeft,
   Filter
 } from "lucide-react";
+import { toApiError } from "@/lib/apiTypes";
 
 interface TicketMessage {
   id: string;
@@ -69,7 +70,7 @@ export default function UserSupportPage() {
   };
 
   useEffect(() => {
-    fetchTickets();
+    void Promise.resolve().then(fetchTickets);
   }, []);
 
   const handleCreateTicket = async (e: React.FormEvent) => {
@@ -90,7 +91,7 @@ export default function UserSupportPage() {
         fetchTickets();
         setSelectedTicket(res.data.data);
       }
-    } catch (err: any) {
+    } catch (errCaught) { const err = toApiError(errCaught);
       alert(err.response?.data?.message || "Failed to create ticket");
     } finally {
       setSubmitting(false);
@@ -110,7 +111,7 @@ export default function UserSupportPage() {
         setSelectedTicket(res.data.data);
         fetchTickets();
       }
-    } catch (err: any) {
+    } catch (errCaught) { const err = toApiError(errCaught);
       alert(err.response?.data?.message || "Failed to send message");
     } finally {
       setSendingReply(false);
@@ -122,13 +123,13 @@ export default function UserSupportPage() {
       case "OPEN":
         return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">OPEN</span>;
       case "IN_PROGRESS":
-        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">IN PROGRESS</span>;
+        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-accent-soft text-accent-hover border border-accent/30">IN PROGRESS</span>;
       case "RESOLVED":
         return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">RESOLVED</span>;
       case "CLOSED":
-        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">CLOSED</span>;
+        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-surface-alt text-ink-soft border border-line">CLOSED</span>;
       default:
-        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700">{status}</span>;
+        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-surface-alt text-ink">{status}</span>;
     }
   };
 
@@ -139,30 +140,30 @@ export default function UserSupportPage() {
       case "HIGH":
         return <span className="text-[10px] font-bold text-amber-600 uppercase">HIGH</span>;
       case "MEDIUM":
-        return <span className="text-[10px] font-medium text-slate-500 uppercase">MEDIUM</span>;
+        return <span className="text-[10px] font-medium text-ink-soft uppercase">MEDIUM</span>;
       default:
-        return <span className="text-[10px] font-medium text-slate-400 uppercase">LOW</span>;
+        return <span className="text-[10px] font-medium text-ink-muted uppercase">LOW</span>;
     }
   };
 
   return (
     <div className="space-y-6">
       {/* Top Banner */}
-      <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="bg-white p-6 rounded-md border border-line shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Developer Support & Tickets</h1>
-            <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+            <h1 className="text-2xl font-bold tracking-tight text-ink">Developer Support & Tickets</h1>
+            <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-accent-soft text-accent-hover border border-accent/30">
               SLA Active
             </span>
           </div>
-          <p className="text-slate-500 text-xs sm:text-sm mt-1">
+          <p className="text-ink-soft text-xs sm:text-sm mt-1">
             Need help with Kundli calculations, ephemeris accuracy, webhook signatures, or billing? Raise a ticket directly with our core engineering team.
           </p>
         </div>
         <button
           onClick={() => { setIsCreating(true); setSelectedTicket(null); }}
-          className="px-4 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold flex items-center gap-2 shadow-xs transition self-start sm:self-auto"
+          className="px-4 py-2 rounded-lg bg-console hover:bg-console-line text-white text-xs font-semibold flex items-center gap-2 shadow-xs transition self-start sm:self-auto"
         >
           <Plus className="w-4 h-4" />
           <span>New Support Ticket</span>
@@ -172,12 +173,12 @@ export default function UserSupportPage() {
       {/* Main Content: Split List / Detail view */}
       {isCreating ? (
         /* Create New Ticket Form */
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-5">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-            <h2 className="text-sm font-bold text-slate-900">Create New Support Request</h2>
+        <div className="bg-white rounded-md border border-line shadow-sm p-6 space-y-5">
+          <div className="flex items-center justify-between pb-3 border-b border-line">
+            <h2 className="text-sm font-bold text-ink">Create New Support Request</h2>
             <button
               onClick={() => setIsCreating(false)}
-              className="text-xs text-slate-500 hover:text-slate-800"
+              className="text-xs text-ink-soft hover:text-ink"
             >
               Cancel
             </button>
@@ -185,24 +186,24 @@ export default function UserSupportPage() {
 
           <form onSubmit={handleCreateTicket} className="space-y-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Subject / Issue Summary</label>
+              <label className="block text-xs font-semibold text-ink mb-1">Subject / Issue Summary</label>
               <input
                 type="text"
                 required
                 placeholder="e.g. Discrepancy in Lahiri Ayanamsha degree or Webhook timeout"
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
-                className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg text-slate-900 focus:outline-hidden"
+                className="w-full px-3 py-2 text-xs border border-line rounded-lg text-ink focus:outline-hidden"
               />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Category</label>
+                <label className="block text-xs font-semibold text-ink mb-1">Category</label>
                 <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
-                  className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg text-slate-900 bg-white focus:outline-hidden"
+                  className="w-full px-3 py-2 text-xs border border-line rounded-lg text-ink bg-white focus:outline-hidden"
                 >
                   <option value="API_INTEGRATION">API Integration & SDK</option>
                   <option value="ACCURACY_CALCULATION">Astronomical / Ephemeris Calculation</option>
@@ -213,11 +214,11 @@ export default function UserSupportPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Priority Level</label>
+                <label className="block text-xs font-semibold text-ink mb-1">Priority Level</label>
                 <select
                   value={priority}
                   onChange={(e) => setPriority(e.target.value)}
-                  className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg text-slate-900 bg-white focus:outline-hidden"
+                  className="w-full px-3 py-2 text-xs border border-line rounded-lg text-ink bg-white focus:outline-hidden"
                 >
                   <option value="LOW">Low (General guidance)</option>
                   <option value="MEDIUM">Medium (Standard query)</option>
@@ -228,14 +229,14 @@ export default function UserSupportPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Detailed Description & Steps to Reproduce</label>
+              <label className="block text-xs font-semibold text-ink mb-1">Detailed Description & Steps to Reproduce</label>
               <textarea
                 rows={5}
                 required
                 placeholder="Provide endpoint URL, payload snippet, headers, or expected vs received output..."
                 value={initialMessage}
                 onChange={(e) => setInitialMessage(e.target.value)}
-                className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg text-slate-900 font-mono focus:outline-hidden"
+                className="w-full px-3 py-2 text-xs border border-line rounded-lg text-ink font-mono focus:outline-hidden"
               />
             </div>
 
@@ -243,14 +244,14 @@ export default function UserSupportPage() {
               <button
                 type="button"
                 onClick={() => setIsCreating(false)}
-                className="px-4 py-2 rounded-lg border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+                className="px-4 py-2 rounded-lg border border-line text-xs font-semibold text-ink-soft hover:bg-surface"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={submitting}
-                className="px-5 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold flex items-center gap-2 shadow-xs transition"
+                className="px-5 py-2 rounded-lg bg-console hover:bg-console-line text-white text-xs font-semibold flex items-center gap-2 shadow-xs transition"
               >
                 {submitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
                 <span>Submit Ticket</span>
@@ -260,21 +261,21 @@ export default function UserSupportPage() {
         </div>
       ) : selectedTicket ? (
         /* Ticket Conversation View */
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
+        <div className="bg-white rounded-md border border-line shadow-sm p-6 space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-line">
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setSelectedTicket(null)}
-                className="p-1.5 border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-600"
+                className="p-1.5 border border-line rounded-lg hover:bg-surface text-ink-soft"
               >
                 <ArrowLeft className="w-4 h-4" />
               </button>
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-mono font-bold text-slate-500">{selectedTicket.ticketNumber}</span>
-                  <h2 className="text-base font-bold text-slate-900">{selectedTicket.subject}</h2>
+                  <span className="text-xs font-mono font-bold text-ink-soft">{selectedTicket.ticketNumber}</span>
+                  <h2 className="text-base font-bold text-ink">{selectedTicket.subject}</h2>
                 </div>
-                <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-0.5">
+                <div className="flex items-center gap-2 text-[11px] text-ink-soft mt-0.5">
                   <span>Category: {selectedTicket.category.replace(/_/g, " ")}</span>
                   <span>•</span>
                   <span>Priority: {getPriorityBadge(selectedTicket.priority)}</span>
@@ -293,17 +294,17 @@ export default function UserSupportPage() {
               return (
                 <div
                   key={msg.id}
-                  className={`p-4 rounded-xl text-xs space-y-1.5 ${
+                  className={`p-4 rounded-md text-xs space-y-1.5 ${
                     isAdmin 
-                      ? "bg-blue-50/70 border border-blue-200 ml-6" 
-                      : "bg-slate-50 border border-slate-200 mr-6"
+                      ? "bg-accent-soft/70 border border-accent/30 ml-6" 
+                      : "bg-surface border border-line mr-6"
                   }`}
                 >
                   <div className="flex items-center justify-between">
-                    <span className={`font-bold ${isAdmin ? "text-blue-900" : "text-slate-900"}`}>
+                    <span className={`font-bold ${isAdmin ? "text-ink" : "text-ink"}`}>
                       {isAdmin ? "⚡ Engineering Support Team" : msg.senderName || "You"}
                     </span>
-                    <span className="text-[10px] text-slate-400">
+                    <span className="text-[10px] text-ink-muted">
                       {new Date(msg.createdAt).toLocaleString("en-IN", {
                         month: "short",
                         day: "numeric",
@@ -312,7 +313,7 @@ export default function UserSupportPage() {
                       })}
                     </span>
                   </div>
-                  <div className="text-slate-800 whitespace-pre-wrap leading-relaxed">
+                  <div className="text-ink whitespace-pre-wrap leading-relaxed">
                     {msg.message}
                   </div>
                 </div>
@@ -322,52 +323,52 @@ export default function UserSupportPage() {
 
           {/* Reply Box */}
           {selectedTicket.status !== "CLOSED" ? (
-            <form onSubmit={handleSendReply} className="pt-2 border-t border-slate-100 flex gap-2">
+            <form onSubmit={handleSendReply} className="pt-2 border-t border-line flex gap-2">
               <input
                 type="text"
                 placeholder="Type your reply or follow-up question..."
                 value={replyText}
                 onChange={(e) => setReplyText(e.target.value)}
-                className="flex-1 px-3 py-2 text-xs border border-slate-300 rounded-lg text-slate-900 focus:outline-hidden"
+                className="flex-1 px-3 py-2 text-xs border border-line rounded-lg text-ink focus:outline-hidden"
               />
               <button
                 type="submit"
                 disabled={sendingReply || !replyText.trim()}
-                className="px-4 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold flex items-center gap-1.5 shadow-xs transition"
+                className="px-4 py-2 rounded-lg bg-console hover:bg-console-line text-white text-xs font-semibold flex items-center gap-1.5 shadow-xs transition"
               >
                 {sendingReply ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
                 <span>Send</span>
               </button>
             </form>
           ) : (
-            <div className="p-3 bg-slate-50 border border-slate-200 text-slate-500 rounded-lg text-xs text-center">
+            <div className="p-3 bg-surface border border-line text-ink-soft rounded-lg text-xs text-center">
               This ticket is closed. If you still have questions, please create a new ticket.
             </div>
           )}
         </div>
       ) : (
         /* Ticket List Table */
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="p-4 border-b border-slate-200 flex items-center justify-between">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-700">
+        <div className="bg-white rounded-md border border-line shadow-sm overflow-hidden">
+          <div className="p-4 border-b border-line flex items-center justify-between">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-ink">
               Your Support History ({tickets.length})
             </h2>
           </div>
 
           {loading ? (
-            <div className="p-12 text-center text-slate-400 text-xs flex items-center justify-center gap-2">
+            <div className="p-12 text-center text-ink-muted text-xs flex items-center justify-center gap-2">
               <Loader2 className="w-4 h-4 animate-spin" />
               <span>Fetching tickets...</span>
             </div>
           ) : tickets.length === 0 ? (
-            <div className="p-12 text-center text-slate-400 text-xs">
+            <div className="p-12 text-center text-ink-muted text-xs">
               <MessageSquare className="w-8 h-8 text-slate-300 mx-auto mb-2" />
               <span>No support tickets opened yet. Need assistance? Click &quot;New Support Ticket&quot; above.</span>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 uppercase font-semibold text-[11px]">
+                <thead className="bg-surface border-b border-line text-ink-soft uppercase font-semibold text-[11px]">
                   <tr>
                     <th className="py-3 px-4">Ticket</th>
                     <th className="py-3 px-4">Subject</th>
@@ -378,24 +379,24 @@ export default function UserSupportPage() {
                     <th className="py-3 px-4 text-right">Action</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 text-slate-700">
+                <tbody className="divide-y divide-line text-ink">
                   {tickets.map((t) => (
                     <tr 
                       key={t.id} 
                       onClick={() => setSelectedTicket(t)}
-                      className="hover:bg-slate-50/80 transition cursor-pointer"
+                      className="hover:bg-surface/80 transition cursor-pointer"
                     >
-                      <td className="py-3 px-4 font-mono font-bold text-slate-900">{t.ticketNumber}</td>
-                      <td className="py-3 px-4 font-medium text-slate-900">
+                      <td className="py-3 px-4 font-mono font-bold text-ink">{t.ticketNumber}</td>
+                      <td className="py-3 px-4 font-medium text-ink">
                         {t.subject}
-                        <div className="text-[11px] text-slate-400">
+                        <div className="text-[11px] text-ink-muted">
                           {t.messages.length} message{t.messages.length > 1 ? "s" : ""}
                         </div>
                       </td>
-                      <td className="py-3 px-4 text-slate-600">{t.category.replace(/_/g, " ")}</td>
+                      <td className="py-3 px-4 text-ink-soft">{t.category.replace(/_/g, " ")}</td>
                       <td className="py-3 px-4">{getPriorityBadge(t.priority)}</td>
                       <td className="py-3 px-4">{getStatusBadge(t.status)}</td>
-                      <td className="py-3 px-4 text-slate-400 text-[11px]">
+                      <td className="py-3 px-4 text-ink-muted text-[11px]">
                         {new Date(t.updatedAt).toLocaleDateString("en-IN", {
                           month: "short",
                           day: "numeric",
@@ -403,7 +404,7 @@ export default function UserSupportPage() {
                           minute: "2-digit"
                         })}
                       </td>
-                      <td className="py-3 px-4 text-right font-semibold text-blue-600 hover:text-blue-800">
+                      <td className="py-3 px-4 text-right font-semibold text-accent hover:text-accent-hover">
                         View Thread →
                       </td>
                     </tr>

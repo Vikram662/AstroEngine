@@ -2,9 +2,10 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
-import Link from "next/link";
 import { useLocale } from "@/hooks/useLocale";
 import { getDictionary } from "@/dictionaries/dictionary";
+import { BirthReport } from "@/components/report/BirthReport";
+import type { BirthReportRequest } from "@/lib/birthReport";
 import { 
   Sparkles, 
   MapPin, 
@@ -17,8 +18,6 @@ import {
   ChevronRight, 
   Bot, 
   CheckCircle2, 
-  X, 
-  ExternalLink, 
   Flame 
 } from "lucide-react";
 
@@ -86,6 +85,14 @@ const SUGGESTED_CHIPS = {
   ]
 };
 
+interface CityResult {
+  city?: string;
+  name?: string;
+  lat: number | string;
+  lon: number | string;
+  tz?: number | string;
+}
+
 interface ChatMessage {
   id: string;
   sender: "user" | "bot";
@@ -106,12 +113,9 @@ export const HeroSection: React.FC = () => {
   const [formData, setFormData] = useState<BirthData>(() => DEFAULT_BIRTH_DATA[locale] || DEFAULT_BIRTH_DATA.hi);
   const [cityInput, setCityInput] = useState<string>(formData.cityName);
   const [cityDropdown, setCityDropdown] = useState<boolean>(false);
-  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searchResults, setSearchResults] = useState<CityResult[]>([]);
   const [searchingCity, setSearchingCity] = useState<boolean>(false);
-  const [kundliLoading, setKundliLoading] = useState<boolean>(false);
-  const [kundliResult, setKundliResult] = useState<any>(null);
-  const [kundliSvg, setKundliSvg] = useState<string>("");
-  const [modalOpen, setModalOpen] = useState<boolean>(false);
+  const [reportRequest, setReportRequest] = useState<BirthReportRequest | null>(null);
 
   // ── AI Chat State ──
   const [chatInput, setChatInput] = useState<string>("");
@@ -128,6 +132,11 @@ export const HeroSection: React.FC = () => {
     }
   ]);
   const chatScrollRef = useRef<HTMLDivElement>(null);
+  const idCounter = useRef(0);
+  const nextId = () => {
+    idCounter.current += 1;
+    return idCounter.current;
+  };
 
   // Switch form data language
   const handleLangChange = (newLang: "hi" | "en") => {
@@ -211,8 +220,8 @@ export const HeroSection: React.FC = () => {
     }
   };
 
-  const selectCity = (c: any) => {
-    const name = c.city || c.name;
+  const selectCity = (c: CityResult) => {
+    const name = c.city || c.name || "";
     setCityInput(name);
     setFormData(prev => ({
       ...prev,
@@ -224,56 +233,21 @@ export const HeroSection: React.FC = () => {
     setCityDropdown(false);
   };
 
-  // Submit Kundli Generation
-  const handleGenerateKundli = async (e: React.FormEvent) => {
+  // Submit: run every birth-data API and show the full report on this page
+  const handleGenerateKundli = (e: React.FormEvent) => {
     e.preventDefault();
-    setKundliLoading(true);
-    setModalOpen(true);
-    setKundliResult(null);
-    setKundliSvg("");
-
-    const payload = {
+    setReportRequest({
+      id: nextId(),
+      name: formData.name.trim(),
+      gender: formData.gender,
       dob: formData.dob,
       tob: formData.tob,
+      cityName: formData.cityName,
       lat: formData.lat,
       lon: formData.lon,
       tz: formData.tz,
-      lang: formData.lang
-    };
-
-    try {
-      const [d1Res, svgRes, planetsRes] = await Promise.all([
-        axios.post("/api/proxy", {
-          endpoint: "/api/v1/parashari/chart/d1",
-          payload,
-          method: "POST"
-        }),
-        axios.post("/api/proxy", {
-          endpoint: "/api/v1/parashari/chart/svg",
-          payload,
-          queryParams: { varga: "D1", chart_style: "NORTH_INDIAN" },
-          method: "POST"
-        }, { responseType: "text" }),
-        axios.post("/api/proxy", {
-          endpoint: "/api/v1/core/planets/positions",
-          payload,
-          method: "POST"
-        })
-      ]);
-
-      setKundliResult({
-        d1: d1Res.data?.data,
-        planets: planetsRes.data?.data?.planets || []
-      });
-
-      if (svgRes.data && typeof svgRes.data === "string" && svgRes.data.includes("<svg")) {
-        setKundliSvg(svgRes.data);
-      }
-    } catch (err) {
-      console.error("Failed to generate quick Kundli", err);
-    } finally {
-      setKundliLoading(false);
-    }
+      lang: formData.lang,
+    });
   };
 
   // Submit AI Question
@@ -282,7 +256,7 @@ export const HeroSection: React.FC = () => {
     if (!q || chatLoading) return;
 
     const userMsg: ChatMessage = {
-      id: Date.now().toString(),
+      id: String(nextId()),
       sender: "user",
       text: q,
       category: customCat,
@@ -319,7 +293,7 @@ export const HeroSection: React.FC = () => {
       );
 
       const botMsg: ChatMessage = {
-        id: (Date.now() + 1).toString(),
+        id: String(nextId()),
         sender: "bot",
         text: botText,
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
@@ -329,7 +303,7 @@ export const HeroSection: React.FC = () => {
     } catch (err) {
       console.error("AI Astrologer chat error", err);
       const errorMsg: ChatMessage = {
-        id: (Date.now() + 1).toString(),
+        id: String(nextId()),
         sender: "bot",
         text: activeLang === "en" 
           ? "Sorry, there was a temporary issue analyzing your chart. Please try again."
@@ -345,6 +319,7 @@ export const HeroSection: React.FC = () => {
   const chips = SUGGESTED_CHIPS[activeLang] || SUGGESTED_CHIPS.hi;
 
   return (
+    <>
     <section className="relative overflow-hidden bg-surface py-12 lg:py-16 border-b border-line">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
@@ -366,7 +341,7 @@ export const HeroSection: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           
           {/* ── LEFT COLUMN: Read My Kundli Quick Form (7 cols) ── */}
-          <div className="lg:col-span-7 bg-card rounded-2xl p-6 sm:p-8 border border-line shadow-sm">
+          <div className="lg:col-span-7 bg-card rounded-lg p-6 sm:p-8 border border-line shadow-sm">
             <div className="flex items-center justify-between border-b border-line pb-4 mb-6">
               <div>
                 <span className="text-xs font-bold uppercase tracking-wider text-accent">{tHero.formBadge}</span>
@@ -406,7 +381,7 @@ export const HeroSection: React.FC = () => {
                     value={formData.name}
                     onChange={e => setFormData({ ...formData, name: e.target.value })}
                     placeholder={tFields.namePlaceholder}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-line bg-surface text-ink text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition"
+                    className="w-full px-3.5 py-2.5 rounded-md border border-line bg-surface text-ink text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition"
                   />
                 </div>
                 <div>
@@ -415,8 +390,8 @@ export const HeroSection: React.FC = () => {
                   </label>
                   <select
                     value={formData.gender}
-                    onChange={e => setFormData({ ...formData, gender: e.target.value as any })}
-                    className="w-full px-3 py-2.5 rounded-xl border border-line bg-surface text-ink text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition"
+                    onChange={e => setFormData({ ...formData, gender: e.target.value as BirthData["gender"] })}
+                    className="w-full px-3 py-2.5 rounded-md border border-line bg-surface text-ink text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition"
                   >
                     <option value="male">{tFields.male}</option>
                     <option value="female">{tFields.female}</option>
@@ -436,7 +411,7 @@ export const HeroSection: React.FC = () => {
                     required
                     value={formData.dob}
                     onChange={e => setFormData({ ...formData, dob: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-line bg-surface text-ink text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition"
+                    className="w-full px-3.5 py-2.5 rounded-md border border-line bg-surface text-ink text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition"
                   />
                 </div>
                 <div>
@@ -449,7 +424,7 @@ export const HeroSection: React.FC = () => {
                     required
                     value={formData.tob}
                     onChange={e => setFormData({ ...formData, tob: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-line bg-surface text-ink text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition"
+                    className="w-full px-3.5 py-2.5 rounded-md border border-line bg-surface text-ink text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition"
                   />
                 </div>
               </div>
@@ -474,11 +449,11 @@ export const HeroSection: React.FC = () => {
                   onChange={e => handleCitySearch(e.target.value)}
                   onFocus={() => { if (searchResults.length > 0) setCityDropdown(true); }}
                   placeholder={tFields.cityPlaceholder}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-line bg-surface text-ink text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition"
+                  className="w-full px-3.5 py-2.5 rounded-md border border-line bg-surface text-ink text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition"
                 />
 
                 {cityDropdown && (
-                  <div className="absolute left-0 right-0 top-full mt-1.5 bg-card rounded-xl border border-line shadow-lg max-h-56 overflow-y-auto z-30 divide-y divide-line/60">
+                  <div className="absolute left-0 right-0 top-full mt-1.5 bg-card rounded-md border border-line max-h-56 overflow-y-auto z-30 divide-y divide-line/60">
                     {searchResults.map((item, idx) => (
                       <button
                         key={idx}
@@ -503,21 +478,11 @@ export const HeroSection: React.FC = () => {
               <div className="pt-2">
                 <button
                   type="submit"
-                  disabled={kundliLoading}
-                  className="w-full py-3.5 px-6 rounded-xl bg-accent hover:bg-accent-hover text-white font-bold text-sm sm:text-base transition shadow-md shadow-accent/20 flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+                  className="w-full py-3.5 px-6 rounded-md bg-accent hover:bg-accent-hover text-white font-bold text-sm sm:text-base transition flex items-center justify-center gap-2 cursor-pointer"
                 >
-                  {kundliLoading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>{tHero.submitting}</span>
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="w-4 h-4" />
-                      <span>{tHero.submitButton}</span>
-                      <ChevronRight className="w-4 h-4 ml-1" />
-                    </>
-                  )}
+                  <Sparkles className="w-4 h-4" />
+                  <span>{tHero.submitButton}</span>
+                  <ChevronRight className="w-4 h-4 ml-1" />
                 </button>
                 <div className="flex items-center justify-center gap-4 mt-3 text-[11px] text-ink-muted">
                   <span className="flex items-center gap-1">
@@ -534,7 +499,7 @@ export const HeroSection: React.FC = () => {
           </div>
 
           {/* ── RIGHT COLUMN: AI Astrologer Chat Widget (5 cols) ── */}
-          <div id="ai-chat" className="lg:col-span-5 bg-card rounded-2xl border border-line shadow-sm flex flex-col h-[520px] scroll-mt-24">
+          <div id="ai-chat" className="lg:col-span-5 bg-card rounded-lg border border-line shadow-sm flex flex-col h-[520px] scroll-mt-24">
             
             {/* Widget Header */}
             <div className="p-4 border-b border-line bg-surface-alt/70 rounded-t-2xl flex items-center justify-between">
@@ -577,7 +542,7 @@ export const HeroSection: React.FC = () => {
                     </div>
                   )}
                   <div
-                    className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 shadow-2xs ${
+                    className={`max-w-[85%] rounded-lg px-3.5 py-2.5 shadow-2xs ${
                       msg.sender === "user"
                         ? "bg-accent text-white rounded-tr-xs"
                         : "bg-card border border-line text-ink rounded-tl-xs"
@@ -607,7 +572,7 @@ export const HeroSection: React.FC = () => {
                   <div className="w-6 h-6 rounded-full bg-accent-soft border border-line flex items-center justify-center text-[11px] shrink-0 text-accent">
                     <Bot className="w-3.5 h-3.5 animate-pulse" />
                   </div>
-                  <div className="bg-card border border-line rounded-2xl px-3 py-2 flex items-center gap-1.5">
+                  <div className="bg-card border border-line rounded-lg px-3 py-2 flex items-center gap-1.5">
                     <Loader2 className="w-3.5 h-3.5 animate-spin text-accent" />
                     <span>{tHero.calculatingAi}</span>
                   </div>
@@ -647,12 +612,12 @@ export const HeroSection: React.FC = () => {
                   value={chatInput}
                   onChange={e => setChatInput(e.target.value)}
                   placeholder={tHero.aiInputPlaceholder}
-                  className="flex-1 px-3 py-2 rounded-xl border border-line bg-surface text-ink text-xs focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent"
+                  className="flex-1 px-3 py-2 rounded-md border border-line bg-surface text-ink text-xs focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent"
                 />
                 <button
                   type="submit"
                   disabled={!chatInput.trim() || chatLoading}
-                  className="p-2 rounded-xl bg-accent hover:bg-accent-hover text-white transition disabled:opacity-40 cursor-pointer"
+                  className="p-2 rounded-md bg-accent hover:bg-accent-hover text-white transition disabled:opacity-40 cursor-pointer"
                 >
                   <Send className="w-4 h-4" />
                 </button>
@@ -665,97 +630,8 @@ export const HeroSection: React.FC = () => {
 
       </div>
 
-      {/* ── LIVE KUNDLI MODAL ── */}
-      {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="bg-card w-full max-w-2xl rounded-3xl border border-line shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
-            
-            {/* Modal Header */}
-            <div className="p-4 sm:p-5 border-b border-line bg-surface-alt flex items-center justify-between">
-              <div>
-                <span className="text-[11px] font-bold uppercase tracking-wider text-accent">{tHero.modalTitle}</span>
-                <h3 className="text-lg sm:text-xl font-bold text-ink">
-                  {formData.name} {tHero.modalKundliOf}
-                </h3>
-              </div>
-              <button
-                onClick={() => setModalOpen(false)}
-                className="p-2 rounded-full hover:bg-surface border border-line text-ink-soft transition"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Modal Content */}
-            <div className="p-4 sm:p-6 overflow-y-auto space-y-6">
-              {kundliLoading ? (
-                <div className="py-16 text-center space-y-3">
-                  <Loader2 className="w-8 h-8 animate-spin text-accent mx-auto" />
-                  <p className="text-sm font-semibold text-ink">{tHero.modalCalculating}</p>
-                  <p className="text-xs text-ink-muted">{tHero.modalLocation}: {formData.cityName} • {tHero.modalLatitude}: {formData.lat}°</p>
-                </div>
-              ) : (
-                <>
-                  {/* Birth Metadata Bar */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-surface p-3.5 rounded-xl border border-line text-xs">
-                    <div>
-                      <span className="text-ink-muted block text-[10px]">{tHero.modalDobTob}</span>
-                      <span className="font-semibold text-ink">{formData.dob}, {formData.tob}</span>
-                    </div>
-                    <div>
-                      <span className="text-ink-muted block text-[10px]">{tHero.modalPlace}</span>
-                      <span className="font-semibold text-ink truncate block">{formData.cityName}</span>
-                    </div>
-                    <div>
-                      <span className="text-ink-muted block text-[10px]">{tHero.modalLagna}</span>
-                      <span className="font-bold text-accent">
-                        {kundliResult?.d1?.ascendant?.sign?.name || (activeLang === "en" ? "Aries" : "मेष")}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-ink-muted block text-[10px]">{tHero.modalMoonSign}</span>
-                      <span className="font-bold text-accent">
-                        {kundliResult?.planets?.find((p: any) => p.id === "MOON")?.sign?.name || (activeLang === "en" ? "Taurus" : "वृषभ")}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* SVG Chart Container */}
-                  <div className="flex justify-center items-center bg-white p-4 rounded-2xl border border-line shadow-xs">
-                    {kundliSvg ? (
-                      <div
-                        className="w-full max-w-[340px] aspect-square flex items-center justify-center [&>svg]:w-full [&>svg]:h-full"
-                        dangerouslySetInnerHTML={{ __html: kundliSvg }}
-                      />
-                    ) : (
-                      <div className="h-64 flex items-center justify-center text-xs text-ink-muted">
-                        {tHero.modalChartRendering}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Deep link into full Calculator */}
-                  <div className="bg-accent-soft p-4 rounded-2xl border border-accent/30 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
-                    <div>
-                      <h4 className="font-bold text-sm text-ink">{tHero.modalBannerTitle}</h4>
-                      <p className="text-xs text-ink-soft mt-0.5">{tHero.modalBannerSubtitle}</p>
-                    </div>
-                    <Link
-                      href={activeLang === "hi" ? "/hi/calculators/lagna-kundli" : "/calculators/lagna-kundli"}
-                      className="px-4 py-2 rounded-xl bg-accent hover:bg-accent-hover text-white font-bold text-xs transition flex items-center gap-1.5 shrink-0 shadow-xs"
-                    >
-                      <span>{tHero.modalOpenFullKundli}</span>
-                      <ExternalLink className="w-3.5 h-3.5" />
-                    </Link>
-                  </div>
-                </>
-              )}
-            </div>
-
-          </div>
-        </div>
-      )}
-
     </section>
+    {reportRequest && <BirthReport request={reportRequest} lang={activeLang} />}
+    </>
   );
 };

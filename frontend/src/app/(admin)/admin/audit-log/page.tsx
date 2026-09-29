@@ -38,7 +38,7 @@ export default function AdminAuditLogPage() {
   };
 
   useEffect(() => {
-    fetchAudits();
+    void Promise.resolve().then(fetchAudits);
   }, []);
 
   const filtered = audits.filter(a =>
@@ -50,39 +50,39 @@ export default function AdminAuditLogPage() {
   return (
     <div className="space-y-6 max-w-6xl">
       {/* Header Banner */}
-      <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="bg-white p-6 rounded-md border border-line shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Immutable Admin Audit Trail</h1>
-            <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-blue-100 text-blue-800 border border-blue-200 font-bold">
+            <h1 className="text-2xl font-bold tracking-tight text-ink">Immutable Admin Audit Trail</h1>
+            <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-accent-soft text-accent-hover border border-accent/30 font-bold">
               SPEC §12.5 COMPLIANT
             </span>
           </div>
-          <p className="text-slate-600 text-xs sm:text-sm mt-1">
+          <p className="text-ink-soft text-xs sm:text-sm mt-1">
             Tamper-proof record of every super-admin action (who changed what, to which tenant, from which IP, and why).
           </p>
         </div>
       </div>
 
       {/* Search Input */}
-      <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+      <div className="bg-white p-3 rounded-md border border-line shadow-sm">
         <div className="relative">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+          <Search className="w-4 h-4 text-ink-muted absolute left-3.5 top-3" />
           <input
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Filter audit logs by action type, target email, or details..."
-            className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-10 pr-4 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-slate-400 font-medium"
+            className="w-full bg-surface border border-line rounded-lg pl-10 pr-4 py-2 text-xs text-ink placeholder:text-ink-muted focus:outline-none focus:bg-white focus:border-ink-muted font-medium"
           />
         </div>
       </div>
 
       {/* Audit Logs Table */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-md border border-line shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50 text-slate-600 border-b border-slate-200 font-sans font-bold">
+            <thead className="bg-surface text-ink-soft border-b border-line font-sans font-bold">
               <tr>
                 <th className="px-6 py-3.5">Timestamp</th>
                 <th className="px-6 py-3.5">Actor Admin</th>
@@ -92,35 +92,35 @@ export default function AdminAuditLogPage() {
                 <th className="px-6 py-3.5">IP Address</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 text-slate-800 font-mono">
+            <tbody className="divide-y divide-line text-ink font-mono">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-10 text-center font-sans text-xs text-slate-500">
+                  <td colSpan={6} className="px-6 py-10 text-center font-sans text-xs text-ink-soft">
                     <Loader2 className="w-4 h-4 animate-spin inline mr-2" />
                     Querying audit trails from MySQL...
                   </td>
                 </tr>
               ) : filtered.map((log) => (
-                <tr key={log.id} className="hover:bg-slate-50/60 transition">
-                  <td className="px-6 py-4 text-slate-500 font-sans text-[11px] whitespace-nowrap">
+                <tr key={log.id} className="hover:bg-surface/60 transition">
+                  <td className="px-6 py-4 text-ink-soft font-sans text-[11px] whitespace-nowrap">
                     {log.createdAt}
                   </td>
-                  <td className="px-6 py-4 text-slate-900 font-bold whitespace-nowrap">
+                  <td className="px-6 py-4 text-ink font-bold whitespace-nowrap">
                     {log.actorEmail}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-800 font-bold border border-blue-200 text-[10px] font-sans">
+                    <span className="px-2 py-0.5 rounded bg-accent-soft text-accent-hover font-bold border border-accent/30 text-[10px] font-sans">
                       {log.action}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-slate-900 font-sans">
+                  <td className="px-6 py-4 text-ink font-sans">
                     <div className="font-semibold">{log.targetEmail || "—"}</div>
-                    {log.targetType && <div className="text-[10px] text-slate-400">{log.targetType}</div>}
+                    {log.targetType && <div className="text-[10px] text-ink-muted">{log.targetType}</div>}
                   </td>
-                  <td className="px-6 py-4 text-slate-700 font-sans text-xs leading-relaxed max-w-sm truncate">
+                  <td className="px-6 py-4 text-ink font-sans text-xs leading-relaxed max-w-sm truncate">
                     {log.metadata ? JSON.stringify(log.metadata) : "—"}
                   </td>
-                  <td className="px-6 py-4 text-slate-500 text-[11px] whitespace-nowrap">
+                  <td className="px-6 py-4 text-ink-soft text-[11px] whitespace-nowrap">
                     {log.ipAddress || "unknown"}
                   </td>
                 </tr>

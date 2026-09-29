@@ -140,9 +140,9 @@ export default function PdfReportsClient({ locale }: { locale: Locale }) {
       locale={locale}
     >
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        <div className="lg:col-span-6 bg-card p-6 rounded-2xl border border-line h-fit">
+        <div className="lg:col-span-6 bg-card p-6 rounded-lg border border-line h-fit">
           <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-xs leading-5 text-blue-900">
+            <div className="rounded-md border border-accent/30 bg-accent-soft px-4 py-3 text-xs leading-5 text-ink">
               {isEnglish
                 ? `The generated PDF will use ${selectedPdfLanguage.label} throughout, with its embedded script font.`
                 : `तैयार PDF पूरी तरह ${selectedPdfLanguage.nativeLabel} में होगी और उसी भाषा का embedded font उपयोग करेगी।`}
@@ -157,7 +157,7 @@ export default function PdfReportsClient({ locale }: { locale: Locale }) {
                 id="pdf_language"
                 value={pdfLanguage}
                 onChange={(e) => setPdfLanguage(e.target.value as PdfLanguage)}
-                className="w-full px-3 py-2.5 rounded-xl border border-line bg-surface text-ink text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition"
+                className="w-full px-3 py-2.5 rounded-md border border-line bg-surface text-ink text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition"
               >
                 {PDF_LANGUAGES.map((language) => (
                   <option key={language.id} value={language.id}>
@@ -176,7 +176,7 @@ export default function PdfReportsClient({ locale }: { locale: Locale }) {
                 id="report_sel"
                 value={reportType}
                 onChange={(e) => setReportType(e.target.value)}
-                className="w-full px-3 py-2.5 rounded-xl border border-line bg-surface text-ink text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition"
+                className="w-full px-3 py-2.5 rounded-md border border-line bg-surface text-ink text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition"
               >
                 {REPORT_TYPES.map((r) => (
                   <option key={r.id} value={r.id}>
@@ -186,12 +186,12 @@ export default function PdfReportsClient({ locale }: { locale: Locale }) {
               </select>
             </div>
 
-            <div className="p-4 rounded-xl bg-surface border border-line">
+            <div className="p-4 rounded-md bg-surface border border-line">
               <BirthDataFields value={form} onChange={setForm} personLabel={isMatching ? (isEnglish ? "Groom details" : "वर विवरण") : undefined} idPrefix="p1_" />
             </div>
 
             {isMatching && (
-              <div className="p-4 rounded-xl bg-surface border border-line">
+              <div className="p-4 rounded-md bg-surface border border-line">
                 <BirthDataFields
                   value={girlForm}
                   onChange={setGirlForm}
@@ -214,7 +214,7 @@ export default function PdfReportsClient({ locale }: { locale: Locale }) {
                   max={2100}
                   value={targetYear}
                   onChange={(e) => setTargetYear(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-line bg-surface text-ink text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition"
+                  className="w-full px-3.5 py-2.5 rounded-md border border-line bg-surface text-ink text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition"
                 />
               </div>
             )}
@@ -235,14 +235,14 @@ export default function PdfReportsClient({ locale }: { locale: Locale }) {
           {error && <ErrorNote message={error} />}
 
           {!jobStatus && !loading && !error && (
-            <div className="bg-card rounded-2xl border border-line p-10 text-center text-ink-muted">
+            <div className="bg-card rounded-lg border border-line p-10 text-center text-ink-muted">
               <div className="text-4xl mb-3">📄</div>
               <p className="text-sm">{isEnglish ? "Choose a detailed Vedic report and create a print-ready, high-resolution PDF." : "अपनी पसंद की विस्तृत वैदिक रिपोर्ट चुनें और प्रिंट-क्वालिटी PDF तैयार करें।"}</p>
             </div>
           )}
 
           {loading && (
-            <div className="bg-card rounded-2xl border border-line p-12 text-center text-ink-soft flex flex-col items-center justify-center">
+            <div className="bg-card rounded-lg border border-line p-12 text-center text-ink-soft flex flex-col items-center justify-center">
               <Loader2 className="w-10 h-10 text-accent animate-spin mb-4" />
               <div className="text-base font-bold text-ink">{isEnglish ? "Rendering and compiling your PDF..." : "PDF रेंडरिंग एवं संकलन जारी..."}</div>
               <p className="text-xs text-ink-muted mt-2 max-w-sm">
@@ -252,7 +252,7 @@ export default function PdfReportsClient({ locale }: { locale: Locale }) {
           )}
 
           {jobStatus === "COMPLETED" && (
-            <div className="bg-card rounded-2xl border border-emerald-200 p-8 text-center space-y-4">
+            <div className="bg-card rounded-lg border border-emerald-200 p-8 text-center space-y-4">
               <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto">
                 <CheckCircle2 className="w-7 h-7" />
               </div>
@@ -265,7 +265,7 @@ export default function PdfReportsClient({ locale }: { locale: Locale }) {
               <button
                 type="button"
                 onClick={handleDownload}
-                className="w-full py-3.5 px-6 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm transition shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full py-3.5 px-6 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm transition shadow-emerald-600/20 flex items-center justify-center gap-2 cursor-pointer"
               >
                 <Download className="w-4 h-4" /> {isEnglish ? "Download PDF report" : "PDF रिपोर्ट डाउनलोड करें"}
               </button>

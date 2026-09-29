@@ -18,6 +18,7 @@ import {
   Check,
   X
 } from "lucide-react";
+import { ApiData, toApiError } from "@/lib/apiTypes";
 
 interface WalletTier {
   id?: string;
@@ -60,16 +61,16 @@ export default function BillingPage() {
   const [subscribingTier, setSubscribingTier] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [transactions, setTransactions] = useState<any[]>([]);
-  const [addons, setAddons] = useState<any[]>([]);
+  const [transactions, setTransactions] = useState<ApiData[]>([]);
+  const [addons, setAddons] = useState<ApiData[]>([]);
   const [addonsLoaded, setAddonsLoaded] = useState(false);
   const [activeAddons, setActiveAddons] = useState<string[]>([]);
   const [togglingAddon, setTogglingAddon] = useState<string | null>(null);
-  const [selectedAddonForPurchase, setSelectedAddonForPurchase] = useState<any | null>(null);
+  const [selectedAddonForPurchase, setSelectedAddonForPurchase] = useState<ApiData | null>(null);
   const [purchasingAddonMethod, setPurchasingAddonMethod] = useState<string | null>(null);
   const [offerCode, setOfferCode] = useState("");
   const [appliedOffer, setAppliedOffer] = useState<CheckoutOffer | null>(null);
-  const [availableOffers, setAvailableOffers] = useState<any[]>([]);
+  const [availableOffers, setAvailableOffers] = useState<ApiData[]>([]);
   const [validatingOffer, setValidatingOffer] = useState(false);
 
   const [userSubscription, setUserSubscription] = useState<{ currentPeriodEnd?: string } | null>(null);
@@ -115,7 +116,7 @@ export default function BillingPage() {
     axios.get("/api/billing/recharge")
       .then(res => {
         if (res.data?.transactions) {
-          setTransactions(res.data.transactions.map((t: any) => ({
+          setTransactions(res.data.transactions.map((t: ApiData) => ({
             id: t.id,
             orderId: t.gatewayOrderId || t.id.substring(0, 10),
             amount: t.amount,
@@ -164,7 +165,7 @@ export default function BillingPage() {
       const res = await axios.post("/api/billing/offers", { code, targetType, targetId, amount });
       setAppliedOffer(res.data.data);
       setOfferCode(res.data.data.code);
-    } catch (err: any) {
+    } catch (errCaught) { const err = toApiError(errCaught);
       setAppliedOffer(null);
       setErrorMessage(err.response?.data?.message || "Offer code could not be applied.");
     } finally {
@@ -172,7 +173,7 @@ export default function BillingPage() {
     }
   }, [offerCode]);
 
-  const openAddonPurchaseModal = (addon: any) => {
+  const openAddonPurchaseModal = (addon: ApiData) => {
     resetCheckoutOffer();
     setSelectedAddonForPurchase(addon);
   };
@@ -218,7 +219,7 @@ export default function BillingPage() {
         const { orderId, key, amount, currency } = orderRes.data;
 
         // Check if Razorpay SDK script is loaded
-        if (typeof window !== "undefined" && (window as any).Razorpay) {
+        if (typeof window !== "undefined" && (window as ApiData).Razorpay) {
           const options = {
             key: key || "rzp_test_mock_enterprise_key",
             amount: Math.round(amount * 100), // in paise
@@ -226,7 +227,7 @@ export default function BillingPage() {
             name: "AstroEngine Cloud",
             description: `Upgrade to ${tier} Subscription Plan`,
             order_id: orderId,
-            handler: async function (response: any) {
+            handler: async function (response: ApiData) {
               try {
                 // Settle and verify upgrade via Gateway only AFTER successful user payment
                 const res = await axios.post("/api/billing/subscribe", { 
@@ -245,7 +246,7 @@ export default function BillingPage() {
                 } else {
                   setErrorMessage(res.data?.message || "Payment verified but subscription activation failed.");
                 }
-              } catch (subErr: any) {
+              } catch (subErrCaught) { const subErr = toApiError(subErrCaught);
                 setErrorMessage(subErr.response?.data?.message || "Failed to confirm subscription.");
               } finally {
                 setSubscribingTier(null);
@@ -266,7 +267,7 @@ export default function BillingPage() {
             }
           };
 
-          const rzp = new (window as any).Razorpay(options);
+          const rzp = new (window as ApiData).Razorpay(options);
           rzp.open();
           return;
         } else {
@@ -319,7 +320,7 @@ export default function BillingPage() {
       const { orderId, key, amount, currency } = orderRes.data;
 
       // Launch real Razorpay popup checkout
-      if (typeof window !== "undefined" && (window as any).Razorpay) {
+      if (typeof window !== "undefined" && (window as ApiData).Razorpay) {
         const options = {
           key: key || "rzp_test_mock_enterprise_key",
           amount: Math.round(amount * 100),
@@ -327,7 +328,7 @@ export default function BillingPage() {
           name: "AstroEngine Cloud",
           description: `Prepaid Wallet Recharge ₹${selectedTier}`,
           order_id: orderId,
-          handler: async function (response: any) {
+          handler: async function (response: ApiData) {
             try {
               // Complete and verify payment transaction only AFTER user completes payment
               const verifyRes = await axios.post("/api/billing/recharge", {
@@ -344,7 +345,7 @@ export default function BillingPage() {
               } else {
                 setErrorMessage("Payment verification failed.");
               }
-            } catch (vErr: any) {
+            } catch (vErrCaught) { const vErr = toApiError(vErrCaught);
               setErrorMessage(vErr.response?.data?.message || "Payment verification failed.");
             } finally {
               setIsProcessing(false);
@@ -365,7 +366,7 @@ export default function BillingPage() {
           }
         };
 
-        const rzp = new (window as any).Razorpay(options);
+        const rzp = new (window as ApiData).Razorpay(options);
         rzp.open();
         return;
       } else {
@@ -384,7 +385,7 @@ export default function BillingPage() {
     }
   };
 
-  const handleCancelAddon = async (addon: any) => {
+  const handleCancelAddon = async (addon: ApiData) => {
     setTogglingAddon(addon.id);
     setErrorMessage(null);
     setSuccessMessage(null);
@@ -409,7 +410,7 @@ export default function BillingPage() {
     }
   };
 
-  const executeAddonPurchase = async (addon: any, method: "WALLET" | "GATEWAY") => {
+  const executeAddonPurchase = async (addon: ApiData, method: "WALLET" | "GATEWAY") => {
     setPurchasingAddonMethod(method);
     setErrorMessage(null);
     setSuccessMessage(null);
@@ -425,7 +426,7 @@ export default function BillingPage() {
 
         const { orderId, key, amount, currency } = orderRes.data;
 
-        if (typeof window !== "undefined" && (window as any).Razorpay) {
+        if (typeof window !== "undefined" && (window as ApiData).Razorpay) {
           const options = {
             key: key || "rzp_test_mock_enterprise_key",
             amount: Math.round(amount * 100),
@@ -433,7 +434,7 @@ export default function BillingPage() {
             name: "AstroEngine Cloud",
             description: `Activate ${addon.name} Add-on`,
             order_id: orderId,
-            handler: async function (response: any) {
+            handler: async function (response: ApiData) {
               try {
                 const res = await axios.post("/api/user/addons", {
                   addonId: addon.id,
@@ -452,7 +453,7 @@ export default function BillingPage() {
                 } else {
                   setErrorMessage(res.data?.message || "Payment verified but addon activation failed.");
                 }
-              } catch (subErr: any) {
+              } catch (subErrCaught) { const subErr = toApiError(subErrCaught);
                 setErrorMessage(subErr.response?.data?.message || "Failed to confirm addon activation.");
               } finally {
                 setPurchasingAddonMethod(null);
@@ -473,7 +474,7 @@ export default function BillingPage() {
             }
           };
 
-          const rzp = new (window as any).Razorpay(options);
+          const rzp = new (window as ApiData).Razorpay(options);
           rzp.open();
           return;
         } else {
@@ -574,9 +575,9 @@ export default function BillingPage() {
       offer.targetType === targetType && (!offer.targetId || offer.targetId === targetId),
     );
     return (
-      <div className="rounded-xl border border-violet-200 bg-violet-50/60 p-3 space-y-2.5">
+      <div className="rounded-md border border-accent/30 bg-accent-soft/60 p-3 space-y-2.5">
         <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 text-xs font-bold text-violet-900">
+          <div className="flex items-center gap-2 text-xs font-bold text-ink">
             <BadgePercent className="w-4 h-4" /> One-time offer
           </div>
           {active && <span className="text-[10px] font-bold text-emerald-700">SAVED ₹{active.discountAmount.toFixed(2)}</span>}
@@ -586,13 +587,13 @@ export default function BillingPage() {
             value={offerCode}
             onChange={(event) => { setOfferCode(event.target.value.toUpperCase()); setAppliedOffer(null); }}
             placeholder="Enter offer code"
-            className="min-w-0 flex-1 rounded-lg border border-violet-200 bg-white px-3 py-2 text-xs font-mono uppercase outline-none focus:border-violet-500"
+            className="min-w-0 flex-1 rounded-lg border border-accent/30 bg-white px-3 py-2 text-xs font-mono uppercase outline-none focus:border-accent"
           />
           <button
             type="button"
             onClick={() => applyCheckoutOffer(targetType, targetId, amount)}
             disabled={validatingOffer || !offerCode.trim()}
-            className="rounded-lg bg-violet-700 px-3 py-2 text-xs font-bold text-white disabled:opacity-50"
+            className="rounded-lg bg-accent-hover px-3 py-2 text-xs font-bold text-white disabled:opacity-50"
           >
             {validatingOffer ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Apply"}
           </button>
@@ -604,7 +605,7 @@ export default function BillingPage() {
                 key={offer.code}
                 type="button"
                 onClick={() => { setOfferCode(offer.code); applyCheckoutOffer(targetType, targetId, amount, offer.code); }}
-                className="rounded-full border border-violet-200 bg-white px-2.5 py-1 text-[10px] font-bold text-violet-800 hover:border-violet-400"
+                className="rounded-full border border-accent/30 bg-white px-2.5 py-1 text-[10px] font-bold text-accent-hover hover:border-accent"
                 title={offer.description || offer.title}
               >
                 {offer.code} · {offer.title}
@@ -612,7 +613,7 @@ export default function BillingPage() {
             ))}
           </div>
         )}
-        {active && <p className="text-[11px] text-violet-800">{active.title} applied. This code can be used only once on your account.</p>}
+        {active && <p className="text-[11px] text-accent-hover">{active.title} applied. This code can be used only once on your account.</p>}
       </div>
     );
   };
@@ -621,7 +622,7 @@ export default function BillingPage() {
     <div className="space-y-6 max-w-6xl">
       {/* Floating Toast Notification (Always visible anywhere on the page & inside modals) */}
       {(errorMessage || successMessage) && (
-        <div className="fixed top-5 right-5 z-[9999] max-w-md w-full p-4 rounded-xl shadow-2xl border transition-all animate-in slide-in-from-top-4 flex items-start gap-3 bg-white">
+        <div className="fixed top-5 right-5 z-[9999] max-w-md w-full p-4 rounded-md border transition-all animate-in slide-in-from-top-4 flex items-start gap-3 bg-white">
           {errorMessage ? (
             <>
               <div className="p-2 rounded-lg bg-rose-100 text-rose-600 shrink-0">
@@ -633,7 +634,7 @@ export default function BillingPage() {
               </div>
               <button 
                 onClick={() => setErrorMessage(null)} 
-                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
+                className="text-ink-muted hover:text-ink-soft p-1 rounded-lg"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -649,7 +650,7 @@ export default function BillingPage() {
               </div>
               <button 
                 onClick={() => setSuccessMessage(null)} 
-                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
+                className="text-ink-muted hover:text-ink-soft p-1 rounded-lg"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -659,16 +660,16 @@ export default function BillingPage() {
       )}
 
       {/* Header Banner */}
-      <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">Wallet & Dynamic Billing</h1>
-        <p className="text-slate-600 text-xs sm:text-sm mt-1">
+      <div className="bg-white p-6 rounded-md border border-line shadow-sm">
+        <h1 className="text-2xl font-bold tracking-tight text-ink">Wallet & Dynamic Billing</h1>
+        <p className="text-ink-soft text-xs sm:text-sm mt-1">
           Top up prepaid balance for high-throughput API calls and white-label PDF generation beyond plan quota.
         </p>
       </div>
 
       {/* Live Alerts */}
       {successMessage && (
-        <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-900 text-xs flex items-center justify-between shadow-sm font-semibold">
+        <div className="p-4 rounded-md bg-emerald-50 border border-emerald-300 text-emerald-900 text-xs flex items-center justify-between shadow-sm font-semibold">
           <div className="flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
             <span>{successMessage}</span>
@@ -680,7 +681,7 @@ export default function BillingPage() {
       )}
 
       {errorMessage && (
-        <div className="p-4 rounded-xl bg-rose-50 border border-rose-300 text-rose-900 text-xs flex items-center justify-between shadow-sm font-semibold">
+        <div className="p-4 rounded-md bg-rose-50 border border-rose-300 text-rose-900 text-xs flex items-center justify-between shadow-sm font-semibold">
           <div className="flex items-center gap-2">
             <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0" />
             <span>{errorMessage}</span>
@@ -692,11 +693,11 @@ export default function BillingPage() {
       )}
 
       {/* Dynamic Wallet Balance Card */}
-      <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="bg-white p-6 rounded-md border border-line shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Live Prepaid Balance</span>
-          <div className="text-3xl font-extrabold text-slate-900 font-mono mt-1">₹{walletBalance.toFixed(2)}</div>
-          <div className="text-xs text-slate-500 mt-1">Automatic deduction: ₹0.02 / call after plan exhaustion</div>
+          <span className="text-xs font-bold text-ink-soft uppercase tracking-wider">Live Prepaid Balance</span>
+          <div className="text-3xl font-extrabold text-ink font-mono mt-1">₹{walletBalance.toFixed(2)}</div>
+          <div className="text-xs text-ink-soft mt-1">Automatic deduction: ₹0.02 / call after plan exhaustion</div>
         </div>
         <div className="flex items-center gap-1.5 text-xs text-emerald-800 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-200 font-semibold">
           <ShieldCheck className="w-4 h-4 text-emerald-600" />
@@ -705,22 +706,22 @@ export default function BillingPage() {
       </div>
 
       {/* Current Subscription Plan & Upgrade Section (§8.2.6) */}
-      <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-5">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
+      <div className="bg-white p-6 rounded-md border border-line shadow-sm space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-line">
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Active Subscription</span>
-              <span className="px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-slate-900 text-white">
+              <span className="text-xs font-bold text-ink-soft uppercase tracking-wider">Active Subscription</span>
+              <span className="px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-console text-white">
                 {currentPlanTier} PLAN
               </span>
             </div>
-            <p className="text-xs text-slate-500 mt-1">
-              Monthly Quota: <strong className="text-slate-800">{currentQuota.toLocaleString()} calls/month</strong>. Upgrade anytime with automated Razorpay recurring mandates.
+            <p className="text-xs text-ink-soft mt-1">
+              Monthly Quota: <strong className="text-ink">{currentQuota.toLocaleString()} calls/month</strong>. Upgrade anytime with automated Razorpay recurring mandates.
             </p>
           </div>
           <Link
             href="/pricing"
-            className="text-xs font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1 self-start sm:self-auto"
+            className="text-xs font-semibold text-accent hover:text-accent-hover flex items-center gap-1 self-start sm:self-auto"
           >
             <span>Compare all features</span>
             <ArrowUpRight className="w-3.5 h-3.5" />
@@ -734,14 +735,14 @@ export default function BillingPage() {
             return (
               <div
                 key={p.id}
-                className={`p-5 rounded-xl border flex flex-col justify-between transition relative ${
+                className={`p-5 rounded-md border flex flex-col justify-between transition relative ${
                   isCurrent
-                    ? "bg-slate-50 border-slate-900 ring-2 ring-slate-900"
-                    : "bg-white border-slate-200 hover:border-slate-300"
+                    ? "bg-surface border-console-line ring-2 ring-ink"
+                    : "bg-white border-line hover:border-line"
                 }`}
               >
                 {p.isPopular && !isCurrent && (
-                  <span className="absolute -top-2.5 right-3 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-blue-600 text-white">
+                  <span className="absolute -top-2.5 right-3 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-accent text-white">
                     Recommended
                   </span>
                 )}
@@ -752,31 +753,31 @@ export default function BillingPage() {
                 )}
 
                 <div>
-                  <h3 className="font-bold text-sm text-slate-900">{p.name}</h3>
+                  <h3 className="font-bold text-sm text-ink">{p.name}</h3>
                   <div className="mt-2 flex items-baseline gap-1">
-                    <span className="text-2xl font-black font-mono text-slate-900">₹{p.priceMonthly.toLocaleString()}</span>
-                    <span className="text-[11px] text-slate-500">/month</span>
+                    <span className="text-2xl font-semibold font-mono text-ink">₹{p.priceMonthly.toLocaleString()}</span>
+                    <span className="text-[11px] text-ink-soft">/month</span>
                   </div>
 
                   {/* Quota & Limits Box */}
-                  <div className="mt-2.5 py-2 px-2.5 rounded-lg bg-slate-50 border border-slate-100 text-[11px] font-mono text-slate-700 space-y-0.5">
+                  <div className="mt-2.5 py-2 px-2.5 rounded-lg bg-surface border border-line text-[11px] font-mono text-ink space-y-0.5">
                     <div className="flex justify-between">
-                      <span className="text-slate-400">Monthly Quota:</span>
-                      <strong className="text-slate-900">{p.includedQuota.toLocaleString()} calls</strong>
+                      <span className="text-ink-muted">Monthly Quota:</span>
+                      <strong className="text-ink">{p.includedQuota.toLocaleString()} calls</strong>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-slate-400">Rate Limit:</span>
-                      <strong className="text-slate-900">{p.rateLimitPerMin} RPM</strong>
+                      <span className="text-ink-muted">Rate Limit:</span>
+                      <strong className="text-ink">{p.rateLimitPerMin} RPM</strong>
                     </div>
                   </div>
 
                   {/* Features List */}
-                  <div className="mt-3.5 space-y-1.5 text-xs text-slate-700">
-                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                  <div className="mt-3.5 space-y-1.5 text-xs text-ink">
+                    <div className="text-[10px] font-bold text-ink-muted uppercase tracking-wider mb-1">
                       Included in this Plan:
                     </div>
                     {(Array.isArray(p.features) ? p.features : []).map((feat, fIdx) => (
-                      <div key={fIdx} className="flex items-start gap-1.5 text-[11px] leading-tight text-slate-700">
+                      <div key={fIdx} className="flex items-start gap-1.5 text-[11px] leading-tight text-ink">
                         <Check className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0 mt-0.5" />
                         <span>{feat}</span>
                       </div>
@@ -784,14 +785,14 @@ export default function BillingPage() {
                   </div>
                 </div>
 
-                <div className="mt-5 pt-4 border-t border-slate-100">
+                <div className="mt-5 pt-4 border-t border-line">
                   <button
                     onClick={() => openUpgradeModal(p)}
                     disabled={isCurrent || subscribingTier === p.tier}
                     className={`w-full py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition ${
                       isCurrent
-                        ? "bg-slate-200 text-slate-500 cursor-default"
-                        : "bg-slate-900 hover:bg-slate-800 text-white shadow-xs"
+                        ? "bg-line text-ink-soft cursor-default"
+                        : "bg-console hover:bg-console-line text-white shadow-xs"
                     }`}
                   >
                     {subscribingTier === p.tier ? (
@@ -813,27 +814,27 @@ export default function BillingPage() {
       </div>
 
       {/* Recharge Packs */}
-      <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
-        <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Select Recharge Amount (INR)</h2>
+      <div className="bg-white p-6 rounded-md border border-line shadow-sm space-y-4">
+        <h2 className="text-sm font-bold text-ink uppercase tracking-wider">Select Recharge Amount (INR)</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {tiers.map((tier) => (
             <div
               key={tier.amount}
               onClick={() => setSelectedTier(tier.amount)}
-              className={`p-5 rounded-xl border cursor-pointer transition relative ${
+              className={`p-5 rounded-md border cursor-pointer transition relative ${
                 selectedTier === tier.amount
-                  ? "bg-slate-50 border-slate-900 ring-2 ring-slate-900 shadow-sm"
-                  : "bg-white border-slate-200 hover:border-slate-300"
+                  ? "bg-surface border-console-line ring-2 ring-ink shadow-sm"
+                  : "bg-white border-line hover:border-line"
               }`}
             >
               {tier.isPopular && (
-                <span className="absolute top-3 right-3 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-slate-900 text-white">
+                <span className="absolute top-3 right-3 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-console text-white">
                   Popular
                 </span>
               )}
-              <div className="text-xs text-slate-500 font-semibold">{tier.label}</div>
-              <div className="text-2xl font-extrabold text-slate-900 font-mono mt-2">₹{tier.amount.toLocaleString()}</div>
-              <div className="text-xs text-blue-700 mt-1 font-bold flex items-center gap-1">
+              <div className="text-xs text-ink-soft font-semibold">{tier.label}</div>
+              <div className="text-2xl font-extrabold text-ink font-mono mt-2">₹{tier.amount.toLocaleString()}</div>
+              <div className="text-xs text-accent-hover mt-1 font-bold flex items-center gap-1">
                 <Zap className="w-3.5 h-3.5" />
                 <span>Get ₹{tier.credits.toLocaleString()} Credits</span>
               </div>
@@ -856,7 +857,7 @@ export default function BillingPage() {
         <button
           onClick={handleRecharge}
           disabled={isProcessing}
-          className="w-full mt-4 py-3 px-4 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs shadow flex items-center justify-center gap-2 transition disabled:opacity-50"
+          className="w-full mt-4 py-3 px-4 rounded-lg bg-console hover:bg-console-line text-white font-bold text-xs shadow flex items-center justify-center gap-2 transition disabled:opacity-50"
         >
           {isProcessing ? (
             <>
@@ -873,22 +874,22 @@ export default function BillingPage() {
       </div>
 
       {/* Modular Engine Add-ons Section (Model 3) */}
-      <div id="addons" className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-4">
+      <div id="addons" className="bg-white p-6 rounded-md border border-line shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-line pb-4">
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="text-base font-bold text-slate-900">Modular Engine Add-ons</h3>
-              <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-purple-100 text-purple-800 border border-purple-200">
+              <h3 className="text-base font-bold text-ink">Modular Engine Add-ons</h3>
+              <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-accent-soft text-accent-hover border border-accent/30">
                 Power-Ups
               </span>
             </div>
-            <p className="text-slate-500 text-xs mt-0.5">
+            <p className="text-ink-soft text-xs mt-0.5">
               Unlock specialized engines individually on Starter or Pro plans without paying for full Enterprise.
             </p>
           </div>
           <div className="text-right">
-            <span className="text-[11px] text-slate-400 font-mono">
-              Wallet Balance: <strong className="text-slate-900 font-mono">₹{walletBalance.toFixed(2)}</strong>
+            <span className="text-[11px] text-ink-muted font-mono">
+              Wallet Balance: <strong className="text-ink font-mono">₹{walletBalance.toFixed(2)}</strong>
             </span>
           </div>
         </div>
@@ -901,45 +902,45 @@ export default function BillingPage() {
             return (
               <div
                 key={addon.id}
-                className={`p-4 rounded-xl border flex flex-col justify-between transition ${
+                className={`p-4 rounded-md border flex flex-col justify-between transition ${
                   isActive
-                    ? "bg-slate-50/70 border-slate-300 ring-1 ring-slate-900/5 shadow-xs"
-                    : "bg-white border-slate-200 hover:border-slate-300 hover:shadow-xs"
+                    ? "bg-surface/70 border-line ring-1 ring-ink/5 shadow-xs"
+                    : "bg-white border-line hover:border-line hover:shadow-xs"
                 }`}
               >
                 <div>
                   <div className="flex items-start justify-between gap-2">
                     <div>
                       <div className="flex items-center gap-1.5">
-                        <span className="font-bold text-slate-900 text-xs">{addon.name}</span>
+                        <span className="font-bold text-ink text-xs">{addon.name}</span>
                       </div>
-                      <span className="inline-block mt-1 px-1.5 py-0.5 rounded text-[9px] font-mono font-bold uppercase tracking-wider bg-slate-100 text-slate-600 border border-slate-200">
+                      <span className="inline-block mt-1 px-1.5 py-0.5 rounded text-[9px] font-mono font-bold uppercase tracking-wider bg-surface-alt text-ink-soft border border-line">
                         {addon.category}
                       </span>
                     </div>
                     <div className="text-right">
-                      <div className="font-mono text-slate-900 font-bold text-xs">
+                      <div className="font-mono text-ink font-bold text-xs">
                         ₹{addon.priceMonthly}
                       </div>
-                      <div className="text-[10px] text-slate-400">/ month</div>
+                      <div className="text-[10px] text-ink-muted">/ month</div>
                     </div>
                   </div>
 
-                  <p className="text-[11px] text-slate-600 mt-2 leading-relaxed">
+                  <p className="text-[11px] text-ink-soft mt-2 leading-relaxed">
                     {addon.description}
                   </p>
 
                   {/* Quota specification pill */}
-                  <div className="mt-2.5 py-1.5 px-2.5 rounded-lg bg-slate-100/80 border border-slate-200/60 flex items-center justify-between text-[10px] font-mono text-slate-700">
+                  <div className="mt-2.5 py-1.5 px-2.5 rounded-lg bg-surface-alt/80 border border-line/60 flex items-center justify-between text-[10px] font-mono text-ink">
                     <span>
-                      Quota: <strong className="text-slate-900 font-bold">{(addon.monthlyQuota || 1000).toLocaleString()} {addon.category === "REPORTS" ? "PDFs" : "calls"}</strong>
+                      Quota: <strong className="text-ink font-bold">{(addon.monthlyQuota || 1000).toLocaleString()} {addon.category === "REPORTS" ? "PDFs" : "calls"}</strong>
                     </span>
                     <span>
-                      Limit: <strong className="text-slate-900 font-bold">{addon.rateLimitPerMin || 60} RPM</strong>
+                      Limit: <strong className="text-ink font-bold">{addon.rateLimitPerMin || 60} RPM</strong>
                     </span>
                   </div>
 
-                  <div className="mt-3 grid grid-cols-2 gap-1.5 text-[10px] text-slate-700">
+                  <div className="mt-3 grid grid-cols-2 gap-1.5 text-[10px] text-ink">
                     {(addon.features || []).map((feat: string, fIdx: number) => (
                       <div key={fIdx} className="flex items-center gap-1">
                         <Check className="w-3 h-3 text-emerald-600 flex-shrink-0" />
@@ -949,7 +950,7 @@ export default function BillingPage() {
                   </div>
                 </div>
 
-                <div className="mt-4 pt-3 border-t border-slate-200/80">
+                <div className="mt-4 pt-3 border-t border-line/80">
                   {isEnterprise ? (
                     <div className="w-full py-1.5 px-2 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold text-[11px] flex items-center justify-center gap-1.5">
                       <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
@@ -972,7 +973,7 @@ export default function BillingPage() {
                   ) : (
                     <button
                       onClick={() => openAddonPurchaseModal(addon)}
-                      className="w-full py-2 px-3 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs shadow flex items-center justify-center gap-1.5 transition"
+                      className="w-full py-2 px-3 rounded-lg bg-console hover:bg-console-line text-white font-bold text-xs shadow flex items-center justify-center gap-1.5 transition"
                     >
                       <Zap className="w-3.5 h-3.5 text-amber-400" />
                       <span>Activate for ₹{addon.priceMonthly}/mo</span>
@@ -986,14 +987,14 @@ export default function BillingPage() {
       </div>
 
       {/* Compact Banner: Invoices & Tax Profile */}
-      <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="bg-white p-5 rounded-md border border-line shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-start gap-3">
-          <div className="p-2.5 rounded-lg bg-slate-100 text-slate-700 mt-0.5">
-            <FileText className="w-5 h-5 text-slate-700" />
+          <div className="p-2.5 rounded-lg bg-surface-alt text-ink mt-0.5">
+            <FileText className="w-5 h-5 text-ink" />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-slate-900">GST Tax Invoices & Business Tax Profile</h3>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <h3 className="text-sm font-bold text-ink">GST Tax Invoices & Business Tax Profile</h3>
+            <p className="text-xs text-ink-soft mt-0.5">
               Configure your Company GSTIN, Registered Address, and view or download all past settled tax invoices.
             </p>
           </div>
@@ -1001,7 +1002,7 @@ export default function BillingPage() {
 
         <Link
           href="/invoices"
-          className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs transition shadow-xs self-start sm:self-auto shrink-0"
+          className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-lg bg-console hover:bg-console-line text-white font-semibold text-xs transition shadow-xs self-start sm:self-auto shrink-0"
         >
           <span>View Invoices & GST Profile</span>
           <ArrowUpRight className="w-4 h-4" />
@@ -1009,16 +1010,16 @@ export default function BillingPage() {
       </div>
       {/* Upgrade Plan Modal: Choose Payment Method (Wallet vs Gateway) */}
       {selectedPlanForUpgrade && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-in fade-in duration-150">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-5">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div className="fixed inset-0 bg-console/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-in fade-in duration-150">
+          <div className="bg-white rounded-lg max-w-md w-full p-6 border border-line space-y-5">
+            <div className="flex items-center justify-between pb-3 border-b border-line">
               <div>
-                <h3 className="text-base font-bold text-slate-900">Upgrade to {selectedPlanForUpgrade.name}</h3>
-                <p className="text-xs text-slate-500 mt-0.5">Choose your preferred payment method to activate plan</p>
+                <h3 className="text-base font-bold text-ink">Upgrade to {selectedPlanForUpgrade.name}</h3>
+                <p className="text-xs text-ink-soft mt-0.5">Choose your preferred payment method to activate plan</p>
               </div>
               <button 
                 onClick={() => { setSelectedPlanForUpgrade(null); resetCheckoutOffer(); }}
-                className="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-100 transition"
+                className="text-ink-muted hover:text-ink p-1.5 rounded-lg hover:bg-surface-alt transition"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -1045,7 +1046,7 @@ export default function BillingPage() {
               return (
                 <div className="space-y-4">
                   {creditDiscount > 0 ? (
-                    <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs space-y-1">
+                    <div className="p-3 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs space-y-1">
                       <div className="font-bold flex items-center justify-between">
                         <span>Prorated Upgrade Credit Applied:</span>
                         <span className="font-mono text-emerald-700">-₹{creditDiscount.toFixed(2)}</span>
@@ -1059,37 +1060,37 @@ export default function BillingPage() {
                   {renderCheckoutOffer("PLAN", selectedPlanForUpgrade.tier, netPayable)}
 
                   {/* Plan Price Summary */}
-                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+                  <div className="p-4 rounded-md bg-surface border border-line flex items-center justify-between">
                     <div>
-                      <div className="text-xs text-slate-500 font-semibold">
+                      <div className="text-xs text-ink-soft font-semibold">
                         {creditDiscount > 0 ? "Adjusted Net Payable Price" : "Monthly Subscription Price"}
                       </div>
-                      <div className="text-xl font-extrabold text-slate-900 font-mono mt-0.5">
+                      <div className="text-xl font-extrabold text-ink font-mono mt-0.5">
                         ₹{finalPayable.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                         {(creditDiscount > 0 || finalPayable < netPayable) && (
-                          <span className="text-xs text-slate-400 line-through font-normal ml-2">
+                          <span className="text-xs text-ink-muted line-through font-normal ml-2">
                             ₹{(finalPayable < netPayable ? netPayable : selectedPlanForUpgrade.priceMonthly).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                           </span>
                         )}
                       </div>
                     </div>
-                    <div className="text-right text-xs text-slate-600 font-medium">
+                    <div className="text-right text-xs text-ink-soft font-medium">
                       <div>{selectedPlanForUpgrade.includedQuota.toLocaleString()} calls / mo</div>
-                      <div className="text-[11px] text-slate-400">{selectedPlanForUpgrade.rateLimitPerMin} RPM</div>
+                      <div className="text-[11px] text-ink-muted">{selectedPlanForUpgrade.rateLimitPerMin} RPM</div>
                     </div>
                   </div>
 
                   {/* Option 1: Live Wallet Balance */}
-                  <div className="p-4 rounded-xl border border-slate-200 hover:border-slate-300 transition space-y-3">
+                  <div className="p-4 rounded-md border border-line hover:border-line transition space-y-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <div className="p-2 rounded-lg bg-blue-50 text-blue-700">
+                        <div className="p-2 rounded-lg bg-accent-soft text-accent-hover">
                           <Wallet className="w-4 h-4" />
                         </div>
                         <div>
-                          <div className="text-xs font-bold text-slate-900">Option 1: Pay via Wallet Balance</div>
-                          <div className="text-[11px] text-slate-500">
-                            Available: <strong className="text-slate-800 font-mono">₹{walletBalance.toFixed(2)}</strong>
+                          <div className="text-xs font-bold text-ink">Option 1: Pay via Wallet Balance</div>
+                          <div className="text-[11px] text-ink-soft">
+                            Available: <strong className="text-ink font-mono">₹{walletBalance.toFixed(2)}</strong>
                           </div>
                         </div>
                       </div>
@@ -1099,7 +1100,7 @@ export default function BillingPage() {
                       <button
                         onClick={() => executeUpgrade(selectedPlanForUpgrade.tier, "WALLET")}
                         disabled={subscribingTier === selectedPlanForUpgrade.tier}
-                        className="w-full py-2.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center justify-center gap-2 transition disabled:opacity-50"
+                        className="w-full py-2.5 rounded-lg bg-console hover:bg-console-line text-white font-bold text-xs flex items-center justify-center gap-2 transition disabled:opacity-50"
                       >
                         {subscribingTier === selectedPlanForUpgrade.tier ? (
                           <>
@@ -1118,14 +1119,14 @@ export default function BillingPage() {
                   </div>
 
                   {/* Option 2: Direct Payment Gateway Checkout */}
-                  <div className="p-4 rounded-xl border border-slate-200 hover:border-slate-300 transition space-y-3">
+                  <div className="p-4 rounded-md border border-line hover:border-line transition space-y-3">
                     <div className="flex items-center gap-2">
                       <div className="p-2 rounded-lg bg-emerald-50 text-emerald-700">
                         <CreditCard className="w-4 h-4" />
                       </div>
                       <div>
-                        <div className="text-xs font-bold text-slate-900">Option 2: Pay via Razorpay Gateway</div>
-                        <div className="text-[11px] text-slate-500">UPI, Credit/Debit Cards, NetBanking, Corporate</div>
+                        <div className="text-xs font-bold text-ink">Option 2: Pay via Razorpay Gateway</div>
+                        <div className="text-[11px] text-ink-soft">UPI, Credit/Debit Cards, NetBanking, Corporate</div>
                       </div>
                     </div>
 
@@ -1158,7 +1159,7 @@ export default function BillingPage() {
               );
             })()}
 
-            <div className="text-[11px] text-center text-slate-400">
+            <div className="text-[11px] text-center text-ink-muted">
               Transactions generate compliant GST Tax Invoices immediately upon settlement.
             </div>
           </div>
@@ -1167,20 +1168,20 @@ export default function BillingPage() {
 
       {/* Add-on Payment Selection Modal (Wallet vs Razorpay) */}
       {selectedAddonForPurchase && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl border border-slate-200 p-6 max-w-md w-full shadow-2xl space-y-4 animate-in fade-in">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div className="fixed inset-0 z-50 bg-console/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg border border-line p-6 max-w-md w-full space-y-4 animate-in fade-in">
+            <div className="flex items-center justify-between border-b border-line pb-3">
               <div>
-                <span className="text-[10px] font-mono uppercase tracking-wider text-purple-600 font-bold bg-purple-50 px-2 py-0.5 rounded-full border border-purple-200">
+                <span className="text-[10px] font-mono uppercase tracking-wider text-accent font-bold bg-accent-soft px-2 py-0.5 rounded-full border border-accent/30">
                   Add-on Activation
                 </span>
-                <h3 className="text-base font-bold text-slate-900 mt-1">
+                <h3 className="text-base font-bold text-ink mt-1">
                   Activate {selectedAddonForPurchase.name}
                 </h3>
               </div>
               <button
                 onClick={() => { setSelectedAddonForPurchase(null); resetCheckoutOffer(); }}
-                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
+                className="text-ink-muted hover:text-ink-soft p-1 rounded-lg"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1188,43 +1189,43 @@ export default function BillingPage() {
 
             {renderCheckoutOffer("ADDON", selectedAddonForPurchase.id, selectedAddonForPurchase.priceMonthly)}
 
-            <p className="text-xs text-slate-600">
+            <p className="text-xs text-ink-soft">
               {selectedAddonForPurchase.description}
             </p>
 
             {/* Price & Quota Box */}
-            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+            <div className="p-3.5 rounded-md bg-surface border border-line flex items-center justify-between">
               <div>
-                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Included Monthly Quota</span>
-                <span className="text-xs font-mono font-bold text-slate-800">
+                <span className="text-[10px] text-ink-muted font-bold uppercase tracking-wider block">Included Monthly Quota</span>
+                <span className="text-xs font-mono font-bold text-ink">
                   {(selectedAddonForPurchase.monthlyQuota || 1000).toLocaleString()} {selectedAddonForPurchase.category === "REPORTS" ? "PDFs" : "calls"} / mo
                 </span>
               </div>
               <div className="text-right">
-                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Price</span>
-                <span className="text-xl font-black font-mono text-slate-900">
+                <span className="text-[10px] text-ink-muted font-bold uppercase tracking-wider block">Price</span>
+                <span className="text-xl font-semibold font-mono text-ink">
                   ₹{checkoutTotal("ADDON", selectedAddonForPurchase.id, selectedAddonForPurchase.priceMonthly)}
                 </span>
-                <span className="text-[10px] text-slate-400">/mo</span>
+                <span className="text-[10px] text-ink-muted">/mo</span>
               </div>
             </div>
 
             <div className="space-y-3 pt-1">
-              <div className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+              <div className="text-xs font-bold text-ink uppercase tracking-wider">
                 Select Payment Method:
               </div>
 
               {/* Option 1: Pay from Live Wallet */}
-              <div className="p-4 rounded-xl border border-slate-200 hover:border-slate-300 transition space-y-3">
+              <div className="p-4 rounded-md border border-line hover:border-line transition space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <div className="p-2 rounded-lg bg-slate-100 text-slate-800">
+                    <div className="p-2 rounded-lg bg-surface-alt text-ink">
                       <Wallet className="w-4 h-4" />
                     </div>
                     <div>
-                      <div className="text-xs font-bold text-slate-900">Option 1: Pay from Wallet</div>
-                      <div className="text-[11px] text-slate-500">
-                        Available Balance: <strong className="font-mono text-slate-900">₹{walletBalance.toFixed(2)}</strong>
+                      <div className="text-xs font-bold text-ink">Option 1: Pay from Wallet</div>
+                      <div className="text-[11px] text-ink-soft">
+                        Available Balance: <strong className="font-mono text-ink">₹{walletBalance.toFixed(2)}</strong>
                       </div>
                     </div>
                   </div>
@@ -1234,7 +1235,7 @@ export default function BillingPage() {
                   <button
                     onClick={() => executeAddonPurchase(selectedAddonForPurchase, "WALLET")}
                     disabled={purchasingAddonMethod === "WALLET"}
-                    className="w-full py-2.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center justify-center gap-2 transition disabled:opacity-50"
+                    className="w-full py-2.5 rounded-lg bg-console hover:bg-console-line text-white font-bold text-xs flex items-center justify-center gap-2 transition disabled:opacity-50"
                   >
                     {purchasingAddonMethod === "WALLET" ? (
                       <>
@@ -1253,14 +1254,14 @@ export default function BillingPage() {
               </div>
 
               {/* Option 2: Pay directly with Razorpay */}
-              <div className="p-4 rounded-xl border border-slate-200 hover:border-slate-300 transition space-y-3">
+              <div className="p-4 rounded-md border border-line hover:border-line transition space-y-3">
                 <div className="flex items-center gap-2">
                   <div className="p-2 rounded-lg bg-emerald-50 text-emerald-700">
                     <CreditCard className="w-4 h-4" />
                   </div>
                   <div>
-                    <div className="text-xs font-bold text-slate-900">Option 2: Pay via Razorpay Gateway</div>
-                    <div className="text-[11px] text-slate-500">UPI, QR, Credit/Debit Cards, NetBanking</div>
+                    <div className="text-xs font-bold text-ink">Option 2: Pay via Razorpay Gateway</div>
+                    <div className="text-[11px] text-ink-soft">UPI, QR, Credit/Debit Cards, NetBanking</div>
                   </div>
                 </div>
 

@@ -4,6 +4,7 @@ import { getVerifiedSession } from "@/lib/authGuard";
 import { Prisma } from "@prisma/client";
 import { OfferValidationError, recordOfferRedemption, resolveOfferForUser } from "@/lib/offers";
 import { toMoney, toJsonSafe } from "@/lib/money";
+import { ApiData, toApiError } from "@/lib/apiTypes";
 
 export interface AddonItem {
   id: string;
@@ -35,7 +36,7 @@ export async function GET() {
     const activeAddons: string[] = Array.isArray(user.activeAddons) ? (user.activeAddons as string[]) : [];
 
     // 1. Fetch live addon catalog directly from MySQL AddonPackage table
-    const dbAddons = await (prisma as any).addonPackage.findMany({
+    const dbAddons = await (prisma as ApiData).addonPackage.findMany({
       where: { isActive: true },
       orderBy: { priceMonthly: "asc" }
     });
@@ -45,7 +46,7 @@ export async function GET() {
       walletBalance: toMoney(user.walletBalance),
       planTier: user.planTier,
       activeAddons,
-      catalog: toJsonSafe((dbAddons || []).map((addon: any) => ({
+      catalog: toJsonSafe((dbAddons || []).map((addon: ApiData) => ({
         ...addon,
         isActive: activeAddons.includes(addon.id) || user.planTier === "ENTERPRISE"
       })))
@@ -68,7 +69,7 @@ export async function POST(req: NextRequest) {
     const { addonId, action, paymentMethod = "WALLET", gatewayPaymentId, gatewayOrderId, offerCode } = body; // action: "activate" | "deactivate"
 
     // Fetch addon details strictly from MySQL database
-    const addon = await (prisma as any).addonPackage.findUnique({
+    const addon = await (prisma as ApiData).addonPackage.findUnique({
       where: { id: addonId }
     });
     if (!addon) {
@@ -202,7 +203,7 @@ export async function POST(req: NextRequest) {
               }
             });
           });
-        } catch (txErr: any) {
+        } catch (txErrCaught) { const txErr = toApiError(txErrCaught);
           if (txErr?.message === "ORDER_ALREADY_SETTLED") {
             return NextResponse.json({
               status: "error",

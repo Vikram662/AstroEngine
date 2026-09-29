@@ -8,6 +8,7 @@ import { BirthDataFields, DEFAULT_BIRTH_DATA, BirthDataValue } from "@/component
 import { fetchParallelSettled } from "@/lib/calculatorApi";
 import { ResultSection, ResultRow, ResultBadge, SubmitButton, ErrorNote } from "@/components/calculators/ResultRows";
 import { Loader2 } from "lucide-react";
+import { ApiData, toApiError } from "@/lib/apiTypes";
 
 const STRINGS = {
   hi: {
@@ -66,9 +67,9 @@ export default function ManglikDoshaClient({ locale }: { locale: Locale }) {
   const [lang, setLang] = useState<"hi" | "en">(locale);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [data, setData] = useState<any>(null);
-  const [mantraData, setMantraData] = useState<any>(null);
-  const [fastingData, setFastingData] = useState<any>(null);
+  const [data, setData] = useState<ApiData>(null);
+  const [mantraData, setMantraData] = useState<ApiData>(null);
+  const [fastingData, setFastingData] = useState<ApiData>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -107,7 +108,7 @@ export default function ManglikDoshaClient({ locale }: { locale: Locale }) {
       setData(manglik);
       if (mantras) setMantraData(mantras);
       if (fasting) setFastingData(fasting);
-    } catch (err: any) {
+    } catch (errCaught) { const err = toApiError(errCaught);
       setError(err?.response?.data?.message || err?.message || s.error);
     } finally {
       setLoading(false);
@@ -166,14 +167,14 @@ export default function ManglikDoshaClient({ locale }: { locale: Locale }) {
       {error && <ErrorNote message={error} />}
 
       {!data && !loading && !error && (
-        <div className="bg-card rounded-2xl border border-line p-10 text-center text-ink-muted">
+        <div className="bg-card rounded-lg border border-line p-10 text-center text-ink-muted">
           <div className="text-4xl mb-3">🔥</div>
           <p className="text-sm">{s.emptyHint}</p>
         </div>
       )}
 
       {loading && (
-        <div className="bg-card rounded-2xl border border-line p-12 text-center text-ink-soft flex flex-col items-center justify-center">
+        <div className="bg-card rounded-lg border border-line p-12 text-center text-ink-soft flex flex-col items-center justify-center">
           <Loader2 className="w-8 h-8 text-accent animate-spin mb-3" />
           <p className="text-sm">{s.loadingHint}</p>
         </div>
@@ -183,7 +184,7 @@ export default function ManglikDoshaClient({ locale }: { locale: Locale }) {
         <div className="space-y-6">
           <ResultSection title={s.resultTitle}>
                 <div
-                  className={`p-6 rounded-xl border text-center mb-4 ${
+                  className={`p-6 rounded-md border text-center mb-4 ${
                     !isManglik || isCancelled
                       ? "bg-emerald-50 border-emerald-200 text-emerald-900"
                       : "bg-rose-50 border-rose-200 text-rose-900"
@@ -203,7 +204,7 @@ export default function ManglikDoshaClient({ locale }: { locale: Locale }) {
                 {/* 3-Way Reference Evaluation: Lagna, Moon, Venus */}
                 {marsPlacements && (
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
-                    <div className="p-3 bg-surface-alt/80 border border-line rounded-xl text-center">
+                    <div className="p-3 bg-surface-alt/80 border border-line rounded-md text-center">
                       <div className="text-[11px] font-bold text-ink-muted uppercase">लग्न से मंगल (From Lagna)</div>
                       <div className="text-lg font-extrabold text-ink mt-0.5">{marsPlacements.house_from_lagna}वां भाव</div>
                       <div className="text-[11px] font-medium mt-1">
@@ -214,7 +215,7 @@ export default function ManglikDoshaClient({ locale }: { locale: Locale }) {
                         )}
                       </div>
                     </div>
-                    <div className="p-3 bg-surface-alt/80 border border-line rounded-xl text-center">
+                    <div className="p-3 bg-surface-alt/80 border border-line rounded-md text-center">
                       <div className="text-[11px] font-bold text-ink-muted uppercase">चंद्र से मंगल (From Moon)</div>
                       <div className="text-lg font-extrabold text-ink mt-0.5">{marsPlacements.house_from_moon}वां भाव</div>
                       <div className="text-[11px] font-medium mt-1">
@@ -225,7 +226,7 @@ export default function ManglikDoshaClient({ locale }: { locale: Locale }) {
                         )}
                       </div>
                     </div>
-                    <div className="p-3 bg-surface-alt/80 border border-line rounded-xl text-center">
+                    <div className="p-3 bg-surface-alt/80 border border-line rounded-md text-center">
                       <div className="text-[11px] font-bold text-ink-muted uppercase">शुक्र से मंगल (From Venus)</div>
                       <div className="text-lg font-extrabold text-ink mt-0.5">{marsPlacements.house_from_venus}वां भाव</div>
                       <div className="text-[11px] font-medium mt-1">
@@ -254,7 +255,7 @@ export default function ManglikDoshaClient({ locale }: { locale: Locale }) {
               {exceptions.length > 0 && (
                 <ResultSection title={s.cancellationsTitle}>
                   <ul className="space-y-2 text-xs">
-                    {exceptions.map((ex: any, idx: number) => (
+                    {exceptions.map((ex: ApiData, idx: number) => (
                       <li key={idx} className="p-3 bg-emerald-50/70 border border-emerald-200 rounded-lg text-emerald-900 leading-relaxed">
                         <span className="font-bold mr-1">नियम {idx + 1}:</span>
                         {typeof ex === "string" ? ex : ex.rule || ex.description || JSON.stringify(ex)}
@@ -267,7 +268,7 @@ export default function ManglikDoshaClient({ locale }: { locale: Locale }) {
               {/* Mangal Vedic & Tantrik Beej Mantras */}
               {marsMantra && (
                 <ResultSection title={lang === "hi" ? "मंगल शांति बीज मंत्र" : "Mars Beej Mantra & Japa"}>
-                  <div className="p-4 bg-surface-alt/70 border border-line rounded-xl space-y-2">
+                  <div className="p-4 bg-surface-alt/70 border border-line rounded-md space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold text-ink">{lang === "hi" ? "भौम तांत्रिक मंत्र" : "Bhauma Tantrik Mantra"}</span>
                       <span className="text-[10px] font-mono-brand bg-accent/10 text-accent px-2 py-0.5 rounded font-bold">
@@ -284,13 +285,13 @@ export default function ManglikDoshaClient({ locale }: { locale: Locale }) {
               <ResultSection title={s.remediesTitle}>
                 {data.remedies && Array.isArray(data.remedies) && data.remedies.length > 0 ? (
                   <ul className="space-y-1.5 text-xs text-ink-soft list-disc list-inside">
-                    {data.remedies.map((rem: any, idx: number) => (
+                    {data.remedies.map((rem: ApiData, idx: number) => (
                       <li key={idx}>{typeof rem === "string" ? rem : rem.remedy || rem.name}</li>
                     ))}
                   </ul>
                 ) : (
                   <div className="space-y-3 text-xs">
-                    <div className="p-3.5 bg-card border border-line rounded-xl">
+                    <div className="p-3.5 bg-card border border-line rounded-md">
                       <div className="font-bold text-ink mb-1">
                         {lang === "hi" ? "मंगलवार व्रत एवं हनुमान आराधना" : "Tuesday Fasting & Hanuman Upasana"}
                       </div>
@@ -300,7 +301,7 @@ export default function ManglikDoshaClient({ locale }: { locale: Locale }) {
                           : "Observe a salt-free fast on Tuesdays. Offer vermillion and jasmine oil to Lord Hanuman, and recite the Sundarkand or Hanuman Chalisa regularly."}
                       </p>
                     </div>
-                    <div className="p-3.5 bg-card border border-line rounded-xl">
+                    <div className="p-3.5 bg-card border border-line rounded-md">
                       <div className="font-bold text-ink mb-1">
                         {lang === "hi" ? "कुंभ विवाह व वैदिक परिहार" : "Kumbh Vivah & Vedic Nuptial Remedy"}
                       </div>

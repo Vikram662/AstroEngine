@@ -8,6 +8,7 @@ import { BirthDataFields, DEFAULT_BIRTH_DATA, BirthDataValue } from "@/component
 import { fetchParallelSettled } from "@/lib/calculatorApi";
 import { ResultSection, ResultRow, ResultBadge, SubmitButton, ErrorNote } from "@/components/calculators/ResultRows";
 import { Loader2 } from "lucide-react";
+import { ApiData, toApiError } from "@/lib/apiTypes";
 
 const STRINGS = {
   hi: {
@@ -52,11 +53,11 @@ export default function GemstoneSuggestionClient({ locale }: { locale: Locale })
   const [lang, setLang] = useState<"hi" | "en">(locale);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [data, setData] = useState<any>(null);
-  const [restrictionsData, setRestrictionsData] = useState<any>(null);
-  const [yantraData, setYantraData] = useState<any>(null);
-  const [mantrasData, setMantrasData] = useState<any>(null);
-  const [fastingData, setFastingData] = useState<any>(null);
+  const [data, setData] = useState<ApiData>(null);
+  const [restrictionsData, setRestrictionsData] = useState<ApiData>(null);
+  const [yantraData, setYantraData] = useState<ApiData>(null);
+  const [mantrasData, setMantrasData] = useState<ApiData>(null);
+  const [fastingData, setFastingData] = useState<ApiData>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,7 +88,7 @@ export default function GemstoneSuggestionClient({ locale }: { locale: Locale })
       if (yantra) setYantraData(yantra);
       if (mantras) setMantrasData(mantras);
       if (fasting) setFastingData(fasting);
-    } catch (err: any) {
+    } catch (errCaught) { const err = toApiError(errCaught);
       setError(err?.response?.data?.message || err?.message || s.error);
     } finally {
       setLoading(false);
@@ -149,14 +150,14 @@ export default function GemstoneSuggestionClient({ locale }: { locale: Locale })
       {error && <ErrorNote message={error} />}
 
       {!data && !loading && !error && (
-        <div className="bg-card rounded-2xl border border-line p-10 text-center text-ink-muted">
+        <div className="bg-card rounded-lg border border-line p-10 text-center text-ink-muted">
           <div className="text-4xl mb-3">💎</div>
           <p className="text-sm">{s.emptyHint}</p>
         </div>
       )}
 
       {loading && (
-        <div className="bg-card rounded-2xl border border-line p-12 text-center text-ink-soft flex flex-col items-center justify-center">
+        <div className="bg-card rounded-lg border border-line p-12 text-center text-ink-soft flex flex-col items-center justify-center">
           <Loader2 className="w-8 h-8 text-accent animate-spin mb-3" />
           <p className="text-sm">{s.loadingHint}</p>
         </div>
@@ -167,7 +168,7 @@ export default function GemstoneSuggestionClient({ locale }: { locale: Locale })
               {/* Primary 3 Gemstones Cards */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {lifeStone && (
-                  <div className="p-5 bg-card rounded-2xl border-2 border-accent/30 shadow-sm relative overflow-hidden">
+                  <div className="p-5 bg-card rounded-lg border-2 border-accent/30 shadow-sm relative overflow-hidden">
                     <div className="text-[10px] uppercase font-bold tracking-wider text-accent mb-1">{lifeStone.type || s.lifeStoneLabel}</div>
                     <div className="text-xl font-extrabold text-ink mb-1">{lifeStone.gemstone || lifeStone.name}</div>
                     <div className="text-xs font-semibold text-accent/80 mb-3">{lifeStone.planet || s.lifeStoneSub}</div>
@@ -189,7 +190,7 @@ export default function GemstoneSuggestionClient({ locale }: { locale: Locale })
                   </div>
                 )}
                 {luckyStone && (
-                  <div className="p-5 bg-card rounded-2xl border-2 border-emerald-500/30 shadow-sm relative overflow-hidden">
+                  <div className="p-5 bg-card rounded-lg border-2 border-emerald-500/30 shadow-sm relative overflow-hidden">
                     <div className="text-[10px] uppercase font-bold tracking-wider text-emerald-600 mb-1">{luckyStone.type || s.luckyStoneLabel}</div>
                     <div className="text-xl font-extrabold text-ink mb-1">{luckyStone.gemstone || luckyStone.name}</div>
                     <div className="text-xs font-semibold text-emerald-600/80 mb-3">{luckyStone.planet || s.luckyStoneSub}</div>
@@ -211,7 +212,7 @@ export default function GemstoneSuggestionClient({ locale }: { locale: Locale })
                   </div>
                 )}
                 {bhagyaStone && (
-                  <div className="p-5 bg-card rounded-2xl border-2 border-amber-500/30 shadow-sm relative overflow-hidden">
+                  <div className="p-5 bg-card rounded-lg border-2 border-amber-500/30 shadow-sm relative overflow-hidden">
                     <div className="text-[10px] uppercase font-bold tracking-wider text-amber-600 mb-1">{bhagyaStone.type || s.fortuneStoneLabel}</div>
                     <div className="text-xl font-extrabold text-ink mb-1">{bhagyaStone.gemstone || bhagyaStone.name}</div>
                     <div className="text-xs font-semibold text-amber-600/80 mb-3">{bhagyaStone.planet || s.fortuneStoneSub}</div>
@@ -248,7 +249,7 @@ export default function GemstoneSuggestionClient({ locale }: { locale: Locale })
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-line/60">
-                        {prohibitions.map((p: any, idx: number) => (
+                        {prohibitions.map((p: ApiData, idx: number) => (
                           <tr key={idx} className="hover:bg-surface-alt/40 transition">
                             <td className="py-2 px-3 font-semibold text-ink">{p.planet}</td>
                             <td className="py-2 px-3 font-medium text-rose-700">{p.gemstone}</td>
@@ -274,8 +275,8 @@ export default function GemstoneSuggestionClient({ locale }: { locale: Locale })
               {mantrasMap && lifeStone?.planet_id && (
                 <ResultSection title={lang === "hi" ? "रत्न प्राण प्रतिष्ठा एवं बीज मंत्र (Consecration Mantras)" : "Gemstone Consecration & Vedic Beej Mantras"}>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {Object.entries(mantrasMap).filter(([k]) => [lifeStone?.planet_id, luckyStone?.planet_id, bhagyaStone?.planet_id].includes(k)).map(([planet, mObj]: [string, any]) => (
-                      <div key={planet} className="p-3.5 bg-surface-alt/70 border border-line rounded-xl">
+                    {Object.entries(mantrasMap).filter(([k]) => [lifeStone?.planet_id, luckyStone?.planet_id, bhagyaStone?.planet_id].includes(k)).map(([planet, mObj]: [string, ApiData]) => (
+                      <div key={planet} className="p-3.5 bg-surface-alt/70 border border-line rounded-md">
                         <div className="flex justify-between items-center mb-1.5">
                           <span className="text-xs font-bold text-ink">{planet} Mantra</span>
                           <span className="text-[10px] font-mono-brand bg-accent/10 text-accent px-2 py-0.5 rounded">{mObj.recitations?.toLocaleString()} Chants</span>
@@ -293,7 +294,7 @@ export default function GemstoneSuggestionClient({ locale }: { locale: Locale })
                 <ResultSection title={lang === "hi" ? "अनुशंसित सिद्ध यंत्र (Sacred Vedic Yantras)" : "Recommended Sacred Geometric Yantras"}>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {primaryYantra && (
-                      <div className="p-4 bg-card border border-line rounded-xl shadow-xs">
+                      <div className="p-4 bg-card border border-line rounded-md shadow-xs">
                         <div className="text-xs font-bold text-accent uppercase mb-1">लग्न सुरक्षा यंत्र / Primary Yantra</div>
                         <div className="text-base font-extrabold text-ink mb-1">{primaryYantra.name}</div>
                         <p className="text-xs text-ink-soft mb-2">{primaryYantra.purpose}</p>
@@ -303,7 +304,7 @@ export default function GemstoneSuggestionClient({ locale }: { locale: Locale })
                       </div>
                     )}
                     {abundanceYantra && (
-                      <div className="p-4 bg-card border border-line rounded-xl shadow-xs">
+                      <div className="p-4 bg-card border border-line rounded-md shadow-xs">
                         <div className="text-xs font-bold text-amber-600 uppercase mb-1">वैभव व समृद्धि यंत्र / Abundance Yantra</div>
                         <div className="text-base font-extrabold text-ink mb-1">{abundanceYantra.name}</div>
                         <p className="text-xs text-ink-soft mb-2">{abundanceYantra.purpose}</p>
@@ -314,7 +315,7 @@ export default function GemstoneSuggestionClient({ locale }: { locale: Locale })
                     )}
                   </div>
                   {yantraData?.installation_guide && (
-                    <div className="mt-3 p-3 bg-surface-alt/60 rounded-xl text-xs text-ink-soft leading-relaxed border border-line/60">
+                    <div className="mt-3 p-3 bg-surface-alt/60 rounded-md text-xs text-ink-soft leading-relaxed border border-line/60">
                       <span className="font-bold text-ink">स्थापना विधि:</span> {yantraData.installation_guide}
                     </div>
                   )}
@@ -326,7 +327,7 @@ export default function GemstoneSuggestionClient({ locale }: { locale: Locale })
                 <ResultSection title={lang === "hi" ? "साप्ताहिक व्रत एवं उपवास नियम (Vrat & Fasting Discipline)" : "Astrological Fasting & Vrat Rules"}>
                   <div className="space-y-3">
                     {weeklyVrat && (
-                      <div className="p-4 bg-card border border-line rounded-xl">
+                      <div className="p-4 bg-card border border-line rounded-md">
                         <div className="flex items-center justify-between mb-1">
                           <span className="text-xs font-bold text-ink">जन्मानुसार साप्ताहिक व्रत ({fastingData?.janma_vaar})</span>
                           <span className="text-[11px] font-semibold text-accent">{weeklyVrat.deity}</span>
@@ -338,7 +339,7 @@ export default function GemstoneSuggestionClient({ locale }: { locale: Locale })
                       </div>
                     )}
                     {universalVrat && (
-                      <div className="p-4 bg-card border border-line rounded-xl">
+                      <div className="p-4 bg-card border border-line rounded-md">
                         <div className="text-xs font-bold text-ink mb-1">{universalVrat.vrat_type}</div>
                         <p className="text-xs text-ink-soft mb-2">{universalVrat.significance}</p>
                         <div className="text-[11px] p-2 bg-surface-alt rounded-lg text-ink-soft">

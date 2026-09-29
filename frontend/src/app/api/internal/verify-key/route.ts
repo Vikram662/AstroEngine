@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
 import { toMoney } from "@/lib/money";
+import type { ApiData } from "@/lib/apiTypes";
 
 function getInternalSecret(): string {
   const secret = process.env.ASTRO_INTERNAL_SECRET;
@@ -39,7 +40,7 @@ export async function POST(req: NextRequest) {
     const keyHash = crypto.createHash("sha256").update(cleanedKey).digest("hex");
 
     // Look up user strictly by cryptographic apiKeyHash
-    let user = await prisma.user.findFirst({
+    const user = await prisma.user.findFirst({
       where: {
         apiKeyHash: keyHash
       },
@@ -86,7 +87,7 @@ export async function POST(req: NextRequest) {
 
     // 1. Fetch live plans, user's plan record, and all active addons directly from MySQL
     const [allDbAddons, planRecord, planModulesSetting] = await Promise.all([
-      (prisma as any).addonPackage.findMany({ where: { isActive: true } }),
+      (prisma as ApiData).addonPackage.findMany({ where: { isActive: true } }),
       prisma.subscriptionPlan.findUnique({ where: { tier: user.planTier } }),
       prisma.systemSetting.findUnique({ where: { key: `PLAN_MODULES_${user.planTier}` } })
     ]);
@@ -119,7 +120,7 @@ export async function POST(req: NextRequest) {
 
     // 3. Find if this incoming request corresponds to an active Addon in MySQL
     // Dynamically match against addon.id, addon.name, or any words in addon.features
-    let matchedAddonRecord = allDbAddons.find((addon: any) => {
+    let matchedAddonRecord = allDbAddons.find((addon: ApiData) => {
       const aId = (addon.id || "").toLowerCase();
       const aName = (addon.name || "").toLowerCase();
       if (aId === normalizedModule) return true;

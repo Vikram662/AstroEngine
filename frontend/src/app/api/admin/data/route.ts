@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
     const type = searchParams.get("type"); // "users" | "billing" | "audit" | "prompts" | "usage"
 
     if (type === "users") {
-      let users = await prisma.user.findMany({
+      const users = await prisma.user.findMany({
         orderBy: { createdAt: "desc" },
         take: 50,
         select: {
@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
     }
 
     if (type === "billing") {
-      let txs = await prisma.transaction.findMany({
+      const txs = await prisma.transaction.findMany({
         include: {
           user: {
             select: { id: true, name: true, email: true, planTier: true }
@@ -78,7 +78,7 @@ export async function GET(req: NextRequest) {
     }
 
     if (type === "prompts") {
-      let prompts = await prisma.astrologicalPrediction.findMany({
+      const prompts = await prisma.astrologicalPrediction.findMany({
         orderBy: { updatedAt: "desc" },
         take: 50
       });

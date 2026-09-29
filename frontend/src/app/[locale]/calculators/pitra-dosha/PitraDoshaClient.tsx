@@ -8,6 +8,7 @@ import { BirthDataFields, DEFAULT_BIRTH_DATA, BirthDataValue } from "@/component
 import { fetchParallelSettled } from "@/lib/calculatorApi";
 import { ResultSection, ResultRow, ResultBadge, SubmitButton, ErrorNote } from "@/components/calculators/ResultRows";
 import { Loader2 } from "lucide-react";
+import { ApiData, toApiError } from "@/lib/apiTypes";
 
 const STRINGS = {
   hi: {
@@ -54,8 +55,8 @@ export default function PitraDoshaClient({ locale }: { locale: Locale }) {
   const [lang, setLang] = useState<"hi" | "en">(locale);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [data, setData] = useState<any>(null);
-  const [mantraData, setMantraData] = useState<any>(null);
+  const [data, setData] = useState<ApiData>(null);
+  const [mantraData, setMantraData] = useState<ApiData>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -88,7 +89,7 @@ export default function PitraDoshaClient({ locale }: { locale: Locale }) {
       if (!pitra) throw new Error(s.error);
       setData(pitra);
       if (mantras) setMantraData(mantras);
-    } catch (err: any) {
+    } catch (errCaught) { const err = toApiError(errCaught);
       setError(err?.response?.data?.message || err?.message || s.error);
     } finally {
       setLoading(false);
@@ -143,14 +144,14 @@ export default function PitraDoshaClient({ locale }: { locale: Locale }) {
       {error && <ErrorNote message={error} />}
 
       {!data && !loading && !error && (
-        <div className="bg-card rounded-2xl border border-line p-10 text-center text-ink-muted">
+        <div className="bg-card rounded-lg border border-line p-10 text-center text-ink-muted">
           <div className="text-4xl mb-3">☀️</div>
           <p className="text-sm">{s.emptyHint}</p>
         </div>
       )}
 
       {loading && (
-        <div className="bg-card rounded-2xl border border-line p-12 text-center text-ink-soft flex flex-col items-center justify-center">
+        <div className="bg-card rounded-lg border border-line p-12 text-center text-ink-soft flex flex-col items-center justify-center">
           <Loader2 className="w-8 h-8 text-accent animate-spin mb-3" />
           <p className="text-sm">{s.loadingHint}</p>
         </div>
@@ -160,7 +161,7 @@ export default function PitraDoshaClient({ locale }: { locale: Locale }) {
         <div className="space-y-6">
               <ResultSection title={s.resultTitle}>
                 <div
-                  className={`p-6 rounded-xl border text-center mb-4 ${
+                  className={`p-6 rounded-md border text-center mb-4 ${
                     isPresent
                       ? "bg-rose-50 border-rose-200 text-rose-950"
                       : "bg-emerald-50 border-emerald-200 text-emerald-900"
@@ -193,7 +194,7 @@ export default function PitraDoshaClient({ locale }: { locale: Locale }) {
               {(data.reasons || data.factors) && (data.reasons || data.factors).length > 0 && (
                 <ResultSection title={s.factorsTitle}>
                   <ul className="space-y-2 text-xs">
-                    {(data.reasons || data.factors).map((f: any, idx: number) => (
+                    {(data.reasons || data.factors).map((f: ApiData, idx: number) => (
                       <li key={idx} className="p-3 bg-surface-alt rounded-lg border border-line text-ink">
                         {typeof f === "string" ? f : f.description || f.rule}
                       </li>
@@ -205,7 +206,7 @@ export default function PitraDoshaClient({ locale }: { locale: Locale }) {
               {/* Surya Beej Mantra */}
               {sunMantra && (
                 <ResultSection title={lang === "hi" ? "सूर्य एवं पूर्वज तृप्ति बीज मंत्र" : "Surya Beej Mantra & Ancestral Peace"}>
-                  <div className="p-4 bg-surface-alt/70 border border-line rounded-xl space-y-2">
+                  <div className="p-4 bg-surface-alt/70 border border-line rounded-md space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold text-ink">Surya Vedic Mantra</span>
                       <span className="text-[10px] font-mono-brand bg-accent/10 text-accent px-2 py-0.5 rounded font-bold">
@@ -229,13 +230,13 @@ export default function PitraDoshaClient({ locale }: { locale: Locale }) {
               <ResultSection title={s.remediesTitle}>
                 {data.remedies && Array.isArray(data.remedies) && data.remedies.length > 0 ? (
                   <ul className="space-y-1.5 text-xs text-ink-soft list-disc list-inside">
-                    {data.remedies.map((r: any, idx: number) => (
+                    {data.remedies.map((r: ApiData, idx: number) => (
                       <li key={idx}>{typeof r === "string" ? r : r.remedy || r.name || r.description}</li>
                     ))}
                   </ul>
                 ) : (
                   <div className="space-y-2.5 text-xs text-ink-soft">
-                    <div className="p-3 bg-card border border-line rounded-xl">
+                    <div className="p-3 bg-card border border-line rounded-md">
                       <span className="font-bold text-ink block mb-0.5">
                         {lang === "hi" ? "त्रिपिंडी श्राद्ध व नारायण बलि" : "Tripindi Shradh & Narayan Bali"}
                       </span>
@@ -243,7 +244,7 @@ export default function PitraDoshaClient({ locale }: { locale: Locale }) {
                         ? "गया (बिहार) अथवा हरिद्वार में पितरों की आत्मिक शांति हेतु नारायण बलि अथवा त्रिपिंडी श्राद्ध कर्म संपन्न कराएं।"
                         : "Perform Narayan Bali or Tripindi Shradh rituals at holy pilgrimage centers like Gaya (Bihar), Haridwar, or Pehowa for ancestral peace."}
                     </div>
-                    <div className="p-3 bg-card border border-line rounded-xl">
+                    <div className="p-3 bg-card border border-line rounded-md">
                       <span className="font-bold text-ink block mb-0.5">
                         {lang === "hi" ? "अमावस्या तर्पण एवं पंचबलि भोग" : "Amavasya Tarpan & Panchabali Bhog"}
                       </span>
@@ -251,7 +252,7 @@ export default function PitraDoshaClient({ locale }: { locale: Locale }) {
                         ? "प्रत्येक अमावस्या को पीपल के वृक्ष पर जल, कच्चा दूध, काले तिल अर्पित करें तथा कौवे, गाय एवं श्वान को अन्न दें।"
                         : "On every Amavasya (new moon), offer water, unboiled milk, and black sesame seeds to a sacred Peepal tree, and provide food offerings to cows, crows, and dogs."}
                     </div>
-                    <div className="p-3 bg-card border border-line rounded-xl">
+                    <div className="p-3 bg-card border border-line rounded-md">
                       <span className="font-bold text-ink block mb-0.5">
                         {lang === "hi" ? "गायत्री मंत्र सूर्योदय अनुष्ठान" : "Gayatri Mantra & Sunrise Arghya"}
                       </span>

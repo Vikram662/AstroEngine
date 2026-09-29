@@ -189,7 +189,7 @@ export default function PricingClient({ locale }: { locale: Locale }) {
         ) : (
           <>
             {/* Core Subscription Plans — comparison table */}
-            <div className="overflow-x-auto rounded-2xl border border-line bg-card shadow-xs">
+            <div className="overflow-x-auto rounded-lg border border-line bg-card shadow-xs">
               <table className="w-full min-w-[720px] text-left text-sm border-collapse">
                 <thead>
                   <tr className="border-b border-line">
@@ -304,7 +304,7 @@ export default function PricingClient({ locale }: { locale: Locale }) {
                     return (
                     <div
                       key={addon.id}
-                      className="p-5 rounded-2xl border border-line bg-card shadow-xs flex flex-col justify-between hover:border-accent/40 hover:shadow-md transition"
+                      className="p-5 rounded-lg border border-line bg-card shadow-xs flex flex-col justify-between hover:border-accent/40 hover: transition"
                     >
                       <div>
                         <div className="flex items-start justify-between gap-2">
@@ -316,13 +316,13 @@ export default function PricingClient({ locale }: { locale: Locale }) {
                           </div>
                           <div className="text-right">
                             {offer && <span className="block text-[10px] font-bold font-mono-brand text-ink-muted line-through">₹{formatInr(addon.priceMonthly)}</span>}
-                            <span className="text-xl font-black font-mono-brand text-ink">₹{formatInr(offer?.finalAmount ?? addon.priceMonthly, Boolean(offer))}</span>
+                            <span className="text-xl font-semibold font-mono-brand text-ink">₹{formatInr(offer?.finalAmount ?? addon.priceMonthly, Boolean(offer))}</span>
                             <span className="text-[10px] text-ink-muted block">{t.perMonth}</span>
                           </div>
                         </div>
 
                         {offer && (
-                          <div className="mt-3 flex items-center justify-between gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-emerald-900">
+                          <div className="mt-3 flex items-center justify-between gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-emerald-900">
                             <div>
                               <div className="text-[10px] font-extrabold uppercase">{t.offer}: {offer.title}</div>
                               <div className="text-[10px] text-emerald-700">{t.save} ₹{formatInr(offer.discountAmount, true)}</div>
@@ -336,7 +336,7 @@ export default function PricingClient({ locale }: { locale: Locale }) {
                         </p>
 
                         {/* Quota & Limits Badge */}
-                        <div className="mt-3 py-2 px-3 rounded-xl bg-surface border border-line flex items-center justify-between text-[10px] font-mono-brand text-ink-soft">
+                        <div className="mt-3 py-2 px-3 rounded-md bg-surface border border-line flex items-center justify-between text-[10px] font-mono-brand text-ink-soft">
                           <span>
                             {t.limit} <strong className="text-ink">{(addon.monthlyQuota || 1000).toLocaleString()} {addon.category === "REPORTS" ? t.pdfs : t.calls}</strong>
                           </span>
@@ -358,7 +358,7 @@ export default function PricingClient({ locale }: { locale: Locale }) {
                       <div className="mt-5 pt-4 border-t border-line">
                         <Link
                           href={`/billing?addon=${encodeURIComponent(addon.id)}${offer ? `&offer=${encodeURIComponent(offer.code)}` : ""}`}
-                          className="w-full py-2.5 rounded-xl bg-accent hover:bg-accent-hover text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition shadow-xs"
+                          className="w-full py-2.5 rounded-md bg-accent hover:bg-accent-hover text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition shadow-xs"
                         >
                           <Zap className="w-3.5 h-3.5 text-accent-foreground/70" />
                           <span>{t.activateInDashboard}</span>

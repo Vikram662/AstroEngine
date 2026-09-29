@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdminSession } from "@/lib/authGuard";
 import { toJsonSafe } from "@/lib/money";
+import type { ApiData } from "@/lib/apiTypes";
 
 export async function GET() {
   try {
@@ -17,7 +18,7 @@ export async function GET() {
     };
 
     const plansWithPerms = await Promise.all(
-      plans.map(async (p: any) => {
+      plans.map(async (p: ApiData) => {
         const setting = await prisma.systemSetting.findUnique({
           where: { key: `PLAN_MODULES_${p.tier}` }
         });

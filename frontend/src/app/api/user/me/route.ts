@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getVerifiedSession } from "@/lib/authGuard";
 import { hashPassword, verifyPassword } from "@/lib/session";
+import { toJsonSafe } from "@/lib/money";
 
 export async function GET() {
   try {
@@ -12,7 +13,7 @@ export async function GET() {
 
     const sessionEmail = session.email;
 
-    let user = await prisma.user.findUnique({
+    const user = await prisma.user.findUnique({
       where: { email: sessionEmail },
       include: {
         subscription: true,
