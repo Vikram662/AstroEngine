@@ -44,14 +44,8 @@ export const REPORT_GROUPS: ReportGroup[] = [
   { id: "astronomy", title: "Planetary positions", blurb: "Sidereal positions, house cusps, retrograde status, sun and moon timings, ayanamsa values." },
   { id: "dasha", title: "Dasha periods", blurb: "Vimshottari, Yogini and Jaimini Char dasha timelines for this birth." },
   { id: "dosha", title: "Doshas", blurb: "Manglik, Kaalsarp, Sade Sati, Pitra and Guru Chandal analysis." },
-  { id: "kp", title: "KP system", blurb: "Krishnamurti planets, cusps, significators and ruling planets." },
-  { id: "lalkitab", title: "Lal Kitab", blurb: "Lal Kitab kundli, debts, blind planets and planet-wise remedies." },
-  { id: "numerology", title: "Numerology", blurb: "Core numbers, Loshu grid, name analysis and forecast from the name and date of birth." },
   { id: "panchang", title: "Panchang and muhurat", blurb: "Birth panchang first, then today's choghadiya, hora, bhadra, panchak and muhurats." },
   { id: "horoscope", title: "Horoscope", blurb: "Daily, weekly, monthly and yearly predictions from the moon sign." },
-  { id: "remedies", title: "Remedies", blurb: "Gemstones, rudraksha, mantras, yantras, donations and fasting." },
-  { id: "western", title: "Western astrology", blurb: "Tropical planets, big three, aspect matrix, wheel chart, daily transits and solar return." },
-  { id: "advanced", title: "Jaimini and Tajik", blurb: "Karakas, arudhas, upagrahas and the Tajik annual chart for this year." },
 ];
 
 const E = (id: string, group: string, title: string, path: string, extra: Partial<ReportEndpoint> = {}): ReportEndpoint => ({
@@ -122,33 +116,6 @@ export const REPORT_ENDPOINTS: ReportEndpoint[] = [
   E("pitra", "dosha", "Pitra dosha", "/api/v1/dosha-matching/pitra-dosha"),
   E("guru-chandal", "dosha", "Guru Chandal yoga", "/api/v1/dosha-matching/guru-chandal"),
 
-  E("kp-planets", "kp", "KP planets", "/api/v1/kp/planets"),
-  E("kp-cusps", "kp", "KP cusps", "/api/v1/kp/cusps"),
-  E("kp-svg", "kp", "KP chart", "/api/v1/kp/chart/svg", { kind: "svg" }),
-  E("kp-sig4", "kp", "Level 4 significators", "/api/v1/kp/significators/level-4"),
-  E("kp-house-sig", "kp", "House significators", "/api/v1/kp/house-significators"),
-  E("kp-ruling", "kp", "Ruling planets", "/api/v1/kp/ruling-planets"),
-
-  E("lk-kundli", "lalkitab", "Lal Kitab kundli", "/api/v1/lalkitab/chart/kundli"),
-  E("lk-svg", "lalkitab", "Lal Kitab chart", "/api/v1/lalkitab/chart/svg", { kind: "svg" }),
-  E("lk-varshphal", "lalkitab", "Varshphal for current age", "/api/v1/lalkitab/varshphal/chart", {
-    query: (ctx) => ({ age: ctx.age }),
-  }),
-  E("lk-rin", "lalkitab", "Debts (Rin)", "/api/v1/lalkitab/debts/rin"),
-  E("lk-blind", "lalkitab", "Blind and half-blind planets", "/api/v1/lalkitab/blind-halfblind"),
-  E("lk-remedies", "lalkitab", "Planet-wise remedies", "/api/v1/lalkitab/remedies/planet-wise"),
-
-  E("num-core", "numerology", "Core numbers", "/api/v1/numerology/core-numbers", { query: (ctx) => ({ name: ctx.request.name }) }),
-  E("num-loshu", "numerology", "Loshu grid", "/api/v1/numerology/loshu-grid"),
-  E("num-missing", "numerology", "Missing numbers", "/api/v1/numerology/missing-numbers"),
-  E("num-name", "numerology", "Name analysis", "/api/v1/numerology/name-analysis", { query: (ctx) => ({ name: ctx.request.name }) }),
-  E("num-correction", "numerology", "Name correction", "/api/v1/numerology/name-correction", {
-    query: (ctx) => ({ current_name: ctx.request.name }),
-  }),
-  E("num-forecast", "numerology", "Forecast for this year", "/api/v1/numerology/forecast", { query: (ctx) => ({ target_year: ctx.year }) }),
-  E("num-pinnacles", "numerology", "Pinnacles and challenges", "/api/v1/numerology/pinnacles-challenges"),
-  E("num-favorable", "numerology", "Favorable numbers", "/api/v1/numerology/favorable"),
-
   E("pan-daily", "panchang", "Birth panchang", "/api/v1/panchang/daily"),
   E("pan-advanced", "panchang", "Advanced birth panchang", "/api/v1/panchang/advanced"),
   E("pan-namakshar", "panchang", "Namakshar", "/api/v1/panchang/namakshar"),
@@ -165,31 +132,6 @@ export const REPORT_ENDPOINTS: ReportEndpoint[] = [
   E("hor-weekly", "horoscope", "Weekly horoscope", "/api/v1/panchang/horoscope/weekly", { dateMode: "today" }),
   E("hor-monthly", "horoscope", "Monthly horoscope", "/api/v1/panchang/horoscope/monthly", { dateMode: "today" }),
   E("hor-yearly", "horoscope", "Yearly horoscope", "/api/v1/panchang/horoscope/yearly", { dateMode: "today" }),
-
-  E("rem-gems", "remedies", "Gemstones", "/api/v1/remedies/gemstones"),
-  E("rem-gem-limits", "remedies", "Gemstone restrictions", "/api/v1/remedies/gemstones/restrictions"),
-  E("rem-rudraksha", "remedies", "Rudraksha", "/api/v1/remedies/rudraksha"),
-  E("rem-mantras", "remedies", "Mantras", "/api/v1/remedies/mantras"),
-  E("rem-yantras", "remedies", "Yantras", "/api/v1/remedies/yantras"),
-  E("rem-donations", "remedies", "Donations", "/api/v1/remedies/donations"),
-  E("rem-fasting", "remedies", "Fasting", "/api/v1/remedies/fasting"),
-
-  E("west-planets", "western", "Tropical planets", "/api/v1/western/tropical-planets"),
-  E("west-big3", "western", "Big three", "/api/v1/western/big-three"),
-  E("west-aspects", "western", "Aspect matrix", "/api/v1/western/aspects/matrix"),
-  E("west-wheel", "western", "Chart wheel", "/api/v1/western/chart/wheel-svg", { kind: "svg" }),
-  E("west-transits", "western", "Transits today", "/api/v1/western/transits/daily", { dateMode: "today" }),
-  E("west-solar", "western", "Solar return", "/api/v1/western/solar-return", { query: (ctx) => ({ return_year: ctx.year }) }),
-
-  E("adv-karakas", "advanced", "Jaimini karakas", "/api/v1/advanced/jaimini/karakas"),
-  E("adv-karakamsha", "advanced", "Karakamsha", "/api/v1/advanced/jaimini/karakamsha"),
-  E("adv-arudhas", "advanced", "Arudha padas", "/api/v1/advanced/jaimini/arudhas"),
-  E("adv-upagrahas", "advanced", "Upagrahas", "/api/v1/advanced/upagrahas"),
-  E("adv-varshphal", "advanced", "Tajik varshphal chart", "/api/v1/advanced/tajik/varshphal-chart", { query: (ctx) => ({ target_year: ctx.year }) }),
-  E("adv-muntha", "advanced", "Muntha", "/api/v1/advanced/tajik/muntha", { query: (ctx) => ({ target_year: ctx.year }) }),
-  E("adv-varshesh", "advanced", "Varshesh", "/api/v1/advanced/tajik/varshesh", { query: (ctx) => ({ target_year: ctx.year }) }),
-  E("adv-tajik-yogas", "advanced", "Tajik yogas", "/api/v1/advanced/tajik/yogas", { query: (ctx) => ({ target_year: ctx.year }) }),
-  E("adv-sahams", "advanced", "Sahams", "/api/v1/advanced/tajik/sahams", { query: (ctx) => ({ target_year: ctx.year }) }),
 ];
 
 export type EndpointState =

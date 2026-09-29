@@ -56,6 +56,8 @@ export const CalculatorsSection: React.FC = () => {
     return matchesCategory && matchesSearch;
   });
 
+  const displayedTools = filteredTools;
+
   const getToolHref = (href: string) => {
     if (locale === "hi" && isMigratedPath(href)) {
       return `/hi${href}`;
@@ -114,11 +116,11 @@ export const CalculatorsSection: React.FC = () => {
 
         {/* 24-Card Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-          {filteredTools.map(tool => (
+          {displayedTools.map(tool => (
             <Link
               key={tool.id}
               href={getToolHref(tool.href)}
-              className="group relative bg-card rounded-lg p-5 border border-line hover:border-accent/40 hover: transition-all duration-200 flex flex-col justify-between"
+              className="group relative bg-card rounded-lg p-5 border border-line hover:border-accent/40 transition-all duration-200 flex flex-col justify-between"
             >
               <div>
                 {/* Card Top: Icon, Badge & Arrow */}
@@ -157,6 +159,8 @@ export const CalculatorsSection: React.FC = () => {
             </Link>
           ))}
         </div>
+
+
 
         {/* Empty state when search produces no results */}
         {filteredTools.length === 0 && (

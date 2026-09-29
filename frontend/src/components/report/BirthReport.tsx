@@ -102,31 +102,40 @@ function useNearViewport<T extends Element>(): [React.RefObject<T | null>, boole
 function EndpointCard({ endpoint, title, state }: { endpoint: ReportEndpoint; title: string; state: EndpointState }) {
   const [ref, near] = useNearViewport<HTMLElement>();
   return (
-    <article ref={ref} className="rounded-lg border border-line bg-card" aria-busy={state.status === "loading"}>
-      <header className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-3">
+    <article ref={ref} className="rounded-xl border border-line bg-card shadow-xs transition hover:border-accent/40" aria-busy={state.status === "loading"}>
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-3.5 bg-surface-alt/40 rounded-t-xl">
         <div className="min-w-0">
-          <h4 className="text-sm font-semibold text-ink">{title}</h4>
-          <p className="truncate font-mono text-[11px] text-ink-muted">POST {endpoint.path}</p>
+          <h4 className="text-sm font-bold text-ink flex items-center gap-2">
+            <span>{title}</span>
+            {endpoint.kind === "svg" && (
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-accent-soft text-accent border border-accent/20">
+                Visual Chart
+              </span>
+            )}
+          </h4>
         </div>
         <StatusPill state={state} />
       </header>
-      <div className="p-4">
+      <div className="p-5">
         {state.status === "done" && !near && <div className="h-24" aria-hidden="true" />}
         {state.status === "done" && near && state.svg && (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={svgToDataUri(state.svg)} alt={title} className="mx-auto h-auto max-h-[28rem] w-full max-w-md" />
+          <div className="flex justify-center p-3 rounded-lg bg-surface border border-line/60">
+            <img src={svgToDataUri(state.svg)} alt={title} className="mx-auto h-auto max-h-[30rem] w-full max-w-lg drop-shadow-xs" />
+          </div>
         )}
         {state.status === "done" && near && !state.svg && <DataView value={state.data} />}
         {state.status === "error" && (
-          <p role="alert" className="flex items-start gap-2 text-xs text-red-700">
+          <p role="alert" className="flex items-start gap-2 text-xs text-red-700 bg-red-50 p-3 rounded-lg border border-red-200">
             <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
             <span>{state.message}</span>
           </p>
         )}
         {(state.status === "queued" || state.status === "loading") && (
-          <div className="space-y-2" aria-hidden="true">
-            <div className="h-3 w-2/3 animate-pulse rounded bg-surface-alt" />
-            <div className="h-3 w-1/2 animate-pulse rounded bg-surface-alt" />
+          <div className="space-y-2.5 py-4" aria-hidden="true">
+            <div className="h-3.5 w-3/4 animate-pulse rounded-md bg-surface-alt" />
+            <div className="h-3 w-1/2 animate-pulse rounded-md bg-surface-alt" />
+            <div className="h-3 w-2/3 animate-pulse rounded-md bg-surface-alt" />
           </div>
         )}
       </div>
@@ -208,105 +217,117 @@ export function BirthReport({ request, lang }: BirthReportProps) {
     setRerun((n) => n + 1);
   };
 
+  const [activeGroupId, setActiveGroupId] = useState<string>("charts");
+
   return (
     <ReportLabelsContext.Provider value={labels}>
-      <section ref={rootRef} id="birth-report" lang={lang} aria-labelledby="report-heading" className="border-b border-line bg-surface-alt scroll-mt-4">
-        <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-          <div className="rounded-lg border border-line bg-card p-5 sm:p-6">
-            <p className="text-xs font-semibold uppercase tracking-wider text-accent">{labels.eyebrow}</p>
-            <h2 id="report-heading" className="mt-1 font-display text-2xl font-semibold text-ink sm:text-3xl">
-              {request.name}
-            </h2>
-            <dl className="mt-3 grid grid-cols-2 gap-x-6 gap-y-2 text-xs sm:grid-cols-4">
+      <section ref={rootRef} id="birth-report" lang={lang} aria-labelledby="report-heading" className="border-b border-line bg-surface scroll-mt-4 py-10">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-8">
+          {/* User Profile Banner */}
+          <div className="rounded-2xl border border-line bg-card p-6 shadow-xs">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-line pb-4">
               <div>
-                <dt className="text-ink-muted">{labels.dob}</dt>
-                <dd className="font-semibold tabular-nums text-ink">{request.dob}</dd>
+                <span className="text-[11px] font-bold uppercase tracking-wider text-accent bg-accent-soft px-2.5 py-1 rounded-full border border-accent/20">
+                  {labels.eyebrow}
+                </span>
+                <h2 id="report-heading" className="mt-2 text-2xl sm:text-3xl font-black text-ink">
+                  {request.name}
+                </h2>
               </div>
-              <div>
-                <dt className="text-ink-muted">{labels.tob}</dt>
-                <dd className="font-semibold tabular-nums text-ink">{request.tob}</dd>
+              <div className="text-xs text-ink-soft">
+                <span>{labels.progress(finished, total, failed)}</span>
+                <div className="mt-1.5 h-2 w-48 sm:w-64 overflow-hidden rounded-full bg-surface-alt">
+                  <div className="h-full bg-accent transition-[width] duration-300" style={{ width: `${percent}%` }} />
+                </div>
               </div>
-              <div>
-                <dt className="text-ink-muted">{labels.place}</dt>
-                <dd className="font-semibold text-ink">{request.cityName}</dd>
+            </div>
+
+            <dl className="mt-4 grid grid-cols-2 gap-4 text-xs sm:grid-cols-4">
+              <div className="p-3 rounded-lg bg-surface border border-line/60">
+                <dt className="text-ink-muted text-[11px]">{labels.dob}</dt>
+                <dd className="font-bold text-ink text-sm mt-0.5">{request.dob}</dd>
               </div>
-              <div>
-                <dt className="text-ink-muted">{labels.coordinates}</dt>
-                <dd className="font-semibold tabular-nums text-ink">
-                  {request.lat.toFixed(4)}, {request.lon.toFixed(4)} (UTC{request.tz >= 0 ? "+" : ""}
-                  {request.tz})
+              <div className="p-3 rounded-lg bg-surface border border-line/60">
+                <dt className="text-ink-muted text-[11px]">{labels.tob}</dt>
+                <dd className="font-bold text-ink text-sm mt-0.5">{request.tob}</dd>
+              </div>
+              <div className="p-3 rounded-lg bg-surface border border-line/60">
+                <dt className="text-ink-muted text-[11px]">{labels.place}</dt>
+                <dd className="font-bold text-ink text-sm mt-0.5 truncate">{request.cityName}</dd>
+              </div>
+              <div className="p-3 rounded-lg bg-surface border border-line/60">
+                <dt className="text-ink-muted text-[11px]">{labels.coordinates}</dt>
+                <dd className="font-bold text-ink text-sm mt-0.5">
+                  {request.lat.toFixed(2)}°, {request.lon.toFixed(2)}°
                 </dd>
               </div>
             </dl>
 
-            {fatal ? (
-              <div role="alert" className="mt-5 rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-800">
-                <p className="flex items-center gap-2 font-semibold">
+            {fatal && (
+              <div role="alert" className="mt-4 rounded-xl border border-red-200 bg-red-50 p-4 text-xs text-red-800 space-y-1">
+                <p className="flex items-center gap-2 font-bold">
                   <TriangleAlert className="h-4 w-4" aria-hidden="true" />
                   {labels.configTitle}
                 </p>
-                <p className="mt-1.5 text-xs leading-relaxed">{labels.configHelp}</p>
-                <p className="mt-2 font-mono text-[11px] text-red-700">{fatal}</p>
-              </div>
-            ) : (
-              <div className="mt-5" role="status" aria-live="polite">
-                <div className="flex items-center justify-between text-xs text-ink-soft">
-                  <span>{labels.progress(finished, total, failed)}</span>
-                  <span className="tabular-nums">{percent}%</span>
-                </div>
-                <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-surface-alt">
-                  <div className="h-full bg-accent transition-[width] duration-300" style={{ width: `${percent}%` }} />
-                </div>
-                {finished === total && failed > 0 && (
-                  <button
-                    type="button"
-                    onClick={retryFailed}
-                    className="mt-3 inline-flex items-center gap-1.5 rounded-md border border-line px-3 py-1.5 text-xs font-semibold text-ink hover:border-accent hover:text-accent cursor-pointer"
-                  >
-                    <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
-                    {labels.rerun}
-                  </button>
-                )}
-                <p className="mt-3 text-[11px] text-ink-muted">{labels.langNote}</p>
+                <p>{labels.configHelp}</p>
+                <p className="font-mono text-[11px] text-red-700">{fatal}</p>
               </div>
             )}
           </div>
 
           {!fatal && (
-            <div className="mt-8 grid gap-8 lg:grid-cols-[14rem_1fr]">
-              <nav aria-label={labels.sections} className="lg:sticky lg:top-4 lg:self-start">
-                <ul className="flex gap-2 overflow-x-auto pb-2 lg:block lg:space-y-1 lg:overflow-visible lg:pb-0">
-                  {byGroup.map(({ group, endpoints }) => {
-                    const done = endpoints.filter((e) => isSettled(states[e.id])).length;
-                    return (
-                      <li key={group.id} className="shrink-0">
-                        <a
-                          href={`#report-${group.id}`}
-                          className="flex items-center justify-between gap-3 rounded-md border border-line bg-card px-3 py-2 text-xs font-medium text-ink hover:border-accent lg:border-transparent lg:bg-transparent lg:hover:bg-card"
-                        >
-                          <span>{text.groupText(group.id).title}</span>
-                          <span className="font-mono text-[11px] tabular-nums text-ink-muted">
-                            {done}/{endpoints.length}
-                          </span>
-                        </a>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </nav>
-
-              <div className="min-w-0 space-y-12">
+            <div className="space-y-6">
+              {/* Modern User-Friendly Tab Bar */}
+              <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 border-b border-line">
                 {byGroup.map(({ group, endpoints }) => {
+                  const done = endpoints.filter((e) => isSettled(states[e.id])).length;
+                  const isActive = activeGroupId === group.id;
+                  const copy = text.groupText(group.id);
+
+                  return (
+                    <button
+                      key={group.id}
+                      type="button"
+                      onClick={() => setActiveGroupId(group.id)}
+                      className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold transition whitespace-nowrap cursor-pointer ${
+                        isActive
+                          ? "bg-accent text-white shadow-xs"
+                          : "bg-card border border-line text-ink hover:bg-surface-alt hover:text-ink"
+                      }`}
+                    >
+                      <span>{copy.title}</span>
+                      <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${isActive ? "bg-white/20 text-white" : "bg-surface-alt text-ink-muted"}`}>
+                        {done}/{endpoints.length}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Active Tab Content Area */}
+              {byGroup
+                .filter(({ group }) => group.id === activeGroupId)
+                .map(({ group, endpoints }) => {
                   const copy = text.groupText(group.id);
                   return (
-                    <section key={group.id} id={`report-${group.id}`} aria-labelledby={`report-${group.id}-title`} className="scroll-mt-4">
-                      <h3 id={`report-${group.id}-title`} className="font-display text-xl font-semibold text-ink">
-                        {copy.title}
-                      </h3>
-                      <p className="mt-1 text-sm text-ink-soft">{copy.blurb}</p>
-                      <div className="mt-4 grid gap-4 xl:grid-cols-2">
+                    <div key={group.id} className="space-y-4 animate-in fade-in duration-200">
+                      <div>
+                        <h3 className="text-xl font-extrabold text-ink">
+                          {copy.title}
+                        </h3>
+                        <p className="mt-1 text-xs text-ink-soft">{copy.blurb}</p>
+                      </div>
+
+                      <div className="grid gap-5 grid-cols-1 md:grid-cols-2">
                         {endpoints.map((endpoint) => (
-                          <div key={endpoint.id} className={endpoint.kind === "json" && endpoint.group === "charts" ? "xl:col-span-2" : ""}>
+                          <div 
+                            key={endpoint.id} 
+                            className={
+                              endpoint.kind === "svg" 
+                                ? "col-span-1" 
+                                : (endpoint.kind === "json" && endpoint.id.includes("houses") ? "col-span-1 md:col-span-2" : "col-span-1")
+                            }
+                          >
                             <EndpointCard
                               endpoint={endpoint}
                               title={text.endpointTitle(endpoint.id)}
@@ -315,12 +336,11 @@ export function BirthReport({ request, lang }: BirthReportProps) {
                           </div>
                         ))}
                       </div>
-                    </section>
+                    </div>
                   );
                 })}
 
-                <p className="border-t border-line pt-5 text-xs text-ink-muted">{labels.footnote}</p>
-              </div>
+              <p className="text-xs text-ink-muted text-center pt-4">{labels.footnote}</p>
             </div>
           )}
         </div>

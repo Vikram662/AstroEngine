@@ -63,16 +63,16 @@ export default function HomeClient() {
     <div className="min-h-screen flex flex-col bg-surface text-ink font-brand selection:bg-accent-soft selection:text-accent">
       <Navbar />
 
-      {/* Consumer Vedic Hero Section (Phase 3) */}
+      {/* Consumer Vedic Hero Section (Birth Chart, AI Consultation & Direct Horoscope) */}
       <HeroSection />
 
-      {/* Free 24 Vedic Calculators Grid (Phase 4) */}
+      {/* Core Calculators Grid (Birth Chart, Dasha Periods, Doshas & Panchang) */}
       <CalculatorsSection />
 
-      {/* Today's Panchang & Muhurat Widget (Phase 5) */}
+      {/* Today's Panchang & Muhurat Widget */}
       <PanchangWidget />
 
-      {/* 12 Zodiac Rashis Horoscope Section (Phase 6) */}
+      {/* 12 Zodiac Rashis Horoscope Section */}
       <HoroscopeSection />
 
       {/* Live Interactive Playground Section */}
