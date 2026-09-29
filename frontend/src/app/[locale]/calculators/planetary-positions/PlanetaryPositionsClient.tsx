@@ -7,6 +7,7 @@ import type { Locale } from "@/lib/locale";
 import { BirthDataFields, DEFAULT_BIRTH_DATA, BirthDataValue } from "@/components/calculators/BirthDataFields";
 import { ResultSection, ResultBadge, SubmitButton, ErrorNote } from "@/components/calculators/ResultRows";
 import { Loader2 } from "lucide-react";
+import { ApiData, toApiError } from "@/lib/apiTypes";
 
 const STRINGS = {
   hi: {
@@ -51,7 +52,7 @@ export default function PlanetaryPositionsClient({ locale }: { locale: Locale })
   const [lang, setLang] = useState<"hi" | "en">(locale);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<ApiData>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -79,7 +80,7 @@ export default function PlanetaryPositionsClient({ locale }: { locale: Locale })
       } else {
         setData(res.data);
       }
-    } catch (err: any) {
+    } catch (errCaught) { const err = toApiError(errCaught);
       setError(err?.response?.data?.message || err?.message || s.error);
     } finally {
       setLoading(false);
@@ -100,7 +101,7 @@ export default function PlanetaryPositionsClient({ locale }: { locale: Locale })
       locale={locale}
     >
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        <div className="lg:col-span-5 bg-card p-6 rounded-2xl border border-line h-fit">
+        <div className="lg:col-span-5 bg-card p-6 rounded-lg border border-line h-fit">
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="flex items-center justify-between pb-3 border-b border-line">
               <span className="text-xs font-bold text-ink">भाषा / Language</span>
@@ -144,14 +145,14 @@ export default function PlanetaryPositionsClient({ locale }: { locale: Locale })
           {error && <ErrorNote message={error} />}
 
           {!planets.length && !loading && !error && (
-            <div className="bg-card rounded-2xl border border-line p-10 text-center text-ink-muted">
+            <div className="bg-card rounded-lg border border-line p-10 text-center text-ink-muted">
               <div className="text-4xl mb-3">🔭</div>
               <p className="text-sm">{s.emptyHint}</p>
             </div>
           )}
 
           {loading && (
-            <div className="bg-card rounded-2xl border border-line p-12 text-center text-ink-soft flex flex-col items-center justify-center">
+            <div className="bg-card rounded-lg border border-line p-12 text-center text-ink-soft flex flex-col items-center justify-center">
               <Loader2 className="w-8 h-8 text-accent animate-spin mb-3" />
               <p className="text-sm">{s.loadingHint}</p>
             </div>
@@ -178,7 +179,7 @@ export default function PlanetaryPositionsClient({ locale }: { locale: Locale })
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-line/60">
-                      {planets.map((p: any, idx: number) => {
+                      {planets.map((p: ApiData, idx: number) => {
                         const isRet = p.is_retrograde || p.speed < 0;
                         return (
                           <tr key={idx} className="hover:bg-surface-alt/40 transition">

@@ -78,7 +78,7 @@ export const CalculatorPageShell: React.FC<Props> = ({
           {form || results ? (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
               {form && (
-                <div className={`${leftColSpan} bg-card p-6 rounded-2xl border border-line h-fit lg:sticky lg:top-24`}>
+                <div className={`${leftColSpan} bg-card p-6 rounded-lg border border-line h-fit lg:sticky lg:top-24`}>
                   {form}
                 </div>
               )}
@@ -92,7 +92,7 @@ export const CalculatorPageShell: React.FC<Props> = ({
             children
           )}
 
-          <aside className="mt-8 rounded-2xl border border-line bg-card p-5 sm:p-6">
+          <aside className="mt-8 rounded-lg border border-line bg-card p-5 sm:p-6">
             <h2 className="text-sm font-bold text-ink">{t.guide}</h2>
             <p className="mt-2 text-xs sm:text-sm leading-6 text-ink-soft">{t.guideBody}</p>
           </aside>
@@ -105,7 +105,7 @@ export const CalculatorPageShell: React.FC<Props> = ({
                   <Link
                     key={r.id}
                     href={relatedHref(r)}
-                    className="p-4 rounded-xl border border-line bg-card hover:border-accent/50 hover:shadow-sm transition block"
+                    className="p-4 rounded-md border border-line bg-card hover:border-accent/50 hover:shadow-sm transition block"
                   >
                     <div className="text-xl mb-1">{r.icon}</div>
                     <div className="text-sm font-bold text-ink">

@@ -7,6 +7,7 @@ import { BirthDataFields, DEFAULT_BIRTH_DATA, BirthDataValue } from "@/component
 import { ResultSection, ResultRow, ResultBadge, SubmitButton, ErrorNote } from "@/components/calculators/ResultRows";
 import { Loader2 } from "lucide-react";
 import type { Locale } from "@/lib/locale";
+import { ApiData, toApiError } from "@/lib/apiTypes";
 
 const STRINGS = {
   hi: {
@@ -55,7 +56,7 @@ export default function MoonSignClient({ locale }: { locale: Locale }) {
   const [lang, setLang] = useState<"hi" | "en">(locale);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<ApiData>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -83,7 +84,7 @@ export default function MoonSignClient({ locale }: { locale: Locale }) {
       } else {
         setData(res.data);
       }
-    } catch (err: any) {
+    } catch (errCaught) { const err = toApiError(errCaught);
       setError(err?.response?.data?.message || err?.message || s.error);
     } finally {
       setLoading(false);
@@ -91,7 +92,7 @@ export default function MoonSignClient({ locale }: { locale: Locale }) {
   };
 
   const planets = data?.planets || [];
-  const moon = planets.find((p: any) => p.id === "MOON" || (p.name || p.planet || "").toLowerCase().includes("moon"));
+  const moon = planets.find((p: ApiData) => p.id === "MOON" || (p.name || p.planet || "").toLowerCase().includes("moon"));
 
   return (
     <CalculatorPageShell
@@ -104,7 +105,7 @@ export default function MoonSignClient({ locale }: { locale: Locale }) {
       locale={locale}
     >
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        <div className="lg:col-span-5 bg-card p-6 rounded-2xl border border-line h-fit">
+        <div className="lg:col-span-5 bg-card p-6 rounded-lg border border-line h-fit">
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="flex items-center justify-between pb-3 border-b border-line">
               <span className="text-xs font-bold text-ink">भाषा / Language</span>
@@ -148,14 +149,14 @@ export default function MoonSignClient({ locale }: { locale: Locale }) {
           {error && <ErrorNote message={error} />}
 
           {!moon && !loading && !error && (
-            <div className="bg-card rounded-2xl border border-line p-10 text-center text-ink-muted">
+            <div className="bg-card rounded-lg border border-line p-10 text-center text-ink-muted">
               <div className="text-4xl mb-3">🌙</div>
               <p className="text-sm">{s.emptyHint}</p>
             </div>
           )}
 
           {loading && (
-            <div className="bg-card rounded-2xl border border-line p-12 text-center text-ink-soft flex flex-col items-center justify-center">
+            <div className="bg-card rounded-lg border border-line p-12 text-center text-ink-soft flex flex-col items-center justify-center">
               <Loader2 className="w-8 h-8 text-accent animate-spin mb-3" />
               <p className="text-sm">{s.loadingHint}</p>
             </div>
@@ -164,7 +165,7 @@ export default function MoonSignClient({ locale }: { locale: Locale }) {
           {moon && (
             <div className="space-y-6">
               <ResultSection title={s.resultTitle}>
-                <div className="p-6 bg-accent-soft rounded-xl border border-line text-center mb-4">
+                <div className="p-6 bg-accent-soft rounded-md border border-line text-center mb-4">
                   <div className="text-xs uppercase tracking-wider text-accent font-semibold mb-1">
                     {s.birthSignLabel}
                   </div>

@@ -1,14 +1,15 @@
 "use client";
 
 import React from "react";
+import type { ApiData } from "@/lib/apiTypes";
 
 interface DoshaTabProps {
-  manglikData: any;
-  kaalSarpData: any;
-  sadeSatiStatus: any;
-  pitraDosha: any;
-  guruChandal: any;
-  sadeSatiTimeline: any;
+  manglikData: ApiData;
+  kaalSarpData: ApiData;
+  sadeSatiStatus: ApiData;
+  pitraDosha: ApiData;
+  guruChandal: ApiData;
+  sadeSatiTimeline: ApiData;
 }
 
 export const DoshaTab: React.FC<DoshaTabProps> = ({
@@ -22,11 +23,11 @@ export const DoshaTab: React.FC<DoshaTabProps> = ({
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in duration-200">
       {/* Manglik Analysis Card */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+      <div className="bg-white p-6 rounded-lg border border-line shadow-xs space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="font-bold text-sm text-slate-900">Manglik Dosha Analysis</h3>
-            <p className="text-xs text-slate-500">Evaluated from Lagna, Chandra, and Shukra</p>
+            <h3 className="font-bold text-sm text-ink">Manglik Dosha Analysis</h3>
+            <p className="text-xs text-ink-soft">Evaluated from Lagna, Chandra, and Shukra</p>
           </div>
           <span
             className={`text-xs font-bold px-2.5 py-1 rounded-full ${
@@ -45,9 +46,9 @@ export const DoshaTab: React.FC<DoshaTabProps> = ({
           </span>
         </div>
 
-        <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2 text-xs">
+        <div className="p-4 rounded-md bg-surface border border-line space-y-2 text-xs">
           <div className="flex justify-between">
-            <span className="text-slate-500">Status &amp; Severity:</span>
+            <span className="text-ink-soft">Status &amp; Severity:</span>
             <strong
               className={
                 manglikData?.is_manglik
@@ -59,8 +60,8 @@ export const DoshaTab: React.FC<DoshaTabProps> = ({
             </strong>
           </div>
           <div className="flex justify-between">
-            <span className="text-slate-500">Mars Position:</span>
-            <strong className="text-slate-900">
+            <span className="text-ink-soft">Mars Position:</span>
+            <strong className="text-ink">
               House {manglikData?.mars_placements?.house_from_lagna || manglikData?.mars_house || 12} from Lagna
               {manglikData?.mars_placements?.mars_sign_id
                 ? ` in ${manglikData.mars_placements.mars_sign_id}`
@@ -68,15 +69,15 @@ export const DoshaTab: React.FC<DoshaTabProps> = ({
             </strong>
           </div>
           <div className="flex justify-between">
-            <span className="text-slate-500">Cancellations Applied:</span>
+            <span className="text-ink-soft">Cancellations Applied:</span>
             <strong className="text-emerald-700">
               {manglikData?.cancellation_reasons?.length || (manglikData?.is_cancelled ? 1 : 0)} Factors Present
             </strong>
           </div>
         </div>
 
-        <div className="text-xs text-slate-600 space-y-1">
-          <span className="font-bold text-slate-900 block">Classical Verdict &amp; Exceptions:</span>
+        <div className="text-xs text-ink-soft space-y-1">
+          <span className="font-bold text-ink block">Classical Verdict &amp; Exceptions:</span>
           {manglikData?.cancellation_reasons && manglikData.cancellation_reasons.length > 0 ? (
             <ul className="list-disc list-inside space-y-0.5 text-emerald-800 font-medium">
               {manglikData.cancellation_reasons.map((r: string, idx: number) => (
@@ -94,11 +95,11 @@ export const DoshaTab: React.FC<DoshaTabProps> = ({
       </div>
 
       {/* Kaal Sarp Analysis Card */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+      <div className="bg-white p-6 rounded-lg border border-line shadow-xs space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="font-bold text-sm text-slate-900">Kaal Sarp Dosha Analysis</h3>
-            <p className="text-xs text-slate-500">Evaluated across all 12 classical Rahu-Ketu axes</p>
+            <h3 className="font-bold text-sm text-ink">Kaal Sarp Dosha Analysis</h3>
+            <p className="text-xs text-ink-soft">Evaluated across all 12 classical Rahu-Ketu axes</p>
           </div>
           <span
             className={`text-xs font-bold px-2.5 py-1 rounded-full ${
@@ -111,19 +112,19 @@ export const DoshaTab: React.FC<DoshaTabProps> = ({
           </span>
         </div>
 
-        <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2 text-xs">
+        <div className="p-4 rounded-md bg-surface border border-line space-y-2 text-xs">
           <div className="flex justify-between">
-            <span className="text-slate-500">Type:</span>
-            <strong className="text-slate-900">{kaalSarpData?.type || "Anant Kaal Sarp"}</strong>
+            <span className="text-ink-soft">Type:</span>
+            <strong className="text-ink">{kaalSarpData?.type || "Anant Kaal Sarp"}</strong>
           </div>
           <div className="flex justify-between">
-            <span className="text-slate-500">Axis:</span>
-            <strong className="text-slate-900">Rahu in 1st / Ketu in 7th</strong>
+            <span className="text-ink-soft">Axis:</span>
+            <strong className="text-ink">Rahu in 1st / Ketu in 7th</strong>
           </div>
         </div>
 
-        <div className="text-xs text-slate-600 space-y-1">
-          <span className="font-bold text-slate-900 block">Recommended Action:</span>
+        <div className="text-xs text-ink-soft space-y-1">
+          <span className="font-bold text-ink block">Recommended Action:</span>
           <p className="leading-relaxed">
             {kaalSarpData?.verdict || "Regular chanting of Maha Mrityunjaya Mantra and offering milk to Shiva lingam on Mondays."}
           </p>
@@ -131,11 +132,11 @@ export const DoshaTab: React.FC<DoshaTabProps> = ({
       </div>
 
       {/* Saturn Sade Sati & Dhaiya Live Check */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+      <div className="bg-white p-6 rounded-lg border border-line shadow-xs space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="font-bold text-sm text-slate-900">Shani Sade Sati &amp; Dhaiya Status</h3>
-            <p className="text-xs text-slate-500">Real-time Saturn transit evaluated relative to Janma Rashi</p>
+            <h3 className="font-bold text-sm text-ink">Shani Sade Sati &amp; Dhaiya Status</h3>
+            <p className="text-xs text-ink-soft">Real-time Saturn transit evaluated relative to Janma Rashi</p>
           </div>
           <span
             className={`text-xs font-bold px-2.5 py-1 rounded-full ${
@@ -148,25 +149,25 @@ export const DoshaTab: React.FC<DoshaTabProps> = ({
           </span>
         </div>
 
-        <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2 text-xs">
+        <div className="p-4 rounded-md bg-surface border border-line space-y-2 text-xs">
           <div className="flex justify-between">
-            <span className="text-slate-500">Current Saturn Sign:</span>
-            <strong className="text-slate-900">{sadeSatiStatus?.transit_saturn_sign || "Aquarius (कुंभ)"}</strong>
+            <span className="text-ink-soft">Current Saturn Sign:</span>
+            <strong className="text-ink">{sadeSatiStatus?.transit_saturn_sign || "Aquarius (कुंभ)"}</strong>
           </div>
           <div className="flex justify-between">
-            <span className="text-slate-500">Relative House from Moon:</span>
-            <strong className="text-slate-900">{sadeSatiStatus?.relative_house_from_moon || 2}nd House</strong>
+            <span className="text-ink-soft">Relative House from Moon:</span>
+            <strong className="text-ink">{sadeSatiStatus?.relative_house_from_moon || 2}nd House</strong>
           </div>
           <div className="flex justify-between">
-            <span className="text-slate-500">Dhaiya (Small Panoti):</span>
-            <strong className="text-slate-900">
+            <span className="text-ink-soft">Dhaiya (Small Panoti):</span>
+            <strong className="text-ink">
               {sadeSatiStatus?.is_dhaiya ? "Active (Kantaka / Ashtama)" : "Inactive"}
             </strong>
           </div>
         </div>
 
-        <div className="text-xs text-slate-600">
-          <span className="font-bold text-slate-900 block mb-1">Saturn Remedial Guidance:</span>
+        <div className="text-xs text-ink-soft">
+          <span className="font-bold text-ink block mb-1">Saturn Remedial Guidance:</span>
           <p className="leading-relaxed">
             Light a mustard oil deepak under a Peepal tree on Saturdays and recite Dasharatha Shani Stotram.
           </p>
@@ -174,11 +175,11 @@ export const DoshaTab: React.FC<DoshaTabProps> = ({
       </div>
 
       {/* Pitra Dosha & Guru Chandal Analysis */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+      <div className="bg-white p-6 rounded-lg border border-line shadow-xs space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="font-bold text-sm text-slate-900">Pitra Dosha &amp; Guru Chandal Evaluation</h3>
-            <p className="text-xs text-slate-500">9th House solar afflictions and Jupiter-Rahu conjunctions</p>
+            <h3 className="font-bold text-sm text-ink">Pitra Dosha &amp; Guru Chandal Evaluation</h3>
+            <p className="text-xs text-ink-soft">9th House solar afflictions and Jupiter-Rahu conjunctions</p>
           </div>
           <span
             className={`text-xs font-bold px-2.5 py-1 rounded-full ${
@@ -191,13 +192,13 @@ export const DoshaTab: React.FC<DoshaTabProps> = ({
           </span>
         </div>
 
-        <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2 text-xs">
+        <div className="p-4 rounded-md bg-surface border border-line space-y-2 text-xs">
           <div className="flex justify-between">
-            <span className="text-slate-500">Pitra Dosha Severity:</span>
-            <strong className="text-slate-900">{pitraDosha?.severity || "None / Clean"}</strong>
+            <span className="text-ink-soft">Pitra Dosha Severity:</span>
+            <strong className="text-ink">{pitraDosha?.severity || "None / Clean"}</strong>
           </div>
           <div className="flex justify-between">
-            <span className="text-slate-500">Guru Chandal (गुरु चांडाल योग):</span>
+            <span className="text-ink-soft">Guru Chandal (गुरु चांडाल योग):</span>
             <strong
               className={
                 guruChandal?.has_guru_chandal_dosha
@@ -212,8 +213,8 @@ export const DoshaTab: React.FC<DoshaTabProps> = ({
           </div>
         </div>
 
-        <div className="text-xs text-slate-600">
-          <span className="font-bold text-slate-900 block mb-1">Classical Shanti Advice:</span>
+        <div className="text-xs text-ink-soft">
+          <span className="font-bold text-ink block mb-1">Classical Shanti Advice:</span>
           <p className="leading-relaxed">
             Feed birds and stray cows on Amavasya days. Offer water with sesame seeds (Til Tarpan) to ancestors.
           </p>
@@ -221,18 +222,18 @@ export const DoshaTab: React.FC<DoshaTabProps> = ({
       </div>
 
       {/* Shani Sade Sati 30-Year Lifetime Progression Timeline */}
-      <div className="md:col-span-2 bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+      <div className="md:col-span-2 bg-white p-6 rounded-lg border border-line shadow-xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-line pb-3">
           <div>
-            <h3 className="font-bold text-sm text-slate-900 flex items-center gap-2">
+            <h3 className="font-bold text-sm text-ink flex items-center gap-2">
               <span>🪐</span>
               <span>Lifetime Shani Sade Sati &amp; Dhaiya Progression Timeline (30-Year Cycles)</span>
             </h3>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="text-xs text-ink-soft mt-0.5">
               Lifespan Saturn transit cycles relative to Natal Moon ({sadeSatiTimeline?.natal_moon_sign || "Janma Rashi"}): 12th House (Rising), 1st House (Peak), 2nd House (Setting)
             </p>
           </div>
-          <span className="text-xs font-mono font-bold px-2.5 py-1 rounded bg-slate-900 text-white">
+          <span className="text-xs font-mono font-bold px-2.5 py-1 rounded bg-console text-white">
             Endpoint 64 Live
           </span>
         </div>
@@ -271,26 +272,26 @@ export const DoshaTab: React.FC<DoshaTabProps> = ({
                 ],
               },
             ]
-          ).map((cycle: any, idx: number) => (
-            <div key={idx} className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
-              <div className="flex items-center justify-between border-b border-slate-200 pb-2">
-                <strong className="text-xs font-bold text-slate-900">{cycle.lifecycle_stage}</strong>
-                <span className="text-[10px] font-mono text-indigo-700 font-bold bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">
+          ).map((cycle: ApiData, idx: number) => (
+            <div key={idx} className="p-4 rounded-md bg-surface border border-line space-y-3">
+              <div className="flex items-center justify-between border-b border-line pb-2">
+                <strong className="text-xs font-bold text-ink">{cycle.lifecycle_stage}</strong>
+                <span className="text-[10px] font-mono text-accent-hover font-bold bg-accent-soft px-2 py-0.5 rounded border border-accent/20">
                   {cycle.approx_age_span}
                 </span>
               </div>
 
               <div className="space-y-2">
-                {cycle.phases?.map((ph: any, pIdx: number) => (
+                {cycle.phases?.map((ph: ApiData, pIdx: number) => (
                   <div
                     key={pIdx}
-                    className="p-2.5 rounded-lg bg-white border border-slate-200 flex items-center justify-between text-xs"
+                    className="p-2.5 rounded-lg bg-white border border-line flex items-center justify-between text-xs"
                   >
                     <div>
-                      <span className="font-semibold text-slate-800 block text-[11px]">{ph.phase}</span>
-                      <span className="text-[10px] text-slate-400">Saturn in {ph.saturn_sign}</span>
+                      <span className="font-semibold text-ink block text-[11px]">{ph.phase}</span>
+                      <span className="text-[10px] text-ink-muted">Saturn in {ph.saturn_sign}</span>
                     </div>
-                    <span className="font-mono text-[11px] font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded">
+                    <span className="font-mono text-[11px] font-bold text-ink bg-surface-alt px-2 py-0.5 rounded">
                       {ph.approx_years}
                     </span>
                   </div>

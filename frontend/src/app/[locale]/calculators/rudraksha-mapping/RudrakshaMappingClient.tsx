@@ -8,6 +8,7 @@ import { BirthDataFields, DEFAULT_BIRTH_DATA, BirthDataValue } from "@/component
 import { fetchParallelSettled } from "@/lib/calculatorApi";
 import { ResultSection, ResultRow, ResultBadge, SubmitButton, ErrorNote } from "@/components/calculators/ResultRows";
 import { Loader2 } from "lucide-react";
+import { ApiData, toApiError } from "@/lib/apiTypes";
 
 const STRINGS = {
   hi: {
@@ -44,9 +45,9 @@ export default function RudrakshaMappingClient({ locale }: { locale: Locale }) {
   const [lang, setLang] = useState<"hi" | "en">(locale);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [rudrakshaList, setRudrakshaList] = useState<any[]>([]);
-  const [gemData, setGemData] = useState<any>(null);
-  const [mantraData, setMantraData] = useState<any>(null);
+  const [rudrakshaList, setRudrakshaList] = useState<ApiData[]>([]);
+  const [gemData, setGemData] = useState<ApiData>(null);
+  const [mantraData, setMantraData] = useState<ApiData>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -86,7 +87,7 @@ export default function RudrakshaMappingClient({ locale }: { locale: Locale }) {
 
       if (gems) setGemData(gems);
       if (mantras) setMantraData(mantras);
-    } catch (err: any) {
+    } catch (errCaught) { const err = toApiError(errCaught);
       setError(err?.response?.data?.message || err?.message || s.error);
     } finally {
       setLoading(false);
@@ -138,14 +139,14 @@ export default function RudrakshaMappingClient({ locale }: { locale: Locale }) {
       {error && <ErrorNote message={error} />}
 
       {!rudrakshaList.length && !loading && !error && (
-        <div className="bg-card rounded-2xl border border-line p-10 text-center text-ink-muted">
+        <div className="bg-card rounded-lg border border-line p-10 text-center text-ink-muted">
           <div className="text-4xl mb-3">📿</div>
           <p className="text-sm">{s.emptyHint}</p>
         </div>
       )}
 
       {loading && (
-        <div className="bg-card rounded-2xl border border-line p-12 text-center text-ink-soft flex flex-col items-center justify-center">
+        <div className="bg-card rounded-lg border border-line p-12 text-center text-ink-soft flex flex-col items-center justify-center">
           <Loader2 className="w-8 h-8 text-accent animate-spin mb-3" />
           <p className="text-sm">{s.loadingHint}</p>
         </div>
@@ -155,8 +156,8 @@ export default function RudrakshaMappingClient({ locale }: { locale: Locale }) {
         <div className="space-y-6">
               <ResultSection title={s.resultTitle}>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {rudrakshaList.map((r: any, idx: number) => (
-                    <div key={idx} className="p-4 bg-surface-alt/70 border border-line rounded-xl">
+                  {rudrakshaList.map((r: ApiData, idx: number) => (
+                    <div key={idx} className="p-4 bg-surface-alt/70 border border-line rounded-md">
                       <div className="flex items-center justify-between mb-2">
                         <span className="font-bold text-accent text-base">
                           {r.mukhi || r.name}
@@ -177,7 +178,7 @@ export default function RudrakshaMappingClient({ locale }: { locale: Locale }) {
               {/* Life Stone and Complementary Gemstone Sync */}
               {gemData?.life_stone && (
                 <ResultSection title={lang === "hi" ? "संबंधित जीवन रत्न व धातु संयोग" : "Life Stone & Complementary Metal"}>
-                  <div className="p-4 bg-card border border-line rounded-xl space-y-2 text-xs">
+                  <div className="p-4 bg-card border border-line rounded-md space-y-2 text-xs">
                     <div className="flex justify-between items-center">
                       <span className="font-bold text-ink text-sm">{gemData.life_stone.gemstone}</span>
                       <span className="text-[11px] text-accent font-semibold">{gemData.life_stone.type}</span>
@@ -190,7 +191,7 @@ export default function RudrakshaMappingClient({ locale }: { locale: Locale }) {
               )}
 
               <ResultSection title={s.rulesTitle}>
-                <div className="p-4 bg-card border border-line rounded-xl space-y-2 text-xs text-ink-soft leading-relaxed">
+                <div className="p-4 bg-card border border-line rounded-md space-y-2 text-xs text-ink-soft leading-relaxed">
                   <p>{s.rulesBody}</p>
                   <div className="p-2.5 bg-surface-alt rounded-lg text-[11px] space-y-1">
                     <div><span className="font-bold text-ink">प्राण प्रतिष्ठा मंत्र:</span> ॐ नमः शिवाय (108 जप)</div>

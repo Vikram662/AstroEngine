@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hashNewPassword } from "@/app/api/auth/session/route";
 import crypto from "crypto";
+import type { ApiData } from "@/lib/apiTypes";
 
 function getInternalSecret(): string {
   const secret = process.env.ASTRO_INTERNAL_SECRET;
@@ -310,7 +311,7 @@ export async function POST(req: NextRequest) {
     ];
 
     for (const addon of addonPackages) {
-      await (prisma as any).addonPackage.upsert({
+      await (prisma as ApiData).addonPackage.upsert({
         where: { id: addon.id },
         update: {
           name: addon.name,
@@ -329,7 +330,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Remove obsolete or discontinued addon ids (e.g. dasha, dosha_matching)
-    await (prisma as any).addonPackage.deleteMany({
+    await (prisma as ApiData).addonPackage.deleteMany({
       where: {
         id: { in: ["dasha", "dosha_matching"] }
       }

@@ -21,6 +21,7 @@ import {
 
 import { useLocale } from "@/hooks/useLocale";
 import { getDictionary } from "@/dictionaries/dictionary";
+import type { ApiData } from "@/lib/apiTypes";
 
 function formatHM(hms?: string): string {
   if (!hms) return "--:--";
@@ -32,7 +33,7 @@ function formatHM(hms?: string): string {
 }
 
 export const PanchangWidget: React.FC = () => {
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<ApiData>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [activeTab, setActiveTab] = useState<"muhurat" | "choghadiya">("muhurat");
   const locale = useLocale();
@@ -76,14 +77,14 @@ export const PanchangWidget: React.FC = () => {
             </p>
           </div>
 
-          <div className="flex items-center gap-2 text-xs text-ink-soft bg-card px-3.5 py-2 rounded-xl border border-line shrink-0">
+          <div className="flex items-center gap-2 text-xs text-ink-soft bg-card px-3.5 py-2 rounded-md border border-line shrink-0">
             <Calendar className="w-4 h-4 text-accent" />
             <span className="font-medium text-ink">{todayDateStr}</span>
           </div>
         </div>
 
         {loading ? (
-          <div className="py-20 text-center bg-card rounded-3xl border border-line">
+          <div className="py-20 text-center bg-card rounded-lg border border-line">
             <Loader2 className="w-8 h-8 animate-spin text-accent mx-auto mb-3" />
             <p className="text-sm font-semibold text-ink">{t.loading}</p>
           </div>
@@ -94,9 +95,9 @@ export const PanchangWidget: React.FC = () => {
             <div className="lg:col-span-7 space-y-5">
               
               {/* Sun & Moon Timings Card */}
-              <div className="bg-card rounded-2xl p-5 border border-line shadow-xs grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div className="bg-card rounded-lg p-5 border border-line shadow-xs grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center text-amber-700 shrink-0">
+                  <div className="w-9 h-9 rounded-md bg-amber-100 flex items-center justify-center text-amber-700 shrink-0">
                     <Sun className="w-4 h-4" />
                   </div>
                   <div>
@@ -108,7 +109,7 @@ export const PanchangWidget: React.FC = () => {
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-orange-100 flex items-center justify-center text-orange-700 shrink-0">
+                  <div className="w-9 h-9 rounded-md bg-orange-100 flex items-center justify-center text-orange-700 shrink-0">
                     <Sun className="w-4 h-4" />
                   </div>
                   <div>
@@ -120,7 +121,7 @@ export const PanchangWidget: React.FC = () => {
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-indigo-100 flex items-center justify-center text-indigo-700 shrink-0">
+                  <div className="w-9 h-9 rounded-md bg-accent-soft flex items-center justify-center text-accent-hover shrink-0">
                     <Moon className="w-4 h-4" />
                   </div>
                   <div>
@@ -132,7 +133,7 @@ export const PanchangWidget: React.FC = () => {
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-700 shrink-0">
+                  <div className="w-9 h-9 rounded-md bg-surface-alt flex items-center justify-center text-ink shrink-0">
                     <MapPin className="w-4 h-4 text-accent" />
                   </div>
                   <div>
@@ -148,7 +149,7 @@ export const PanchangWidget: React.FC = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 
                 {/* Tithi */}
-                <div className="bg-card rounded-2xl p-5 border border-line shadow-xs">
+                <div className="bg-card rounded-lg p-5 border border-line shadow-xs">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-accent block mb-1">
                     {t.tithiTitle}
                   </span>
@@ -167,7 +168,7 @@ export const PanchangWidget: React.FC = () => {
                 </div>
 
                 {/* Nakshatra */}
-                <div className="bg-card rounded-2xl p-5 border border-line shadow-xs">
+                <div className="bg-card rounded-lg p-5 border border-line shadow-xs">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-accent block mb-1">
                     {t.nakshatraTitle}
                   </span>
@@ -186,7 +187,7 @@ export const PanchangWidget: React.FC = () => {
                 </div>
 
                 {/* Yoga */}
-                <div className="bg-card rounded-2xl p-5 border border-line shadow-xs">
+                <div className="bg-card rounded-lg p-5 border border-line shadow-xs">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-accent block mb-1">
                     {t.yogaTitle}
                   </span>
@@ -205,7 +206,7 @@ export const PanchangWidget: React.FC = () => {
                 </div>
 
                 {/* Karana */}
-                <div className="bg-card rounded-2xl p-5 border border-line shadow-xs">
+                <div className="bg-card rounded-lg p-5 border border-line shadow-xs">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-accent block mb-1">
                     {t.karanaTitle}
                   </span>
@@ -226,7 +227,7 @@ export const PanchangWidget: React.FC = () => {
               </div>
 
               {/* Bottom Live Link */}
-              <div className="p-4 rounded-xl bg-card border border-line flex items-center justify-between text-xs">
+              <div className="p-4 rounded-md bg-card border border-line flex items-center justify-between text-xs">
                 <span className="text-ink-soft">
                   {t.var}: <strong className="text-ink">{data?.vaar || (locale === "en" ? "Tuesday" : "मंगलवार")}</strong> • {t.samvat}
                 </span>
@@ -242,10 +243,10 @@ export const PanchangWidget: React.FC = () => {
             </div>
 
             {/* ── RIGHT: Auspicious & Inauspicious Timings / Choghadiya (5 cols) ── */}
-            <div className="lg:col-span-5 bg-card rounded-2xl border border-line p-5 shadow-xs space-y-5">
+            <div className="lg:col-span-5 bg-card rounded-lg border border-line p-5 shadow-xs space-y-5">
               
               {/* Toggle Buttons */}
-              <div className="flex items-center gap-2 bg-surface-alt p-1 rounded-xl border border-line text-xs">
+              <div className="flex items-center gap-2 bg-surface-alt p-1 rounded-md border border-line text-xs">
                 <button
                   type="button"
                   onClick={() => setActiveTab("muhurat")}
@@ -269,7 +270,7 @@ export const PanchangWidget: React.FC = () => {
               {activeTab === "muhurat" ? (
                 <div className="space-y-3.5">
                   {/* Rahu Kaal Alert */}
-                  <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-xs">
+                  <div className="p-3.5 rounded-md bg-rose-50 border border-rose-200 text-xs">
                     <div className="flex items-center justify-between text-rose-900 font-bold mb-1">
                       <span className="flex items-center gap-1.5">
                         <AlertTriangle className="w-4 h-4 text-rose-600" />
@@ -288,7 +289,7 @@ export const PanchangWidget: React.FC = () => {
                   </div>
 
                   {/* Abhijit Muhurat */}
-                  <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs">
+                  <div className="p-3.5 rounded-md bg-emerald-50 border border-emerald-200 text-xs">
                     <div className="flex items-center justify-between text-emerald-900 font-bold mb-1">
                       <span className="flex items-center gap-1.5">
                         <CheckCircle2 className="w-4 h-4 text-emerald-600" />
@@ -340,12 +341,12 @@ export const PanchangWidget: React.FC = () => {
                     { name: "ROG", nature: locale === "en" ? "Inauspicious" : "अशुभ", start_time: "13:44:00", end_time: "15:15:00" },
                     { name: "UDWEG", nature: locale === "en" ? "Inauspicious" : "अशुभ", start_time: "15:15:00", end_time: "16:46:00" },
                     { name: "CHAL", nature: locale === "en" ? "Auspicious" : "शुभ", start_time: "16:46:00", end_time: "18:17:00" },
-                  ]).map((slot: any, idx: number) => {
+                  ]).map((slot: ApiData, idx: number) => {
                     const isAuspicious = ["AMRIT", "SHUBH", "LABH", "CHAL"].includes(slot.name);
                     return (
                       <div
                         key={idx}
-                        className={`p-2.5 rounded-xl border text-xs flex items-center justify-between ${
+                        className={`p-2.5 rounded-md border text-xs flex items-center justify-between ${
                           isAuspicious
                             ? "bg-emerald-50/60 border-emerald-200/80 text-emerald-950"
                             : "bg-surface border-line text-ink-soft"
@@ -367,7 +368,7 @@ export const PanchangWidget: React.FC = () => {
               <div className="pt-2">
                 <Link
                   href={locale === "hi" ? "/hi/calculators/daily-panchang" : "/calculators/daily-panchang"}
-                  className="w-full py-2.5 px-4 rounded-xl bg-accent hover:bg-accent-hover text-white font-bold text-xs transition flex items-center justify-center gap-1.5 shadow-2xs"
+                  className="w-full py-2.5 px-4 rounded-md bg-accent hover:bg-accent-hover text-white font-bold text-xs transition flex items-center justify-center gap-1.5 shadow-2xs"
                 >
                   <Compass className="w-3.5 h-3.5" />
                   <span>{t.panchangCalcBtn}</span>

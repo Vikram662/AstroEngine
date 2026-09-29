@@ -217,7 +217,7 @@ export const LivePlayground = () => {
         </div>
 
         {/* Dark contextual code console — the one deliberately dark moment on the page */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 rounded-xl border border-stone-800 bg-stone-900 overflow-hidden shadow-sm">
+        <div className="grid grid-cols-1 lg:grid-cols-2 rounded-md border border-stone-800 bg-stone-900 overflow-hidden shadow-sm">
           {/* Request Panel (Left) */}
           <div className="flex flex-col border-b lg:border-b-0 lg:border-r border-stone-800">
             <div className="flex items-center justify-between px-4 py-2.5 bg-stone-800/60 border-b border-stone-800 text-xs font-mono-brand">

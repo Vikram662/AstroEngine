@@ -4,6 +4,7 @@ import { getVerifiedSession } from "@/lib/authGuard";
 import { Prisma } from "@prisma/client";
 import crypto from "crypto";
 import { toMoney, toJsonSafe } from "@/lib/money";
+import { toApiError } from "@/lib/apiTypes";
 
 export async function GET() {
   try {
@@ -287,7 +288,7 @@ export async function POST(req: NextRequest) {
 
           return { updatedUser, settledTx };
         });
-      } catch (txErr: any) {
+      } catch (txErrCaught) { const txErr = toApiError(txErrCaught);
         if (txErr?.message === "ORDER_ALREADY_SETTLED") {
           return NextResponse.json({
             status: "error",

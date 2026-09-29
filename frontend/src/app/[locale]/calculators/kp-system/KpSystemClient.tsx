@@ -8,6 +8,7 @@ import { BirthDataFields, DEFAULT_BIRTH_DATA, BirthDataValue } from "@/component
 import { fetchParallelSettled } from "@/lib/calculatorApi";
 import { ResultSection, ResultRow, ResultBadge, SubmitButton, ErrorNote } from "@/components/calculators/ResultRows";
 import { Loader2 } from "lucide-react";
+import { ApiData, toApiError } from "@/lib/apiTypes";
 
 const STRINGS = {
   hi: {
@@ -52,10 +53,10 @@ export default function KpSystemClient({ locale }: { locale: Locale }) {
   const [lang, setLang] = useState<"hi" | "en">(locale);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [kpPlanets, setKpPlanets] = useState<any[]>([]);
-  const [kpCusps, setKpCusps] = useState<any[]>([]);
-  const [rulingPlanets, setRulingPlanets] = useState<any>(null);
-  const [significators, setSignificators] = useState<any>(null);
+  const [kpPlanets, setKpPlanets] = useState<ApiData[]>([]);
+  const [kpCusps, setKpCusps] = useState<ApiData[]>([]);
+  const [rulingPlanets, setRulingPlanets] = useState<ApiData>(null);
+  const [significators, setSignificators] = useState<ApiData>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -102,7 +103,7 @@ export default function KpSystemClient({ locale }: { locale: Locale }) {
       setKpCusps(Array.isArray(cList) ? cList : []);
       if (ruling) setRulingPlanets(ruling);
       if (sig) setSignificators(sig);
-    } catch (err: any) {
+    } catch (errCaught) { const err = toApiError(errCaught);
       setError(err?.response?.data?.message || err?.message || s.error);
     } finally {
       setLoading(false);
@@ -154,14 +155,14 @@ export default function KpSystemClient({ locale }: { locale: Locale }) {
       {error && <ErrorNote message={error} />}
 
       {!kpPlanets.length && !loading && !error && (
-        <div className="bg-card rounded-2xl border border-line p-10 text-center text-ink-muted">
+        <div className="bg-card rounded-lg border border-line p-10 text-center text-ink-muted">
           <div className="text-4xl mb-3">🎯</div>
           <p className="text-sm">{s.emptyHint}</p>
         </div>
       )}
 
       {loading && (
-        <div className="bg-card rounded-2xl border border-line p-12 text-center text-ink-soft flex flex-col items-center justify-center">
+        <div className="bg-card rounded-lg border border-line p-12 text-center text-ink-soft flex flex-col items-center justify-center">
           <Loader2 className="w-8 h-8 text-accent animate-spin mb-3" />
           <p className="text-sm">{s.loadingHint}</p>
         </div>
@@ -174,23 +175,23 @@ export default function KpSystemClient({ locale }: { locale: Locale }) {
           {rulingPlanets && (
             <ResultSection title={lang === "hi" ? "केपी रूलिंग प्लैनेट्स (Ruling Planets)" : "KP Ruling Planets (RP)"}>
               <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 text-center">
-                <div className="p-3 bg-surface-alt/80 border border-line rounded-xl">
+                <div className="p-3 bg-surface-alt/80 border border-line rounded-md">
                   <div className="text-[10px] text-ink-muted font-bold uppercase">Lagna Lord</div>
                   <div className="text-sm font-extrabold text-accent mt-0.5">{rulingPlanets.lagna_lord || "-"}</div>
                 </div>
-                <div className="p-3 bg-surface-alt/80 border border-line rounded-xl">
+                <div className="p-3 bg-surface-alt/80 border border-line rounded-md">
                   <div className="text-[10px] text-ink-muted font-bold uppercase">Lagna Star</div>
                   <div className="text-sm font-extrabold text-accent mt-0.5">{rulingPlanets.lagna_star_lord || "-"}</div>
                 </div>
-                <div className="p-3 bg-surface-alt/80 border border-line rounded-xl">
+                <div className="p-3 bg-surface-alt/80 border border-line rounded-md">
                   <div className="text-[10px] text-ink-muted font-bold uppercase">Moon Sign</div>
                   <div className="text-sm font-extrabold text-ink mt-0.5">{rulingPlanets.moon_sign_lord || "-"}</div>
                 </div>
-                <div className="p-3 bg-surface-alt/80 border border-line rounded-xl">
+                <div className="p-3 bg-surface-alt/80 border border-line rounded-md">
                   <div className="text-[10px] text-ink-muted font-bold uppercase">Moon Star</div>
                   <div className="text-sm font-extrabold text-ink mt-0.5">{rulingPlanets.moon_star_lord || "-"}</div>
                 </div>
-                <div className="p-3 bg-surface-alt/80 border border-line rounded-xl col-span-2 sm:col-span-1">
+                <div className="p-3 bg-surface-alt/80 border border-line rounded-md col-span-2 sm:col-span-1">
                   <div className="text-[10px] text-ink-muted font-bold uppercase">Day Lord</div>
                   <div className="text-sm font-extrabold text-emerald-700 mt-0.5">{rulingPlanets.day_lord || "-"}</div>
                 </div>
@@ -211,7 +212,7 @@ export default function KpSystemClient({ locale }: { locale: Locale }) {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-line/60">
-                      {kpPlanets.map((p: any, idx: number) => (
+                      {kpPlanets.map((p: ApiData, idx: number) => (
                         <tr key={idx} className="hover:bg-surface-alt/40 transition">
                           <td className="py-2.5 px-2.5 font-bold text-ink">{p.planet_name || p.name || p.planet}</td>
                           <td className="py-2.5 px-2.5">{p.sign?.name || p.rashi_name}</td>
@@ -239,7 +240,7 @@ export default function KpSystemClient({ locale }: { locale: Locale }) {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-line/60">
-                        {kpCusps.map((c: any, idx: number) => (
+                        {kpCusps.map((c: ApiData, idx: number) => (
                           <tr key={idx} className="hover:bg-surface-alt/40 transition">
                             <td className="py-2.5 px-2.5 font-bold text-ink">{s.cuspPrefix} {c.cusp || c.house || idx + 1}</td>
                             <td className="py-2.5 px-2.5 font-mono-brand">{Number(c.degree_in_sign ?? c.degree ?? 0).toFixed(2)}°</td>
@@ -264,12 +265,12 @@ export default function KpSystemClient({ locale }: { locale: Locale }) {
                           <th className="py-2 px-2.5">ग्रह / Planet</th>
                           <th className="py-2 px-2.5">Grade A (Star Lord House)</th>
                           <th className="py-2 px-2.5">Grade B (Occupied House)</th>
-                          <th className="py-2 px-2.5">Grade C (Lord's Star Houses)</th>
+                          <th className="py-2 px-2.5">Grade C (Lord&apos;s Star Houses)</th>
                           <th className="py-2 px-2.5">Grade D (Owned Houses)</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-line/60">
-                        {Object.entries(significators.planets || significators.planet_4_level_significators).map(([pName, g]: [string, any], idx: number) => (
+                        {Object.entries(significators.planets || significators.planet_4_level_significators).map(([pName, g]: [string, ApiData], idx: number) => (
                           <tr key={idx} className="hover:bg-surface-alt/40 transition">
                             <td className="py-2.5 px-2.5 font-bold text-ink">{pName}</td>
                             <td className="py-2.5 px-2.5 font-mono text-accent font-semibold">{Array.isArray(g.A) ? g.A.join(", ") : g.A || "-"}</td>

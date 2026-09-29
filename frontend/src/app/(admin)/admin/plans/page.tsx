@@ -26,6 +26,7 @@ import {
   Sparkles,
   ShieldAlert
 } from "lucide-react";
+import type { ApiData } from "@/lib/apiTypes";
 
 interface PlanItem {
   id?: string;
@@ -72,15 +73,15 @@ export const SYSTEM_MODULES = [
 
 const ADDON_ICONS: Record<string, React.ReactNode> = {
   FileText: <FileText className="w-4 h-4 text-emerald-600" />,
-  Hash: <Hash className="w-4 h-4 text-indigo-600" />,
-  Compass: <Compass className="w-4 h-4 text-purple-600" />,
+  Hash: <Hash className="w-4 h-4 text-accent" />,
+  Compass: <Compass className="w-4 h-4 text-accent" />,
   BookOpen: <BookOpen className="w-4 h-4 text-amber-600" />,
   Star: <Star className="w-4 h-4 text-yellow-600" />,
   Heart: <Heart className="w-4 h-4 text-rose-600" />,
   Clock: <Clock className="w-4 h-4 text-cyan-600" />,
   Sparkles: <Sparkles className="w-4 h-4 text-amber-500" />,
   ShieldAlert: <ShieldAlert className="w-4 h-4 text-rose-500" />,
-  Zap: <Zap className="w-4 h-4 text-blue-600" />
+  Zap: <Zap className="w-4 h-4 text-accent" />
 };
 
 export default function AdminPlansPage() {
@@ -152,8 +153,8 @@ export default function AdminPlansPage() {
   };
 
   useEffect(() => {
-    fetchPlans();
-    fetchAddons();
+    void Promise.resolve().then(fetchPlans);
+    void Promise.resolve().then(fetchAddons);
   }, []);
 
   // Plan Modal Handlers
@@ -330,10 +331,10 @@ export default function AdminPlansPage() {
   return (
     <div className="space-y-6 max-w-6xl">
       {/* Header Banner */}
-      <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="bg-white p-6 rounded-md border border-line shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Subscription Plans & Modular Add-ons</h1>
-          <p className="text-slate-600 text-xs sm:text-sm mt-1">
+          <h1 className="text-2xl font-bold tracking-tight text-ink">Subscription Plans & Modular Add-ons</h1>
+          <p className="text-ink-soft text-xs sm:text-sm mt-1">
             Configure subscription tiers, module access rules, and dynamic Standalone Add-on power-ups stored in MySQL.
           </p>
         </div>
@@ -341,7 +342,7 @@ export default function AdminPlansPage() {
           {activeTab === "PLANS" ? (
             <button
               onClick={() => handleOpenPlanModal()}
-              className="px-4 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs shadow flex items-center gap-2 transition"
+              className="px-4 py-2 rounded-lg bg-console hover:bg-console-line text-white font-semibold text-xs shadow flex items-center gap-2 transition"
             >
               <Plus className="w-4 h-4" />
               <span>Create New Plan</span>
@@ -359,13 +360,13 @@ export default function AdminPlansPage() {
       </div>
 
       {/* Tabs Switcher */}
-      <div className="flex border-b border-slate-200 gap-6">
+      <div className="flex border-b border-line gap-6">
         <button
           onClick={() => setActiveTab("PLANS")}
           className={`pb-3 text-sm font-bold flex items-center gap-2 transition border-b-2 ${
             activeTab === "PLANS"
-              ? "border-slate-900 text-slate-900"
-              : "border-transparent text-slate-500 hover:text-slate-800"
+              ? "border-console-line text-ink"
+              : "border-transparent text-ink-soft hover:text-ink"
           }`}
         >
           <Layers className="w-4 h-4" />
@@ -376,7 +377,7 @@ export default function AdminPlansPage() {
           className={`pb-3 text-sm font-bold flex items-center gap-2 transition border-b-2 ${
             activeTab === "ADDONS"
               ? "border-emerald-600 text-emerald-700"
-              : "border-transparent text-slate-500 hover:text-slate-800"
+              : "border-transparent text-ink-soft hover:text-ink"
           }`}
         >
           <Package className="w-4 h-4" />
@@ -386,7 +387,7 @@ export default function AdminPlansPage() {
       </div>
 
       {successNotice && (
-        <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-900 text-xs flex items-center gap-2 shadow-sm font-semibold">
+        <div className="p-4 rounded-md bg-emerald-50 border border-emerald-300 text-emerald-900 text-xs flex items-center gap-2 shadow-sm font-semibold">
           <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
           <span>{successNotice}</span>
         </div>
@@ -396,7 +397,7 @@ export default function AdminPlansPage() {
       {activeTab === "PLANS" && (
         <>
           {loadingPlans ? (
-            <div className="flex items-center justify-center py-20 text-slate-500 gap-2 font-mono text-xs">
+            <div className="flex items-center justify-center py-20 text-ink-soft gap-2 font-mono text-xs">
               <Loader2 className="w-5 h-5 animate-spin" />
               <span>Querying subscription plans from MySQL...</span>
             </div>
@@ -405,49 +406,49 @@ export default function AdminPlansPage() {
               {plans.map((p) => (
                 <div
                   key={p.tier}
-                  className={`p-6 rounded-xl border flex flex-col justify-between relative shadow-sm transition bg-white ${
+                  className={`p-6 rounded-md border flex flex-col justify-between relative shadow-sm transition bg-white ${
                     p.isPopular
-                      ? "border-2 border-slate-900 ring-1 ring-slate-900"
-                      : "border-slate-200"
+                      ? "border-2 border-console-line ring-1 ring-ink"
+                      : "border-line"
                   }`}
                 >
                   {p.isPopular && (
-                    <div className="absolute -top-2.5 right-4 px-2.5 py-0.5 rounded bg-slate-900 text-white font-mono text-[10px] font-bold uppercase">
+                    <div className="absolute -top-2.5 right-4 px-2.5 py-0.5 rounded bg-console text-white font-mono text-[10px] font-bold uppercase">
                       Featured / Popular
                     </div>
                   )}
 
                   <div>
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-mono font-bold text-slate-500 uppercase tracking-wider">{p.name}</span>
-                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-100 text-slate-800 border border-slate-200 font-bold">
+                      <span className="text-xs font-mono font-bold text-ink-soft uppercase tracking-wider">{p.name}</span>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-surface-alt text-ink border border-line font-bold">
                         {p.tier}
                       </span>
                     </div>
 
                     <div className="mt-3 flex items-baseline gap-1">
-                      <span className="text-3xl font-extrabold font-mono text-slate-900">₹{p.priceMonthly.toLocaleString()}</span>
-                      <span className="text-xs text-slate-500">/ month</span>
+                      <span className="text-3xl font-extrabold font-mono text-ink">₹{p.priceMonthly.toLocaleString()}</span>
+                      <span className="text-xs text-ink-soft">/ month</span>
                     </div>
 
-                    <div className="mt-4 py-3 border-y border-slate-100 text-xs text-slate-700 space-y-1.5 font-medium">
+                    <div className="mt-4 py-3 border-y border-line text-xs text-ink space-y-1.5 font-medium">
                       <div className="flex justify-between">
-                        <span className="text-slate-500">Included Monthly Quota:</span>
-                        <strong className="text-slate-900 font-mono">{p.includedQuota.toLocaleString()} calls</strong>
+                        <span className="text-ink-soft">Included Monthly Quota:</span>
+                        <strong className="text-ink font-mono">{p.includedQuota.toLocaleString()} calls</strong>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-slate-500">Rate Limit:</span>
-                        <strong className="text-slate-900 font-mono">{p.rateLimitPerMin} req / min</strong>
+                        <span className="text-ink-soft">Rate Limit:</span>
+                        <strong className="text-ink font-mono">{p.rateLimitPerMin} req / min</strong>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-slate-500">Overage Cost:</span>
-                        <strong className="text-slate-900 font-mono">₹{p.overageCost.toFixed(2)} / call</strong>
+                        <span className="text-ink-soft">Overage Cost:</span>
+                        <strong className="text-ink font-mono">₹{p.overageCost.toFixed(2)} / call</strong>
                       </div>
                     </div>
 
                     <div className="mt-4">
-                      <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Features Included:</div>
-                      <ul className="space-y-1.5 text-xs text-slate-800">
+                      <div className="text-[11px] font-bold text-ink-soft uppercase tracking-wider mb-2">Features Included:</div>
+                      <ul className="space-y-1.5 text-xs text-ink">
                         {(Array.isArray(p.features) ? p.features : []).map((feat, idx) => (
                           <li key={idx} className="flex items-center gap-2">
                             <Check className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
@@ -458,10 +459,10 @@ export default function AdminPlansPage() {
                     </div>
 
                     {/* Dynamic Allowed Modules Section */}
-                    <div className="mt-4 pt-3 border-t border-slate-100">
-                      <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center justify-between">
+                    <div className="mt-4 pt-3 border-t border-line">
+                      <div className="text-[11px] font-bold text-ink-soft uppercase tracking-wider mb-2 flex items-center justify-between">
                         <span>Active API Modules:</span>
-                        <span className="font-mono text-[10px] text-slate-400">
+                        <span className="font-mono text-[10px] text-ink-muted">
                           {p.allowedModules?.includes("*") ? "All 12" : `${p.allowedModules?.length || 0} / 12`}
                         </span>
                       </div>
@@ -476,7 +477,7 @@ export default function AdminPlansPage() {
                             return (
                               <span
                                 key={mId}
-                                className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-700 border border-slate-200"
+                                className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-surface-alt text-ink border border-line"
                               >
                                 {mod?.label || mId}
                               </span>
@@ -487,10 +488,10 @@ export default function AdminPlansPage() {
                     </div>
                   </div>
 
-                  <div className="mt-6 pt-4 border-t border-slate-100">
+                  <div className="mt-6 pt-4 border-t border-line">
                     <button
                       onClick={() => handleOpenPlanModal(p)}
-                      className="w-full py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-900 font-semibold text-xs flex items-center justify-center gap-1.5 transition"
+                      className="w-full py-2 rounded-lg bg-surface-alt hover:bg-line text-ink font-semibold text-xs flex items-center justify-center gap-1.5 transition"
                     >
                       <Edit3 className="w-3.5 h-3.5" />
                       <span>Configure Plan & Modules</span>
@@ -506,19 +507,19 @@ export default function AdminPlansPage() {
       {/* TAB 2: Database Add-on Packages Management */}
       {activeTab === "ADDONS" && (
         <div className="space-y-4">
-          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-indigo-600 flex-shrink-0 mt-0.5" />
+          <div className="p-4 rounded-md bg-surface border border-line text-xs text-ink-soft flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-accent flex-shrink-0 mt-0.5" />
             <div>
-              <span className="font-bold text-slate-800">Direct Database Control:</span>
+              <span className="font-bold text-ink">Direct Database Control:</span>
               <p className="mt-0.5">
-                These add-on packages are stored in the MySQL <code className="bg-slate-200 px-1 py-0.5 rounded text-slate-900 font-mono">AddonPackage</code> table. 
+                These add-on packages are stored in the MySQL <code className="bg-line px-1 py-0.5 rounded text-ink font-mono">AddonPackage</code> table. 
                 Any price changes, feature updates, or activations here directly reflect in client dashboards and the verification engine in real-time.
               </p>
             </div>
           </div>
 
           {loadingAddons ? (
-            <div className="flex items-center justify-center py-20 text-slate-500 gap-2 font-mono text-xs">
+            <div className="flex items-center justify-center py-20 text-ink-soft gap-2 font-mono text-xs">
               <Loader2 className="w-5 h-5 animate-spin" />
               <span>Loading add-ons from MySQL database...</span>
             </div>
@@ -527,60 +528,60 @@ export default function AdminPlansPage() {
               {addons.map((addon) => (
                 <div
                   key={addon.id}
-                  className={`p-5 rounded-xl border bg-white shadow-sm flex flex-col justify-between transition ${
-                    addon.isActive ? "border-slate-200" : "border-slate-200 bg-slate-50/50 opacity-60"
+                  className={`p-5 rounded-md border bg-white shadow-sm flex flex-col justify-between transition ${
+                    addon.isActive ? "border-line" : "border-line bg-surface/50 opacity-60"
                   }`}
                 >
                   <div>
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center border border-slate-200">
-                          {ADDON_ICONS[addon.icon] || <Zap className="w-4 h-4 text-slate-700" />}
+                        <div className="w-8 h-8 rounded-lg bg-surface-alt flex items-center justify-center border border-line">
+                          {ADDON_ICONS[addon.icon] || <Zap className="w-4 h-4 text-ink" />}
                         </div>
                         <div>
-                          <h3 className="font-bold text-sm text-slate-900">{addon.name}</h3>
-                          <span className="font-mono text-[10px] text-slate-400">ID: {addon.id}</span>
+                          <h3 className="font-bold text-sm text-ink">{addon.name}</h3>
+                          <span className="font-mono text-[10px] text-ink-muted">ID: {addon.id}</span>
                         </div>
                       </div>
                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
-                        addon.isActive ? "bg-emerald-100 text-emerald-800" : "bg-slate-200 text-slate-600"
+                        addon.isActive ? "bg-emerald-100 text-emerald-800" : "bg-line text-ink-soft"
                       }`}>
                         {addon.isActive ? "ACTIVE" : "PAUSED"}
                       </span>
                     </div>
 
                     <div className="mt-3 flex items-baseline gap-1">
-                      <span className="text-2xl font-black font-mono text-slate-900">₹{addon.priceMonthly}</span>
-                      <span className="text-xs text-slate-500 font-medium">/ month</span>
+                      <span className="text-2xl font-semibold font-mono text-ink">₹{addon.priceMonthly}</span>
+                      <span className="text-xs text-ink-soft font-medium">/ month</span>
                     </div>
 
                     {/* Quota & Limits Specification Box */}
-                    <div className="mt-3 py-2.5 px-3 rounded-lg bg-slate-50 border border-slate-100 text-[11px] text-slate-700 space-y-1 font-medium">
+                    <div className="mt-3 py-2.5 px-3 rounded-lg bg-surface border border-line text-[11px] text-ink space-y-1 font-medium">
                       <div className="flex justify-between">
-                        <span className="text-slate-500">Included Monthly Limit:</span>
-                        <strong className="text-slate-900 font-mono">
+                        <span className="text-ink-soft">Included Monthly Limit:</span>
+                        <strong className="text-ink font-mono">
                           {(addon.monthlyQuota || 1000).toLocaleString()} {addon.category === "REPORTS" ? "PDFs" : "calls"}
                         </strong>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-slate-500">Rate Limit:</span>
-                        <strong className="text-slate-900 font-mono">{addon.rateLimitPerMin || 60} req / min</strong>
+                        <span className="text-ink-soft">Rate Limit:</span>
+                        <strong className="text-ink font-mono">{addon.rateLimitPerMin || 60} req / min</strong>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-slate-500">Overage Cost:</span>
-                        <strong className="text-slate-900 font-mono">₹{(addon.overageCost !== undefined ? addon.overageCost : 0.05).toFixed(2)} / unit</strong>
+                        <span className="text-ink-soft">Overage Cost:</span>
+                        <strong className="text-ink font-mono">₹{(addon.overageCost !== undefined ? addon.overageCost : 0.05).toFixed(2)} / unit</strong>
                       </div>
                     </div>
 
-                    <p className="mt-2.5 text-xs text-slate-600 leading-relaxed line-clamp-2">
+                    <p className="mt-2.5 text-xs text-ink-soft leading-relaxed line-clamp-2">
                       {addon.description}
                     </p>
 
-                    <div className="mt-3 pt-3 border-t border-slate-100">
-                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Key Highlights:</div>
+                    <div className="mt-3 pt-3 border-t border-line">
+                      <div className="text-[10px] font-bold text-ink-muted uppercase tracking-wider mb-1.5">Key Highlights:</div>
                       <div className="space-y-1">
                         {(Array.isArray(addon.features) ? addon.features : []).slice(0, 3).map((f, i) => (
-                          <div key={i} className="flex items-center gap-1.5 text-[11px] text-slate-700">
+                          <div key={i} className="flex items-center gap-1.5 text-[11px] text-ink">
                             <Check className="w-3 h-3 text-emerald-600 flex-shrink-0" />
                             <span className="truncate">{f}</span>
                           </div>
@@ -589,12 +590,12 @@ export default function AdminPlansPage() {
                     </div>
                   </div>
 
-                  <div className="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+                  <div className="mt-5 pt-3 border-t border-line flex items-center justify-between gap-2">
                     <button
                       onClick={() => handleToggleAddonStatus(addon)}
                       className={`text-xs font-semibold px-2.5 py-1.5 rounded-lg border flex items-center gap-1.5 transition ${
                         addon.isActive 
-                          ? "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100" 
+                          ? "bg-surface border-line text-ink hover:bg-surface-alt" 
                           : "bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100"
                       }`}
                     >
@@ -605,7 +606,7 @@ export default function AdminPlansPage() {
                         </>
                       ) : (
                         <>
-                          <ToggleLeft className="w-4 h-4 text-slate-400" />
+                          <ToggleLeft className="w-4 h-4 text-ink-muted" />
                           <span>Activate</span>
                         </>
                       )}
@@ -613,7 +614,7 @@ export default function AdminPlansPage() {
 
                     <button
                       onClick={() => handleOpenAddonModal(addon)}
-                      className="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs flex items-center gap-1.5 shadow-sm transition"
+                      className="px-3 py-1.5 rounded-lg bg-console hover:bg-console-line text-white font-semibold text-xs flex items-center gap-1.5 shadow-sm transition"
                     >
                       <Edit3 className="w-3 h-3" />
                       <span>Edit Add-on</span>
@@ -629,19 +630,19 @@ export default function AdminPlansPage() {
       {/* PLAN CONFIGURATION MODAL */}
       {isPlanModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 rounded-2xl max-w-xl w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+          <div className="bg-white border border-line rounded-lg max-w-xl w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-line pb-3">
               <div>
-                <h2 className="text-lg font-bold text-slate-900">
+                <h2 className="text-lg font-bold text-ink">
                   Configure Plan: {name || tier}
                 </h2>
-                <p className="text-xs text-slate-500 font-mono">
+                <p className="text-xs text-ink-soft font-mono">
                   Modify pricing, rate limits, monthly quotas, and active modules.
                 </p>
               </div>
               <button
                 onClick={() => setIsPlanModalOpen(false)}
-                className="text-slate-400 hover:text-slate-700 p-1 rounded-lg"
+                className="text-ink-muted hover:text-ink p-1 rounded-lg"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -650,11 +651,11 @@ export default function AdminPlansPage() {
             <form onSubmit={handleSavePlan} className="space-y-4 text-xs">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-slate-700 font-bold mb-1">Tier Key</label>
+                  <label className="block text-ink font-bold mb-1">Tier Key</label>
                   <select
                     value={tier}
-                    onChange={(e) => setTier(e.target.value as any)}
-                    className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-slate-900 font-mono font-bold focus:outline-none focus:border-slate-900"
+                    onChange={(e) => setTier(e.target.value as ApiData)}
+                    className="w-full bg-surface border border-line rounded-lg p-2 text-ink font-mono font-bold focus:outline-none focus:border-console-line"
                   >
                     <option value="STARTER">STARTER</option>
                     <option value="PRO">PRO</option>
@@ -662,12 +663,12 @@ export default function AdminPlansPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-slate-700 font-bold mb-1">Display Name</label>
+                  <label className="block text-ink font-bold mb-1">Display Name</label>
                   <input
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-slate-900 font-medium focus:outline-none focus:border-slate-900"
+                    className="w-full bg-surface border border-line rounded-lg p-2 text-ink font-medium focus:outline-none focus:border-console-line"
                     required
                   />
                 </div>
@@ -675,55 +676,55 @@ export default function AdminPlansPage() {
 
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-slate-700 font-bold mb-1">Price (₹ / mo)</label>
+                  <label className="block text-ink font-bold mb-1">Price (₹ / mo)</label>
                   <input
                     type="number"
                     value={priceMonthly}
                     onChange={(e) => setPriceMonthly(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-slate-900 font-mono font-medium focus:outline-none focus:border-slate-900"
+                    className="w-full bg-surface border border-line rounded-lg p-2 text-ink font-mono font-medium focus:outline-none focus:border-console-line"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-slate-700 font-bold mb-1">Included Quota</label>
+                  <label className="block text-ink font-bold mb-1">Included Quota</label>
                   <input
                     type="number"
                     value={includedQuota}
                     onChange={(e) => setIncludedQuota(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-slate-900 font-mono font-medium focus:outline-none focus:border-slate-900"
+                    className="w-full bg-surface border border-line rounded-lg p-2 text-ink font-mono font-medium focus:outline-none focus:border-console-line"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-slate-700 font-bold mb-1">Rate Limit (RPM)</label>
+                  <label className="block text-ink font-bold mb-1">Rate Limit (RPM)</label>
                   <input
                     type="number"
                     value={rateLimitPerMin}
                     onChange={(e) => setRateLimitPerMin(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-slate-900 font-mono font-medium focus:outline-none focus:border-slate-900"
+                    className="w-full bg-surface border border-line rounded-lg p-2 text-ink font-mono font-medium focus:outline-none focus:border-console-line"
                     required
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-slate-700 font-bold mb-1">Overage Cost (₹ per call)</label>
+                <label className="block text-ink font-bold mb-1">Overage Cost (₹ per call)</label>
                 <input
                   type="number"
                   step="0.01"
                   value={overageCost}
                   onChange={(e) => setOverageCost(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-slate-900 font-mono font-medium focus:outline-none focus:border-slate-900"
+                  className="w-full bg-surface border border-line rounded-lg p-2 text-ink font-mono font-medium focus:outline-none focus:border-console-line"
                   required
                 />
               </div>
 
               {/* Module Selection Section */}
-              <div className="border border-slate-200 rounded-xl p-3 bg-slate-50/70">
-                <div className="flex items-center justify-between pb-2 border-b border-slate-200">
+              <div className="border border-line rounded-md p-3 bg-surface/70">
+                <div className="flex items-center justify-between pb-2 border-b border-line">
                   <div>
-                    <label className="text-slate-900 font-bold text-xs">Included API Modules</label>
-                    <p className="text-[11px] text-slate-500">
+                    <label className="text-ink font-bold text-xs">Included API Modules</label>
+                    <p className="text-[11px] text-ink-soft">
                       Select which engines users on this plan are authorized to call.
                     </p>
                   </div>
@@ -731,14 +732,14 @@ export default function AdminPlansPage() {
                     <button
                       type="button"
                       onClick={handleSelectAllModules}
-                      className="px-2 py-0.5 rounded bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold transition"
+                      className="px-2 py-0.5 rounded bg-line hover:bg-line text-ink font-bold transition"
                     >
                       Select All
                     </button>
                     <button
                       type="button"
                       onClick={handleClearAllModules}
-                      className="px-2 py-0.5 rounded bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold transition"
+                      className="px-2 py-0.5 rounded bg-line hover:bg-line text-ink font-bold transition"
                     >
                       Clear All
                     </button>
@@ -753,19 +754,19 @@ export default function AdminPlansPage() {
                         key={mod.id}
                         className={`flex items-start gap-2 p-2 rounded-lg border cursor-pointer transition ${
                           isChecked
-                            ? "bg-white border-slate-900 shadow-xs"
-                            : "bg-slate-100 border-slate-200 opacity-65"
+                            ? "bg-white border-console-line shadow-xs"
+                            : "bg-surface-alt border-line opacity-65"
                         }`}
                       >
                         <input
                           type="checkbox"
                           checked={isChecked}
                           onChange={() => toggleModule(mod.id)}
-                          className="mt-0.5 rounded text-slate-900"
+                          className="mt-0.5 rounded text-ink"
                         />
                         <div>
-                          <div className="font-bold text-slate-900 text-[11px]">{mod.label}</div>
-                          <div className="text-[10px] text-slate-500 leading-tight">{mod.desc}</div>
+                          <div className="font-bold text-ink text-[11px]">{mod.label}</div>
+                          <div className="text-[10px] text-ink-soft leading-tight">{mod.desc}</div>
                         </div>
                       </label>
                     );
@@ -774,7 +775,7 @@ export default function AdminPlansPage() {
               </div>
 
               <div>
-                <label className="block text-slate-700 font-bold mb-1">
+                <label className="block text-ink font-bold mb-1">
                   Features List (One feature per line, shown on pricing table)
                 </label>
                 <textarea
@@ -782,7 +783,7 @@ export default function AdminPlansPage() {
                   onChange={(e) => setFeaturesText(e.target.value)}
                   rows={3}
                   placeholder="35,000 Requests / Month&#10;Core Astronomy Calculations"
-                  className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-slate-900 font-medium focus:outline-none focus:border-slate-900"
+                  className="w-full bg-surface border border-line rounded-lg p-2.5 text-ink font-medium focus:outline-none focus:border-console-line"
                   required
                 />
               </div>
@@ -793,25 +794,25 @@ export default function AdminPlansPage() {
                   id="popularCheck"
                   checked={isPopular}
                   onChange={(e) => setIsPopular(e.target.checked)}
-                  className="w-4 h-4 rounded text-slate-900"
+                  className="w-4 h-4 rounded text-ink"
                 />
-                <label htmlFor="popularCheck" className="text-slate-700 font-bold">
+                <label htmlFor="popularCheck" className="text-ink font-bold">
                   Mark this plan as &quot;Popular / Recommended&quot;
                 </label>
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200">
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-line">
                 <button
                   type="button"
                   onClick={() => setIsPlanModalOpen(false)}
-                  className="px-4 py-2 rounded-lg text-slate-600 hover:bg-slate-100 font-semibold"
+                  className="px-4 py-2 rounded-lg text-ink-soft hover:bg-surface-alt font-semibold"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={savingPlan}
-                  className="px-5 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold shadow flex items-center gap-2 disabled:opacity-50"
+                  className="px-5 py-2 rounded-lg bg-console hover:bg-console-line text-white font-bold shadow flex items-center gap-2 disabled:opacity-50"
                 >
                   {savingPlan && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                   <span>Save Plan</span>
@@ -825,19 +826,19 @@ export default function AdminPlansPage() {
       {/* ADDON CONFIGURATION MODAL */}
       {isAddonModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+          <div className="bg-white border border-line rounded-lg max-w-lg w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-line pb-3">
               <div>
-                <h2 className="text-lg font-bold text-slate-900">
+                <h2 className="text-lg font-bold text-ink">
                   {isEditingAddon ? `Edit Add-on: ${addonName}` : "Create New Add-on Package"}
                 </h2>
-                <p className="text-xs text-slate-500 font-mono">
+                <p className="text-xs text-ink-soft font-mono">
                   Changes save directly to MySQL AddonPackage table.
                 </p>
               </div>
               <button
                 onClick={() => setIsAddonModalOpen(false)}
-                className="text-slate-400 hover:text-slate-700 p-1 rounded-lg"
+                className="text-ink-muted hover:text-ink p-1 rounded-lg"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -846,7 +847,7 @@ export default function AdminPlansPage() {
             <form onSubmit={handleSaveAddon} className="space-y-4 text-xs">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-slate-700 font-bold mb-1">
+                  <label className="block text-ink font-bold mb-1">
                     Add-on Identifier (Slug)
                   </label>
                   <input
@@ -855,16 +856,16 @@ export default function AdminPlansPage() {
                     onChange={(e) => setAddonId(e.target.value)}
                     disabled={isEditingAddon}
                     placeholder="e.g. western, pdf, numerology"
-                    className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-slate-900 font-mono font-bold focus:outline-none focus:border-slate-900 disabled:opacity-60"
+                    className="w-full bg-surface border border-line rounded-lg p-2 text-ink font-mono font-bold focus:outline-none focus:border-console-line disabled:opacity-60"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-slate-700 font-bold mb-1">Category</label>
+                  <label className="block text-ink font-bold mb-1">Category</label>
                   <select
                     value={addonCategory}
                     onChange={(e) => setAddonCategory(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-slate-900 font-medium focus:outline-none focus:border-slate-900"
+                    className="w-full bg-surface border border-line rounded-lg p-2 text-ink font-medium focus:outline-none focus:border-console-line"
                   >
                     <option value="CALCULATIONS">CALCULATIONS</option>
                     <option value="REPORTS">REPORTS</option>
@@ -874,34 +875,34 @@ export default function AdminPlansPage() {
               </div>
 
               <div>
-                <label className="block text-slate-700 font-bold mb-1">Package Name</label>
+                <label className="block text-ink font-bold mb-1">Package Name</label>
                 <input
                   type="text"
                   value={addonName}
                   onChange={(e) => setAddonName(e.target.value)}
                   placeholder="e.g. Western Tropical Astrology"
-                  className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-slate-900 font-medium focus:outline-none focus:border-slate-900"
+                  className="w-full bg-surface border border-line rounded-lg p-2 text-ink font-medium focus:outline-none focus:border-console-line"
                   required
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-slate-700 font-bold mb-1">Price (₹ / month)</label>
+                  <label className="block text-ink font-bold mb-1">Price (₹ / month)</label>
                   <input
                     type="number"
                     value={addonPrice}
                     onChange={(e) => setAddonPrice(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-slate-900 font-mono font-bold focus:outline-none focus:border-slate-900"
+                    className="w-full bg-surface border border-line rounded-lg p-2 text-ink font-mono font-bold focus:outline-none focus:border-console-line"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-slate-700 font-bold mb-1">Icon Style</label>
+                  <label className="block text-ink font-bold mb-1">Icon Style</label>
                   <select
                     value={addonIcon}
                     onChange={(e) => setAddonIcon(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-slate-900 font-medium focus:outline-none focus:border-slate-900"
+                    className="w-full bg-surface border border-line rounded-lg p-2 text-ink font-medium focus:outline-none focus:border-console-line"
                   >
                     <option value="Zap">Zap (Default)</option>
                     <option value="FileText">FileText (Reports / PDF)</option>
@@ -918,9 +919,9 @@ export default function AdminPlansPage() {
               </div>
 
               {/* Quota, Rate Limit, and Overage Cost Controls */}
-              <div className="grid grid-cols-3 gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200">
+              <div className="grid grid-cols-3 gap-3 p-3 rounded-md bg-surface border border-line">
                 <div>
-                  <label className="block text-slate-700 font-bold mb-1 text-[11px]">
+                  <label className="block text-ink font-bold mb-1 text-[11px]">
                     Included Quota
                   </label>
                   <input
@@ -928,13 +929,13 @@ export default function AdminPlansPage() {
                     value={addonMonthlyQuota}
                     onChange={(e) => setAddonMonthlyQuota(e.target.value)}
                     placeholder="e.g. 500"
-                    className="w-full bg-white border border-slate-300 rounded-lg p-2 text-slate-900 font-mono font-bold focus:outline-none focus:border-slate-900"
+                    className="w-full bg-white border border-line rounded-lg p-2 text-ink font-mono font-bold focus:outline-none focus:border-console-line"
                     required
                   />
-                  <span className="text-[10px] text-slate-400">calls or PDFs / mo</span>
+                  <span className="text-[10px] text-ink-muted">calls or PDFs / mo</span>
                 </div>
                 <div>
-                  <label className="block text-slate-700 font-bold mb-1 text-[11px]">
+                  <label className="block text-ink font-bold mb-1 text-[11px]">
                     Rate Limit (RPM)
                   </label>
                   <input
@@ -942,13 +943,13 @@ export default function AdminPlansPage() {
                     value={addonRateLimit}
                     onChange={(e) => setAddonRateLimit(e.target.value)}
                     placeholder="e.g. 60"
-                    className="w-full bg-white border border-slate-300 rounded-lg p-2 text-slate-900 font-mono font-bold focus:outline-none focus:border-slate-900"
+                    className="w-full bg-white border border-line rounded-lg p-2 text-ink font-mono font-bold focus:outline-none focus:border-console-line"
                     required
                   />
-                  <span className="text-[10px] text-slate-400">requests / min</span>
+                  <span className="text-[10px] text-ink-muted">requests / min</span>
                 </div>
                 <div>
-                  <label className="block text-slate-700 font-bold mb-1 text-[11px]">
+                  <label className="block text-ink font-bold mb-1 text-[11px]">
                     Overage (₹ / call)
                   </label>
                   <input
@@ -957,27 +958,27 @@ export default function AdminPlansPage() {
                     value={addonOverageCost}
                     onChange={(e) => setAddonOverageCost(e.target.value)}
                     placeholder="e.g. 0.05"
-                    className="w-full bg-white border border-slate-300 rounded-lg p-2 text-slate-900 font-mono font-bold focus:outline-none focus:border-slate-900"
+                    className="w-full bg-white border border-line rounded-lg p-2 text-ink font-mono font-bold focus:outline-none focus:border-console-line"
                     required
                   />
-                  <span className="text-[10px] text-slate-400">wallet deduction</span>
+                  <span className="text-[10px] text-ink-muted">wallet deduction</span>
                 </div>
               </div>
 
               <div>
-                <label className="block text-slate-700 font-bold mb-1">Description</label>
+                <label className="block text-ink font-bold mb-1">Description</label>
                 <textarea
                   value={addonDesc}
                   onChange={(e) => setAddonDesc(e.target.value)}
                   rows={2}
                   placeholder="Brief summary of what this add-on unlocks..."
-                  className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-slate-900 font-medium focus:outline-none focus:border-slate-900"
+                  className="w-full bg-surface border border-line rounded-lg p-2 text-ink font-medium focus:outline-none focus:border-console-line"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-slate-700 font-bold mb-1">
+                <label className="block text-ink font-bold mb-1">
                   Features List (One feature per line)
                 </label>
                 <textarea
@@ -985,7 +986,7 @@ export default function AdminPlansPage() {
                   onChange={(e) => setAddonFeaturesText(e.target.value)}
                   rows={3}
                   placeholder="Vector SVG Charts&#10;Print-Ready 300 DPI&#10;Cloudflare R2 Storage"
-                  className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-slate-900 font-medium focus:outline-none focus:border-slate-900"
+                  className="w-full bg-surface border border-line rounded-lg p-2.5 text-ink font-medium focus:outline-none focus:border-console-line"
                 />
               </div>
 
@@ -995,18 +996,18 @@ export default function AdminPlansPage() {
                   id="addonActiveCheck"
                   checked={addonIsActive}
                   onChange={(e) => setAddonIsActive(e.target.checked)}
-                  className="w-4 h-4 rounded text-slate-900"
+                  className="w-4 h-4 rounded text-ink"
                 />
-                <label htmlFor="addonActiveCheck" className="text-slate-700 font-bold">
+                <label htmlFor="addonActiveCheck" className="text-ink font-bold">
                   Active (Available for purchase on developer dashboard)
                 </label>
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200">
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-line">
                 <button
                   type="button"
                   onClick={() => setIsAddonModalOpen(false)}
-                  className="px-4 py-2 rounded-lg text-slate-600 hover:bg-slate-100 font-semibold"
+                  className="px-4 py-2 rounded-lg text-ink-soft hover:bg-surface-alt font-semibold"
                 >
                   Cancel
                 </button>

@@ -2,6 +2,7 @@
 
 import React from "react";
 import { Layers, Loader2 } from "lucide-react";
+import type { ApiData } from "@/lib/apiTypes";
 
 interface KundliTabProps {
   chartStyle: "NORTH_INDIAN" | "SOUTH_INDIAN";
@@ -12,13 +13,13 @@ interface KundliTabProps {
   vargaSvgMap: Record<string, string>;
   svgChartD1: string;
   vargaLoading: boolean;
-  loadVargaSvg: (varga: string, prof: any, style: "NORTH_INDIAN" | "SOUTH_INDIAN") => void;
-  profile: any;
-  housePredictions: any;
-  bhavChalit: any;
-  avasthasData: any;
-  bhavabalaData: any;
-  specialPoints: any;
+  loadVargaSvg: (varga: string, prof: ApiData, style: "NORTH_INDIAN" | "SOUTH_INDIAN") => void;
+  profile: ApiData;
+  housePredictions: ApiData;
+  bhavChalit: ApiData;
+  avasthasData: ApiData;
+  bhavabalaData: ApiData;
+  specialPoints: ApiData;
 }
 
 export const KundliTab: React.FC<KundliTabProps> = ({
@@ -41,20 +42,20 @@ export const KundliTab: React.FC<KundliTabProps> = ({
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
       {/* Varga Selector Header */}
-      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+      <div className="bg-white p-5 rounded-lg border border-line shadow-xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h3 className="font-bold text-base text-slate-900 flex items-center gap-2">
-              <Layers className="w-5 h-5 text-indigo-600" />
+            <h3 className="font-bold text-base text-ink flex items-center gap-2">
+              <Layers className="w-5 h-5 text-accent" />
               <span>Shodhadvadashamsha &amp; Shodashavarga (D1 to D60)</span>
             </h3>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="text-xs text-ink-soft mt-0.5">
               Select any harmonic divisional chart computed live by Parashari Engine with micro-precision SVG
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
+            <div className="flex items-center gap-1 bg-surface-alt p-1 rounded-md border border-line">
               <button
                 onClick={() => {
                   setChartStyle("NORTH_INDIAN");
@@ -63,8 +64,8 @@ export const KundliTab: React.FC<KundliTabProps> = ({
                 }}
                 className={`px-3 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
                   chartStyle === "NORTH_INDIAN"
-                    ? "bg-white text-indigo-700 shadow-2xs border border-indigo-200"
-                    : "text-slate-600 hover:text-slate-900"
+                    ? "bg-white text-accent-hover shadow-2xs border border-accent/30"
+                    : "text-ink-soft hover:text-ink"
                 }`}
               >
                 <span>🔷</span>
@@ -78,8 +79,8 @@ export const KundliTab: React.FC<KundliTabProps> = ({
                 }}
                 className={`px-3 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
                   chartStyle === "SOUTH_INDIAN"
-                    ? "bg-white text-indigo-700 shadow-2xs border border-indigo-200"
-                    : "text-slate-600 hover:text-slate-900"
+                    ? "bg-white text-accent-hover shadow-2xs border border-accent/30"
+                    : "text-ink-soft hover:text-ink"
                 }`}
               >
                 <span>🟩</span>
@@ -88,8 +89,8 @@ export const KundliTab: React.FC<KundliTabProps> = ({
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-slate-600">Active Chart:</span>
-              <span className="px-3 py-1 rounded-lg text-xs font-mono font-bold bg-indigo-600 text-white shadow-xs">
+              <span className="text-xs font-semibold text-ink-soft">Active Chart:</span>
+              <span className="px-3 py-1 rounded-lg text-xs font-mono font-bold bg-accent text-white shadow-xs">
                 {selectedVarga} — {vargaCharts.find((v) => v.id === selectedVarga)?.name || selectedVarga}
               </span>
             </div>
@@ -97,7 +98,7 @@ export const KundliTab: React.FC<KundliTabProps> = ({
         </div>
 
         {/* Varga Chart Badges / Tabs */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none border-t border-slate-100 pt-3">
+        <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none border-t border-line pt-3">
           {vargaCharts.map((v) => {
             const isSelected = selectedVarga === v.id;
             return (
@@ -107,16 +108,16 @@ export const KundliTab: React.FC<KundliTabProps> = ({
                   setSelectedVarga(v.id);
                   loadVargaSvg(v.id, profile, chartStyle);
                 }}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 whitespace-nowrap ${
+                className={`px-3 py-1.5 rounded-md text-xs font-bold transition flex items-center gap-1.5 whitespace-nowrap ${
                   isSelected
-                    ? "bg-slate-900 text-white shadow-xs scale-105"
-                    : "bg-slate-100 hover:bg-slate-200 text-slate-700"
+                    ? "bg-console text-white shadow-xs scale-105"
+                    : "bg-surface-alt hover:bg-line text-ink"
                 }`}
               >
                 <span>{v.id}</span>
                 <span
                   className={`text-[10px] font-normal ${
-                    isSelected ? "text-slate-300" : "text-slate-500"
+                    isSelected ? "text-slate-300" : "text-ink-soft"
                   }`}
                 >
                   {v.name.split("/")[0].trim()}
@@ -130,29 +131,29 @@ export const KundliTab: React.FC<KundliTabProps> = ({
       {/* Main Interactive Chart Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Active Selected Varga Chart */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+        <div className="bg-white p-6 rounded-lg border border-line shadow-xs space-y-4">
           <div className="flex items-center justify-between">
             <div>
               <div className="flex items-center gap-2">
-                <span className="px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 font-mono text-xs font-bold border border-indigo-200">
+                <span className="px-2 py-0.5 rounded bg-accent-soft text-accent-hover font-mono text-xs font-bold border border-accent/30">
                   {selectedVarga}
                 </span>
-                <h4 className="font-bold text-sm text-slate-900">
+                <h4 className="font-bold text-sm text-ink">
                   {vargaCharts.find((v) => v.id === selectedVarga)?.hindi} (
                   {vargaCharts.find((v) => v.id === selectedVarga)?.name})
                 </h4>
               </div>
-              <p className="text-xs text-slate-500 mt-1">
+              <p className="text-xs text-ink-soft mt-1">
                 {vargaCharts.find((v) => v.id === selectedVarga)?.desc}
               </p>
             </div>
 
             {vargaLoading && (
-              <Loader2 className="w-5 h-5 animate-spin text-indigo-600" />
+              <Loader2 className="w-5 h-5 animate-spin text-accent" />
             )}
           </div>
 
-          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 flex items-center justify-center min-h-[360px]">
+          <div className="bg-surface p-4 rounded-md border border-line flex items-center justify-center min-h-[360px]">
             {vargaSvgMap[`${selectedVarga}_${chartStyle}`] ||
             (chartStyle === "NORTH_INDIAN" ? vargaSvgMap[selectedVarga] : null) ? (
               <div
@@ -166,17 +167,17 @@ export const KundliTab: React.FC<KundliTabProps> = ({
                 }}
               />
             ) : vargaLoading ? (
-              <div className="text-center text-xs text-slate-400">
-                <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-indigo-600" />
+              <div className="text-center text-xs text-ink-muted">
+                <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-accent" />
                 Generating {selectedVarga} (
                 {chartStyle === "SOUTH_INDIAN" ? "South Indian" : "North Indian"}) Chart...
               </div>
             ) : (
               <div className="text-center space-y-2">
-                <p className="text-xs text-slate-500">Vector SVG not rendered yet.</p>
+                <p className="text-xs text-ink-soft">Vector SVG not rendered yet.</p>
                 <button
                   onClick={() => loadVargaSvg(selectedVarga, profile, chartStyle)}
-                  className="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-700 transition"
+                  className="px-3 py-1.5 rounded-lg bg-accent text-white text-xs font-semibold hover:bg-accent-hover transition"
                 >
                   Load {selectedVarga} (
                   {chartStyle === "SOUTH_INDIAN" ? "South Indian" : "North Indian"})
@@ -187,25 +188,25 @@ export const KundliTab: React.FC<KundliTabProps> = ({
         </div>
 
         {/* Lagna Chart (D1) Reference Standard */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+        <div className="bg-white p-6 rounded-lg border border-line shadow-xs space-y-4">
           <div className="flex items-center justify-between">
             <div>
               <div className="flex items-center gap-2">
-                <span className="px-2 py-0.5 rounded bg-slate-900 text-white font-mono text-xs font-bold">
+                <span className="px-2 py-0.5 rounded bg-console text-white font-mono text-xs font-bold">
                   D1 Reference
                 </span>
-                <h4 className="font-bold text-sm text-slate-900">
+                <h4 className="font-bold text-sm text-ink">
                   D1 — Lagna Kundli (मूल जन्म लग्न कुंडली)
                 </h4>
               </div>
-              <p className="text-xs text-slate-500 mt-1">
+              <p className="text-xs text-ink-soft mt-1">
                 Base foundational chart with exact ascendant degrees (
                 {chartStyle === "SOUTH_INDIAN" ? "South Indian Style" : "North Indian Style"})
               </p>
             </div>
           </div>
 
-          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 flex items-center justify-center min-h-[360px]">
+          <div className="bg-surface p-4 rounded-md border border-line flex items-center justify-center min-h-[360px]">
             {vargaSvgMap[`D1_${chartStyle}`] ||
             (chartStyle === "NORTH_INDIAN"
               ? vargaSvgMap["D1"] || svgChartD1
@@ -221,8 +222,8 @@ export const KundliTab: React.FC<KundliTabProps> = ({
               />
             ) : (
               <div className="text-center space-y-2">
-                <Loader2 className="w-5 h-5 animate-spin mx-auto text-indigo-600" />
-                <div className="text-xs text-slate-400">
+                <Loader2 className="w-5 h-5 animate-spin mx-auto text-accent" />
+                <div className="text-xs text-ink-muted">
                   Rendering D1 ({chartStyle === "SOUTH_INDIAN" ? "South Indian" : "North Indian"}) Chart...
                 </div>
               </div>
@@ -232,11 +233,11 @@ export const KundliTab: React.FC<KundliTabProps> = ({
       </div>
 
       {/* Quick Grid of Key Vargas (D9, D10, D12) */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
-        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+      <div className="bg-white p-6 rounded-lg border border-line shadow-xs space-y-4">
+        <div className="flex items-center justify-between border-b border-line pb-3">
           <div>
-            <h4 className="font-bold text-sm text-slate-900">Essential Varga Quick-Switch Deck</h4>
-            <p className="text-xs text-slate-500">Instant one-click preview for primary life pillars</p>
+            <h4 className="font-bold text-sm text-ink">Essential Varga Quick-Switch Deck</h4>
+            <p className="text-xs text-ink-soft">Instant one-click preview for primary life pillars</p>
           </div>
         </div>
 
@@ -256,33 +257,33 @@ export const KundliTab: React.FC<KundliTabProps> = ({
                 setSelectedVarga(item.id);
                 loadVargaSvg(item.id, profile, chartStyle);
               }}
-              className={`p-3 rounded-xl border text-center transition ${
+              className={`p-3 rounded-md border text-center transition ${
                 selectedVarga === item.id
-                  ? "bg-indigo-50 border-indigo-300 ring-2 ring-indigo-500/20"
-                  : "bg-slate-50 hover:bg-slate-100 border-slate-200"
+                  ? "bg-accent-soft border-accent/40 ring-2 ring-accent/20"
+                  : "bg-surface hover:bg-surface-alt border-line"
               }`}
             >
-              <div className="text-xs font-black text-indigo-600 font-mono">{item.id}</div>
-              <div className="text-xs font-bold text-slate-800 mt-0.5">{item.hi}</div>
-              <div className="text-[10px] text-slate-400 mt-0.5">{item.name}</div>
+              <div className="text-xs font-semibold text-accent font-mono">{item.id}</div>
+              <div className="text-xs font-bold text-ink mt-0.5">{item.hi}</div>
+              <div className="text-[10px] text-ink-muted mt-0.5">{item.name}</div>
             </button>
           ))}
         </div>
       </div>
 
       {/* 12 Houses (Bhavas) Life Predictions & Bhavaphala */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-6 space-y-5">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-4">
+      <div className="bg-white rounded-lg border border-line shadow-xs p-6 space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-line pb-4">
           <div>
-            <h3 className="font-bold text-base text-slate-900 flex items-center gap-2">
+            <h3 className="font-bold text-base text-ink flex items-center gap-2">
               <span>🏛️</span>
               12 Houses Bhavaphala &amp; Life Predictions (द्वादश भाव फल)
             </h3>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="text-xs text-ink-soft mt-0.5">
               Classical Vedic predictions for all 12 life areas: Career, Marriage, Wealth, Health, Family &amp; Moksha
             </p>
           </div>
-          <span className="text-xs font-mono font-bold px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 w-fit">
+          <span className="text-xs font-mono font-bold px-3 py-1 rounded-full bg-accent-soft text-accent-hover border border-accent/30 w-fit">
             Parashari Bhavaphala Engine
           </span>
         </div>
@@ -303,37 +304,37 @@ export const KundliTab: React.FC<KundliTabProps> = ({
               { house: 11, name: "Labha Bhava (11th House)", icon: "🌟", domain: "Income, Profits & Network Circles", sign: "Libra", sign_lord: "Venus", potency_score: 84, prediction: "Eleventh house secures multiple income streams, high-profile friendships, and fulfillment of ambitious life goals.", remedy: "Collaborate generously with philanthropic circles." },
               { house: 12, name: "Vyaya Bhava (12th House)", icon: "🕊️", domain: "Foreign Lands, Expenses & Moksha", sign: "Scorpio", sign_lord: "Mars", potency_score: 70, prediction: "Twelfth house favors foreign travels, overseas earnings, meditation retreats, and gradual spiritual detachment.", remedy: "Practice charity before sunset and meditate before sleeping." },
             ]
-          ).map((h: any, idx: number) => (
+          ).map((h: ApiData, idx: number) => (
             <div
               key={idx}
-              className="p-4 rounded-2xl border border-slate-200 bg-slate-50/50 hover:bg-white hover:border-indigo-200 transition space-y-2.5"
+              className="p-4 rounded-lg border border-line bg-surface/50 hover:bg-white hover:border-accent/30 transition space-y-2.5"
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className="text-xl">{h.icon}</span>
                   <div>
-                    <h4 className="font-bold text-xs text-slate-900 leading-tight">{h.name}</h4>
-                    <div className="text-[10px] text-slate-400 font-medium">{h.domain}</div>
+                    <h4 className="font-bold text-xs text-ink leading-tight">{h.name}</h4>
+                    <div className="text-[10px] text-ink-muted font-medium">{h.domain}</div>
                   </div>
                 </div>
-                <span className="text-xs font-black text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-full">
+                <span className="text-xs font-semibold text-accent-hover bg-accent-soft border border-accent/30 px-2 py-0.5 rounded-full">
                   {h.potency_score || 80}/100
                 </span>
               </div>
 
-              <div className="flex items-center gap-2 text-[10px] font-mono text-slate-600 bg-white p-2 rounded-lg border border-slate-100">
+              <div className="flex items-center gap-2 text-[10px] font-mono text-ink-soft bg-white p-2 rounded-lg border border-line">
                 <span><strong>Sign:</strong> {h.sign}</span>
                 <span>•</span>
                 <span><strong>Lord:</strong> {h.sign_lord}</span>
                 {h.occupant_planets && h.occupant_planets.length > 0 && (
                   <>
                     <span>•</span>
-                    <span className="text-indigo-600 font-bold">Planets: {h.occupant_planets.join(", ")}</span>
+                    <span className="text-accent font-bold">Planets: {h.occupant_planets.join(", ")}</span>
                   </>
                 )}
               </div>
 
-              <p className="text-[11px] text-slate-700 leading-relaxed">{h.prediction}</p>
+              <p className="text-[11px] text-ink leading-relaxed">{h.prediction}</p>
 
               {h.remedy && (
                 <div className="text-[10px] text-emerald-800 bg-emerald-50/60 p-2 rounded-lg border border-emerald-100 flex items-start gap-1.5">
@@ -348,36 +349,36 @@ export const KundliTab: React.FC<KundliTabProps> = ({
 
       {/* Advanced Parashari Analysis Extras (Bhav Chalit, Avasthas, Bhavabala, Special Points) */}
       {(bhavChalit || avasthasData || bhavabalaData || specialPoints) && (
-        <div className="space-y-6 pt-4 border-t border-slate-200">
-          <h2 className="text-sm font-black text-slate-700 uppercase tracking-wider">
+        <div className="space-y-6 pt-4 border-t border-line">
+          <h2 className="text-sm font-semibold text-ink uppercase tracking-wider">
             📐 Advanced Parashari Analysis
           </h2>
 
           {/* Bhav Chalit */}
           {bhavChalit && (
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-6 space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div className="bg-white rounded-lg border border-line shadow-xs p-6 space-y-4">
+              <div className="flex items-center justify-between border-b border-line pb-3">
                 <div>
-                  <h3 className="font-bold text-sm text-slate-900">Bhav Chalit Chart (भाव चलित)</h3>
-                  <p className="text-xs text-slate-500">
+                  <h3 className="font-bold text-sm text-ink">Bhav Chalit Chart (भाव चलित)</h3>
+                  <p className="text-xs text-ink-soft">
                     House positions using equal house method — shows house-shift of planets
                   </p>
                 </div>
-                <span className="text-xs font-mono font-bold px-2.5 py-1 rounded bg-indigo-50 text-indigo-700">
+                <span className="text-xs font-mono font-bold px-2.5 py-1 rounded bg-accent-soft text-accent-hover">
                   Module 3
                 </span>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-xs">
                   <thead>
-                    <tr className="border-b border-slate-100">
-                      <th className="text-left py-2 font-bold text-slate-500 uppercase text-[10px]">Planet</th>
-                      <th className="text-left py-2 font-bold text-slate-500 uppercase text-[10px]">Rashi House</th>
-                      <th className="text-left py-2 font-bold text-slate-500 uppercase text-[10px]">Chalit House</th>
-                      <th className="text-left py-2 font-bold text-slate-500 uppercase text-[10px]">Shifted?</th>
+                    <tr className="border-b border-line">
+                      <th className="text-left py-2 font-bold text-ink-soft uppercase text-[10px]">Planet</th>
+                      <th className="text-left py-2 font-bold text-ink-soft uppercase text-[10px]">Rashi House</th>
+                      <th className="text-left py-2 font-bold text-ink-soft uppercase text-[10px]">Chalit House</th>
+                      <th className="text-left py-2 font-bold text-ink-soft uppercase text-[10px]">Shifted?</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-50">
+                  <tbody className="divide-y divide-line">
                     {(() => {
                       const rawList = Array.isArray(bhavChalit?.shifted_planets)
                         ? bhavChalit.shifted_planets
@@ -388,23 +389,23 @@ export const KundliTab: React.FC<KundliTabProps> = ({
                         : typeof bhavChalit === "object" && bhavChalit !== null
                         ? Object.values(bhavChalit).filter((v) => typeof v === "object" && v !== null)
                         : [];
-                      return rawList.map((p: any, i: number) => {
+                      return rawList.map((p: ApiData, i: number) => {
                         const pName = p.planet || p.name || p.planet_name || `Planet ${i + 1}`;
                         const rHouse = p.birth_house || p.rashi_house || p.house_rashi || p.house || "—";
                         const cHouse = p.chalit_house || p.bhav_house || p.chalit || rHouse;
                         const shifted = rHouse !== "—" && cHouse !== "—" && rHouse !== cHouse;
                         return (
-                          <tr key={i} className="hover:bg-slate-50">
-                            <td className="py-2 font-bold text-slate-900">{pName}</td>
-                            <td className="py-2 font-mono text-slate-600">H{rHouse}</td>
-                            <td className="py-2 font-mono text-indigo-700 font-bold">H{cHouse}</td>
+                          <tr key={i} className="hover:bg-surface">
+                            <td className="py-2 font-bold text-ink">{pName}</td>
+                            <td className="py-2 font-mono text-ink-soft">H{rHouse}</td>
+                            <td className="py-2 font-mono text-accent-hover font-bold">H{cHouse}</td>
                             <td className="py-2">
                               {shifted ? (
                                 <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800">
                                   Shifted!
                                 </span>
                               ) : (
-                                <span className="text-slate-400 text-[10px]">Same House</span>
+                                <span className="text-ink-muted text-[10px]">Same House</span>
                               )}
                             </td>
                           </tr>
@@ -419,15 +420,15 @@ export const KundliTab: React.FC<KundliTabProps> = ({
 
           {/* Avasthas */}
           {avasthasData && (
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-6 space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div className="bg-white rounded-lg border border-line shadow-xs p-6 space-y-4">
+              <div className="flex items-center justify-between border-b border-line pb-3">
                 <div>
-                  <h3 className="font-bold text-sm text-slate-900">Planet Avasthas (ग्रह अवस्था)</h3>
-                  <p className="text-xs text-slate-500">
+                  <h3 className="font-bold text-sm text-ink">Planet Avasthas (ग्रह अवस्था)</h3>
+                  <p className="text-xs text-ink-soft">
                     Baladi (Age Fruit) & Jagradadi (Consciousness State) of Planets
                   </p>
                 </div>
-                <span className="text-xs font-mono font-bold px-2.5 py-1 rounded bg-indigo-50 text-indigo-700">
+                <span className="text-xs font-mono font-bold px-2.5 py-1 rounded bg-accent-soft text-accent-hover">
                   Module 3
                 </span>
               </div>
@@ -439,26 +440,26 @@ export const KundliTab: React.FC<KundliTabProps> = ({
                     : typeof avasthaMap === "object" && avasthaMap !== null
                     ? Object.entries(avasthaMap)
                         .filter(([k]) => !["ascendant_sign", "status", "message"].includes(k))
-                        .map(([k, v]: [string, any]) => ({ pid: k, ...(typeof v === "object" ? v : { state: v }) }))
+                        .map(([k, v]: [string, ApiData]) => ({ pid: k, ...(typeof v === "object" ? v : { state: v }) }))
                     : [];
 
-                  return list.map((a: any, i: number) => {
+                  return list.map((a: ApiData, i: number) => {
                     const name = a.planet_name || a.planet || a.name || a.pid;
                     const baladi = a.baladi_avastha || a.avastha || a.state || "—";
                     const jagradadi = a.jagradadi_avastha;
                     const deg = a.degree_in_sign != null ? `${a.degree_in_sign}°` : "";
                     const sign = a.sign ? ` in ${a.sign}` : "";
                     return (
-                      <div key={i} className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5">
+                      <div key={i} className="p-3.5 rounded-md bg-surface border border-line space-y-1.5">
                         <div className="flex items-center justify-between">
-                          <span className="text-xs font-black text-slate-900">{name}</span>
-                          <span className="text-[10px] font-mono text-slate-500">{deg}{sign}</span>
+                          <span className="text-xs font-semibold text-ink">{name}</span>
+                          <span className="text-[10px] font-mono text-ink-soft">{deg}{sign}</span>
                         </div>
-                        <div className="text-[11px] font-bold text-indigo-600 bg-indigo-50/70 px-2 py-0.5 rounded">
+                        <div className="text-[11px] font-bold text-accent bg-accent-soft/70 px-2 py-0.5 rounded">
                           {baladi}
                         </div>
                         {jagradadi && (
-                          <div className="text-[10px] text-slate-600 truncate">{jagradadi}</div>
+                          <div className="text-[10px] text-ink-soft truncate">{jagradadi}</div>
                         )}
                       </div>
                     );
@@ -470,13 +471,13 @@ export const KundliTab: React.FC<KundliTabProps> = ({
 
           {/* Bhavabala */}
           {bhavabalaData && (
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-6 space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div className="bg-white rounded-lg border border-line shadow-xs p-6 space-y-4">
+              <div className="flex items-center justify-between border-b border-line pb-3">
                 <div>
-                  <h3 className="font-bold text-sm text-slate-900">Bhavabala — House Strength (भावबल)</h3>
-                  <p className="text-xs text-slate-500">12 Houses Potency in Virupas, Rupas & Relative Strength</p>
+                  <h3 className="font-bold text-sm text-ink">Bhavabala — House Strength (भावबल)</h3>
+                  <p className="text-xs text-ink-soft">12 Houses Potency in Virupas, Rupas & Relative Strength</p>
                 </div>
-                <span className="text-xs font-mono font-bold px-2.5 py-1 rounded bg-indigo-50 text-indigo-700">
+                <span className="text-xs font-mono font-bold px-2.5 py-1 rounded bg-accent-soft text-accent-hover">
                   Module 3
                 </span>
               </div>
@@ -488,31 +489,31 @@ export const KundliTab: React.FC<KundliTabProps> = ({
                     : typeof bhavMap === "object" && bhavMap !== null
                     ? Object.entries(bhavMap)
                         .filter(([k]) => !["ascendant_sign", "status", "message"].includes(k))
-                        .map(([k, v]: [string, any]) => ({ key: k, ...(typeof v === "object" ? v : { score: v }) }))
+                        .map(([k, v]: [string, ApiData]) => ({ key: k, ...(typeof v === "object" ? v : { score: v }) }))
                     : [];
 
-                  return list.map((b: any, i: number) => {
+                  return list.map((b: ApiData, i: number) => {
                     const hNum = b.house_number || b.house || i + 1;
                     const rupas = b.total_bhavabala_rupas || (b.total_bhavabala_virupas ? (b.total_bhavabala_virupas / 60).toFixed(1) : b.score || b.total || 0);
                     const virupas = b.total_bhavabala_virupas || (typeof b.score === "number" ? b.score : null);
                     const lord = b.lord ? ` • Lord: ${b.lord}` : "";
                     const strength = b.relative_strength || (Number(rupas) >= 8 ? "EXCELLENT" : Number(rupas) >= 6.5 ? "GOOD" : "AVERAGE");
-                    const badgeColor = strength === "EXCELLENT" ? "bg-emerald-100 text-emerald-800" : strength === "GOOD" ? "bg-blue-100 text-blue-800" : "bg-slate-100 text-slate-700";
+                    const badgeColor = strength === "EXCELLENT" ? "bg-emerald-100 text-emerald-800" : strength === "GOOD" ? "bg-accent-soft text-accent-hover" : "bg-surface-alt text-ink";
 
                     return (
-                      <div key={i} className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
+                      <div key={i} className="p-3.5 rounded-md bg-surface border border-line space-y-1">
                         <div className="flex items-center justify-between">
-                          <span className="text-[11px] font-black text-slate-900">House {hNum}</span>
+                          <span className="text-[11px] font-semibold text-ink">House {hNum}</span>
                           <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${badgeColor}`}>{strength}</span>
                         </div>
-                        <div className="font-black text-slate-900 text-base font-mono">
-                          {Number(rupas).toFixed(2)} <span className="text-[10px] font-normal text-slate-500">Rupas</span>
+                        <div className="font-semibold text-ink text-base font-mono">
+                          {Number(rupas).toFixed(2)} <span className="text-[10px] font-normal text-ink-soft">Rupas</span>
                         </div>
-                        <div className="text-[10px] text-slate-500 truncate">
+                        <div className="text-[10px] text-ink-soft truncate">
                           {b.sign || `Sign ${hNum}`}{lord}
                         </div>
                         {virupas != null && (
-                          <div className="text-[9px] font-mono text-slate-400">
+                          <div className="text-[9px] font-mono text-ink-muted">
                             {Number(virupas).toFixed(1)} Virupas
                           </div>
                         )}
@@ -526,15 +527,15 @@ export const KundliTab: React.FC<KundliTabProps> = ({
 
           {/* Special Points */}
           {specialPoints && (
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-6 space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div className="bg-white rounded-lg border border-line shadow-xs p-6 space-y-4">
+              <div className="flex items-center justify-between border-b border-line pb-3">
                 <div>
-                  <h3 className="font-bold text-sm text-slate-900">Sensitive Points & Critical Junctions (विशेष संवेदनशील बिंदु)</h3>
-                  <p className="text-xs text-slate-500">
+                  <h3 className="font-bold text-sm text-ink">Sensitive Points & Critical Junctions (विशेष संवेदनशील बिंदु)</h3>
+                  <p className="text-xs text-ink-soft">
                     Pushkar Navamsha (शुभ फल), Pushkar Bhaga (पुनरुद्धार), Gandanta (संधि दोष)
                   </p>
                 </div>
-                <span className="text-xs font-mono font-bold px-2.5 py-1 rounded bg-indigo-50 text-indigo-700">
+                <span className="text-xs font-mono font-bold px-2.5 py-1 rounded bg-accent-soft text-accent-hover">
                   Module 3
                 </span>
               </div>
@@ -550,17 +551,17 @@ export const KundliTab: React.FC<KundliTabProps> = ({
                     ? specialPoints
                     : [];
 
-                  return spList.map((sp: any, i: number) => {
+                  return spList.map((sp: ApiData, i: number) => {
                     const pName = sp.planet || sp.name || sp.point || `Planet ${i + 1}`;
                     const isPushkarNav = sp.is_pushkar_navamsha;
                     const isPushkarBhaga = sp.is_pushkar_bhaga;
                     const isGandanta = sp.is_gandanta;
 
                     return (
-                      <div key={i} className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+                      <div key={i} className="p-3.5 rounded-md bg-surface border border-line space-y-2">
                         <div className="flex items-center justify-between">
-                          <span className="text-xs font-black text-slate-900">{pName}</span>
-                          <span className="text-[10px] font-mono text-slate-500">
+                          <span className="text-xs font-semibold text-ink">{pName}</span>
+                          <span className="text-[10px] font-mono text-ink-soft">
                             {sp.sign} ({sp.longitude ? `${(sp.longitude % 30).toFixed(1)}°` : "—"})
                           </span>
                         </div>
@@ -581,7 +582,7 @@ export const KundliTab: React.FC<KundliTabProps> = ({
                             </span>
                           )}
                           {!isPushkarNav && !isPushkarBhaga && !isGandanta && (
-                            <span className="text-[10px] text-slate-400">Normal Planetary Zone</span>
+                            <span className="text-[10px] text-ink-muted">Normal Planetary Zone</span>
                           )}
                         </div>
                       </div>

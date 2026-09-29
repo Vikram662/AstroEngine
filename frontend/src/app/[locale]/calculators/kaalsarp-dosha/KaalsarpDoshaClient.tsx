@@ -8,6 +8,7 @@ import { BirthDataFields, DEFAULT_BIRTH_DATA, BirthDataValue } from "@/component
 import { fetchParallelSettled } from "@/lib/calculatorApi";
 import { ResultSection, ResultRow, ResultBadge, SubmitButton, ErrorNote } from "@/components/calculators/ResultRows";
 import { Loader2 } from "lucide-react";
+import { ApiData, toApiError } from "@/lib/apiTypes";
 
 const STRINGS = {
   hi: {
@@ -60,8 +61,8 @@ export default function KaalsarpDoshaClient({ locale }: { locale: Locale }) {
   const [lang, setLang] = useState<"hi" | "en">(locale);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [data, setData] = useState<any>(null);
-  const [mantraData, setMantraData] = useState<any>(null);
+  const [data, setData] = useState<ApiData>(null);
+  const [mantraData, setMantraData] = useState<ApiData>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,7 +95,7 @@ export default function KaalsarpDoshaClient({ locale }: { locale: Locale }) {
       if (!kalsarpa) throw new Error(s.error);
       setData(kalsarpa);
       if (mantras) setMantraData(mantras);
-    } catch (err: any) {
+    } catch (errCaught) { const err = toApiError(errCaught);
       setError(err?.response?.data?.message || err?.message || s.error);
     } finally {
       setLoading(false);
@@ -152,14 +153,14 @@ export default function KaalsarpDoshaClient({ locale }: { locale: Locale }) {
       {error && <ErrorNote message={error} />}
 
       {!data && !loading && !error && (
-        <div className="bg-card rounded-2xl border border-line p-10 text-center text-ink-muted">
+        <div className="bg-card rounded-lg border border-line p-10 text-center text-ink-muted">
           <div className="text-4xl mb-3">🐍</div>
           <p className="text-sm">{s.emptyHint}</p>
         </div>
       )}
 
       {loading && (
-        <div className="bg-card rounded-2xl border border-line p-12 text-center text-ink-soft flex flex-col items-center justify-center">
+        <div className="bg-card rounded-lg border border-line p-12 text-center text-ink-soft flex flex-col items-center justify-center">
           <Loader2 className="w-8 h-8 text-accent animate-spin mb-3" />
           <p className="text-sm">{s.loadingHint}</p>
         </div>
@@ -169,7 +170,7 @@ export default function KaalsarpDoshaClient({ locale }: { locale: Locale }) {
         <div className="space-y-6">
               <ResultSection title={s.resultTitle}>
                 <div
-                  className={`p-6 rounded-xl border text-center mb-4 ${
+                  className={`p-6 rounded-md border text-center mb-4 ${
                     isPresent
                       ? "bg-rose-50 border-rose-200 text-rose-950"
                       : "bg-emerald-50 border-emerald-200 text-emerald-900"
@@ -190,12 +191,12 @@ export default function KaalsarpDoshaClient({ locale }: { locale: Locale }) {
 
                 {/* Rahu / Ketu Nodal Axis Metrics */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-                  <div className="p-3 bg-surface-alt/80 border border-line rounded-xl">
+                  <div className="p-3 bg-surface-alt/80 border border-line rounded-md">
                     <div className="text-[11px] font-bold text-ink-muted uppercase">राहु अक्ष स्थिति (Rahu Position)</div>
                     <div className="text-base font-extrabold text-ink mt-0.5">{s.house(data.rahu_house)}</div>
                     <div className="text-xs font-mono text-ink-soft mt-1">अंश: {data.rahu_degree ? `${data.rahu_degree}°` : "N/A"}</div>
                   </div>
-                  <div className="p-3 bg-surface-alt/80 border border-line rounded-xl">
+                  <div className="p-3 bg-surface-alt/80 border border-line rounded-md">
                     <div className="text-[11px] font-bold text-ink-muted uppercase">केतु अक्ष स्थिति (Ketu Position)</div>
                     <div className="text-base font-extrabold text-ink mt-0.5">{ketuHouse ? s.house(ketuHouse) : "N/A"}</div>
                     <div className="text-xs font-mono text-ink-soft mt-1">अंश: {data.ketu_degree ? `${data.ketu_degree}°` : "N/A"}</div>
@@ -227,7 +228,7 @@ export default function KaalsarpDoshaClient({ locale }: { locale: Locale }) {
                 <ResultSection title={lang === "hi" ? "राहु एवं केतु शांति बीज मंत्र" : "Rahu & Ketu Vedic Beej Mantras"}>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {rahuMantra && (
-                      <div className="p-3.5 bg-surface-alt/70 border border-line rounded-xl space-y-1.5">
+                      <div className="p-3.5 bg-surface-alt/70 border border-line rounded-md space-y-1.5">
                         <div className="flex justify-between items-center">
                           <span className="text-xs font-bold text-ink">{lang === "hi" ? "राहु बीज मंत्र" : "Rahu Beej Mantra"}</span>
                           <span className="text-[10px] font-mono-brand bg-accent/10 text-accent px-2 py-0.5 rounded font-bold">
@@ -239,7 +240,7 @@ export default function KaalsarpDoshaClient({ locale }: { locale: Locale }) {
                       </div>
                     )}
                     {ketuMantra && (
-                      <div className="p-3.5 bg-surface-alt/70 border border-line rounded-xl space-y-1.5">
+                      <div className="p-3.5 bg-surface-alt/70 border border-line rounded-md space-y-1.5">
                         <div className="flex justify-between items-center">
                           <span className="text-xs font-bold text-ink">{lang === "hi" ? "केतु बीज मंत्र" : "Ketu Beej Mantra"}</span>
                           <span className="text-[10px] font-mono-brand bg-accent/10 text-accent px-2 py-0.5 rounded font-bold">
@@ -258,13 +259,13 @@ export default function KaalsarpDoshaClient({ locale }: { locale: Locale }) {
               <ResultSection title={s.remediesTitle}>
                 {data.remedies && Array.isArray(data.remedies) && data.remedies.length > 0 ? (
                   <ul className="space-y-1.5 text-xs text-ink-soft list-disc list-inside">
-                    {data.remedies.map((r: any, idx: number) => (
+                    {data.remedies.map((r: ApiData, idx: number) => (
                       <li key={idx}>{typeof r === "string" ? r : r.remedy || r.name}</li>
                     ))}
                   </ul>
                 ) : (
                   <div className="space-y-2.5 text-xs text-ink-soft">
-                    <div className="p-3 bg-card border border-line rounded-xl">
+                    <div className="p-3 bg-card border border-line rounded-md">
                       <span className="font-bold text-ink block mb-0.5">
                         {lang === "hi" ? "महामृत्युंजय अनुष्ठान" : "Mahamrityunjaya Anushthana"}
                       </span>
@@ -272,7 +273,7 @@ export default function KaalsarpDoshaClient({ locale }: { locale: Locale }) {
                         ? "नित्य 108 बार महामृत्युंजय मंत्र (ॐ त्र्यम्बकं यजामहे...) का जप करें अथवा सावन मास व शिवरात्रि पर रुद्राभिषेक संपन्न कराएं।"
                         : "Chant the Mahamrityunjaya Mantra (Om Tryambakam Yajamahe...) 108 times daily or perform Rudrabhisheka on Mondays or Shivratri."}
                     </div>
-                    <div className="p-3 bg-card border border-line rounded-xl">
+                    <div className="p-3 bg-card border border-line rounded-md">
                       <span className="font-bold text-ink block mb-0.5">
                         {lang === "hi" ? "नाग पंचमी व चांदी के नाग-नागिन दान" : "Nag Panchami Offerings"}
                       </span>
@@ -280,7 +281,7 @@ export default function KaalsarpDoshaClient({ locale }: { locale: Locale }) {
                         ? "नाग पंचमी पर शिवलिंग पर चांदी अथवा तांबे के नाग-नागिन का जोड़ा अर्पित करें तथा बहते जल में प्रवाहित करें।"
                         : "Offer a pair of silver or copper Nag-Nagin on the Shivling on Nag Panchami and gently immerse in running water."}
                     </div>
-                    <div className="p-3 bg-card border border-line rounded-xl">
+                    <div className="p-3 bg-card border border-line rounded-md">
                       <span className="font-bold text-ink block mb-0.5">
                         {lang === "hi" ? "त्र्यंबकेश्वर अथवा कालहस्ती शांति पूजा" : "Trimbakeshwar or Kalahasti Shanti Puja"}
                       </span>

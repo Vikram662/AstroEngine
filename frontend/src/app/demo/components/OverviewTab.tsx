@@ -2,21 +2,22 @@
 
 import React from "react";
 import { ShieldAlert, Loader2 } from "lucide-react";
+import type { ApiData } from "@/lib/apiTypes";
 
 interface OverviewTabProps {
-  d1Chart: any;
-  planets: any[];
-  panchang: any;
-  currentDasha: any;
+  d1Chart: ApiData;
+  planets: ApiData[];
+  panchang: ApiData;
+  currentDasha: ApiData;
   chartStyle: "NORTH_INDIAN" | "SOUTH_INDIAN";
   setChartStyle: (style: "NORTH_INDIAN" | "SOUTH_INDIAN") => void;
   vargaSvgMap: Record<string, string>;
   svgChartD1: string;
   vargaLoading: boolean;
-  loadVargaSvg: (varga: string, prof: any, style: "NORTH_INDIAN" | "SOUTH_INDIAN") => void;
-  profile: any;
-  manglikData: any;
-  kaalSarpData: any;
+  loadVargaSvg: (varga: string, prof: ApiData, style: "NORTH_INDIAN" | "SOUTH_INDIAN") => void;
+  profile: ApiData;
+  manglikData: ApiData;
+  kaalSarpData: ApiData;
   lang?: string;
 }
 
@@ -56,16 +57,16 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       {/* Quick Summary Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {/* Card 1: Lagna */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
-          <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+        <div className="bg-white p-5 rounded-lg border border-line shadow-xs">
+          <div className="text-[10px] font-bold uppercase tracking-wider text-ink-muted">
             {labels.lagna}
           </div>
-          <div className="text-xl font-black text-slate-900 mt-1">
+          <div className="text-xl font-semibold text-ink mt-1">
             {typeof d1Chart?.ascendant?.sign === "object"
               ? d1Chart.ascendant.sign.name || d1Chart.ascendant.sign.id
               : d1Chart?.ascendant?.sign || "Sagittarius (धनु)"}
           </div>
-          <div className="text-xs text-slate-500 mt-0.5 font-mono">
+          <div className="text-xs text-ink-soft mt-0.5 font-mono">
             {d1Chart?.ascendant?.full_degree
               ? `${d1Chart.ascendant.full_degree.toFixed(2)}°`
               : d1Chart?.ascendant?.degree
@@ -75,8 +76,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         </div>
 
         {/* Card 2: Vedic Moon Sign (Janma Rashi) */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
-          <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+        <div className="bg-white p-5 rounded-lg border border-line shadow-xs">
+          <div className="text-[10px] font-bold uppercase tracking-wider text-ink-muted">
             {labels.moonSign}
           </div>
           {(() => {
@@ -108,10 +109,10 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               "हस्त";
             return (
               <>
-                <div className="text-xl font-black text-slate-900 mt-1">
+                <div className="text-xl font-semibold text-ink mt-1">
                   {moonSignName}
                 </div>
-                <div className="text-xs text-slate-500 mt-0.5">
+                <div className="text-xs text-ink-soft mt-0.5">
                   Nakshatra: <strong>{nakName}</strong> ({Number(moonDeg).toFixed(2)}°)
                 </div>
               </>
@@ -120,8 +121,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         </div>
 
         {/* Card 3: Vedic Sun Sign (Surya Rashi) */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
-          <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+        <div className="bg-white p-5 rounded-lg border border-line shadow-xs">
+          <div className="text-[10px] font-bold uppercase tracking-wider text-ink-muted">
             {labels.sunSign}
           </div>
           {(() => {
@@ -144,10 +145,10 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               : 0;
             return (
               <>
-                <div className="text-xl font-black text-slate-900 mt-1">
+                <div className="text-xl font-semibold text-ink mt-1">
                   {sunSignName}
                 </div>
-                <div className="text-xs text-slate-500 mt-0.5 font-mono">
+                <div className="text-xs text-ink-soft mt-0.5 font-mono">
                   Vedic Sidereal ({Number(sunDeg).toFixed(2)}°)
                 </div>
               </>
@@ -156,8 +157,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         </div>
 
         {/* Card 4: Current Dasha */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
-          <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+        <div className="bg-white p-5 rounded-lg border border-line shadow-xs">
+          <div className="text-[10px] font-bold uppercase tracking-wider text-ink-muted">
             {labels.currentDasha}
           </div>
           {(() => {
@@ -175,10 +176,10 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               "";
             return (
               <>
-                <div className="text-xl font-black text-indigo-600 mt-1">
+                <div className="text-xl font-semibold text-accent mt-1">
                   {mdName}
                 </div>
-                <div className="text-xs text-slate-500 mt-0.5">
+                <div className="text-xs text-ink-soft mt-0.5">
                   {labels.antar}: <strong>{adName}</strong> {pdName ? `> ${pdName}` : ""}
                 </div>
               </>
@@ -190,19 +191,19 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       {/* Chart SVG + Today's Panchang Overview */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* SVG Chart Preview */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-3">
+        <div className="bg-white p-6 rounded-lg border border-line shadow-xs space-y-3">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
-              <h3 className="font-bold text-sm text-slate-900">
+              <h3 className="font-bold text-sm text-ink">
                 Lagna Kundli (D1 Vector Chart)
               </h3>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-ink-soft">
                 Live vector SVG generated by Parashari Engine
               </p>
             </div>
 
             {/* North / South Indian Toggle in Overview */}
-            <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200 self-start sm:self-auto">
+            <div className="flex items-center gap-1 bg-surface-alt p-1 rounded-md border border-line self-start sm:self-auto">
               <button
                 onClick={() => {
                   setChartStyle("NORTH_INDIAN");
@@ -210,8 +211,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                 }}
                 className={`px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
                   chartStyle === "NORTH_INDIAN"
-                    ? "bg-white text-indigo-700 shadow-2xs border border-indigo-200"
-                    : "text-slate-600 hover:text-slate-900"
+                    ? "bg-white text-accent-hover shadow-2xs border border-accent/30"
+                    : "text-ink-soft hover:text-ink"
                 }`}
               >
                 <span>🔷</span>
@@ -224,8 +225,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                 }}
                 className={`px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
                   chartStyle === "SOUTH_INDIAN"
-                    ? "bg-white text-indigo-700 shadow-2xs border border-indigo-200"
-                    : "text-slate-600 hover:text-slate-900"
+                    ? "bg-white text-accent-hover shadow-2xs border border-accent/30"
+                    : "text-ink-soft hover:text-ink"
                 }`}
               >
                 <span>🟩</span>
@@ -234,7 +235,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center justify-center p-2 bg-amber-50/20 rounded-xl border border-amber-100 min-h-[360px]">
+          <div className="flex items-center justify-center p-2 bg-amber-50/20 rounded-md border border-amber-100 min-h-[360px]">
             {vargaSvgMap[`D1_${chartStyle}`] ||
             (chartStyle === "NORTH_INDIAN"
               ? vargaSvgMap["D1"] || svgChartD1
@@ -249,8 +250,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                 }}
               />
             ) : vargaLoading ? (
-              <div className="text-xs text-slate-400 font-mono py-20 flex flex-col items-center gap-2">
-                <Loader2 className="w-5 h-5 animate-spin text-indigo-600" />
+              <div className="text-xs text-ink-muted font-mono py-20 flex flex-col items-center gap-2">
+                <Loader2 className="w-5 h-5 animate-spin text-accent" />
                 <span>
                   Rendering{" "}
                   {chartStyle === "SOUTH_INDIAN" ? "South Indian" : "North Indian"}{" "}
@@ -259,10 +260,10 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               </div>
             ) : (
               <div className="text-center space-y-2 py-10">
-                <p className="text-xs text-slate-500">Vector SVG not rendered yet.</p>
+                <p className="text-xs text-ink-soft">Vector SVG not rendered yet.</p>
                 <button
                   onClick={() => loadVargaSvg("D1", profile, chartStyle)}
-                  className="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-700 transition"
+                  className="px-3 py-1.5 rounded-lg bg-accent text-white text-xs font-semibold hover:bg-accent-hover transition"
                 >
                   Load D1 ({chartStyle === "SOUTH_INDIAN" ? "South Indian" : "North Indian"})
                 </button>
@@ -272,13 +273,13 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         </div>
 
         {/* Panchang & Day Energy */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+        <div className="bg-white p-6 rounded-lg border border-line shadow-xs space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="font-bold text-sm text-slate-900">
-                Today's Panchang &amp; Muhurat
+              <h3 className="font-bold text-sm text-ink">
+                Today&apos;s Panchang &amp; Muhurat
               </h3>
-              <p className="text-xs text-slate-500">The 5 sacred limbs of Vedic Time</p>
+              <p className="text-xs text-ink-soft">The 5 sacred limbs of Vedic Time</p>
             </div>
             <span className="text-[11px] font-mono font-semibold px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
               Module 2 Live
@@ -286,49 +287,49 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           </div>
 
           <div className="grid grid-cols-2 gap-3 text-xs">
-            <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
-              <span className="text-slate-400 text-[10px] uppercase font-bold block">
+            <div className="p-3 rounded-md bg-surface border border-line">
+              <span className="text-ink-muted text-[10px] uppercase font-bold block">
                 Tithi
               </span>
-              <strong className="text-slate-900 font-semibold">
+              <strong className="text-ink font-semibold">
                 {panchang?.tithi?.name || "Shukla Pratipada"}
               </strong>
             </div>
-            <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
-              <span className="text-slate-400 text-[10px] uppercase font-bold block">
+            <div className="p-3 rounded-md bg-surface border border-line">
+              <span className="text-ink-muted text-[10px] uppercase font-bold block">
                 Nakshatra
               </span>
-              <strong className="text-slate-900 font-semibold">
+              <strong className="text-ink font-semibold">
                 {panchang?.nakshatra?.name || "Rohini"}
               </strong>
             </div>
-            <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
-              <span className="text-slate-400 text-[10px] uppercase font-bold block">
+            <div className="p-3 rounded-md bg-surface border border-line">
+              <span className="text-ink-muted text-[10px] uppercase font-bold block">
                 Yoga
               </span>
-              <strong className="text-slate-900 font-semibold">
+              <strong className="text-ink font-semibold">
                 {panchang?.yoga?.name || "Siddhi Yoga"}
               </strong>
             </div>
-            <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
-              <span className="text-slate-400 text-[10px] uppercase font-bold block">
+            <div className="p-3 rounded-md bg-surface border border-line">
+              <span className="text-ink-muted text-[10px] uppercase font-bold block">
                 Karana
               </span>
-              <strong className="text-slate-900 font-semibold">
+              <strong className="text-ink font-semibold">
                 {panchang?.karana?.name || "Bava"}
               </strong>
             </div>
-            <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
-              <span className="text-slate-400 text-[10px] uppercase font-bold block">
+            <div className="p-3 rounded-md bg-surface border border-line">
+              <span className="text-ink-muted text-[10px] uppercase font-bold block">
                 Vaar (Day)
               </span>
-              <strong className="text-slate-900 font-semibold">
+              <strong className="text-ink font-semibold">
                 {typeof panchang?.vaar === "object"
                   ? panchang.vaar.name || panchang.vaar.id
                   : panchang?.vaar || "Thursday (गुरुवार)"}
               </strong>
             </div>
-            <div className="p-3 rounded-xl bg-rose-50 border border-rose-100 text-rose-900">
+            <div className="p-3 rounded-md bg-rose-50 border border-rose-100 text-rose-900">
               <span className="text-rose-500 text-[10px] uppercase font-bold block">
                 Rahu Kaal
               </span>
@@ -339,8 +340,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           </div>
 
           {/* Dosha Badges */}
-          <div className="pt-2 border-t border-slate-100">
-            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">
+          <div className="pt-2 border-t border-line">
+            <div className="text-[10px] font-bold uppercase tracking-wider text-ink-muted mb-2">
               Dosha Snapshot:
             </div>
             <div className="flex flex-wrap gap-2">

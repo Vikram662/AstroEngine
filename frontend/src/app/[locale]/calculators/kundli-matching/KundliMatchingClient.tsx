@@ -8,6 +8,7 @@ import { fetchParallelSettled } from "@/lib/calculatorApi";
 import { BirthDataFields, DEFAULT_BIRTH_DATA, BirthDataValue } from "@/components/calculators/BirthDataFields";
 import { ResultSection, ResultRow, ResultBadge, SubmitButton, ErrorNote } from "@/components/calculators/ResultRows";
 import { Loader2 } from "lucide-react";
+import { ApiData, toApiError } from "@/lib/apiTypes";
 
 const KOOT_LABELS: Record<Locale, Record<string, string>> = {
   hi: {
@@ -59,9 +60,9 @@ export default function KundliMatchingClient({ locale }: { locale: Locale }) {
   const [lang, setLang] = useState<"hi" | "en">(locale);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [data, setData] = useState<any>(null);
-  const [groomManglik, setGroomManglik] = useState<any>(null);
-  const [brideManglik, setBrideManglik] = useState<any>(null);
+  const [data, setData] = useState<ApiData>(null);
+  const [groomManglik, setGroomManglik] = useState<ApiData>(null);
+  const [brideManglik, setBrideManglik] = useState<ApiData>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -106,7 +107,7 @@ export default function KundliMatchingClient({ locale }: { locale: Locale }) {
       setData(resMatch);
       if (resGroomM) setGroomManglik(resGroomM);
       if (resBrideM) setBrideManglik(resBrideM);
-    } catch (err: any) {
+    } catch (errCaught) { const err = toApiError(errCaught);
       setError(err?.response?.data?.message || err?.message || ERROR_TEXT[locale]);
     } finally {
       setLoading(false);
@@ -118,7 +119,7 @@ export default function KundliMatchingClient({ locale }: { locale: Locale }) {
   const kootas = data?.kootas || {};
   const gunas = Array.isArray(data?.gunas)
     ? data.gunas
-    : Object.entries(kootas).map(([key, val]: [string, any]) => ({
+    : Object.entries(kootas).map(([key, val]: [string, ApiData]) => ({
         koot: KOOT_LABELS[locale][key] || key,
         obtained: val.points,
         max: val.max,
@@ -131,7 +132,7 @@ export default function KundliMatchingClient({ locale }: { locale: Locale }) {
 
   const formContent = (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="p-4 rounded-xl bg-surface border border-line">
+      <div className="p-4 rounded-md bg-surface border border-line">
         <BirthDataFields
           value={boyForm}
           onChange={setBoyForm}
@@ -140,7 +141,7 @@ export default function KundliMatchingClient({ locale }: { locale: Locale }) {
         />
       </div>
 
-      <div className="p-4 rounded-xl bg-surface border border-line">
+      <div className="p-4 rounded-md bg-surface border border-line">
         <BirthDataFields
           value={girlForm}
           onChange={setGirlForm}
@@ -166,7 +167,7 @@ export default function KundliMatchingClient({ locale }: { locale: Locale }) {
       {error && <ErrorNote message={error} />}
 
       {!data && !loading && !error && (
-        <div className="bg-card rounded-2xl border border-line p-10 text-center text-ink-muted">
+        <div className="bg-card rounded-lg border border-line p-10 text-center text-ink-muted">
           <div className="text-4xl mb-3">💍</div>
           <p className="text-sm">
             {lang === "en"
@@ -177,7 +178,7 @@ export default function KundliMatchingClient({ locale }: { locale: Locale }) {
       )}
 
           {loading && (
-            <div className="bg-card rounded-2xl border border-line p-12 text-center text-ink-soft flex flex-col items-center justify-center">
+            <div className="bg-card rounded-lg border border-line p-12 text-center text-ink-soft flex flex-col items-center justify-center">
               <Loader2 className="w-8 h-8 text-accent animate-spin mb-3" />
               <p className="text-sm">
                 {lang === "en"
@@ -191,7 +192,7 @@ export default function KundliMatchingClient({ locale }: { locale: Locale }) {
             <div className="space-y-6">
               <ResultSection title={lang === "en" ? "Compatibility Summary" : "मिलान परिणाम"}>
                 <div
-                  className={`p-6 rounded-xl border text-center mb-4 ${
+                  className={`p-6 rounded-md border text-center mb-4 ${
                     totalScore >= 18
                       ? "bg-emerald-50 border-emerald-200 text-emerald-950"
                       : "bg-rose-50 border-rose-200 text-rose-950"
@@ -242,7 +243,7 @@ export default function KundliMatchingClient({ locale }: { locale: Locale }) {
               {(groomManglik || brideManglik) && (
                 <ResultSection title={lang === "en" ? "Manglik Dosha Analysis" : "मांगलिक दोष तुलना"}>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="p-3.5 rounded-xl border border-line bg-surface-alt/40">
+                    <div className="p-3.5 rounded-md border border-line bg-surface-alt/40">
                       <span className="text-xs font-bold text-ink block">{lang === "en" ? "Groom (वर)" : "वर"}</span>
                       <div className="mt-1 flex items-center justify-between">
                         <span className="text-xs text-ink-soft">{lang === "en" ? "Manglik Status" : "मांगलिक स्थिति"}</span>
@@ -259,7 +260,7 @@ export default function KundliMatchingClient({ locale }: { locale: Locale }) {
                       )}
                     </div>
 
-                    <div className="p-3.5 rounded-xl border border-line bg-surface-alt/40">
+                    <div className="p-3.5 rounded-md border border-line bg-surface-alt/40">
                       <span className="text-xs font-bold text-ink block">{lang === "en" ? "Bride (कन्या)" : "कन्या"}</span>
                       <div className="mt-1 flex items-center justify-between">
                         <span className="text-xs text-ink-soft">{lang === "en" ? "Manglik Status" : "मांगलिक स्थिति"}</span>
@@ -282,7 +283,7 @@ export default function KundliMatchingClient({ locale }: { locale: Locale }) {
               {Array.isArray(gunas) && gunas.length > 0 && (
                 <ResultSection title={lang === "en" ? "8 Koot Breakdown" : "8 कूटों का विस्तृत विभाजन"}>
                   <div className="divide-y divide-line/60">
-                    {gunas.map((g: any, idx: number) => (
+                    {gunas.map((g: ApiData, idx: number) => (
                       <div key={idx} className="py-2.5 flex items-center justify-between text-xs">
                         <div>
                           <div className="font-bold text-ink">{g.koot || g.name}</div>

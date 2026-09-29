@@ -1,28 +1,28 @@
 @import "tailwindcss";
 
 /*
- * Public-site design tokens — warm off-white neutrals with a single
- * red-orange accent, paired with a single Inter type system (JetBrains
- * Mono reserved for code/data). Every consuming component reads these
- * tokens (bg-surface, text-ink, border-line, bg-accent, ...) rather than
- * hardcoded colors, so this file is the single place the public-site look
- * is defined. Tailwind's own defaults (zinc, slate, indigo, font-sans) are
- * untouched, so the dashboard/admin panels are unaffected.
+ * Design tokens: Claude's palette, ivory surfaces, near-black ink and a single clay-orange accent. Components read these tokens (bg-surface, text-ink, border-line,
+ * bg-accent, bg-console, ...) instead of hardcoded colours, so this file is the one place
+ * the look is defined. Status colours (emerald, amber, rose) stay as Tailwind defaults
+ * because they carry meaning.
  */
 :root {
-  --accent: #c23400;
-  --accent-hover: #9c2a00;
-  --accent-soft: #fdeee7;
+  --accent: #c96442;
+  --accent-hover: #b0553a;
+  --accent-soft: #f6e8e1;
   --accent-foreground: #ffffff;
 
-  --ink: #2c2421;
-  --ink-soft: #6b5e57;
-  --ink-muted: #8a7d76;
+  --ink: #141413;
+  --ink-soft: #5e5d59;
+  --ink-muted: #87867f;
 
-  --surface: #fcfaf8;
-  --surface-alt: #f5f1ed;
-  --card: #f7f5f2;
-  --line: #e5e0dc;
+  --surface: #faf9f5;
+  --surface-alt: #f0eee6;
+  --card: #ffffff;
+  --line: #e8e6dc;
+
+  --console: #1f1e1d;
+  --console-line: #3a3937;
 }
 
 @theme inline {
@@ -40,16 +40,20 @@
   --color-card: var(--card);
   --color-line: var(--line);
 
-  /* Inter / JetBrains Mono loaded via next/font/google in app/layout.tsx */
-  --font-brand: var(--font-inter), ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --font-display: var(--font-inter), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --color-console: var(--console);
+  --color-console-line: var(--console-line);
+
+  /* Bricolage Grotesque / DM Sans / JetBrains Mono are loaded with next/font in app/layout.tsx */
+  --font-display: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
+  --font-brand: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, "SFMono-Regular", Menlo, monospace;
   --font-mono-brand: var(--font-jetbrains-mono), ui-monospace, "SFMono-Regular", Menlo, monospace;
 }
 
 body {
-  background-color: #fafafa;
-  color: #09090b;
-  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  background-color: var(--surface);
+  color: var(--ink);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -58,30 +62,23 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-/* Subtle dot grid for clean developer feel (existing dev-console pages) */
-.clean-grid {
-  background-image: radial-gradient(#e4e4e7 1px, transparent 1px);
-  background-size: 20px 20px;
-}
-
-/* Warm dot grid variant for the redesigned public pages */
+.clean-grid,
 .warm-grid {
   background-image: radial-gradient(var(--line) 1px, transparent 1px);
   background-size: 20px 20px;
 }
 
-/* Clean light scrollbars */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #f4f4f5;
+  background: var(--surface-alt);
 }
 ::-webkit-scrollbar-thumb {
-  background: #d4d4d8;
+  background: #d3d0c4;
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #a1a1aa;
+  background: #b0aea5;
 }

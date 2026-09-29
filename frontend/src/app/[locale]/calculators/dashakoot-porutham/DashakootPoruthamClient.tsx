@@ -7,6 +7,7 @@ import type { Locale } from "@/lib/locale";
 import { BirthDataFields, DEFAULT_BIRTH_DATA, BirthDataValue } from "@/components/calculators/BirthDataFields";
 import { ResultSection, ResultRow, ResultBadge, SubmitButton, ErrorNote } from "@/components/calculators/ResultRows";
 import { Loader2 } from "lucide-react";
+import { ApiData, toApiError } from "@/lib/apiTypes";
 
 const STRINGS = {
   hi: {
@@ -71,7 +72,7 @@ export default function DashakootPoruthamClient({ locale }: { locale: Locale }) 
   const [lang, setLang] = useState<"hi" | "en">(locale);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<ApiData>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -104,7 +105,7 @@ export default function DashakootPoruthamClient({ locale }: { locale: Locale }) 
       } else {
         setData(res.data);
       }
-    } catch (err: any) {
+    } catch (errCaught) { const err = toApiError(errCaught);
       setError(err?.response?.data?.message || err?.message || s.error);
     } finally {
       setLoading(false);
@@ -126,7 +127,7 @@ export default function DashakootPoruthamClient({ locale }: { locale: Locale }) 
       locale={locale}
     >
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        <div className="lg:col-span-6 bg-card p-6 rounded-2xl border border-line h-fit">
+        <div className="lg:col-span-6 bg-card p-6 rounded-lg border border-line h-fit">
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="flex items-center justify-between pb-3 border-b border-line">
               <span className="text-xs font-bold text-ink">भाषा / Language</span>
@@ -152,7 +153,7 @@ export default function DashakootPoruthamClient({ locale }: { locale: Locale }) 
               </div>
             </div>
 
-            <div className="p-4 rounded-xl bg-surface border border-line">
+            <div className="p-4 rounded-md bg-surface border border-line">
               <BirthDataFields
                 value={boyForm}
                 onChange={setBoyForm}
@@ -161,7 +162,7 @@ export default function DashakootPoruthamClient({ locale }: { locale: Locale }) 
               />
             </div>
 
-            <div className="p-4 rounded-xl bg-surface border border-line">
+            <div className="p-4 rounded-md bg-surface border border-line">
               <BirthDataFields
                 value={girlForm}
                 onChange={setGirlForm}
@@ -186,14 +187,14 @@ export default function DashakootPoruthamClient({ locale }: { locale: Locale }) 
           {error && <ErrorNote message={error} />}
 
           {!data && !loading && !error && (
-            <div className="bg-card rounded-2xl border border-line p-10 text-center text-ink-muted">
+            <div className="bg-card rounded-lg border border-line p-10 text-center text-ink-muted">
               <div className="text-4xl mb-3">🪷</div>
               <p className="text-sm">{s.emptyHint}</p>
             </div>
           )}
 
           {loading && (
-            <div className="bg-card rounded-2xl border border-line p-12 text-center text-ink-soft flex flex-col items-center justify-center">
+            <div className="bg-card rounded-lg border border-line p-12 text-center text-ink-soft flex flex-col items-center justify-center">
               <Loader2 className="w-8 h-8 text-accent animate-spin mb-3" />
               <p className="text-sm">{s.loadingHint}</p>
             </div>
@@ -203,7 +204,7 @@ export default function DashakootPoruthamClient({ locale }: { locale: Locale }) 
             <div className="space-y-6">
               <ResultSection title={s.summaryTitle}>
                 <div
-                  className={`p-6 rounded-xl border text-center mb-4 ${
+                  className={`p-6 rounded-md border text-center mb-4 ${
                     score >= 6
                       ? "bg-emerald-50 border-emerald-200 text-emerald-950"
                       : "bg-amber-50 border-amber-200 text-amber-950"
@@ -238,7 +239,7 @@ export default function DashakootPoruthamClient({ locale }: { locale: Locale }) 
               {Array.isArray(poruthams) && poruthams.length > 0 && (
                 <ResultSection title={s.breakdownTitle}>
                   <div className="divide-y divide-line/60">
-                    {poruthams.map((p: any, idx: number) => {
+                    {poruthams.map((p: ApiData, idx: number) => {
                       const isGood = p.is_compatible ?? (p.status === "good" || p.favorable || p.is_match);
                       return (
                         <div key={idx} className="py-2.5 flex items-center justify-between text-xs">

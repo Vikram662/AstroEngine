@@ -8,6 +8,7 @@ import { fetchParallelSettled } from "@/lib/calculatorApi";
 import { BirthDataFields, DEFAULT_BIRTH_DATA, BirthDataValue } from "@/components/calculators/BirthDataFields";
 import { ResultSection, ResultRow, ResultBadge, SubmitButton, ErrorNote } from "@/components/calculators/ResultRows";
 import { Loader2 } from "lucide-react";
+import { ApiData, toApiError } from "@/lib/apiTypes";
 
 const STRINGS = {
   hi: {
@@ -56,7 +57,7 @@ export default function WesternAstrologyClient({ locale }: { locale: Locale }) {
   const [lang, setLang] = useState<"hi" | "en">(locale);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<ApiData>(null);
   const [wheelSvg, setWheelSvg] = useState<string>("");
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -98,7 +99,7 @@ export default function WesternAstrologyClient({ locale }: { locale: Locale }) {
       if (resSvg && typeof resSvg === "string" && resSvg.includes("<svg")) {
         setWheelSvg(resSvg);
       }
-    } catch (err: any) {
+    } catch (errCaught) { const err = toApiError(errCaught);
       setError(err?.response?.data?.message || err?.message || s.error);
     } finally {
       setLoading(false);
@@ -154,14 +155,14 @@ export default function WesternAstrologyClient({ locale }: { locale: Locale }) {
       {error && <ErrorNote message={error} />}
 
       {!data && !loading && !error && (
-        <div className="bg-card rounded-2xl border border-line p-10 text-center text-ink-muted">
+        <div className="bg-card rounded-lg border border-line p-10 text-center text-ink-muted">
           <div className="text-4xl mb-3">♈</div>
           <p className="text-sm">{s.emptyHint}</p>
         </div>
       )}
 
       {loading && (
-        <div className="bg-card rounded-2xl border border-line p-12 text-center text-ink-soft flex flex-col items-center justify-center">
+        <div className="bg-card rounded-lg border border-line p-12 text-center text-ink-soft flex flex-col items-center justify-center">
           <Loader2 className="w-8 h-8 text-accent animate-spin mb-3" />
           <p className="text-sm">{s.loadingHint}</p>
         </div>
@@ -170,7 +171,7 @@ export default function WesternAstrologyClient({ locale }: { locale: Locale }) {
           {data && (
             <div className="space-y-6">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="p-4 bg-card border border-line rounded-xl text-center">
+                <div className="p-4 bg-card border border-line rounded-md text-center">
                   <div className="text-[11px] uppercase font-bold text-ink-muted mb-1">{s.sunLabel}</div>
                   <div className="font-display text-xl font-medium text-ink">
                     {typeof sun === "object" ? sun?.sign || sun?.name : sun || s.sunFallback}
@@ -180,7 +181,7 @@ export default function WesternAstrologyClient({ locale }: { locale: Locale }) {
                   )}
                 </div>
 
-                <div className="p-4 bg-card border border-line rounded-xl text-center">
+                <div className="p-4 bg-card border border-line rounded-md text-center">
                   <div className="text-[11px] uppercase font-bold text-ink-muted mb-1">{s.moonLabel}</div>
                   <div className="font-display text-xl font-medium text-ink">
                     {typeof moon === "object" ? moon?.sign || moon?.name : moon || s.moonFallback}
@@ -190,7 +191,7 @@ export default function WesternAstrologyClient({ locale }: { locale: Locale }) {
                   )}
                 </div>
 
-                <div className="p-4 bg-card border border-line rounded-xl text-center">
+                <div className="p-4 bg-card border border-line rounded-md text-center">
                   <div className="text-[11px] uppercase font-bold text-ink-muted mb-1">{s.risingLabel}</div>
                   <div className="font-display text-xl font-medium text-ink">
                     {typeof rising === "object" ? rising?.sign || rising?.name : rising || s.risingFallback}
@@ -204,7 +205,7 @@ export default function WesternAstrologyClient({ locale }: { locale: Locale }) {
               {wheelSvg && (
                 <ResultSection title={s.wheelTitle}>
                   <div
-                    className="w-full max-w-md mx-auto aspect-square flex items-center justify-center bg-surface-alt/50 rounded-xl p-2 border border-line/60"
+                    className="w-full max-w-md mx-auto aspect-square flex items-center justify-center bg-surface-alt/50 rounded-md p-2 border border-line/60"
                     dangerouslySetInnerHTML={{ __html: wheelSvg }}
                   />
                 </ResultSection>
@@ -226,7 +227,7 @@ export default function WesternAstrologyClient({ locale }: { locale: Locale }) {
                       <div className="text-sm font-bold text-ink mt-0.5">{data.element_distribution.air || 0}%</div>
                     </div>
                     <div className="p-2.5 rounded-lg bg-surface-alt border border-line">
-                      <div className="font-semibold text-blue-600">{s.water}</div>
+                      <div className="font-semibold text-accent">{s.water}</div>
                       <div className="text-sm font-bold text-ink mt-0.5">{data.element_distribution.water || 0}%</div>
                     </div>
                   </div>

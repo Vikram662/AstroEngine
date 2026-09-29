@@ -18,6 +18,7 @@ import {
   Code2,
   Loader2
 } from "lucide-react";
+import type { ApiData } from "@/lib/apiTypes";
 
 interface PlanItem {
   tier: string;
@@ -32,7 +33,7 @@ interface PlanItem {
 
 export default function HomeClient() {
   const [plans, setPlans] = useState<PlanItem[]>([]);
-  const [addons, setAddons] = useState<any[]>([]);
+  const [addons, setAddons] = useState<ApiData[]>([]);
   const [loadingPlans, setLoadingPlans] = useState(true);
   const [companyInfo, setCompanyInfo] = useState<Record<string, string>>({});
 
@@ -155,9 +156,9 @@ export default function HomeClient() {
             {plans.map((p) => (
               <div
                 key={p.tier}
-                className={`rounded-2xl border flex flex-col justify-between relative overflow-hidden ${
+                className={`rounded-lg border flex flex-col justify-between relative overflow-hidden ${
                   p.isPopular
-                    ? "bg-card border-accent shadow-md"
+                    ? "bg-card border-accent "
                     : "bg-card border-line shadow-xs"
                 }`}
               >
@@ -222,7 +223,7 @@ export default function HomeClient() {
                 {addons.map((addon) => (
                   <div
                     key={addon.id}
-                    className="p-5 rounded-2xl border border-line bg-card shadow-xs flex flex-col justify-between hover:border-accent/50 transition"
+                    className="p-5 rounded-lg border border-line bg-card shadow-xs flex flex-col justify-between hover:border-accent/50 transition"
                   >
                     <div>
                       <div className="flex items-start justify-between gap-2">
@@ -233,7 +234,7 @@ export default function HomeClient() {
                           </span>
                         </div>
                         <div className="text-right">
-                          <span className="text-lg font-black font-mono text-ink">₹{addon.priceMonthly}</span>
+                          <span className="text-lg font-semibold font-mono text-ink">₹{addon.priceMonthly}</span>
                           <span className="text-[10px] text-ink-muted block">/ mo</span>
                         </div>
                       </div>

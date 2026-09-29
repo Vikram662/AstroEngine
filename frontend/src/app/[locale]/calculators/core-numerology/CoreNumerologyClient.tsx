@@ -7,6 +7,7 @@ import type { Locale } from "@/lib/locale";
 import { fetchParallelSettled } from "@/lib/calculatorApi";
 import { ResultSection, ResultRow, ResultBadge, SubmitButton, ErrorNote } from "@/components/calculators/ResultRows";
 import { Calendar, User, Loader2 } from "lucide-react";
+import { ApiData, toApiError } from "@/lib/apiTypes";
 
 const STRINGS = {
   hi: {
@@ -56,11 +57,11 @@ export default function CoreNumerologyClient({ locale }: { locale: Locale }) {
   const [lang, setLang] = useState<"hi" | "en">(locale);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [data, setData] = useState<any>(null);
-  const [favorableData, setFavorableData] = useState<any>(null);
-  const [loshuData, setLoshuData] = useState<any>(null);
-  const [pinnaclesData, setPinnaclesData] = useState<any>(null);
-  const [forecastData, setForecastData] = useState<any>(null);
+  const [data, setData] = useState<ApiData>(null);
+  const [favorableData, setFavorableData] = useState<ApiData>(null);
+  const [loshuData, setLoshuData] = useState<ApiData>(null);
+  const [pinnaclesData, setPinnaclesData] = useState<ApiData>(null);
+  const [forecastData, setForecastData] = useState<ApiData>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -114,7 +115,7 @@ export default function CoreNumerologyClient({ locale }: { locale: Locale }) {
       if (resLoshu) setLoshuData(resLoshu);
       if (resPinnacles) setPinnaclesData(resPinnacles);
       if (resForecast) setForecastData(resForecast);
-    } catch (err: any) {
+    } catch (errCaught) { const err = toApiError(errCaught);
       setError(err?.response?.data?.message || err?.message || s.error);
     } finally {
       setLoading(false);
@@ -171,7 +172,7 @@ export default function CoreNumerologyClient({ locale }: { locale: Locale }) {
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder={lang === "en" ? "e.g. Aditya Sharma" : "उदा. आदित्य शर्मा"}
-            className="w-full px-3.5 py-2.5 rounded-xl border border-line bg-surface text-ink text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition"
+            className="w-full px-3.5 py-2.5 rounded-md border border-line bg-surface text-ink text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition"
           />
         </div>
 
@@ -186,7 +187,7 @@ export default function CoreNumerologyClient({ locale }: { locale: Locale }) {
             required
             value={dob}
             onChange={(e) => setDob(e.target.value)}
-            className="w-full px-3.5 py-2.5 rounded-xl border border-line bg-surface text-ink text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition"
+            className="w-full px-3.5 py-2.5 rounded-md border border-line bg-surface text-ink text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition"
           />
         </div>
 
@@ -208,7 +209,7 @@ export default function CoreNumerologyClient({ locale }: { locale: Locale }) {
       {error && <ErrorNote message={error} />}
 
       {!data && !loading && !error && (
-        <div className="bg-card rounded-2xl border border-line p-12 text-center text-ink-muted">
+        <div className="bg-card rounded-lg border border-line p-12 text-center text-ink-muted">
           <div className="text-5xl mb-4">🔢</div>
           <h3 className="text-base font-bold text-ink mb-1">
             {lang === "en" ? "Complete Numerology Reading" : "संपूर्ण अंकशास्त्र विश्लेषण"}
@@ -218,7 +219,7 @@ export default function CoreNumerologyClient({ locale }: { locale: Locale }) {
       )}
 
       {loading && (
-        <div className="bg-card rounded-2xl border border-line p-14 text-center text-ink-soft flex flex-col items-center justify-center">
+        <div className="bg-card rounded-lg border border-line p-14 text-center text-ink-soft flex flex-col items-center justify-center">
           <Loader2 className="w-9 h-9 text-accent animate-spin mb-3" />
           <p className="text-sm font-semibold text-ink">{s.loadingHint}</p>
         </div>
@@ -228,7 +229,7 @@ export default function CoreNumerologyClient({ locale }: { locale: Locale }) {
             <div className="space-y-6">
               {/* 1. Core Numbers Cards with Ruling Planets & Traits */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="p-4 bg-card border border-line rounded-xl text-center">
+                <div className="p-4 bg-card border border-line rounded-md text-center">
                   <div className="text-[11px] uppercase font-bold text-ink-muted mb-1">{s.mulankLabel}</div>
                   <div className="font-display text-4xl font-extrabold text-accent">
                     {mulank?.number ?? 1}
@@ -241,7 +242,7 @@ export default function CoreNumerologyClient({ locale }: { locale: Locale }) {
                   )}
                 </div>
 
-                <div className="p-4 bg-card border border-line rounded-xl text-center">
+                <div className="p-4 bg-card border border-line rounded-md text-center">
                   <div className="text-[11px] uppercase font-bold text-ink-muted mb-1">{s.bhagyankLabel}</div>
                   <div className="font-display text-4xl font-extrabold text-accent">
                     {bhagyank?.number ?? 1}
@@ -254,7 +255,7 @@ export default function CoreNumerologyClient({ locale }: { locale: Locale }) {
                   )}
                 </div>
 
-                <div className="p-4 bg-card border border-line rounded-xl text-center">
+                <div className="p-4 bg-card border border-line rounded-md text-center">
                   <div className="text-[11px] uppercase font-bold text-ink-muted mb-1">{s.namankLabel}</div>
                   <div className="font-display text-4xl font-extrabold text-accent">
                     {namank?.number ?? 1}
@@ -271,7 +272,7 @@ export default function CoreNumerologyClient({ locale }: { locale: Locale }) {
               {/* 2. Personal Year Cycle & Forecast */}
               {forecastData && (
                 <ResultSection title={lang === "en" ? `Annual Forecast (${forecastData.target_year})` : `वार्षिक फलादेश (${forecastData.target_year})`}>
-                  <div className="p-4 rounded-xl border border-accent/30 bg-accent-soft/30 flex items-start gap-3">
+                  <div className="p-4 rounded-md border border-accent/30 bg-accent-soft/30 flex items-start gap-3">
                     <span className="text-2xl">🌟</span>
                     <div>
                       <div className="text-xs font-bold text-ink flex items-center gap-2">
@@ -346,7 +347,7 @@ export default function CoreNumerologyClient({ locale }: { locale: Locale }) {
                 <ResultSection title={lang === "en" ? "Lo Shu 3x3 Magic Grid & Planes" : "लो-शू 3x3 चक्र एवं जीवन तल"}>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 items-center">
                     {/* The 3x3 Table */}
-                    <div className="w-full max-w-[240px] mx-auto grid grid-cols-3 gap-2 p-3 bg-surface-alt/50 rounded-2xl border border-line">
+                    <div className="w-full max-w-[240px] mx-auto grid grid-cols-3 gap-2 p-3 bg-surface-alt/50 rounded-lg border border-line">
                       {[
                         { pos: 4, label: "4 (Rahu)" },
                         { pos: 9, label: "9 (Mars)" },
@@ -362,7 +363,7 @@ export default function CoreNumerologyClient({ locale }: { locale: Locale }) {
                         return (
                           <div
                             key={item.pos}
-                            className={`aspect-square flex flex-col items-center justify-center rounded-xl border font-bold text-base transition ${
+                            className={`aspect-square flex flex-col items-center justify-center rounded-md border font-bold text-base transition ${
                               count > 0
                                 ? "bg-accent text-white border-accent shadow-xs"
                                 : "bg-card text-ink-muted/40 border-line"
@@ -403,10 +404,10 @@ export default function CoreNumerologyClient({ locale }: { locale: Locale }) {
               {pinnaclesData?.pinnacles && (
                 <ResultSection title={lang === "en" ? "4 Life Pinnacles (पिनेकल चक्र)" : "जीवन के 4 मुख्य पिनेकल (उत्कर्ष काल)"}>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    {pinnaclesData.pinnacles.map((p: any) => (
-                      <div key={p.pinnacle} className="p-3 bg-card border border-line rounded-xl text-center">
+                    {pinnaclesData.pinnacles.map((p: ApiData) => (
+                      <div key={p.pinnacle} className="p-3 bg-card border border-line rounded-md text-center">
                         <span className="text-[10px] text-ink-muted font-bold uppercase block">{lang === "en" ? `Pinnacle ${p.pinnacle}` : `पिनेकल ${p.pinnacle}`}</span>
-                        <span className="text-2xl font-black text-accent block my-1">{p.number}</span>
+                        <span className="text-2xl font-semibold text-accent block my-1">{p.number}</span>
                         <span className="text-[11px] text-ink-soft block">{p.age_span}</span>
                       </div>
                     ))}

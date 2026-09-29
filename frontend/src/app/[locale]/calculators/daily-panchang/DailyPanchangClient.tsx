@@ -9,6 +9,7 @@ import { BirthDataFields, DEFAULT_BIRTH_DATA, BirthDataValue } from "@/component
 import { fetchParallelSettled } from "@/lib/calculatorApi";
 import { ResultSection, ResultRow, ResultBadge, SubmitButton, ErrorNote } from "@/components/calculators/ResultRows";
 import { Loader2 } from "lucide-react";
+import type { ApiData as LooseData } from "@/lib/apiTypes";
 
 type ApiData = Record<string, unknown>;
 
@@ -27,7 +28,7 @@ export default function DailyPanchangClient({ locale }: { locale: Locale }) {
   const lang = locale;
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<LooseData>(null);
   const [extras, setExtras] = useState<Record<string, ApiData>>({});
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -112,14 +113,14 @@ export default function DailyPanchangClient({ locale }: { locale: Locale }) {
       {error && <ErrorNote message={error} />}
 
       {!data && !loading && !error && (
-        <div className="bg-card rounded-2xl border border-line p-10 text-center text-ink-muted">
+        <div className="bg-card rounded-lg border border-line p-10 text-center text-ink-muted">
               <div className="text-4xl mb-3">📜</div>
               <p className="text-sm">{lang === "en" ? "Choose a date and place to see the 5 classical limbs (Vaar, Tithi, Nakshatra, Yoga, Karana) and auspicious/inauspicious muhurats." : "तारीख एवं स्थान चुनें और 5 शास्त्रीय अंग (वार, तिथि, नक्षत्र, योग, करण) व शुभ-अशुभ मुहूर्त देखें।"}</p>
             </div>
           )}
 
           {loading && (
-            <div className="bg-card rounded-2xl border border-line p-12 text-center text-ink-soft flex flex-col items-center justify-center">
+            <div className="bg-card rounded-lg border border-line p-12 text-center text-ink-soft flex flex-col items-center justify-center">
               <Loader2 className="w-8 h-8 text-accent animate-spin mb-3" />
               <p className="text-sm">{lang === "en" ? "Calculating Panchang elements per Surya Siddhanta and Drik Ganita..." : "सूर्य सिद्धांत एवं दृक गणित अनुसार पंचांग अवयवों की गणना हो रही है..."}</p>
             </div>
@@ -192,7 +193,7 @@ export default function DailyPanchangClient({ locale }: { locale: Locale }) {
                 <ResultSection title={lang === "en" ? "Complete Choghadiya" : "संपूर्ण चौघड़िया"}>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {[{ title: lang === "en" ? "Day" : "दिन", rows: dayChoghadiya }, { title: lang === "en" ? "Night" : "रात्रि", rows: nightChoghadiya }].map((group) => (
-                      <div key={group.title} className="rounded-xl border border-line overflow-hidden">
+                      <div key={group.title} className="rounded-md border border-line overflow-hidden">
                         <div className="px-3 py-2 bg-surface-alt text-xs font-bold text-ink">{group.title}</div>
                         <div className="divide-y divide-line/60">
                           {group.rows.map((slot, index) => <div key={index} className="px-3 py-2 text-xs flex justify-between gap-3"><span className="font-semibold text-ink">{String(slot.name || slot.choghadiya || "-")}</span><span className="text-ink-muted whitespace-nowrap">{String(slot.start_time || "-")} - {String(slot.end_time || "-")}</span></div>)}

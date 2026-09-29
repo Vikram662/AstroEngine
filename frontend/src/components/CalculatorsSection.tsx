@@ -90,7 +90,7 @@ export const CalculatorsSection: React.FC = () => {
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               placeholder={t.searchPlaceholder}
-              className="w-full pl-9 pr-3.5 py-2.5 rounded-xl border border-line bg-card text-ink text-xs focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition"
+              className="w-full pl-9 pr-3.5 py-2.5 rounded-md border border-line bg-card text-ink text-xs focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition"
             />
           </div>
         </div>
@@ -101,7 +101,7 @@ export const CalculatorsSection: React.FC = () => {
             <button
               key={cat.id}
               onClick={() => setActiveCategory(cat.id)}
-              className={`px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition cursor-pointer ${
+              className={`px-3.5 py-2 rounded-md text-xs font-semibold whitespace-nowrap transition cursor-pointer ${
                 activeCategory === cat.id
                   ? "bg-accent text-white shadow-xs"
                   : "bg-card border border-line text-ink-soft hover:bg-surface-alt hover:text-ink"
@@ -118,12 +118,12 @@ export const CalculatorsSection: React.FC = () => {
             <Link
               key={tool.id}
               href={getToolHref(tool.href)}
-              className="group relative bg-card rounded-2xl p-5 border border-line hover:border-accent/40 hover:shadow-md transition-all duration-200 flex flex-col justify-between"
+              className="group relative bg-card rounded-lg p-5 border border-line hover:border-accent/40 hover: transition-all duration-200 flex flex-col justify-between"
             >
               <div>
                 {/* Card Top: Icon, Badge & Arrow */}
                 <div className="flex items-start justify-between gap-2 mb-3.5">
-                  <div className="w-11 h-11 rounded-xl bg-accent-soft border border-line/80 flex items-center justify-center text-xl shrink-0 group-hover:scale-105 transition-transform">
+                  <div className="w-11 h-11 rounded-md bg-accent-soft border border-line/80 flex items-center justify-center text-xl shrink-0 group-hover:scale-105 transition-transform">
                     {tool.icon}
                   </div>
                   <div className="flex items-center gap-1.5">
@@ -160,12 +160,12 @@ export const CalculatorsSection: React.FC = () => {
 
         {/* Empty state when search produces no results */}
         {filteredTools.length === 0 && (
-          <div className="text-center py-16 bg-card rounded-2xl border border-line">
+          <div className="text-center py-16 bg-card rounded-lg border border-line">
             <p className="text-sm font-semibold text-ink">{t.notFound}</p>
             <p className="text-xs text-ink-muted mt-1">{t.notFoundDesc}</p>
             <button
               onClick={() => { setSearchQuery(""); setActiveCategory("all"); }}
-              className="mt-4 px-4 py-2 rounded-xl bg-accent text-white text-xs font-semibold"
+              className="mt-4 px-4 py-2 rounded-md bg-accent text-white text-xs font-semibold"
             >
               {t.viewAll}
             </button>
@@ -173,9 +173,9 @@ export const CalculatorsSection: React.FC = () => {
         )}
 
         {/* Bottom Banner */}
-        <div className="mt-12 p-6 rounded-2xl bg-surface-alt border border-line flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="mt-12 p-6 rounded-lg bg-surface-alt border border-line flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3 text-center sm:text-left">
-            <div className="w-10 h-10 rounded-xl bg-accent text-white flex items-center justify-center shrink-0">
+            <div className="w-10 h-10 rounded-md bg-accent text-white flex items-center justify-center shrink-0">
               <Sparkles className="w-5 h-5" />
             </div>
             <div>
@@ -185,7 +185,7 @@ export const CalculatorsSection: React.FC = () => {
           </div>
           <Link
             href={locale === "hi" ? "/hi/calculators/lagna-kundli" : "/calculators/lagna-kundli"}
-            className="px-5 py-2.5 rounded-xl bg-accent hover:bg-accent-hover text-white font-bold text-xs transition flex items-center gap-1.5 shrink-0 shadow-xs"
+            className="px-5 py-2.5 rounded-md bg-accent hover:bg-accent-hover text-white font-bold text-xs transition flex items-center gap-1.5 shrink-0 shadow-xs"
           >
             <span>{locale === "en" ? "Start with your birth chart" : "अपनी जन्म कुंडली से शुरू करें"}</span>
             <ChevronRight className="w-4 h-4" />

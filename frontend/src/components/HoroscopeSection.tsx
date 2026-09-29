@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { useLocale } from "@/hooks/useLocale";
 import { getDictionary } from "@/dictionaries/dictionary";
+import type { ApiData } from "@/lib/apiTypes";
 
 interface RashiInfo {
   index: number;
@@ -214,7 +215,7 @@ const RASHI_FALLBACK: Record<string, RashiFallback> = {
 
 export const HoroscopeSection: React.FC = () => {
   const [period, setPeriod] = useState<"daily" | "weekly" | "yearly">("daily");
-  const [horoscopeMap, setHoroscopeMap] = useState<Record<string, any>>({});
+  const [horoscopeMap, setHoroscopeMap] = useState<Record<string, ApiData>>({});
   const [loading, setLoading] = useState<boolean>(true);
   const [selectedRashi, setSelectedRashi] = useState<RashiInfo | null>(null);
   const [readingModalOpen, setReadingModalOpen] = useState<boolean>(false);
@@ -223,14 +224,14 @@ export const HoroscopeSection: React.FC = () => {
   const t = dict.horoscope;
 
   useEffect(() => {
-    setLoading(true);
+    void Promise.resolve().then(() => setLoading(true));
     axios.get(`/api/horoscope?period=${period}&lang=${locale}`)
       .then(res => {
         if (res.data?.data) {
           const list = res.data.data.horoscopes || res.data.data.results || res.data.data.rashis || [];
-          const map: Record<string, any> = {};
+          const map: Record<string, ApiData> = {};
           if (Array.isArray(list)) {
-            list.forEach((item: any) => {
+            list.forEach((item: ApiData) => {
               const key = (item.rashi_id || item.id || item.name_en || "").toLowerCase();
               map[key] = item;
             });
@@ -256,7 +257,7 @@ export const HoroscopeSection: React.FC = () => {
     );
   };
 
-  const getOverallScore = (reading: any): number | null => {
+  const getOverallScore = (reading: ApiData): number | null => {
     if (!reading?.ratings) return null;
     if (typeof reading.ratings.overall === "number") return reading.ratings.overall;
     const { career, finance, love, health } = reading.ratings;
@@ -285,7 +286,7 @@ export const HoroscopeSection: React.FC = () => {
           </div>
 
           {/* Timeframe Switcher */}
-          <div className="flex items-center gap-1.5 bg-surface-alt p-1.5 rounded-xl border border-line text-xs">
+          <div className="flex items-center gap-1.5 bg-surface-alt p-1.5 rounded-md border border-line text-xs">
             <button
               onClick={() => setPeriod("daily")}
               className={`px-3.5 py-1.5 rounded-lg font-bold transition cursor-pointer ${
@@ -326,13 +327,13 @@ export const HoroscopeSection: React.FC = () => {
               <div
                 key={rashi.id}
                 onClick={() => openReading(rashi)}
-                className="group bg-card rounded-2xl p-5 border border-line hover:border-accent/50 hover:shadow-md transition-all duration-200 cursor-pointer flex flex-col justify-between"
+                className="group bg-card rounded-lg p-5 border border-line hover:border-accent/50 hover: transition-all duration-200 cursor-pointer flex flex-col justify-between"
               >
                 <div>
                   {/* Card Top: Symbol, Name, Score */}
                   <div className="flex items-start justify-between gap-3 mb-3">
                     <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-xl bg-accent-soft border border-line/80 flex items-center justify-center text-2xl group-hover:scale-105 transition-transform shrink-0">
+                      <div className="w-12 h-12 rounded-md bg-accent-soft border border-line/80 flex items-center justify-center text-2xl group-hover:scale-105 transition-transform shrink-0">
                         {rashi.symbol}
                       </div>
                       <div>
@@ -347,7 +348,7 @@ export const HoroscopeSection: React.FC = () => {
                   </div>
 
                   {/* Compatibility Badges */}
-                  <div className="flex items-center gap-2 text-[10px] text-ink-soft bg-surface-alt p-2 rounded-xl border border-line mb-3">
+                  <div className="flex items-center gap-2 text-[10px] text-ink-soft bg-surface-alt p-2 rounded-md border border-line mb-3">
                     <span className="truncate">{t.element}: <strong className="text-ink">{element}</strong></span>
                     <span className="text-line">•</span>
                     <span className="truncate">{t.lord}: <strong className="text-ink">{lord}</strong></span>
@@ -388,12 +389,12 @@ export const HoroscopeSection: React.FC = () => {
       {/* ── DETAILED HOROSCOPE MODAL ── */}
       {readingModalOpen && selectedRashi && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="bg-card w-full max-w-xl rounded-3xl border border-line shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
+          <div className="bg-card w-full max-w-xl rounded-lg border border-line overflow-hidden max-h-[90vh] flex flex-col">
             
             {/* Modal Header */}
             <div className="p-5 border-b border-line bg-surface-alt flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-accent-soft border border-line flex items-center justify-center text-2xl">
+                <div className="w-12 h-12 rounded-lg bg-accent-soft border border-line flex items-center justify-center text-2xl">
                   {selectedRashi.symbol}
                 </div>
                 <div>
@@ -420,7 +421,7 @@ export const HoroscopeSection: React.FC = () => {
             {/* Modal Body */}
             <div className="p-5 sm:p-6 overflow-y-auto space-y-5 text-xs text-ink-soft leading-relaxed">
               {/* Lucky Attributes Grid */}
-              <div className="grid grid-cols-3 gap-3 bg-surface p-3.5 rounded-xl border border-line text-center">
+              <div className="grid grid-cols-3 gap-3 bg-surface p-3.5 rounded-md border border-line text-center">
                 <div>
                   <span className="text-[10px] text-ink-muted block">{locale === "en" ? "Lucky Color" : "शुभ रंग"}</span>
                   <span className="font-bold text-ink text-xs mt-0.5 block">
@@ -449,7 +450,7 @@ export const HoroscopeSection: React.FC = () => {
                   <Sparkles className="w-4 h-4 text-accent" />
                   <span>{locale === "en" ? "General Prediction" : "सामान्य फलादेश"}</span>
                 </h4>
-                <p className="bg-surface p-4 rounded-xl border border-line text-ink leading-relaxed">
+                <p className="bg-surface p-4 rounded-md border border-line text-ink leading-relaxed">
                   {getReadingForRashi(selectedRashi)?.prediction ||
                    getReadingForRashi(selectedRashi)?.summary ||
                    (locale === "en" ? RASHI_FALLBACK[selectedRashi.id].general_en : RASHI_FALLBACK[selectedRashi.id].general_hi)}
@@ -458,7 +459,7 @@ export const HoroscopeSection: React.FC = () => {
 
               {/* Categorized Pillars */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="bg-surface p-3.5 rounded-xl border border-line">
+                <div className="bg-surface p-3.5 rounded-md border border-line">
                   <div className="flex items-center gap-1.5 font-bold text-ink mb-1.5">
                     <Briefcase className="w-3.5 h-3.5 text-accent" />
                     <span>{locale === "en" ? "Career & Business" : "करियर एवं व्यवसाय"}</span>
@@ -469,7 +470,7 @@ export const HoroscopeSection: React.FC = () => {
                   </p>
                 </div>
 
-                <div className="bg-surface p-3.5 rounded-xl border border-line">
+                <div className="bg-surface p-3.5 rounded-md border border-line">
                   <div className="flex items-center gap-1.5 font-bold text-ink mb-1.5">
                     <Heart className="w-3.5 h-3.5 text-rose-500" />
                     <span>{locale === "en" ? "Love & Relationships" : "प्रेम एवं संबंध"}</span>

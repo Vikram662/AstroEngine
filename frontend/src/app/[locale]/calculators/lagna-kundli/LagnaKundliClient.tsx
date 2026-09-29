@@ -9,6 +9,7 @@ import { fetchParallelSettled } from "@/lib/calculatorApi";
 import { ResultSection, ResultRow, ResultBadge, SubmitButton, ErrorNote } from "@/components/calculators/ResultRows";
 import { Loader2 } from "lucide-react";
 import type { Locale } from "@/lib/locale";
+import type { ApiData } from "@/lib/apiTypes";
 
 export default function LagnaKundliClient({ locale }: { locale: Locale }) {
   const [form, setForm] = useState<BirthDataValue>(() => ({
@@ -18,13 +19,13 @@ export default function LagnaKundliClient({ locale }: { locale: Locale }) {
   const lang = locale;
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [chartData, setChartData] = useState<any>(null);
+  const [chartData, setChartData] = useState<ApiData>(null);
   const [svgChart, setSvgChart] = useState<string>("");
-  const [houseData, setHouseData] = useState<any>(null);
-  const [yogaData, setYogaData] = useState<any>(null);
-  const [strengthData, setStrengthData] = useState<any>(null);
-  const [dashaData, setDashaData] = useState<any>(null);
-  const [manglikData, setManglikData] = useState<any>(null);
+  const [houseData, setHouseData] = useState<ApiData>(null);
+  const [yogaData, setYogaData] = useState<ApiData>(null);
+  const [strengthData, setStrengthData] = useState<ApiData>(null);
+  const [dashaData, setDashaData] = useState<ApiData>(null);
+  const [manglikData, setManglikData] = useState<ApiData>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -90,11 +91,11 @@ export default function LagnaKundliClient({ locale }: { locale: Locale }) {
   const houses = Array.isArray(houseData?.houses) ? houseData.houses : [];
   const yogas = Array.isArray(yogaData?.yogas) ? yogaData.yogas : [];
   const strengths = strengthData?.shadbala && typeof strengthData.shadbala === "object"
-    ? Object.values(strengthData.shadbala) as any[]
+    ? Object.values(strengthData.shadbala) as ApiData[]
     : [];
   const runningDasha = dashaData?.running_dasha;
 
-  const moonPlanet = planets.find((p: any) => (p.name || p.planet || "").toUpperCase().includes("MOON"));
+  const moonPlanet = planets.find((p: ApiData) => (p.name || p.planet || "").toUpperCase().includes("MOON"));
   const moonSign = moonPlanet?.sign?.name || moonPlanet?.rashi_name || "-";
   const moonNakshatra = moonPlanet?.nakshatra?.name || "-";
   const moonPada = moonPlanet?.nakshatra?.pada || "-";
@@ -134,7 +135,7 @@ export default function LagnaKundliClient({ locale }: { locale: Locale }) {
       {error && <ErrorNote message={error} />}
 
       {!chartData && !loading && !error && (
-        <div className="bg-card rounded-2xl border border-line p-12 text-center text-ink-muted">
+        <div className="bg-card rounded-lg border border-line p-12 text-center text-ink-muted">
           <div className="text-5xl mb-4">🪐</div>
           <h3 className="text-base font-bold text-ink mb-1">
             {lang === "en" ? "Ready to Calculate Your Kundli" : "आपकी कुंडली गणना हेतु तैयार"}
@@ -148,7 +149,7 @@ export default function LagnaKundliClient({ locale }: { locale: Locale }) {
       )}
 
       {loading && (
-        <div className="bg-card rounded-2xl border border-line p-14 text-center text-ink-soft flex flex-col items-center justify-center">
+        <div className="bg-card rounded-lg border border-line p-14 text-center text-ink-soft flex flex-col items-center justify-center">
           <Loader2 className="w-9 h-9 text-accent animate-spin mb-3" />
           <p className="text-sm font-semibold text-ink">
             {lang === "en"
@@ -163,22 +164,22 @@ export default function LagnaKundliClient({ locale }: { locale: Locale }) {
               {/* 1. Avakahada Chakra / Core Particulars */}
               <ResultSection title={lang === "en" ? "Avakahada & Birth Particulars" : "अवकहड़ा चक्र एवं जन्म पंचांग"}>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-1">
-                  <div className="rounded-xl border border-line/70 bg-surface-alt/40 p-3">
+                  <div className="rounded-md border border-line/70 bg-surface-alt/40 p-3">
                     <span className="text-[11px] font-medium text-ink-muted block">{lang === "en" ? "Lagna (Ascendant)" : "जन्म लग्न"}</span>
                     <span className="text-sm font-bold text-ink mt-0.5 block">{ascendant?.sign?.name || ascendant?.rashi_name || "-"}</span>
                     <span className="text-[10px] text-accent font-semibold">{Number(ascendant?.norm_degree ?? ascendant?.degree ?? 0).toFixed(2)}°</span>
                   </div>
-                  <div className="rounded-xl border border-line/70 bg-surface-alt/40 p-3">
+                  <div className="rounded-md border border-line/70 bg-surface-alt/40 p-3">
                     <span className="text-[11px] font-medium text-ink-muted block">{lang === "en" ? "Janma Rashi (Moon)" : "जन्म राशि (चंद्र)"}</span>
                     <span className="text-sm font-bold text-ink mt-0.5 block">{moonSign}</span>
                     <span className="text-[10px] text-ink-soft">{moonPlanet ? `${Number(moonPlanet.norm_degree ?? moonPlanet.degree ?? 0).toFixed(2)}°` : "-"}</span>
                   </div>
-                  <div className="rounded-xl border border-line/70 bg-surface-alt/40 p-3">
+                  <div className="rounded-md border border-line/70 bg-surface-alt/40 p-3">
                     <span className="text-[11px] font-medium text-ink-muted block">{lang === "en" ? "Nakshatra & Pada" : "जन्म नक्षत्र व चरण"}</span>
                     <span className="text-sm font-bold text-ink mt-0.5 block">{moonNakshatra}</span>
                     <span className="text-[10px] text-ink-soft">{lang === "en" ? `Pada ${moonPada}` : `चरण ${moonPada}`}</span>
                   </div>
-                  <div className="rounded-xl border border-line/70 bg-surface-alt/40 p-3">
+                  <div className="rounded-md border border-line/70 bg-surface-alt/40 p-3">
                     <span className="text-[11px] font-medium text-ink-muted block">{lang === "en" ? "Manglik Status" : "मांगलिक स्थिति"}</span>
                     <span className="mt-0.5 block">
                       {manglikData ? (
@@ -195,7 +196,7 @@ export default function LagnaKundliClient({ locale }: { locale: Locale }) {
               {svgChart && (
                 <ResultSection title={lang === "en" ? "Lagna Kundli (D1 Chart)" : "लग्न कुंडली (D1 चक्र)"}>
                   <div
-                    className="w-full max-w-lg mx-auto aspect-square flex items-center justify-center bg-surface-alt/40 rounded-2xl p-4 border border-line shadow-xs"
+                    className="w-full max-w-lg mx-auto aspect-square flex items-center justify-center bg-surface-alt/40 rounded-lg p-4 border border-line shadow-xs"
                     dangerouslySetInnerHTML={{ __html: svgChart }}
                   />
                 </ResultSection>
@@ -204,7 +205,7 @@ export default function LagnaKundliClient({ locale }: { locale: Locale }) {
               {/* 3. Running Vimshottari Dasha Tree */}
               {runningDasha && (
                 <ResultSection title={lang === "en" ? "Current Running Dasha (विंशोत्तरी दशा)" : "वर्तमान सक्रिय विंशोत्तरी दशा"}>
-                  <div className="p-4 rounded-xl border border-accent/30 bg-accent-soft/30 flex flex-wrap items-center justify-between gap-4">
+                  <div className="p-4 rounded-md border border-accent/30 bg-accent-soft/30 flex flex-wrap items-center justify-between gap-4">
                     <div>
                       <div className="text-[11px] font-semibold text-accent uppercase tracking-wider">
                         {lang === "en" ? "Active Mahadasha > Antardasha > Pratyantar" : "सक्रिय महादशा > अंतर्दशा > प्रत्यंतर"}
@@ -243,7 +244,7 @@ export default function LagnaKundliClient({ locale }: { locale: Locale }) {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-line/60">
-                        {planets.map((p: any, idx: number) => (
+                        {planets.map((p: ApiData, idx: number) => (
                           <tr key={idx} className="hover:bg-surface-alt/40 transition">
                             <td className="py-2.5 px-3 font-bold text-ink flex items-center gap-1.5">
                               <span>{p.name || p.planet}</span>
@@ -274,8 +275,8 @@ export default function LagnaKundliClient({ locale }: { locale: Locale }) {
               {yogas.length > 0 && (
                 <ResultSection title={lang === "en" ? `Classical Yogas Identified (${yogas.length})` : `कुंडली में निर्मित शास्त्रीय योग (${yogas.length})`}>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                    {yogas.map((yoga: any, index: number) => (
-                      <article key={index} className="rounded-xl border border-line bg-card p-4 hover:border-accent/40 transition">
+                    {yogas.map((yoga: ApiData, index: number) => (
+                      <article key={index} className="rounded-md border border-line bg-card p-4 hover:border-accent/40 transition">
                         <div className="flex items-start justify-between gap-2">
                           <h3 className="text-sm font-bold text-ink">{yoga.name}</h3>
                           <ResultBadge tone={yoga.is_cancelled ? "neutral" : yoga.category?.includes("Arishta") ? "bad" : "good"}>
@@ -308,7 +309,7 @@ export default function LagnaKundliClient({ locale }: { locale: Locale }) {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-line/60">
-                        {strengths.map((planet: any, index: number) => (
+                        {strengths.map((planet: ApiData, index: number) => (
                           <tr key={index} className="hover:bg-surface-alt/40 transition">
                             <td className="px-3 py-2.5 font-bold text-ink">{planet.planet_name}</td>
                             <td className="px-3 py-2.5 font-mono">{planet.total_shadbala_rupas}</td>
@@ -331,8 +332,8 @@ export default function LagnaKundliClient({ locale }: { locale: Locale }) {
               {houses.length > 0 && (
                 <ResultSection title={lang === "en" ? "12-House Bhavaphala & Predictions" : "द्वादश भाव फल एवं जीवन फलादेश"}>
                   <div className="space-y-3">
-                    {houses.map((house: any) => (
-                      <details key={house.house} className="group rounded-xl border border-line bg-card open:bg-surface-alt/25 transition">
+                    {houses.map((house: ApiData) => (
+                      <details key={house.house} className="group rounded-md border border-line bg-card open:bg-surface-alt/25 transition">
                         <summary className="cursor-pointer list-none p-4 flex items-center justify-between gap-3">
                           <span className="flex items-center gap-3">
                             <span className="text-xl">{house.icon || "🏛️"}</span>

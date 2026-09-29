@@ -8,6 +8,7 @@ import { BirthDataFields, DEFAULT_BIRTH_DATA, BirthDataValue } from "@/component
 import { fetchParallelSettled } from "@/lib/calculatorApi";
 import { ResultSection, ResultRow, ResultBadge, SubmitButton, ErrorNote } from "@/components/calculators/ResultRows";
 import { Loader2 } from "lucide-react";
+import { ApiData, toApiError } from "@/lib/apiTypes";
 
 const STRINGS = {
   hi: {
@@ -66,10 +67,10 @@ export default function SadeSatiClient({ locale }: { locale: Locale }) {
   const [lang, setLang] = useState<"hi" | "en">(locale);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [statusData, setStatusData] = useState<any>(null);
-  const [timelineData, setTimelineData] = useState<any[]>([]);
-  const [mantraData, setMantraData] = useState<any>(null);
-  const [fastingData, setFastingData] = useState<any>(null);
+  const [statusData, setStatusData] = useState<ApiData>(null);
+  const [timelineData, setTimelineData] = useState<ApiData[]>([]);
+  const [mantraData, setMantraData] = useState<ApiData>(null);
+  const [fastingData, setFastingData] = useState<ApiData>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -116,8 +117,8 @@ export default function SadeSatiClient({ locale }: { locale: Locale }) {
 
       const cycles = timeline?.lifetime_cycles || [];
       const flatRows = Array.isArray(cycles)
-        ? cycles.flatMap((cycle: any) =>
-            (cycle.phases || []).map((ph: any) => ({
+        ? cycles.flatMap((cycle: ApiData) =>
+            (cycle.phases || []).map((ph: ApiData) => ({
               stage: cycle.lifecycle_stage,
               phase: ph.phase,
               years: ph.approx_years,
@@ -126,7 +127,7 @@ export default function SadeSatiClient({ locale }: { locale: Locale }) {
           )
         : [];
       setTimelineData(flatRows);
-    } catch (err: any) {
+    } catch (errCaught) { const err = toApiError(errCaught);
       setError(err?.response?.data?.message || err?.message || s.error);
     } finally {
       setLoading(false);
@@ -182,14 +183,14 @@ export default function SadeSatiClient({ locale }: { locale: Locale }) {
       {error && <ErrorNote message={error} />}
 
       {!statusData && !loading && !error && (
-        <div className="bg-card rounded-2xl border border-line p-10 text-center text-ink-muted">
+        <div className="bg-card rounded-lg border border-line p-10 text-center text-ink-muted">
           <div className="text-4xl mb-3">🪐</div>
           <p className="text-sm">{s.emptyHint}</p>
         </div>
       )}
 
       {loading && (
-        <div className="bg-card rounded-2xl border border-line p-12 text-center text-ink-soft flex flex-col items-center justify-center">
+        <div className="bg-card rounded-lg border border-line p-12 text-center text-ink-soft flex flex-col items-center justify-center">
           <Loader2 className="w-8 h-8 text-accent animate-spin mb-3" />
           <p className="text-sm">{s.loadingHint}</p>
         </div>
@@ -199,7 +200,7 @@ export default function SadeSatiClient({ locale }: { locale: Locale }) {
         <div className="space-y-6">
               <ResultSection title={s.resultTitle}>
                 <div
-                  className={`p-6 rounded-xl border text-center mb-4 ${
+                  className={`p-6 rounded-md border text-center mb-4 ${
                     isUnderSadeSati
                       ? "bg-rose-50 border-rose-200 text-rose-950"
                       : isDhaiya
@@ -251,7 +252,7 @@ export default function SadeSatiClient({ locale }: { locale: Locale }) {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-line/60">
-                        {timelineData.map((item: any, idx: number) => (
+                        {timelineData.map((item: ApiData, idx: number) => (
                           <tr key={idx} className="hover:bg-surface-alt/40 transition">
                             <td className="py-2.5 px-3 font-semibold text-ink">{item.stage}</td>
                             <td className="py-2.5 px-3">{item.phase}</td>
@@ -268,7 +269,7 @@ export default function SadeSatiClient({ locale }: { locale: Locale }) {
               {statusData.remedies && statusData.remedies.length > 0 && (
                 <ResultSection title={s.remediesTitle}>
                   <ul className="space-y-1.5 text-xs text-ink-soft list-disc list-inside">
-                    {statusData.remedies.map((r: any, idx: number) => (
+                    {statusData.remedies.map((r: ApiData, idx: number) => (
                       <li key={idx}>{typeof r === "string" ? r : r.remedy}</li>
                     ))}
                   </ul>
@@ -278,7 +279,7 @@ export default function SadeSatiClient({ locale }: { locale: Locale }) {
               {/* Saturn Beej Mantra & Chanting */}
               {saturnMantra && (
                 <ResultSection title={lang === "hi" ? "शनि बीज मंत्र एवं जप संख्या" : "Saturn Beej Mantra & Japa Frequency"}>
-                  <div className="p-4 bg-surface-alt/70 border border-line rounded-xl space-y-2">
+                  <div className="p-4 bg-surface-alt/70 border border-line rounded-md space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold text-ink">Shani Tantrik Mantra</span>
                       <span className="text-[10px] font-mono-brand bg-accent/10 text-accent px-2 py-0.5 rounded font-bold">
@@ -294,7 +295,7 @@ export default function SadeSatiClient({ locale }: { locale: Locale }) {
               {/* Saturday Vrat & Fasting Rules */}
               {fastingData?.recommended_weekly_vrat && (
                 <ResultSection title={lang === "hi" ? "शनि शांति व्रत एवं दान विधि" : "Saturday Shani Shanti Vrat & Daan"}>
-                  <div className="p-4 bg-card border border-line rounded-xl space-y-2 text-xs">
+                  <div className="p-4 bg-card border border-line rounded-md space-y-2 text-xs">
                     <div className="font-bold text-ink text-sm">शनिवार व्रत नियम (Saturday Fasting Discipline)</div>
                     <p className="text-ink-soft leading-relaxed">
                       सूर्यास्त तक निर्जल अथवा फलाहार व्रत रखें। शाम को पीपल के वृक्ष के नीचे सरसों के तेल का चौमुखा दीपक जलाएं तथा काले तिल व उड़द की खिचड़ी का सेवन करें या जरूरतमंदों को दान करें।

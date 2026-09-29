@@ -7,6 +7,7 @@ import type { Locale } from "@/lib/locale";
 import { fetchParallelSettled } from "@/lib/calculatorApi";
 import { ResultSection, ResultRow, ResultBadge, SubmitButton, ErrorNote } from "@/components/calculators/ResultRows";
 import { Calendar, Loader2 } from "lucide-react";
+import { ApiData, toApiError } from "@/lib/apiTypes";
 
 const STRINGS = {
   hi: {
@@ -61,10 +62,10 @@ export default function LoshuGridClient({ locale }: { locale: Locale }) {
   const [lang, setLang] = useState<"hi" | "en">(locale);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<ApiData>(null);
 
-  const [remediesData, setRemediesData] = useState<any>(null);
-  const [coreData, setCoreData] = useState<any>(null);
+  const [remediesData, setRemediesData] = useState<ApiData>(null);
+  const [coreData, setCoreData] = useState<ApiData>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -104,7 +105,7 @@ export default function LoshuGridClient({ locale }: { locale: Locale }) {
       setData(resGrid);
       if (resRemedies) setRemediesData(resRemedies);
       if (resCore) setCoreData(resCore);
-    } catch (err: any) {
+    } catch (errCaught) { const err = toApiError(errCaught);
       setError(err?.response?.data?.message || err?.message || s.error);
     } finally {
       setLoading(false);
@@ -179,7 +180,7 @@ export default function LoshuGridClient({ locale }: { locale: Locale }) {
           required
           value={dob}
           onChange={(e) => setDob(e.target.value)}
-          className="w-full px-3.5 py-2.5 rounded-xl border border-line bg-surface text-ink text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition"
+          className="w-full px-3.5 py-2.5 rounded-md border border-line bg-surface text-ink text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition"
         />
       </div>
 
@@ -200,7 +201,7 @@ export default function LoshuGridClient({ locale }: { locale: Locale }) {
       {error && <ErrorNote message={error} />}
 
       {!data && !loading && !error && (
-        <div className="bg-card rounded-2xl border border-line p-12 text-center text-ink-muted">
+        <div className="bg-card rounded-lg border border-line p-12 text-center text-ink-muted">
           <div className="text-5xl mb-4">🧮</div>
           <h3 className="text-base font-bold text-ink mb-1">
             {lang === "en" ? "Ready to Build Your Lo Shu Grid" : "लो-शू चक्र निर्माण हेतु तैयार"}
@@ -210,7 +211,7 @@ export default function LoshuGridClient({ locale }: { locale: Locale }) {
       )}
 
       {loading && (
-        <div className="bg-card rounded-2xl border border-line p-14 text-center text-ink-soft flex flex-col items-center justify-center">
+        <div className="bg-card rounded-lg border border-line p-14 text-center text-ink-soft flex flex-col items-center justify-center">
           <Loader2 className="w-9 h-9 text-accent animate-spin mb-3" />
           <p className="text-sm font-semibold text-ink">{s.loadingHint}</p>
         </div>
@@ -221,7 +222,7 @@ export default function LoshuGridClient({ locale }: { locale: Locale }) {
               {/* Core Driver & Conductor Banner */}
               {coreData && (
                 <div className="grid grid-cols-2 gap-3 p-1">
-                  <div className="p-3.5 bg-card border border-line rounded-xl text-center">
+                  <div className="p-3.5 bg-card border border-line rounded-md text-center">
                     <span className="text-[11px] uppercase font-bold text-ink-muted block">
                       {lang === "en" ? "Driver (Mulank)" : "मूलांक (Driver)"}
                     </span>
@@ -232,7 +233,7 @@ export default function LoshuGridClient({ locale }: { locale: Locale }) {
                       {coreData.mulank?.ruler} ({coreData.mulank?.traits?.split(",")[0]})
                     </span>
                   </div>
-                  <div className="p-3.5 bg-card border border-line rounded-xl text-center">
+                  <div className="p-3.5 bg-card border border-line rounded-md text-center">
                     <span className="text-[11px] uppercase font-bold text-ink-muted block">
                       {lang === "en" ? "Conductor (Bhagyank)" : "भाग्यांक (Conductor)"}
                     </span>
@@ -248,7 +249,7 @@ export default function LoshuGridClient({ locale }: { locale: Locale }) {
 
               {/* 3x3 Magic Grid Visual */}
               <ResultSection title={s.gridTitle}>
-                <div className="w-72 mx-auto grid grid-cols-3 gap-2.5 p-4 bg-surface-alt/50 rounded-2xl border border-line">
+                <div className="w-72 mx-auto grid grid-cols-3 gap-2.5 p-4 bg-surface-alt/50 rounded-lg border border-line">
                   {GRID_LAYOUT.map((row, rIdx) =>
                     row.map((num, cIdx) => {
                       const displayVal = getCellDigits(num, rIdx, cIdx);
@@ -256,7 +257,7 @@ export default function LoshuGridClient({ locale }: { locale: Locale }) {
                       return (
                         <div
                           key={num}
-                          className={`aspect-square flex flex-col items-center justify-center rounded-xl border font-bold transition ${
+                          className={`aspect-square flex flex-col items-center justify-center rounded-md border font-bold transition ${
                             hasVal
                               ? "bg-accent text-white border-accent shadow-xs text-lg font-mono"
                               : "bg-card border-line/70 text-ink-muted/30 text-sm font-mono"
@@ -305,7 +306,7 @@ export default function LoshuGridClient({ locale }: { locale: Locale }) {
               {Array.isArray(planes) && planes.length > 0 && (
                 <ResultSection title={s.planesTitle}>
                   <div className="divide-y divide-line/60">
-                    {planes.map((p: any, idx: number) => (
+                    {planes.map((p: ApiData, idx: number) => (
                       <div key={idx} className="py-2.5 flex items-center justify-between text-xs">
                         <div>
                           <div className="font-bold text-ink">{p.name || p.plane}</div>

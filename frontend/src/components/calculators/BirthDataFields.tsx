@@ -196,7 +196,7 @@ export const BirthDataFields: React.FC<Props> = ({
                 value={value.name}
                 onChange={(e) => onChange({ ...value, name: e.target.value })}
                 placeholder={t.namePlaceholder}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-line bg-surface text-ink text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition"
+                className="w-full px-3.5 py-2.5 rounded-md border border-line bg-surface text-ink text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition"
               />
             </div>
           )}
@@ -209,7 +209,7 @@ export const BirthDataFields: React.FC<Props> = ({
                 id={id("gender")}
                 value={value.gender}
                 onChange={(e) => onChange({ ...value, gender: e.target.value as "male" | "female" })}
-                className="w-full px-3 py-2.5 rounded-xl border border-line bg-surface text-ink text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition"
+                className="w-full px-3 py-2.5 rounded-md border border-line bg-surface text-ink text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition"
               >
                 <option value="male">{t.male}</option>
                 <option value="female">{t.female}</option>
@@ -231,7 +231,7 @@ export const BirthDataFields: React.FC<Props> = ({
             required
             value={value.dob}
             onChange={(e) => onChange({ ...value, dob: e.target.value })}
-            className="w-full px-3.5 py-2.5 rounded-xl border border-line bg-surface text-ink text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition"
+            className="w-full px-3.5 py-2.5 rounded-md border border-line bg-surface text-ink text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition"
           />
         </div>
         {requireTime && (
@@ -246,7 +246,7 @@ export const BirthDataFields: React.FC<Props> = ({
               required
               value={value.tob}
               onChange={(e) => onChange({ ...value, tob: e.target.value })}
-              className="w-full px-3.5 py-2.5 rounded-xl border border-line bg-surface text-ink text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition"
+              className="w-full px-3.5 py-2.5 rounded-md border border-line bg-surface text-ink text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition"
             />
           </div>
         )}
@@ -275,11 +275,11 @@ export const BirthDataFields: React.FC<Props> = ({
               if (searchResults.length > 0) setCityDropdown(true);
             }}
             placeholder={t.cityPlaceholder}
-            className="w-full px-3.5 py-2.5 rounded-xl border border-line bg-surface text-ink text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition"
+            className="w-full px-3.5 py-2.5 rounded-md border border-line bg-surface text-ink text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition"
           />
 
           {cityDropdown && (
-            <div className="absolute left-0 right-0 top-full mt-1.5 bg-card rounded-xl border border-line shadow-lg max-h-56 overflow-y-auto z-30 divide-y divide-line/60">
+            <div className="absolute left-0 right-0 top-full mt-1.5 bg-card rounded-md border border-line max-h-56 overflow-y-auto z-30 divide-y divide-line/60">
               {searchResults.map((item, idx) => (
                 <button
                   key={idx}

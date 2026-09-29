@@ -7,6 +7,7 @@ import type { Locale } from "@/lib/locale";
 import { BirthDataFields, DEFAULT_BIRTH_DATA, BirthDataValue } from "@/components/calculators/BirthDataFields";
 import { ResultSection, ResultRow, SubmitButton, ErrorNote } from "@/components/calculators/ResultRows";
 import { Loader2 } from "lucide-react";
+import { ApiData, toApiError } from "@/lib/apiTypes";
 
 const STRINGS = {
   hi: {
@@ -47,7 +48,7 @@ export default function CharDashaClient({ locale }: { locale: Locale }) {
   const [lang, setLang] = useState<"hi" | "en">(locale);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<ApiData>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,7 +76,7 @@ export default function CharDashaClient({ locale }: { locale: Locale }) {
       } else {
         setData(res.data);
       }
-    } catch (err: any) {
+    } catch (errCaught) { const err = toApiError(errCaught);
       setError(err?.response?.data?.message || err?.message || s.error);
     } finally {
       setLoading(false);
@@ -96,7 +97,7 @@ export default function CharDashaClient({ locale }: { locale: Locale }) {
       locale={locale}
     >
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        <div className="lg:col-span-5 bg-card p-6 rounded-2xl border border-line h-fit">
+        <div className="lg:col-span-5 bg-card p-6 rounded-lg border border-line h-fit">
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="flex items-center justify-between pb-3 border-b border-line">
               <span className="text-xs font-bold text-ink">भाषा / Language</span>
@@ -140,14 +141,14 @@ export default function CharDashaClient({ locale }: { locale: Locale }) {
           {error && <ErrorNote message={error} />}
 
           {!data && !loading && !error && (
-            <div className="bg-card rounded-2xl border border-line p-10 text-center text-ink-muted">
+            <div className="bg-card rounded-lg border border-line p-10 text-center text-ink-muted">
               <div className="text-4xl mb-3">🧭</div>
               <p className="text-sm">{s.emptyHint}</p>
             </div>
           )}
 
           {loading && (
-            <div className="bg-card rounded-2xl border border-line p-12 text-center text-ink-soft flex flex-col items-center justify-center">
+            <div className="bg-card rounded-lg border border-line p-12 text-center text-ink-soft flex flex-col items-center justify-center">
               <Loader2 className="w-8 h-8 text-accent animate-spin mb-3" />
               <p className="text-sm">{s.loadingHint}</p>
             </div>
@@ -158,8 +159,8 @@ export default function CharDashaClient({ locale }: { locale: Locale }) {
               {karakas.length > 0 && (
                 <ResultSection title={s.karakasTitle}>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    {karakas.map((k: any, idx: number) => (
-                      <div key={idx} className="p-3 bg-surface-alt rounded-xl border border-line/60">
+                    {karakas.map((k: ApiData, idx: number) => (
+                      <div key={idx} className="p-3 bg-surface-alt rounded-md border border-line/60">
                         <div className="text-[11px] text-ink-muted uppercase font-semibold">
                           {k.karaka || k.name}
                         </div>
@@ -191,7 +192,7 @@ export default function CharDashaClient({ locale }: { locale: Locale }) {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-line/60">
-                        {charDashaList.map((d: any, idx: number) => (
+                        {charDashaList.map((d: ApiData, idx: number) => (
                           <tr key={idx} className="hover:bg-surface-alt/40 transition">
                             <td className="py-2.5 px-3 font-bold text-ink">
                               {d.sign || d.rashi || d.name}

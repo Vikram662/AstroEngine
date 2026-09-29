@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getVerifiedSession } from "@/lib/authGuard";
 import { toMoney } from "@/lib/money";
+import type { ApiData } from "@/lib/apiTypes";
 
 // GET /api/billing/invoice/[id] - Generates a printable Tax Invoice / GST Invoice HTML
 export async function GET(
@@ -84,7 +85,7 @@ export async function GET(
     const sellerEmail = escapeHtml(companyMap["COMPANY_EMAIL"] || "billing@astroengine.io");
 
     // Fetch customer tax profile if available
-    const taxProfile = (tx.user as any).taxProfile || {};
+    const taxProfile = (tx.user as ApiData).taxProfile || {};
     const customerGstin = escapeHtml(taxProfile.gstin || "");
     const customerBusinessName = escapeHtml(taxProfile.businessName || tx.user.name || "Enterprise Developer");
     const customerAddress = escapeHtml(taxProfile.address || "");

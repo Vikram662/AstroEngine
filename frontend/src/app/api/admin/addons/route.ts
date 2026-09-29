@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdminSession } from "@/lib/authGuard";
 import { toJsonSafe } from "@/lib/money";
+import type { ApiData } from "@/lib/apiTypes";
 
 // GET /api/admin/addons - Admin gets all addons directly from MySQL
 export async function GET() {
@@ -11,7 +12,7 @@ export async function GET() {
       return NextResponse.json({ status: "error", message: "Forbidden: Admin authorization required." }, { status: 403 });
     }
 
-    const addons = await (prisma as any).addonPackage.findMany({
+    const addons = await (prisma as ApiData).addonPackage.findMany({
       orderBy: { createdAt: "asc" }
     });
 
@@ -49,7 +50,7 @@ export async function POST(req: NextRequest) {
       ? features.split("\n").map((f: string) => f.trim()).filter(Boolean)
       : [];
 
-    const upserted = await (prisma as any).addonPackage.upsert({
+    const upserted = await (prisma as ApiData).addonPackage.upsert({
       where: { id: id.toLowerCase().trim() },
       update: {
         name,
@@ -104,7 +105,7 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ status: "error", message: "Addon id required" }, { status: 400 });
     }
 
-    await (prisma as any).addonPackage.delete({
+    await (prisma as ApiData).addonPackage.delete({
       where: { id }
     });
 

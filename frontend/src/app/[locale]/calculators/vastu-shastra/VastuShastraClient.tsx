@@ -6,6 +6,7 @@ import { CalculatorPageShell } from "@/components/calculators/CalculatorPageShel
 import type { Locale } from "@/lib/locale";
 import { ResultSection, ResultRow, ResultBadge, SubmitButton, ErrorNote } from "@/components/calculators/ResultRows";
 import { Home, Compass, Plus, Trash2, Loader2 } from "lucide-react";
+import { ApiData, toApiError } from "@/lib/apiTypes";
 
 interface VastuRoom {
   room_type: string;
@@ -76,7 +77,7 @@ export default function VastuShastraClient({ locale }: { locale: Locale }) {
   const [lang, setLang] = useState<"hi" | "en">(locale);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<ApiData>(null);
 
   const handleAddRoom = () => {
     setRooms([...rooms, { room_type: "bedroom", zone: "N", color: "White" }]);
@@ -116,7 +117,7 @@ export default function VastuShastraClient({ locale }: { locale: Locale }) {
       } else {
         setData(res.data);
       }
-    } catch (err: any) {
+    } catch (errCaught) { const err = toApiError(errCaught);
       setError(err?.response?.data?.message || err?.message || s.error);
     } finally {
       setLoading(false);
@@ -137,7 +138,7 @@ export default function VastuShastraClient({ locale }: { locale: Locale }) {
       locale={locale}
     >
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        <div className="lg:col-span-6 bg-card p-6 rounded-2xl border border-line h-fit">
+        <div className="lg:col-span-6 bg-card p-6 rounded-lg border border-line h-fit">
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="flex items-center justify-between pb-3 border-b border-line">
               <span className="text-xs font-bold text-ink">भाषा / Language</span>
@@ -173,7 +174,7 @@ export default function VastuShastraClient({ locale }: { locale: Locale }) {
                   id="prop_type"
                   value={propertyType}
                   onChange={(e) => setPropertyType(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl border border-line bg-surface text-ink text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition"
+                  className="w-full px-3 py-2.5 rounded-md border border-line bg-surface text-ink text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition"
                 >
                   <option value="residential">{s.propertyTypes.residential}</option>
                   <option value="commercial">{s.propertyTypes.commercial}</option>
@@ -190,7 +191,7 @@ export default function VastuShastraClient({ locale }: { locale: Locale }) {
                   id="prop_facing"
                   value={facing}
                   onChange={(e) => setFacing(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl border border-line bg-surface text-ink text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition"
+                  className="w-full px-3 py-2.5 rounded-md border border-line bg-surface text-ink text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition"
                 >
                   <option value="North">{s.directions.North}</option>
                   <option value="East">{s.directions.East}</option>
@@ -218,7 +219,7 @@ export default function VastuShastraClient({ locale }: { locale: Locale }) {
 
               <div className="space-y-2.5 max-h-60 overflow-y-auto pr-1">
                 {rooms.map((r, idx) => (
-                  <div key={idx} className="flex items-center gap-2 p-2.5 rounded-xl bg-surface border border-line text-xs">
+                  <div key={idx} className="flex items-center gap-2 p-2.5 rounded-md bg-surface border border-line text-xs">
                     <select
                       value={r.room_type}
                       onChange={(e) => handleUpdateRoom(idx, "room_type", e.target.value)}
@@ -276,14 +277,14 @@ export default function VastuShastraClient({ locale }: { locale: Locale }) {
           {error && <ErrorNote message={error} />}
 
           {!data && !loading && !error && (
-            <div className="bg-card rounded-2xl border border-line p-10 text-center text-ink-muted">
+            <div className="bg-card rounded-lg border border-line p-10 text-center text-ink-muted">
               <div className="text-4xl mb-3">🏠</div>
               <p className="text-sm">{s.emptyHint}</p>
             </div>
           )}
 
           {loading && (
-            <div className="bg-card rounded-2xl border border-line p-12 text-center text-ink-soft flex flex-col items-center justify-center">
+            <div className="bg-card rounded-lg border border-line p-12 text-center text-ink-soft flex flex-col items-center justify-center">
               <Loader2 className="w-8 h-8 text-accent animate-spin mb-3" />
               <p className="text-sm">{s.loadingHint}</p>
             </div>
@@ -293,7 +294,7 @@ export default function VastuShastraClient({ locale }: { locale: Locale }) {
             <div className="space-y-6">
               <ResultSection title={s.scoreTitle}>
                 <div
-                  className={`p-6 rounded-xl border text-center mb-4 ${
+                  className={`p-6 rounded-md border text-center mb-4 ${
                     score >= 70
                       ? "bg-emerald-50 border-emerald-200 text-emerald-950"
                       : score >= 50
@@ -314,7 +315,7 @@ export default function VastuShastraClient({ locale }: { locale: Locale }) {
               {Array.isArray(roomEvaluations) && roomEvaluations.length > 0 && (
                 <ResultSection title={s.roomReportTitle}>
                   <div className="divide-y divide-line/60">
-                    {roomEvaluations.map((re: any, idx: number) => {
+                    {roomEvaluations.map((re: ApiData, idx: number) => {
                       const isFavorable = re.is_favorable || re.status === "good";
                       return (
                         <div key={idx} className="py-2.5 flex items-center justify-between text-xs">

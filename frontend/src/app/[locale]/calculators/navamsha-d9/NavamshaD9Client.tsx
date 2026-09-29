@@ -8,6 +8,7 @@ import { fetchParallelSettled } from "@/lib/calculatorApi";
 import { BirthDataFields, DEFAULT_BIRTH_DATA, BirthDataValue } from "@/components/calculators/BirthDataFields";
 import { ResultSection, ResultRow, ResultBadge, SubmitButton, ErrorNote } from "@/components/calculators/ResultRows";
 import { Loader2 } from "lucide-react";
+import { ApiData, toApiError } from "@/lib/apiTypes";
 
 const STRINGS = {
   hi: {
@@ -60,10 +61,10 @@ export default function NavamshaD9Client({ locale }: { locale: Locale }) {
   const [lang, setLang] = useState<"hi" | "en">(locale);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [chartData, setChartData] = useState<any>(null);
+  const [chartData, setChartData] = useState<ApiData>(null);
   const [svgChart, setSvgChart] = useState<string>("");
   const [d1Signs, setD1Signs] = useState<Record<string, string>>({});
-  const [specialPoints, setSpecialPoints] = useState<any>(null);
+  const [specialPoints, setSpecialPoints] = useState<ApiData>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -122,11 +123,11 @@ export default function NavamshaD9Client({ locale }: { locale: Locale }) {
 
       const d1Planets = resD1?.planets || [];
       const signMap: Record<string, string> = {};
-      d1Planets.forEach((p: any) => {
+      d1Planets.forEach((p: ApiData) => {
         if (p?.id && p?.sign?.id) signMap[p.id] = p.sign.id;
       });
       setD1Signs(signMap);
-    } catch (err: any) {
+    } catch (errCaught) { const err = toApiError(errCaught);
       setError(err?.response?.data?.message || err?.message || s.error);
     } finally {
       setLoading(false);
@@ -181,14 +182,14 @@ export default function NavamshaD9Client({ locale }: { locale: Locale }) {
       {error && <ErrorNote message={error} />}
 
       {!chartData && !loading && !error && (
-        <div className="bg-card rounded-2xl border border-line p-10 text-center text-ink-muted">
+        <div className="bg-card rounded-lg border border-line p-10 text-center text-ink-muted">
           <div className="text-4xl mb-3">✨</div>
           <p className="text-sm">{s.emptyHint}</p>
         </div>
       )}
 
       {loading && (
-        <div className="bg-card rounded-2xl border border-line p-12 text-center text-ink-soft flex flex-col items-center justify-center">
+        <div className="bg-card rounded-lg border border-line p-12 text-center text-ink-soft flex flex-col items-center justify-center">
           <Loader2 className="w-8 h-8 text-accent animate-spin mb-3" />
           <p className="text-sm">{s.loadingHint}</p>
         </div>
@@ -199,7 +200,7 @@ export default function NavamshaD9Client({ locale }: { locale: Locale }) {
               {svgChart && (
                 <ResultSection title={s.chartTitle}>
                   <div
-                    className="w-full max-w-md mx-auto aspect-square flex items-center justify-center bg-surface-alt/50 rounded-xl p-2 border border-line/60"
+                    className="w-full max-w-md mx-auto aspect-square flex items-center justify-center bg-surface-alt/50 rounded-md p-2 border border-line/60"
                     dangerouslySetInnerHTML={{ __html: svgChart }}
                   />
                 </ResultSection>
@@ -224,7 +225,7 @@ export default function NavamshaD9Client({ locale }: { locale: Locale }) {
               {specialPoints && (
                 <ResultSection title={lang === "hi" ? "पुष्कर नवांश एवं गंडान्त विश्लेषण" : "Pushkar Navamsha & Sensitive Points"}>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                    <div className="p-3 bg-surface-alt rounded-xl border border-line">
+                    <div className="p-3 bg-surface-alt rounded-md border border-line">
                       <span className="font-bold text-ink block mb-1">पुष्कर नवांश (Pushkar Navamsha)</span>
                       <p className="text-ink-soft">
                         {specialPoints.pushkar_navamsha?.planets && specialPoints.pushkar_navamsha.planets.length > 0
@@ -232,7 +233,7 @@ export default function NavamshaD9Client({ locale }: { locale: Locale }) {
                           : "कोई भी ग्रह पुष्कर नवांश में नहीं है।"}
                       </p>
                     </div>
-                    <div className="p-3 bg-surface-alt rounded-xl border border-line">
+                    <div className="p-3 bg-surface-alt rounded-md border border-line">
                       <span className="font-bold text-ink block mb-1">नक्षत्र गंडान्त (Gandanta Degree)</span>
                       <p className="text-ink-soft">
                         {specialPoints.gandanta?.is_gandanta
@@ -257,7 +258,7 @@ export default function NavamshaD9Client({ locale }: { locale: Locale }) {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-line/60">
-                        {planets.map((p: any, idx: number) => {
+                        {planets.map((p: ApiData, idx: number) => {
                           const isVargottama =
                             p.is_vargottama || p.vargottama || (p.id && d1Signs[p.id] && d1Signs[p.id] === p.sign?.id);
                           return (

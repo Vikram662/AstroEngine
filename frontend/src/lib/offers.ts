@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import type { ApiData } from "@/lib/apiTypes";
 
 export type CheckoutTargetType = "PLAN" | "ADDON";
 
@@ -33,7 +34,7 @@ export async function resolveOfferForUser(args: {
   const code = args.code?.trim().toUpperCase();
   if (!code) return null;
 
-  const offer = await (prisma as any).offer.findUnique({
+  const offer = await (prisma as ApiData).offer.findUnique({
     where: { code },
     include: {
       redemptions: {
@@ -101,7 +102,7 @@ export async function recordOfferRedemption(
   orderReference?: string | null,
 ) {
   if (!offer) return;
-  await (tx as any).offerRedemption.create({
+  await (tx as ApiData).offerRedemption.create({
     data: {
       offerId: offer.id,
       userId,

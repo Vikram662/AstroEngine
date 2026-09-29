@@ -103,7 +103,7 @@ export default function LoginPage() {
       <Navbar />
 
       <div className="flex-1 flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-card p-8 rounded-2xl border border-line shadow-sm space-y-6">
+        <div className="max-w-md w-full bg-card p-8 rounded-lg border border-line shadow-sm space-y-6">
           <div>
             <div className="w-8 h-8 rounded bg-ink text-white flex items-center justify-center font-brand font-bold text-xs mb-3">
               AE
@@ -177,7 +177,7 @@ export default function LoginPage() {
 
             {/* OTP Input Block (Shown during registration once OTP is requested) */}
             {isRegistering && otpSent && (
-              <div className="p-3.5 bg-surface-alt border border-line rounded-xl space-y-2">
+              <div className="p-3.5 bg-surface-alt border border-line rounded-md space-y-2">
                 <div className="flex items-center justify-between">
                   <label className="block text-xs font-bold text-ink-soft uppercase tracking-wider">
                     Email Verification Code (OTP)
@@ -212,7 +212,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading || sendingOtp}
-              className="w-full py-3 rounded-lg bg-accent hover:bg-accent-hover text-white font-bold text-sm shadow-md shadow-accent/20 flex items-center justify-center gap-2 transition disabled:opacity-50"
+              className="w-full py-3 rounded-lg bg-accent hover:bg-accent-hover text-white font-bold text-sm shadow-accent/20 flex items-center justify-center gap-2 transition disabled:opacity-50"
             >
               {loading || sendingOtp ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
