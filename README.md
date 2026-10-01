@@ -6,6 +6,40 @@ This is the repository's single maintained Markdown document. It consolidates th
 
 ---
 
+## Production checklist (read this first)
+
+Everything below is needed once, in this order. Details for each step are further down.
+
+1. **CI:** push to GitHub and check the Actions tab is green (typecheck, lint, 155 frontend + 73 backend tests, dependency audits).
+2. **Database:** `cd frontend && npx prisma db push && npx prisma generate`, **then** restart the app (never the other way round: the new code reads the new tables / columns).
+3. **Environment:** fill `frontend/.env` and `backend/.env` (see *Environment variables*). Mandatory: `DATABASE_URL`, `SESSION_SECRET`, `ASTRO_INTERNAL_SECRET` (= backend `INTERNAL_SECRET_KEY`), `NEXT_APP_URL` (backend), `ASTRO_BACKEND_URL`, `ASTRO_INTERNAL_API_KEY`, `NEXT_PUBLIC_APP_URL`. Recommended: `REDIS_URL`, `SETTINGS_ENCRYPTION_KEY` (back it up).
+4. **Seed once:** `npm run seed`. Copy the admin password and the admin API key it prints (shown once); the API key goes into `ASTRO_INTERNAL_API_KEY`.
+5. **Credentials in Admin > Settings:** Razorpay (key, secret, webhook secret), SMTP, Cloudflare R2, company / GST details. Rotate any credential that was ever seeded with a dummy value. Then run `npm run encrypt-settings` if you set `SETTINGS_ENCRYPTION_KEY`.
+6. **Admin accounts:** enable two-factor authentication (Dashboard > Profile).
+7. **Scheduled jobs** (Windows Task Scheduler, or cron): see the table below.
+8. **Smoke-test on staging** with real MySQL / SMTP / Razorpay test keys: sign-up (OTP), login, forgot password, 2FA login; recharge (receipt + email); buy a plan (invoice number, same number on reload); generate a report (customer's wallet is charged, "report ready" email); make a report fail (refund + email); switch a notification off and confirm nothing arrives; run the monthly invoice job for last month.
+
+### Scheduled jobs
+
+| Script | When | What it does |
+| --- | --- | --- |
+| `scripts/process-notifications.ps1 -BaseUrl <app>` | every minute | Sends queued notifications (retries with back-off), re-checks running PDF reports ("ready / failed" alerts and refunds), raises error-spike alerts. |
+| `scripts/monthly-invoices.ps1 -BaseUrl <app>` | 1st of every month | Issues one consolidated GST usage invoice per customer for last month (per-call overage + report charges) and any missing purchase invoices. Idempotent. |
+| `scripts/backup.ps1` | daily | MySQL dump + the PDF-job SQLite DB, with retention. Copy the output off the machine. |
+
+Each script header contains a ready-made `schtasks` command. The two billing scripts read `ASTRO_INTERNAL_SECRET` from the environment or `frontend/.env`.
+
+### Testing and CI
+
+```bash
+cd frontend && npm test && npm run typecheck && npm run lint     # Vitest (155 tests), tsc, eslint
+cd backend  && pip install -r requirements-dev.txt && pytest      # 73 tests
+```
+
+GitHub Actions (`.github/workflows/ci.yml`) runs both on every push and pull request, plus `npm audit` and `pip-audit`; Dependabot proposes dependency updates weekly. One legacy test, `test_all_117_endpoints_live`, needs the Swiss Ephemeris data and a running Next.js, so CI deselects it: run it by hand against a full stack. Tests use mocked databases: they do not replace the staging smoke-test above.
+
+---
+
 ## 1. Architecture
 
 ```
@@ -66,27 +100,33 @@ Standard request body (`BirthDataRequest`): `dob, tob, lat, lon, tz (default 5.5
 
 ## 4. Local setup
 
+Prerequisites: Python 3.11+, **Node 22+**, MySQL (XAMPP is fine), optionally Redis.
+
 **Backend:**
 ```bash
 cd backend
 python -m venv venv && venv\Scripts\activate   # or source venv/bin/activate on Linux/Mac
-pip install -r requirements.txt
+pip install -r requirements-dev.txt
+cp .env.example .env   # or create it: INTERNAL_SECRET_KEY, NEXT_APP_URL, ENVIRONMENT=development, EPHE_PATH
 uvicorn app.main:app --reload --port 8000
 ```
-- Swiss Ephemeris `.se1` data files (1800–2100 CE, ~25MB) go in `backend/ephe/` — falls back to the lower-accuracy Moshier analytical engine if missing.
-- `.env` needs: `PORT, ENVIRONMENT, INTERNAL_SECRET_KEY(+_PREVIOUS), EPHE_PATH, REDIS_HOST/PORT/PASSWORD, R2_ACCOUNT_ID/ACCESS_KEY/SECRET/BUCKET/PUBLIC_DOMAIN, DATABASE_URL, SENTRY_DSN`.
-- **Also required, not in the old install guide:** `NEXT_APP_URL`, `ASTRO_INTERNAL_SECRET`/`ASTRO_INTERNAL_API_KEY`, `ASTRO_BACKEND_URL` for the Next.js↔FastAPI wiring — without these, most endpoints 500 on a fresh clone via `/api/proxy`.
+- Swiss Ephemeris `.se1` data files (1800-2100 CE, ~25MB) go in `backend/ephe/`; without them the lower-accuracy Moshier analytical engine is used and `/ready` returns 503.
+- `ENVIRONMENT=development` enables the local `test` API-key bypass used by the legacy endpoint test. Never set it in production.
 
 **Frontend:**
 ```bash
 cd frontend
 npm install
+cp .env.example .env.local   # or create it: DATABASE_URL, SESSION_SECRET (optional in dev), ASTRO_INTERNAL_SECRET, ASTRO_BACKEND_URL, ASTRO_INTERNAL_API_KEY
+npx prisma db push && npx prisma generate
+npm run seed                 # admin account + settings + plans (prints the admin password / API key once)
 npm run dev
 ```
-- `frontend/.env.local` (gitignored) needs `ASTRO_BACKEND_URL` and `ASTRO_INTERNAL_API_KEY` at minimum for the demo/calculator pages to reach the backend.
+- Without `ASTRO_INTERNAL_SECRET`, `ASTRO_BACKEND_URL` and `ASTRO_INTERNAL_API_KEY` the calculator pages cannot reach the backend (the proxy answers 500). The full list of variables is under *Environment variables*.
 - Linux hosts need `build-essential`, `python3-dev`, and Noto fonts for PDF rendering.
+- In development, e-mails (OTP, notifications) are printed to the terminal when SMTP is not configured.
 
-**Pricing:** Reconciled to a single standard across DB seeds, docs, and backend fallback: Starter ₹4,999/mo (35k calls), Pro ₹14,999/mo (300k calls), Enterprise ₹39,999/mo (1.5M calls).
+**Pricing:** Starter Rs 4,999/mo (35k calls), Pro Rs 14,999/mo (300k calls), Enterprise Rs 39,999/mo (1.5M calls); calls beyond the quota are charged per call from the wallet (Rs 0.02 / 0.015 / 0.01) and invoiced monthly; PDF reports cost Rs 4 to Rs 12 each (see *Billing*).
 
 ## 5. Backend calculation status (verified live, not just read as code)
 
@@ -104,20 +144,36 @@ Core astronomy (planetary positions, ascendant, Panchang) matches raw `pyswissep
 - Historical reports that `frontend/src/lib` was missing are no longer current; locale, PDF dispatch, and R2 upload helpers now live there.
 - The dashboard PDF queue now dispatches through `frontend/src/lib/pdfEngine.ts`, persists the original request payload, and supports a real admin retry route instead of a dead UI action.
 
-## 6. Security & billing — re-verified this session (2026-09-28)
+## 6. Security & billing (current state)
 
-The six items below were re-checked directly against the current code (not just re-read from the old review). Four were already fixed by earlier work; two were genuinely still open and have now been fixed in this session:
+A full security review was carried out and its findings fixed (history in `git log`). What the system guarantees today:
 
-- `POST /api/plans` — **already fixed.** Guarded by `requireAdminSession()` in [plans/route.ts](frontend/src/app/api/plans/route.ts).
-- Wallet recharge — **already fixed.** Real Razorpay Orders API call, HMAC-SHA256 signature verification with `crypto.timingSafeEqual`, replay protection via `gatewayPaymentId` lookup, and an atomic `$transaction` settlement in [billing/recharge/route.ts](frontend/src/app/api/billing/recharge/route.ts).
-- Invoice stored XSS — **already fixed.** Every interpolated field goes through an `escapeHtml()` helper before being embedded in the generated HTML in [billing/invoice/[id]/route.ts](frontend/src/app/api/billing/invoice/%5Bid%5D/route.ts).
-- `GET /api/user/me` password leak — **already fixed.** `password`, `apiKeyHash`, and `accountWebhookSecret` are destructured out of the response in [user/me/route.ts](frontend/src/app/api/user/me/route.ts).
-- Rate limiting — **enforced with Redis + in-memory fallback.** Backend: a sliding-window limiter (`backend/app/core/rate_limiter.py`) now connects directly to Upstash/Redis (`REDIS_HOST`) with atomic ZSET pipelines, while gracefully falling back to local sliding-window in-memory storage if Redis is offline. Enforced via `Depends(verify_api_key)` across astrology module routers. Frontend: login is capped at 6 attempts/5min per IP and OTP requests at 4/10min per email, both in `frontend/src/app/api/auth/*`.
-- Hardcoded seed credentials — **fixed this session.** `prisma/seed.ts` and `prisma/seed_users.ts` both hashed `admin@astroengine.io` / `Admin@12345` with a bare unsalted SHA-256 instead of the real scrypt `hashPassword` in `src/lib/session.ts`, and `seed_users.ts` had no production guard and reset the admin password on every run. Both now import the real scrypt hasher, both skip entirely when `NODE_ENV=production`, neither overwrites an existing password on `update`, and the password is overridable via `SEED_ADMIN_PASSWORD`/`SEED_DEV_PASSWORD` env vars.
-- Money as `Float` — **fixed this session.** Every money field in `schema.prisma` (`walletBalance`, `priceMonthly`, `overageCost`, `creditsCost`, `creditsAdded`, transaction/offer amounts — 19 fields across 8 models) is now `Decimal @db.Decimal(12, 4)`. This touched 15 API route files: reading a Decimal field and using it in `===`, `>=`/`<=` against another Decimal, or returning it raw in `NextResponse.json()` are all silently wrong (Decimal.js objects coerce to strings, so `===` fails, cross-Decimal comparisons become lexicographic string compares, and JSON serialization emits a decimal-string instead of a number) — found and fixed several live instances of this, including a Decimal-vs-Decimal wallet balance comparison in the hot-path `internal/verify-key/route.ts` that would have inverted quota/overage checks. Added `frontend/src/lib/money.ts` (`toMoney`, `toJsonSafe`, `scaleMoney`, `splitInclusiveTax`) as the single conversion point, applied at every Prisma read/response boundary that touches a money field.
-  - **Not yet done:** the actual DB migration. This session has no `.env`/`DATABASE_URL` configured, so the schema and code changes could only be verified by regenerating the Prisma client and full-project `tsc --noEmit` (both clean, 0 errors) — not against a live MySQL instance. Run `npx prisma db push` (or generate a proper migration if you want migration history) once you have a DB connection, then smoke-test a wallet recharge and a plan purchase end-to-end.
+**Authentication and sessions**
+- Session cookies are HMAC-signed, `httpOnly`, expire after 72 h and carry an issue time; **changing or resetting the password signs out every other device**. `SESSION_SECRET` is mandatory outside `next dev` and is never derived from another secret.
+- Passwords: scrypt (async), 8-128 characters, equal login timing for unknown emails. Legacy SHA-256 hashes are upgraded on the next login.
+- Sign-up / reset codes are stored as keyed hashes; **wrong guesses are counted with the code in the database** (5, then the code is burned); login, OTP and reset are also rate-limited per IP and per account (Redis when `REDIS_URL` is set). Sign-up and reset never reveal whether an account exists.
+- Optional TOTP two-factor authentication (RFC 6238, each code usable once); recommended for every admin.
+- API keys are stored only as SHA-256 hashes; the engine verifies them through `/api/internal/verify-key` with a constant-time shared secret.
 
-If picking this back up further, the verification harness at `C:\xampp\htdocs\my-app\docs\astroengine_review_scripts\run_all.py` (lives one level up, outside this repo — see its own README there) is a from-code-evidence differential test suite, not a changelog.
+**Network and input handling**
+- Webhook URLs (customer account webhooks, PDF callbacks) are SSRF-protected: the destination IP is validated at connect time (no DNS rebinding), redirects are never followed, private / metadata / mapped / NAT64 ranges are blocked.
+- The public calculator proxy has an endpoint allow-list, GET/POST only, traversal protection and per-IP / per-user rate limits; report generation requires a signed-in user and users can only poll / download their own reports.
+- Logo uploads: raster images only (PNG / JPG / WebP, verified by content), safe file names; backend SVG charts are sanitised before they are shown; invoices and exports escape every value and use a nonce-based CSP.
+- Security headers are set on every page; ReDoc is loaded from a pinned URL with an integrity hash; backend error details never reach clients.
+
+**Money**
+- Razorpay signatures are mandatory in every environment, the amount is always taken from the server-side order, the webhook is refused until its secret is configured, and a plan is activated only if the amount actually paid covers it.
+- Quota and wallet debits are single conditional database statements (no overdraw under concurrency); every metered call has a receipt, and a failed call or report is **refunded exactly once**.
+- Money fields are `Decimal`, converted at one place (`frontend/src/lib/money.ts`).
+- Razorpay / R2 / SMTP secrets can be encrypted at rest (`SETTINGS_ENCRYPTION_KEY`); only the storage settings are exposed to the engine.
+
+**Known limitations** (deliberately left, with the reason)
+- The per-add-on usage counter is a read-modify-write on a JSON column (small race on very bursty add-on traffic); fixing it needs raw SQL that must be tested on MySQL.
+- PDF generation runs in threads inside the API process (bounded by `PDF_MAX_CONCURRENCY`), not in a separate job queue; rate limits are per process unless Redis is configured.
+- Two-factor authentication has no backup codes yet (an admin who loses their phone needs a database reset of the 2FA columns), and it is optional.
+- Reports created straight through the public API (not the dashboard) are not tracked in the database, so they get no "ready / failed" notification.
+- A call refunded after its month's usage invoice was issued would need a credit note; none is generated.
+- Secrets in `.env` files and the database are only as safe as the server: use a secrets manager if you have one.
 
 ## 7. Frontend: public-site redesign & i18n
 
@@ -223,6 +279,13 @@ The old docs disagreed with each other on several numbers. Resolutions:
 - `frontend/src/lib/pdfEngine.ts` — shared PDF report dispatch used by creation and retry flows.
 - `frontend/src/lib/offers.ts` — shared server-side offer validation, price calculation, and one-time redemption recording.
 - `frontend/src/lib/r2Upload.ts` — shared Cloudflare R2 upload/signing helper.
+- `frontend/src/lib/metering.ts` — the billing core: entitlement, atomic quota / wallet debit, per-report price, receipts, usage alerts. Used by the API gateway, the dashboard and the proxy.
+- `frontend/src/lib/billingRefund.ts`, `pdfReconcile.ts` — exactly-once refunds; re-sync of running reports.
+- `frontend/src/lib/invoicing.ts`, `invoice.ts`, `invoiceHtml.ts` — consecutive GST invoice numbers, GST maths, invoice / receipt rendering. `csv.ts` — safe CSV cells.
+- `frontend/src/lib/notifications.ts`, `notificationPrefs.ts`, `notificationTemplates.ts` — notification queue, the user's on/off switches, e-mail templates.
+- `frontend/src/lib/session.ts`, `webSession.ts`, `sessionSecret.ts`, `passwords.ts`, `otp.ts`, `totp.ts`, `rateLimit.ts`, `ssrf.ts`, `secretBox.ts` — auth and hardening primitives.
+- `frontend/src/__tests__/` — Vitest suites (billing, invoices, notifications, auth, 2FA, proxy, libs). `backend/tests/` — pytest.
+- `frontend/prisma/` — schema and the seed scripts (`seed*.mts`). `scripts/` — the scheduled jobs. `.github/` — CI and Dependabot.
 - `C:\xampp\htdocs\my-app\docs\astroengine_review_scripts\` (outside this repo) — the independent verification harness referenced in §6.
 
 ## Environment variables
@@ -333,7 +396,7 @@ Every customer controls what they hear about under **Dashboard > Settings > Noti
 | Error spike | more than 5% of calls failing in 10 minutes (once an hour) | on |
 | *Security (always on)* | password changed / reset, 2FA turned on / off | cannot be switched off, e-mail only |
 
-**How it works (queue / outbox):** when an event happens the app checks the user's switch for it; only if it is ON (or it is a security event) a row is written to the `Notification` table, in the *same database transaction* as the thing that happened (a payment, an invoice...), one row per channel: e-mail, plus the user's account webhook if they set one (signed with their secret, never used for security alerts). A worker sends the rows, retrying with back-off (1 min, 5 min, 30 min, 2 h, 6 h; then marked `FAILED`). If the user switches an event off while it waits in the queue it is skipped, not sent. Duplicates are prevented by a dedupe key. A notification problem can never break a payment, call or report.
+**How it works (queue / outbox):** when an event happens the app checks the user's switch for it; only if it is ON (or it is a security event) a row is written to the `Notification` table, in the *same database transaction* as the thing that happened (a payment, an invoice...), one row per channel: e-mail, plus the user's account webhook if they set one (signed with their secret, never used for security alerts). **The same switch controls both channels**: switch an event off and neither the e-mail nor the webhook is sent. A worker sends the rows, retrying with back-off (1 min, 5 min, 30 min, 2 h, 6 h; then marked `FAILED`). If the user switches an event off while it waits in the queue it is skipped, not sent. Duplicates are prevented by a dedupe key. A notification problem can never break a payment, call or report.
 
 Delivery starts immediately by itself. As a safety net (retries, plus re-checking reports that were still running, so "report ready/failed" alerts and refunds happen without anybody opening the page, plus the error-spike check) run the worker every minute:
 
