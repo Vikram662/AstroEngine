@@ -49,6 +49,7 @@ def _enqueue_report(
     req: PdfReportRequest,
     background_tasks: BackgroundTasks,
     x_api_key: Optional[str],
+    auth: Optional[dict],
     report_type: str,
     credits_cost: float,
     message: str,
@@ -85,6 +86,7 @@ def _enqueue_report(
         report_type=report_type,
         lang=selected_lang,
         webhook_url=req.webhook_url,
+        billing_receipt=(auth or {}).get("receipt"),
     )
 
     return PdfJobResponse(
@@ -105,7 +107,7 @@ async def create_basic_kundli_job(
 ):
     """Module 12 — Endpoint 93: Asynchronous 15 Page Basic Kundli PDF Generator with White-Label Branding.
     Returns HTTP 202 Accepted with job_id for polling."""
-    return _enqueue_report(req, background_tasks, x_api_key, "kundli_basic", 5.0,
+    return _enqueue_report(req, background_tasks, x_api_key, auth, "kundli_basic", 5.0,
                            "Basic Kundli PDF generation job queued successfully.")
 
 
@@ -117,7 +119,7 @@ async def create_brihat_kundli_job(
     x_api_key: str = Header(None, alias="x-api-key"),
 ):
     """Module 12 — Endpoint 94: Asynchronous 60 Page Grand Brihat Kundli PDF Generator."""
-    return _enqueue_report(req, background_tasks, x_api_key, "kundli_brihat", 12.0,
+    return _enqueue_report(req, background_tasks, x_api_key, auth, "kundli_brihat", 12.0,
                            "Brihat Kundli PDF generation job queued successfully.")
 
 
@@ -194,7 +196,7 @@ async def create_matching_pdf_job(
         "girl_dob": req.girl_dob, "girl_tob": req.girl_tob, "girl_lat": req.girl_lat,
         "girl_lon": req.girl_lon, "girl_tz": req.girl_tz,
     }
-    return _enqueue_report(req, background_tasks, x_api_key, "matching_report", 6.0,
+    return _enqueue_report(req, background_tasks, x_api_key, auth, "matching_report", 6.0,
                            "Matchmaking PDF queued successfully.", partner)
 
 
@@ -206,7 +208,7 @@ async def create_varshphal_pdf_job(
     x_api_key: str = Header(None, alias="x-api-key"),
 ):
     """Module 12 — Endpoint 96: 20 Page Varshphal (Annual Solar Return) PDF Report."""
-    return _enqueue_report(req, background_tasks, x_api_key, "varshphal_annual", 8.0,
+    return _enqueue_report(req, background_tasks, x_api_key, auth, "varshphal_annual", 8.0,
                            "Varshphal PDF queued successfully.", {"target_year": req.target_year or 2026})
 
 
@@ -218,7 +220,7 @@ async def create_lalkitab_pdf_job(
     x_api_key: str = Header(None, alias="x-api-key"),
 ):
     """Module 12 — Endpoint 97: 30 Page Lal Kitab Remedial & Farman PDF Report."""
-    return _enqueue_report(req, background_tasks, x_api_key, "lalkitab_full", 9.0,
+    return _enqueue_report(req, background_tasks, x_api_key, auth, "lalkitab_full", 9.0,
                            "Lal Kitab PDF queued successfully.")
 
 
@@ -230,7 +232,7 @@ async def create_sadesati_pdf_job(
     x_api_key: str = Header(None, alias="x-api-key"),
 ):
     """Module 12 — Endpoint 98: 15 Page Shani Sade Sati Life Guide PDF Report."""
-    return _enqueue_report(req, background_tasks, x_api_key, "sadesati_guide", 4.0,
+    return _enqueue_report(req, background_tasks, x_api_key, auth, "sadesati_guide", 4.0,
                            "Sade Sati PDF queued successfully.")
 
 
@@ -242,5 +244,5 @@ async def create_numerology_pdf_job(
     x_api_key: str = Header(None, alias="x-api-key"),
 ):
     """Module 12 — Endpoint 99: 12 Page Complete Numerology Blueprint PDF Report."""
-    return _enqueue_report(req, background_tasks, x_api_key, "numerology_report", 5.0,
+    return _enqueue_report(req, background_tasks, x_api_key, auth, "numerology_report", 5.0,
                            "Numerology PDF queued successfully.")

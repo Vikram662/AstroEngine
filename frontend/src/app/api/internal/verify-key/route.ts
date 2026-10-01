@@ -293,9 +293,11 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Log the API call in ApiRequestLog for real-time traffic monitoring & usage analytics
+    // Log the call. The log row doubles as the billing "receipt": /api/internal/refund
+    // uses its id (and flips its statusCode) so a failed call is refunded exactly once.
+    let receiptId: string | null = null;
     try {
-      await prisma.apiRequestLog.create({
+      const log = await prisma.apiRequestLog.create({
         data: {
           userId: user.id,
           endpoint: endpoint.substring(0, 100),
@@ -305,13 +307,16 @@ export async function POST(req: NextRequest) {
           statusCode: 200,
         }
       });
+      receiptId = log.id.toString();
     } catch {
-      // Non-blocking log failure
+      // Non-blocking log failure (such a call simply cannot be auto-refunded)
     }
 
     return NextResponse.json({
       valid: true,
       role: user.role,
+      receiptId,
+      addonId: deductionType.startsWith("ADDON") ? matchedAddonRecord?.id ?? null : null,
       userId: user.id,
       email: user.email,
       planTier: user.planTier,

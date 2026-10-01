@@ -107,3 +107,74 @@ def test_pdf_request_with_internal_webhook_is_rejected():
         assert r.status_code == 400
     finally:
         app.dependency_overrides.clear()
+
+
+# ── Refund-on-failure ────────────────────────────────────────────────────────
+from fastapi import Request  # noqa: E402
+
+import app.main as main_module  # noqa: E402
+
+
+def _metered_client(monkeypatch, calls):
+    async def metered(request: Request):
+        request.state.billing_receipt = {"receiptId": "42", "deductionType": "QUOTA", "addonId": None}
+        return {"valid": True, "role": "USER", "receipt": request.state.billing_receipt}
+
+    app.dependency_overrides[verify_api_key] = metered
+    monkeypatch.setattr(main_module, "schedule_refund", lambda receipt, status: calls.append((receipt, status)))
+    return TestClient(app)
+
+
+def test_validation_error_triggers_refund(monkeypatch):
+    calls = []
+    c = _metered_client(monkeypatch, calls)
+    try:
+        r = c.post("/api/v1/core/planets/positions", json={"dob": "not-a-date"}, headers={"x-api-key": "k"})
+        assert r.status_code >= 400
+        assert calls and calls[0][0]["receiptId"] == "42" and calls[0][1] == r.status_code
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_successful_call_is_not_refunded(monkeypatch):
+    calls = []
+    c = _metered_client(monkeypatch, calls)
+    try:
+        r = c.post("/api/v1/core/planets/positions", json=_BODY, headers={"x-api-key": "k"})
+        assert r.status_code == 200
+        assert calls == []
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_build_receipt():
+    from app.core.billing import build_receipt
+    assert build_receipt({}) is None
+    assert build_receipt({"receiptId": 7, "deductionType": "WALLET_CREDIT", "addonId": None}) == {
+        "receiptId": "7", "deductionType": "WALLET_CREDIT", "addonId": None}
+
+
+def test_refund_posts_to_billing_service(monkeypatch):
+    import asyncio
+    import httpx
+    from app.core import billing
+
+    seen = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen["url"] = str(request.url)
+        seen["body"] = request.content.decode()
+        seen["secret"] = request.headers.get("x-internal-secret")
+        return httpx.Response(200, json={"status": "success", "refunded": True})
+
+    real_client = httpx.AsyncClient
+    monkeypatch.setattr(billing.settings, "NEXT_APP_URL", "http://next.test")
+    monkeypatch.setattr(billing.settings, "INTERNAL_SECRET_KEY", "s3cret")
+    monkeypatch.setattr(billing.httpx, "AsyncClient", lambda **kw: real_client(transport=httpx.MockTransport(handler), **kw))
+
+    ok = asyncio.run(billing.refund_receipt({"receiptId": "42", "deductionType": "QUOTA", "addonId": None}, 422))
+    assert ok is True
+    assert seen["url"] == "http://next.test/api/internal/refund"
+    assert '"receiptId":"42"' in seen["body"].replace(" ", "") and '"httpStatus":422' in seen["body"].replace(" ", "")
+    assert seen["secret"] == "s3cret"
+    assert asyncio.run(billing.refund_receipt(None)) is False

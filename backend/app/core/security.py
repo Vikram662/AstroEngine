@@ -3,6 +3,7 @@ import logging
 import httpx
 from fastapi import Header, HTTPException, Request, status
 from app.core.config import settings
+from app.core.billing import build_receipt
 
 logger = logging.getLogger("astroengine.security")
 
@@ -94,6 +95,14 @@ async def verify_api_key(
                         "message": data.get("message", "Invalid API key provided.")
                     }
                 )
+
+            # Billing receipt: lets the response middleware (or an async job) refund
+            # this call if it ends in an error. Attached BEFORE the rate-limit check
+            # because a throttled request has already been metered.
+            receipt = build_receipt(data)
+            if receipt:
+                request.state.billing_receipt = receipt
+                data["receipt"] = receipt
 
             # Rate Limiting check (sliding window RPM)
             from app.core.rate_limiter import check_sliding_window_rate_limit

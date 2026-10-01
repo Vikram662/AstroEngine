@@ -2,6 +2,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, HTMLResponse
 from app.core.config import settings
+from app.core.billing import schedule_refund
 from app.modules.core_astronomy.router import router as core_astronomy_router
 from app.modules.panchang.router import router as panchang_router
 from app.modules.parashari.router import router as parashari_router
@@ -406,6 +407,12 @@ async def attach_quota_to_response(request: Request, call_next):
     into both HTTP response headers and the JSON response body (`quota` field).
     """
     response = await call_next(request)
+
+    # Refund metered calls that failed (validation error, throttling, server error):
+    # the customer should not pay for a request that returned no result.
+    receipt = getattr(request.state, "billing_receipt", None)
+    if receipt and response.status_code >= 400:
+        schedule_refund(receipt, response.status_code)
 
     # Attach quota headers if authenticated
     quota = getattr(request.state, "quota", None)

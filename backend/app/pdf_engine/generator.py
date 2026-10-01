@@ -7,6 +7,7 @@ from app.pdf_engine.jobs_db import jobs_store, PersistentJobStore
 from app.pdf_engine.renderer import render_real_pdf_bytes
 from app.pdf_engine.storage import store_report_pdf
 from app.core.ssrf import post_webhook_json
+from app.core.billing import refund_receipt
 
 TEMPLATES_DIR = os.path.join(os.path.dirname(__file__), "templates")
 jinja_env = Environment(loader=FileSystemLoader(TEMPLATES_DIR), autoescape=True)
@@ -51,7 +52,8 @@ async def process_pdf_job_async(
     branding: Dict[str, Any],
     report_type: str,
     lang: str = "en",
-    webhook_url: Optional[str] = None
+    webhook_url: Optional[str] = None,
+    billing_receipt: Optional[Dict[str, Any]] = None
 ):
     """
     Real Asynchronous PDF Pipeline:
@@ -122,5 +124,9 @@ async def process_pdf_job_async(
             job_id=job_id,
             status="FAILED",
             failure_reason="Report generation failed. Please retry or contact support.",
-            refunded=True
+            refunded=False
         )
+        # Give the metered call back: the 202 was already returned, so the HTTP
+        # middleware cannot refund it. Only mark the job refunded if it really was.
+        if await refund_receipt(billing_receipt, 500):
+            jobs_store.update_status(job_id=job_id, status="FAILED", refunded=True)
