@@ -225,16 +225,47 @@ The old docs disagreed with each other on several numbers. Resolutions:
 - `frontend/src/lib/r2Upload.ts` — shared Cloudflare R2 upload/signing helper.
 - `C:\xampp\htdocs\my-app\docs\astroengine_review_scripts\` (outside this repo) — the independent verification harness referenced in §6.
 
-## Security configuration (required for production)
+## Environment variables
 
-| Variable | Where | Purpose |
+Never commit real values: `.env` files are git-ignored. Only the variable names are listed here.
+
+### Frontend (`frontend/.env`)
+
+| Variable | Required | Purpose |
 | --- | --- | --- |
-| `SESSION_SECRET` | frontend | Signs session cookies. **Mandatory** outside `next dev`; no fallback. Use 32+ random bytes. Keep it different from `ASTRO_INTERNAL_SECRET`. |
-| `ASTRO_INTERNAL_SECRET` / `INTERNAL_SECRET_KEY` | frontend / backend | Shared service-to-service secret (must match). |
-| `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET` | frontend | Payment gateway. The webhook is refused (503) until the webhook secret is configured. |
-| `ASTRO_INTERNAL_API_KEY` | frontend | API key (of an ADMIN account) used by the public calculator proxy. |
-| `TRUSTED_PROXY_HOPS` | frontend | Number of reverse proxies in front of Next.js (default `1`); used to read the real client IP. |
-| `PROXY_ANON_RPM`, `PROXY_USER_RPM`, `PROXY_HEAVY_RPM`, `PLAYGROUND_RPM` | frontend | Optional rate-limit tuning. |
+| `DATABASE_URL` | yes | MySQL connection string used by Prisma. |
+| `SESSION_SECRET` | **yes (prod)** | Signs session cookies. No fallback outside `next dev`. Use 32+ random bytes; keep it different from `ASTRO_INTERNAL_SECRET`. |
+| `ASTRO_INTERNAL_SECRET` | yes | Service-to-service secret. Must equal the backend's `INTERNAL_SECRET_KEY`. |
+| `ASTRO_BACKEND_URL` | yes | FastAPI base URL (default `http://127.0.0.1:8000`). |
+| `ASTRO_INTERNAL_API_KEY` | yes | API key of an **ADMIN** account, used by the public calculator proxy and playground. |
+| `NEXT_PUBLIC_APP_URL` | yes | Public site URL (links in emails, billing redirects). |
+| `NEXT_PUBLIC_ASTRO_ENGINE_URL` | optional | Public API base URL shown in the docs. |
+| `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET` | yes (billing) | Razorpay credentials. Admin > Settings values take priority; dummy/placeholder values are ignored. |
+| `RAZORPAY_WEBHOOK_SECRET` | yes (billing) | Webhook signing secret. Webhooks are refused (503) until it is set. |
+| `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`, `R2_PUBLIC_DOMAIN` | for logo/PDF storage | Cloudflare R2 (Admin > Settings overrides these). |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD` (or `SMTP_PASS`), `SMTP_FROM`, `SMTP_FROM_NAME` | for email | Outgoing mail (OTP, notifications). |
+| `TRUSTED_PROXY_HOPS` | optional (default `1`) | Number of reverse proxies in front of Next.js; used to read the real client IP. |
+| `PROXY_ANON_RPM`, `PROXY_USER_RPM`, `PROXY_HEAVY_RPM`, `PLAYGROUND_RPM` | optional | Rate-limit tuning (defaults 120 / 600 / 10 / 20 per minute). |
+| `ADMIN_INITIAL_PASSWORD`, `ASTRO_MASTER_API_KEY` | seed only | Used by `/api/admin/seed`. If the password is unset, a random one is generated and returned once. |
+| `ALLOW_PROD_SEED` | seed only | Must be `true` to run the seed endpoint in production. |
+| `SEED_ADMIN_PASSWORD`, `SEED_DEV_PASSWORD` | seed scripts only | Used by `prisma/seed*.ts`. |
 
-Run in production with `npm run build && npm run start` and `uvicorn` without `--reload`
-(see `ecosystem.config.js`). Run backend tests with `pip install -r backend/requirements-dev.txt && pytest`.
+### Backend (`backend/.env`)
+
+| Variable | Required | Purpose |
+| --- | --- | --- |
+| `INTERNAL_SECRET_KEY` | yes | Must equal the frontend's `ASTRO_INTERNAL_SECRET`. |
+| `NEXT_APP_URL` | yes | Frontend base URL (API-key verification, settings, plans). |
+| `ENVIRONMENT` | recommended | `production` in prod. `development` enables the local test-key bypass. |
+| `CORS_ORIGINS` | optional | Comma-separated allowed origins (defaults to `NEXT_APP_URL`). |
+| `EPHE_PATH` | yes | Swiss Ephemeris data directory (default `./ephe`). |
+| `PORT` | optional | Default `8000`. |
+| `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD` | optional | Shared rate limiting; without Redis limits are per process (keep a single worker). |
+| `R2_*` | optional | Fallback R2 settings if not provided by the frontend settings API. |
+| `SENTRY_DSN` | optional | Error telemetry. |
+
+### Production notes
+
+- Build and run: `npm run build && npm run start`, and `uvicorn` without `--reload` (see `ecosystem.config.js`).
+- Tests: `pip install -r backend/requirements-dev.txt && pytest`.
+- Rotate any Razorpay / R2 / SMTP credentials that were ever seeded with dummy values (they exist in git history).
