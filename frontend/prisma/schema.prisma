@@ -123,6 +123,7 @@ model User {
   supportTickets   SupportTicket[]
   assignedOffers   Offer[]            @relation("PersonalizedOffers")
   offerRedemptions OfferRedemption[]
+  invoices         Invoice[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -418,4 +419,47 @@ model EmailOtp {
   attempts  Int      @default(0) // wrong guesses so far; the code is burned after 5
   expiresAt DateTime
   createdAt DateTime @default(now())
+}
+
+// ── GST tax invoices ───────────────────────────────────────────────────────────────
+// Numbers are consecutive per financial year (Apr-Mar): AE/25-26/000001. A number is
+// allocated from InvoiceCounter inside the same transaction that creates the invoice, so
+// there are no gaps and no duplicates. Seller and buyer details are copied onto the
+// invoice when it is issued, so later profile edits never change an issued invoice.
+enum InvoiceType {
+  SALE // plan or add-on purchase
+  USAGE // month-end consolidation of per-call overage and report charges
+}
+
+model InvoiceCounter {
+  fiscalYear String @id // "25-26"
+  lastSeq    Int    @default(0)
+}
+
+model Invoice {
+  id            String      @id @default(uuid())
+  number        String      @unique
+  fiscalYear    String
+  seq           Int
+  type          InvoiceType
+  userId        String
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactionId String?     @unique // SALE: the purchase this invoice belongs to
+  periodStart   DateTime? // USAGE: first instant of the billed month (IST)
+  periodEnd     DateTime?
+  description   String
+  quantity      Int         @default(1) // USAGE: number of billed calls / reports
+  gross         Decimal     @db.Decimal(12, 2)
+  taxable       Decimal     @db.Decimal(12, 2)
+  cgst          Decimal     @db.Decimal(12, 2)
+  sgst          Decimal     @db.Decimal(12, 2)
+  igst          Decimal     @db.Decimal(12, 2)
+  intraState    Boolean
+  seller        Json
+  buyer         Json
+  issuedAt      DateTime    @default(now())
+
+  @@unique([fiscalYear, seq])
+  @@unique([userId, type, periodStart]) // one usage invoice per user per month
+  @@index([userId, issuedAt])
 }

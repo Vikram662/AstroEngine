@@ -5,7 +5,9 @@ import { NextRequest } from "next/server";
 // ── Mocked Prisma ───────────────────────────────────────────────────────────
 const db = vi.hoisted(() => {
   const m = {
-    systemSetting: { findUnique: vi.fn() },
+    systemSetting: { findUnique: vi.fn(), findMany: vi.fn() },
+    invoice: { findUnique: vi.fn(), create: vi.fn() },
+    invoiceCounter: { upsert: vi.fn() },
     transaction: { findFirst: vi.fn(), updateMany: vi.fn() },
     subscriptionPlan: { findUnique: vi.fn() },
     subscription: { upsert: vi.fn() },
@@ -52,7 +54,11 @@ beforeEach(() => {
   db.systemSetting.findUnique.mockResolvedValue({ value: WEBHOOK_SECRET });
   db.transaction.findFirst.mockResolvedValue({ id: "t1", userId: "u1", amount: 1, status: "PENDING", gatewayPaymentId: null });
   db.transaction.updateMany.mockResolvedValue({ count: 1 });
-  db.user.findUnique.mockResolvedValue({ planTier: "STARTER" });
+  db.user.findUnique.mockResolvedValue({ planTier: "STARTER", name: "U", email: "u@example.com", taxProfile: null });
+  db.systemSetting.findMany.mockResolvedValue([]);
+  db.invoice.findUnique.mockResolvedValue(null);
+  db.invoiceCounter.upsert.mockResolvedValue({ lastSeq: 7 });
+  db.invoice.create.mockImplementation(async ({ data }: { data: object }) => data);
   db.subscriptionPlan.findUnique.mockImplementation(async ({ where }: { where: { tier: string } }) =>
     where.tier === "ENTERPRISE"
       ? { tier: "ENTERPRISE", priceMonthly: 39999, includedQuota: 1500000, rateLimitPerMin: 1200 }
@@ -85,6 +91,7 @@ describe("POST /api/billing/webhook", () => {
     const res = await webhook(webhookReq(captured(1, "ENTERPRISE")));
     expect(res.status).toBe(200);
     expect(db.subscription.upsert).not.toHaveBeenCalled();
+    expect(db.invoice.create).not.toHaveBeenCalled(); // a top-up is a deposit: no tax invoice
     expect(db.user.update).toHaveBeenCalledWith(
       expect.objectContaining({ data: { walletBalance: { increment: 1 } } })
     );
@@ -98,6 +105,10 @@ describe("POST /api/billing/webhook", () => {
     expect(db.user.update).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ planTier: "ENTERPRISE" }) })
     );
+    // the sale gets a consecutive GST invoice number in the same transaction
+    const inv = db.invoice.create.mock.calls[0][0].data;
+    expect(inv.number).toMatch(/^AE\/\d{2}-\d{2}\/000007$/);
+    expect(inv).toMatchObject({ type: "SALE", userId: "u1", transactionId: "t1", gross: 35000 });
   });
 
   it("is idempotent for already settled orders", async () => {

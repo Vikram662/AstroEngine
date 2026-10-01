@@ -19,7 +19,7 @@ export async function GET() {
     // separately, so the same rupee is never counted as both a deposit and a sale.
     const [
       totalUsers, starterUsers, proUsers, enterpriseUsers,
-      salesAgg, addonSalesAgg, topUpAgg, totalApiRequests, latencyAgg, failedPdfJobs, activePdfJobs,
+      salesAgg, addonSalesAgg, topUpAgg, usageAgg, totalApiRequests, latencyAgg, failedPdfJobs, activePdfJobs,
     ] = await Promise.all([
       prisma.user.count(),
       prisma.user.count({ where: { planTier: "STARTER" } }),
@@ -38,13 +38,20 @@ export async function GET() {
         where: { status: "SUCCESS", creditsAdded: { gt: 0 } },
         _sum: { amount: true },
       }),
+      // per-call overage + report charges taken from wallets (refunded calls have status >= 400)
+      prisma.apiRequestLog.aggregate({
+        where: { statusCode: 200, creditsCost: { gt: 0 } },
+        _sum: { creditsCost: true },
+      }),
       prisma.apiRequestLog.count(),
       prisma.apiRequestLog.aggregate({ _avg: { responseTime: true } }),
       prisma.pdfGenerationJob.count({ where: { status: "FAILED", createdAt: { gte: since24h } } }),
       prisma.pdfGenerationJob.count({ where: { status: { in: ["PENDING", "PROCESSING"] } } }),
     ]);
 
-    const totalRevenue = toMoney(salesAgg._sum.amount) + Math.abs(toMoney(addonSalesAgg._sum.amount));
+    const purchaseRevenue = toMoney(salesAgg._sum.amount) + Math.abs(toMoney(addonSalesAgg._sum.amount));
+    const usageRevenue = toMoney(usageAgg._sum.creditsCost);
+    const totalRevenue = purchaseRevenue + usageRevenue;
     const walletTopUps = toMoney(topUpAgg._sum.amount);
     const avgLatency = latencyAgg._avg.responseTime ? Math.round(latencyAgg._avg.responseTime) : 0;
 
@@ -77,6 +84,7 @@ export async function GET() {
           enterprise: enterpriseUsers
         },
         totalRevenue,
+        revenueBreakdown: { purchases: purchaseRevenue, usage: usageRevenue },
         walletTopUps,
         totalApiRequests,
         avgLatency,

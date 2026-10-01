@@ -26,8 +26,6 @@ vi.mock("@/lib/pdfEngine", async (orig) => ({ ...(await orig<typeof import("@/li
 
 import { computeGst, invoiceNumber, isWalletTopUp, supplyValue } from "@/lib/invoice";
 import { csvCell, csvRow } from "@/lib/csv";
-import { GET as invoiceGet } from "@/app/api/billing/invoice/[id]/route";
-import { GET as reportsGet } from "@/app/api/admin/reports/route";
 import { POST as queuePost } from "@/app/api/pdf/queue/route";
 import { GET as statsGet } from "@/app/api/admin/stats/route";
 
@@ -77,141 +75,6 @@ describe("csv", () => {
     expect(csvCell(null)).toBe("");
     expect(csvCell(42.5)).toBe("42.5");
     expect(csvRow(["a", "b,c", 3])).toBe("a,\"b,c\",3");
-  });
-});
-
-// ── Invoice route ──────────────────────────────────────────────────────────────
-const ctx = (id = "tx1") => ({ params: Promise.resolve({ id }) });
-const invoiceReq = () => new NextRequest("http://x/api/billing/invoice/tx1");
-const baseTx = {
-  id: "abcdef12-1111", userId: "user-0000-1111-2222", status: "SUCCESS", amount: 118, creditsAdded: 0, paymentGateway: "WALLET", createdAt: new Date("2026-03-05T10:00:00Z"),
-  user: { email: "owner@example.com", name: "Owner <script>", taxProfile: { businessName: "<b>Evil</b> Co", state: "Karnataka" } },
-};
-
-describe("GET /api/billing/invoice/[id]", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    auth.getVerifiedSession.mockResolvedValue({ userId: "u1", email: "owner@example.com", role: "USER" });
-    db.transaction.findUnique.mockResolvedValue(baseTx);
-    db.systemSetting.findMany.mockResolvedValue([{ key: "COMPANY_LOGO_URL", value: "javascript:alert(1)" }]);
-  });
-
-  it("requires a session and ownership", async () => {
-    auth.getVerifiedSession.mockResolvedValue(null);
-    expect((await invoiceGet(invoiceReq(), ctx())).status).toBe(401);
-    auth.getVerifiedSession.mockResolvedValue({ userId: "u2", email: "other@example.com", role: "USER" });
-    expect((await invoiceGet(invoiceReq(), ctx())).status).toBe(403);
-    auth.getVerifiedSession.mockResolvedValue({ userId: "a", email: "admin@example.com", role: "ADMIN" });
-    expect((await invoiceGet(invoiceReq(), ctx())).status).toBe(200);
-  });
-
-  it("issues no invoice for payments that did not succeed", async () => {
-    for (const status of ["PENDING", "FAILED"]) {
-      db.transaction.findUnique.mockResolvedValue({ ...baseTx, status });
-      expect((await invoiceGet(invoiceReq(), ctx())).status).toBe(409);
-    }
-  });
-
-  it("wallet top-ups get a payment receipt with NO GST; purchases get the tax invoice", async () => {
-    db.transaction.findUnique.mockResolvedValue({ ...baseTx, creditsAdded: 118, paymentGateway: "RAZORPAY" });
-    const receipt = await (await invoiceGet(invoiceReq(), ctx())).text();
-    expect(receipt).toContain("Payment Receipt");
-    expect(receipt).toContain("REC-2026-ABCDEF12");
-    expect(receipt).toContain("Total Amount Received");
-    expect(receipt).toContain("not a tax invoice");
-    expect(receipt).not.toMatch(/CGST|SGST|IGST|Taxable Subtotal/);
-
-    db.transaction.findUnique.mockResolvedValue(baseTx); // paid a plan from the wallet
-    const invoice = await (await invoiceGet(invoiceReq(), ctx())).text();
-    expect(invoice).toContain("Tax Invoice");
-    expect(invoice).toContain("INV-2026-ABCDEF12");
-    expect(invoice).toContain("Taxable Subtotal");
-    expect(invoice).toContain("Paid from wallet balance");
-  });
-
-  it("invoices a wallet add-on purchase (stored with a negative amount) at its positive value", async () => {
-    db.transaction.findUnique.mockResolvedValue({ ...baseTx, amount: -118, creditsAdded: -118, paymentGateway: "WALLET_INTERNAL" });
-    const html = await (await invoiceGet(invoiceReq(), ctx())).text();
-    expect(html).toContain("Modular engine add-on");
-    expect(html).toContain("₹100.00");
-    expect(html).not.toContain("₹-");
-  });
-
-  it("renders escaped, correct, locked-down HTML", async () => {
-    const res = await invoiceGet(invoiceReq(), ctx());
-    const html = await res.text();
-    expect(html).toContain("INV-2026-ABCDEF12");
-    expect(html).toContain("IGST");                       // Karnataka customer, Maharashtra seller
-    expect(html).toContain("₹100.00");                    // taxable value of 118 incl. 18%
-    expect(html).not.toContain("<b>Evil</b>");
-    expect(html).toContain("&lt;b&gt;Evil&lt;/b&gt;");
-    expect(html).not.toContain("javascript:alert");       // hostile logo URL dropped
-    expect(html).not.toContain("onclick=");
-    const csp = res.headers.get("content-security-policy") || "";
-    expect(csp).toMatch(/default-src 'none'/);
-    const nonce = /script-src 'nonce-([^']+)'/.exec(csp)?.[1];
-    expect(nonce).toBeTruthy();
-    expect(html).toContain(`<script nonce="${nonce}">`);
-    expect(res.headers.get("cache-control")).toContain("no-store");
-  });
-});
-
-// ── Admin reports ───────────────────────────────────────────────────────────────
-describe("GET /api/admin/reports?export=gstr1_returns", () => {
-  const req = (qs = "") => new NextRequest(`http://x/api/admin/reports?export=gstr1_returns${qs}`);
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-    auth.requireAdminSession.mockResolvedValue({ userId: "a1", role: "ADMIN" });
-    db.systemSetting.findMany.mockResolvedValue([]);
-    db.auditLog.create.mockResolvedValue({});
-    db.transaction.findMany.mockResolvedValue([
-      {
-        id: "abcdef12-1", createdAt: new Date("2026-03-05T10:00:00Z"), amount: 118, paymentGateway: "RAZORPAY", gatewayPaymentId: "pay_1",
-        user: { email: "=cmd|' /C calc'!A0@x.com", taxProfile: { state: "Karnataka", gstin: "29ABCDE1234F1Z5" } },
-      },
-      {
-        id: "fedcba98-2", createdAt: new Date("2026-03-06T10:00:00Z"), amount: 236, paymentGateway: "RAZORPAY", gatewayPaymentId: "pay_2",
-        user: { email: "b@example.com", taxProfile: null },
-      },
-    ]);
-  });
-
-  it("is admin only", async () => {
-    auth.requireAdminSession.mockResolvedValue(null);
-    expect((await reportsGet(req())).status).toBe(403);
-  });
-
-  it("exports taxable purchases only (no wallet top-ups), with totals, matching invoice numbers, and escaped cells", async () => {
-    const res = await reportsGet(req("&from=2026-03-01&to=2026-03-31"));
-    expect(res.status).toBe(200);
-    const where = db.transaction.findMany.mock.calls[0][0].where;
-    expect(where.creditsAdded).toEqual({ lte: 0 });        // top-ups add credits: excluded, they carry no GST
-    expect(where.paymentGateway).toBeUndefined();         // wallet-paid purchases ARE taxable sales
-    expect(where.status).toBe("SUCCESS");
-    expect(where.createdAt.gte).toBeInstanceOf(Date);
-
-    const csv = await res.text();
-    const lines = csv.trim().split("\n");
-    expect(lines[0]).toContain("InvoiceNumber");
-    expect(lines[1]).toContain("INV-2026-ABCDEF12");       // same number as the invoice
-    expect(lines[1]).toContain("18.00");                   // IGST for Karnataka GSTIN
-    expect(lines[1]).not.toMatch(/^[^,]*,[^,]*,=/);        // formula cell was neutralised
-    expect(lines[1]).toContain("'=cmd");
-    expect(lines[lines.length - 1]).toMatch(/^TOTAL,.*354\.00/);
-    expect(db.auditLog.create).toHaveBeenCalledTimes(1);
-  });
-
-  it("reports an add-on bought from the wallet (negative amount) as a positive sale", async () => {
-    db.transaction.findMany.mockResolvedValue([
-      { id: "11111111-1", createdAt: new Date("2026-03-05T10:00:00Z"), amount: -118, paymentGateway: "WALLET_INTERNAL", gatewayPaymentId: "addon_pdf_1",
-        user: { email: "c@example.com", taxProfile: null } },
-    ]);
-    const csv = await (await reportsGet(req())).text();
-    const lines = csv.trim().split("\n");
-    expect(lines[1]).toContain("118.00");
-    expect(lines[1]).toContain("100.00");
-    expect(lines[1]).not.toContain("-118");
   });
 });
 
@@ -279,11 +142,11 @@ describe("POST /api/pdf/queue", () => {
 
 // ── Admin stats: sales vs deposits ────────────────────────────────────────────────
 describe("GET /api/admin/stats revenue", () => {
-  it("counts purchases as revenue and reports wallet top-ups separately", async () => {
+  it("counts purchases and usage charges as revenue, and reports wallet top-ups separately", async () => {
     auth.requireAdminSession.mockResolvedValue({ userId: "a1", role: "ADMIN" });
     db.user.count.mockResolvedValue(3);
     db.apiRequestLog.count.mockResolvedValue(10);
-    db.apiRequestLog.aggregate.mockResolvedValue({ _avg: { responseTime: 20 } });
+    db.apiRequestLog.aggregate.mockResolvedValue({ _avg: { responseTime: 20 }, _sum: { creditsCost: 202.5 } });
     db.pdfGenerationJob.count.mockResolvedValue(0);
     db.$queryRaw.mockResolvedValue([{ 1: 1 }]);
     vi.stubGlobal("fetch", vi.fn(async () => ({ ok: true })));
@@ -293,7 +156,9 @@ describe("GET /api/admin/stats revenue", () => {
       return { _sum: { amount: -499 } };                                                     // add-ons (negative)
     });
     const body = await (await statsGet()).json();
-    expect(body.data.totalRevenue).toBe(5498);
+    // purchases 4999 + 499, plus per-call / report charges 202.50 taken from wallets
+    expect(body.data.revenueBreakdown).toEqual({ purchases: 5498, usage: 202.5 });
+    expect(body.data.totalRevenue).toBe(5700.5);
     expect(body.data.walletTopUps).toBe(10000);
     vi.unstubAllGlobals();
   });

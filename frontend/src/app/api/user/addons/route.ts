@@ -7,6 +7,7 @@ import { toMoney, toJsonSafe } from "@/lib/money";
 import { ApiData, toApiError } from "@/lib/apiTypes";
 import { publicMessage } from "@/lib/apiErrors";
 import { getRazorpayKeySecret, verifyHmacHex } from "@/lib/razorpay";
+import { issueSaleInvoice } from "@/lib/invoicing";
 
 export interface AddonItem {
   id: string;
@@ -191,6 +192,7 @@ export async function POST(req: NextRequest) {
                 walletBalance: newBalance
               }
             });
+            await issueSaleInvoice(tx, { ...pendingOrder, status: "SUCCESS" });
           });
         } catch (txErrCaught) { const txErr = toApiError(txErrCaught);
           if (txErr?.message === "ORDER_ALREADY_SETTLED") {
@@ -232,7 +234,7 @@ export async function POST(req: NextRequest) {
         const updatedUser = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
           await recordOfferRedemption(tx, user.id, appliedOffer, `addon_${addonId}_${Date.now()}`);
           if (user.planTier !== "ENTERPRISE") {
-            await tx.transaction.create({
+            const purchase = await tx.transaction.create({
               data: {
                 userId: user.id,
                 amount: -payablePrice,
@@ -243,6 +245,7 @@ export async function POST(req: NextRequest) {
                 status: "SUCCESS"
               }
             });
+            await issueSaleInvoice(tx, purchase);
           }
 
           return await tx.user.update({

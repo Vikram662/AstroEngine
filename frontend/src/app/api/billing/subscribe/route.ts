@@ -8,6 +8,7 @@ import { toMoney, toJsonSafe } from "@/lib/money";
 import { toApiError } from "@/lib/apiTypes";
 import { getRazorpayKeySecret, verifyHmacHex } from "@/lib/razorpay";
 import { publicMessage } from "@/lib/apiErrors";
+import { issueSaleInvoice } from "@/lib/invoicing";
 
 export async function POST(req: NextRequest) {
   try {
@@ -152,6 +153,8 @@ export async function POST(req: NextRequest) {
             status: "SUCCESS",
           },
         });
+        // Consecutive GST invoice number, committed together with the payment.
+        await issueSaleInvoice(db, transaction);
         return { sub, transaction };
       });
 
@@ -295,6 +298,8 @@ export async function POST(req: NextRequest) {
           const settledTx = await tx.transaction.findUnique({
             where: { id: pendingOrder.id }
           });
+
+          if (settledTx) await issueSaleInvoice(tx, settledTx);
 
           return { updatedUser, sub, settledTx };
         });

@@ -5,6 +5,7 @@ import axios from "axios";
 import Link from "next/link";
 import { Receipt, FileText, Download, Building2, CreditCard, Save, CheckCircle2, AlertCircle, Loader2, ExternalLink, ShieldCheck } from "lucide-react";
 import type { ApiData } from "@/lib/apiTypes";
+import { IssuedInvoicesCard } from "@/components/IssuedInvoicesCard";
 
 interface TaxProfile {
   businessName: string;
@@ -448,6 +449,8 @@ export default function InvoicesPage() {
           )}
         </div>
       </div>
+
+      <IssuedInvoicesCard />
     </div>
   );
 }

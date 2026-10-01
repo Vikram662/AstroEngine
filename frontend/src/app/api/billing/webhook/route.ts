@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { toMoney } from "@/lib/money";
+import { issueSaleInvoice } from "@/lib/invoicing";
 import {
   creditsForAmount,
   getRazorpayWebhookSecret,
@@ -99,6 +100,7 @@ export async function POST(req: NextRequest) {
               });
 
               if (updateCount.count === 1) {
+                await issueSaleInvoice(tx, { ...transaction, status: "SUCCESS" });
                 const now = new Date();
                 const periodEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
