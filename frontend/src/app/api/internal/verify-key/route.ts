@@ -1,23 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
+import { hasValidInternalSecret } from "@/lib/internalAuth";
 import { toMoney } from "@/lib/money";
 import type { ApiData } from "@/lib/apiTypes";
-
-function getInternalSecret(): string {
-  const secret = process.env.ASTRO_INTERNAL_SECRET;
-  if (!secret) {
-    throw new Error("CRITICAL SECURITY ERROR: ASTRO_INTERNAL_SECRET must be configured in environment.");
-  }
-  return secret;
-}
 
 // POST /api/internal/verify-key - Fast verification & quota/wallet debit for Python FastAPI engine
 export async function POST(req: NextRequest) {
   try {
-    const internalSecret = getInternalSecret();
-    const authHeader = req.headers.get("x-internal-secret");
-    if (!authHeader || authHeader !== internalSecret) {
+    if (!hasValidInternalSecret(req)) {
       return NextResponse.json(
         { status: "error", message: "Forbidden internal handshake" },
         { status: 403 }
@@ -25,9 +16,11 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { apiKey, endpoint = "/api/v1/general", module = "GENERAL", responseTime = 10 } = body;
+    const { apiKey, responseTime = 10 } = body;
+    const endpoint: string = typeof body.endpoint === "string" ? body.endpoint : "/api/v1/general";
+    const moduleName: string = typeof body.module === "string" ? body.module : "GENERAL";
 
-    if (!apiKey) {
+    if (!apiKey || typeof apiKey !== "string" || apiKey.length > 256) {
       return NextResponse.json({
         valid: false,
         error_code: "MISSING_KEY",
@@ -82,7 +75,7 @@ export async function POST(req: NextRequest) {
     // =========================================================================
     // 100% DYNAMIC DB-DRIVEN MODULE & ADDON PERMISSION SYSTEM
     // =========================================================================
-    const normalizedModule = (module || "GENERAL").toLowerCase();
+    const normalizedModule = (moduleName || "GENERAL").toLowerCase();
     const isSuperOrAdmin = user.role === "ADMIN" || user.role === "SUPER_ADMIN";
 
     // 1. Fetch live plans, user's plan record, and all active addons directly from MySQL
@@ -158,16 +151,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         valid: false,
         error_code: "PLAN_UPGRADE_OR_ADDON_REQUIRED",
-        message: `The '${module.toUpperCase()}' engine is not included in your '${user.planTier}' plan. Activate it as a Modular Add-on or upgrade your plan.`,
+        message: `The '${moduleName.toUpperCase()}' engine is not included in your '${user.planTier}' plan. Activate it as a Modular Add-on or upgrade your plan.`,
         details: {
           currentPlan: user.planTier,
           requiredPlan: requiredTier,
-          module: module,
+          module: moduleName,
           addonAvailable: Boolean(matchedAddonRecord),
           addonId: matchedAddonRecord?.id,
           addonPortalUrl: `${billingUrl}#addons`,
           upgradeUrl: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/pricing`,
-          action: `Activate the ${matchedAddonRecord?.name || module.toUpperCase()} Add-on in your Billing dashboard or recharge your wallet.`
+          action: `Activate the ${matchedAddonRecord?.name || moduleName.toUpperCase()} Add-on in your Billing dashboard or recharge your wallet.`
         }
       }, { status: 403 });
     }
@@ -204,17 +197,20 @@ export async function POST(req: NextRequest) {
         creditsDeducted = 0;
       }
       // 2. Add-on quota exhausted -> Wallet Overage fallback
-      else if (walletBalance >= addonOverage) {
-        currentAddonUsageMap[matchedAddonRecord.id] = currentAddonUsage + 1;
-        await prisma.user.update({
-          where: { id: user.id },
+      else if (
+        walletBalance >= addonOverage &&
+        // Conditional update: the balance check and debit are one atomic statement,
+        // so concurrent calls cannot overdraw the wallet.
+        (await prisma.user.updateMany({
+          where: { id: user.id, walletBalance: { gte: addonOverage } },
           data: {
-            addonUsage: currentAddonUsageMap,
+            addonUsage: { ...currentAddonUsageMap, [matchedAddonRecord.id]: currentAddonUsage + 1 },
             walletBalance: { decrement: addonOverage },
             monthlyUsage: { increment: 1 },
             apiKeyLastUsedAt: new Date()
           }
-        });
+        })).count === 1
+      ) {
         deductionType = "ADDON_OVERAGE";
         creditsDeducted = addonOverage;
       }
@@ -251,33 +247,34 @@ export async function POST(req: NextRequest) {
       const monthlyQuota = planRecord?.includedQuota || user.monthlyQuota || 35000;
       const monthlyUsage = user.monthlyUsage || 0;
 
-      // STEP 1: Plan quota remaining
-      if (monthlyUsage < monthlyQuota) {
-        await prisma.user.update({
-          where: { id: user.id },
-          data: {
-            monthlyUsage: { increment: 1 },
-            apiKeyLastUsedAt: new Date()
-          }
-        });
+      // STEP 1: claim one unit of plan quota atomically (no read-then-write race)
+      const quotaClaim = await prisma.user.updateMany({
+        where: { id: user.id, monthlyUsage: { lt: monthlyQuota } },
+        data: { monthlyUsage: { increment: 1 }, apiKeyLastUsedAt: new Date() }
+      });
+
+      if (quotaClaim.count === 1) {
         deductionType = "QUOTA";
         creditsDeducted = 0;
-      } 
-      // STEP 2: Quota exhausted -> Fallback to prepaid wallet
-      else if (walletBalance >= costPerCall) {
-        await prisma.user.update({
-          where: { id: user.id },
+      } else {
+        // STEP 2: quota exhausted -> debit the prepaid wallet atomically
+        const walletClaim = await prisma.user.updateMany({
+          where: { id: user.id, walletBalance: { gte: costPerCall } },
           data: {
             walletBalance: { decrement: costPerCall },
             monthlyUsage: { increment: 1 },
             apiKeyLastUsedAt: new Date()
           }
         });
-        deductionType = "WALLET_CREDIT";
-        creditsDeducted = costPerCall;
-      } 
-      // STEP 3: Both Monthly Plan Quota AND Wallet Credits are exhausted!
-      else {
+        if (walletClaim.count === 1) {
+          deductionType = "WALLET_CREDIT";
+          creditsDeducted = costPerCall;
+        } else {
+          deductionType = "EXHAUSTED";
+        }
+      }
+
+      if (deductionType === "EXHAUSTED") {
         const rechargeUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/billing`;
         return NextResponse.json({
           valid: false,
@@ -302,7 +299,7 @@ export async function POST(req: NextRequest) {
         data: {
           userId: user.id,
           endpoint: endpoint.substring(0, 100),
-          module: module.substring(0, 50),
+          module: moduleName.substring(0, 50),
           creditsCost: creditsDeducted,
           responseTime: responseTime || 12,
           statusCode: 200,
@@ -314,6 +311,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       valid: true,
+      role: user.role,
       userId: user.id,
       email: user.email,
       planTier: user.planTier,
@@ -332,11 +330,11 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (error: unknown) {
-    const err = error as { message?: string };
+    console.error("[verify-key]", error);
     return NextResponse.json({
       valid: false,
       error_code: "SERVER_ERROR",
-      message: err.message || "Internal auth error"
+      message: "Internal auth error"
     }, { status: 500 });
   }
 }

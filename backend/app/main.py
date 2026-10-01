@@ -81,13 +81,32 @@ GLOBAL_RESPONSES = {
     500: {"description": "Internal Server Error — Calculation or C-binding execution error."}
 }
 
+_PLANS_TTL_OK = 60.0       # seconds to reuse a successfully fetched table
+_PLANS_TTL_FALLBACK = 30.0 # seconds to reuse the static fallback after a failed fetch
+_plans_cache = {"value": None, "expires": 0.0}
+
+
 def get_dynamic_plans_markdown() -> str:
-    """
+    """Cached wrapper: /openapi.json must never trigger a blocking HTTP call per request."""
+    import time
+    now = time.time()
+    if _plans_cache["value"] is not None and now < _plans_cache["expires"]:
+        return _plans_cache["value"]
+    value, fetched = _fetch_plans_markdown()
+    _plans_cache["value"] = value
+    _plans_cache["expires"] = now + (_PLANS_TTL_OK if fetched else _PLANS_TTL_FALLBACK)
+    return value
+
+
+def _fetch_plans_markdown():
+    """Returns (markdown, fetched_from_db).
+    
     Fetch active subscription plans dynamically from Next.js /api/plans (MySQL database)
     and format them into a markdown table for ReDoc / OpenAPI documentation.
     """
     import urllib.request
     import json
+    plans_data = []
     try:
         base_url = (settings.NEXT_APP_URL or "http://localhost:3000").rstrip("/")
         req = urllib.request.Request(f"{base_url}/api/plans")
@@ -107,7 +126,7 @@ def get_dynamic_plans_markdown() -> str:
                     rows.append(f"| **{name} Tier** | **{price} / mo** | **{quota}** | {rpm} | {overage} | {features} |")
                 
                 table_header = "| Subscription Plan | Monthly Price | Monthly Included Quota | Rate Limit (RPM) | Overage Cost / Call | Key Features |\n| :--- | :--- | :--- | :--- | :--- | :--- |\n"
-                return table_header + "\n".join(rows)
+                return table_header + "\n".join(rows), True
     except Exception:
         pass
 
@@ -118,7 +137,7 @@ def get_dynamic_plans_markdown() -> str:
         "| **Starter Tier** | **₹4,999 / mo** | **35,000 calls** | 60 req / min | ₹0.02 / call | 35,000 Requests / Month, 60 RPM Rate Limit, Core Astronomy (Planets, Cusps, Retrograde) |\n"
         "| **Pro Tier** | **₹14,999 / mo** | **300,000 calls** | 300 req / min | ₹0.015 / call | 300,000 Requests / Month, 300 RPM Rate Limit, Full D1–D60 Divisional Vargas (Harmonics) |\n"
         "| **Enterprise Tier** | **₹39,999 / mo** | **1,500,000 calls** | 1,200 req / min | ₹0.01 / call | 1,500,000 Requests / Month, 1,200 RPM High-Volume Burst Capacity, ALL 117 Production Calculation APIs Unlocked |"
-    )
+    ), False
 
 def build_api_description(plans_table_markdown: str) -> str:
     return f"""# AstroEngine Enterprise B2B API Suite
@@ -905,7 +924,9 @@ async def custom_redoc_html():
   </div>
 
   <!-- ReDoc Standalone Script -->
-  <script src="https://cdn.redoc.ly/redoc/latest/bundles/redoc.standalone.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/redoc@2.1.5/bundles/redoc.standalone.js"
+          integrity="sha384-0GrsyTQc9Oqd8h+b2dbc4XdR2T/DYpy0tLNNstyx+LBMUyiBbcWPbEs9aRmUcaxD"
+          crossorigin="anonymous"></script>
   <script>
     Redoc.init('/openapi.json', {{
       theme: {{

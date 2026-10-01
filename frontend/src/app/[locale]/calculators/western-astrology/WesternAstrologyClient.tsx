@@ -9,6 +9,7 @@ import { BirthDataFields, DEFAULT_BIRTH_DATA, BirthDataValue } from "@/component
 import { ResultSection, ResultRow, ResultBadge, SubmitButton, ErrorNote } from "@/components/calculators/ResultRows";
 import { Loader2 } from "lucide-react";
 import { ApiData, toApiError } from "@/lib/apiTypes";
+import { sanitizeSvg } from "@/lib/sanitizeSvg";
 
 const STRINGS = {
   hi: {
@@ -206,7 +207,7 @@ export default function WesternAstrologyClient({ locale }: { locale: Locale }) {
                 <ResultSection title={s.wheelTitle}>
                   <div
                     className="w-full max-w-md mx-auto aspect-square flex items-center justify-center bg-surface-alt/50 rounded-md p-2 border border-line/60"
-                    dangerouslySetInnerHTML={{ __html: wheelSvg }}
+                    dangerouslySetInnerHTML={{ __html: sanitizeSvg(wheelSvg) }}
                   />
                 </ResultSection>
               )}

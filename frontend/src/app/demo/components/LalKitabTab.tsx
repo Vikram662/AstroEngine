@@ -3,6 +3,7 @@
 import React from "react";
 import { BookOpen, Award, Sparkles } from "lucide-react";
 import type { ApiData } from "@/lib/apiTypes";
+import { sanitizeSvg } from "@/lib/sanitizeSvg";
 
 interface LalKitabTabProps {
   lalKitabChartSvg: string;
@@ -40,7 +41,7 @@ export const LalKitabTab: React.FC<LalKitabTabProps> = ({
             {lalKitabChartSvg ? (
               <div
                 className="w-full h-full flex items-center justify-center [&>svg]:w-full [&>svg]:h-full [&>svg]:drop-shadow-xs"
-                dangerouslySetInnerHTML={{ __html: lalKitabChartSvg }}
+                dangerouslySetInnerHTML={{ __html: sanitizeSvg(lalKitabChartSvg) }}
               />
             ) : (
               <div className="flex flex-col items-center justify-center text-ink-muted gap-2">

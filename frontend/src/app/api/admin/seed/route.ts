@@ -1,24 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { hashNewPassword } from "@/app/api/auth/session/route";
+import { hashPasswordAsync } from "@/lib/passwords";
+import { hasValidInternalSecret } from "@/lib/internalAuth";
 import crypto from "crypto";
 import type { ApiData } from "@/lib/apiTypes";
-
-function getInternalSecret(): string {
-  const secret = process.env.ASTRO_INTERNAL_SECRET;
-  if (!secret) {
-    throw new Error("CRITICAL SECURITY ERROR: ASTRO_INTERNAL_SECRET must be configured in environment.");
-  }
-  return secret;
-}
 
 // POST /api/admin/seed - Strictly authenticated seed endpoint
 export async function POST(req: NextRequest) {
   try {
     // 1. Strict Server-Side Super-Admin / Internal Secret Verification
-    const internalSecret = getInternalSecret();
-    const authHeader = req.headers.get("x-internal-secret");
-    if (!authHeader || authHeader !== internalSecret) {
+    if (!hasValidInternalSecret(req)) {
       return NextResponse.json(
         { status: "error", message: "Forbidden: Invalid authorization handshake secret." },
         { status: 403 }
@@ -33,8 +24,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const adminPassword = process.env.ADMIN_INITIAL_PASSWORD || `Admin@${crypto.randomBytes(4).toString("hex")}`;
-    const adminPasswordHash = hashNewPassword(adminPassword);
+    const generatedPassword = !process.env.ADMIN_INITIAL_PASSWORD;
+    const adminPassword = process.env.ADMIN_INITIAL_PASSWORD || crypto.randomBytes(18).toString("base64url");
+    const adminPasswordHash = await hashPasswordAsync(adminPassword);
 
     const masterKey = process.env.ASTRO_MASTER_API_KEY || `ak_live_${crypto.randomBytes(24).toString("hex")}`;
     const masterKeyHash = crypto.createHash("sha256").update(masterKey).digest("hex");
@@ -78,20 +70,20 @@ export async function POST(req: NextRequest) {
       { key: "MODULE_MATCHMAKING_ACTIVE", value: "true", category: "MODULES", description: "36-Guna Ashtakoota matchmaking module switch" },
       { key: "AUTO_REFUND_FAILED_JOBS", value: "true", category: "BILLING", description: "Automatically refund credits if a PDF job fails or times out" },
       // Payment Gateway (Razorpay) Settings from Database
-      { key: "RAZORPAY_KEY_ID", value: "rzp_test_1DP5mmOlF5G5ag", category: "PAYMENTS", description: "Razorpay Standard Test Key ID" },
-      { key: "RAZORPAY_KEY_SECRET", value: "s8e8w9f0a1b2c3d4e5f6g7h8", category: "PAYMENTS", description: "Razorpay Secret Key for HMAC signature verification" },
-      { key: "RAZORPAY_WEBHOOK_SECRET", value: "whsec_astro_enterprise_live2026", category: "PAYMENTS", description: "Razorpay Webhook secret for auto-verification" },
+      { key: "RAZORPAY_KEY_ID", value: "", category: "PAYMENTS", description: "Razorpay Standard Test Key ID" },
+      { key: "RAZORPAY_KEY_SECRET", value: "", category: "PAYMENTS", description: "Razorpay Secret Key for HMAC signature verification" },
+      { key: "RAZORPAY_WEBHOOK_SECRET", value: "", category: "PAYMENTS", description: "Razorpay Webhook secret for auto-verification" },
       // Cloudflare R2 Storage Settings from Database
-      { key: "R2_ACCOUNT_ID", value: "cf_acc_9012a3b4c5d6e7f8", category: "STORAGE", description: "Cloudflare Account ID for PDF Object Storage" },
-      { key: "R2_ACCESS_KEY_ID", value: "r2_key_817291a0b2c3", category: "STORAGE", description: "Cloudflare R2 Access Key ID" },
-      { key: "R2_SECRET_ACCESS_KEY", value: "r2_sec_99182736450192837465", category: "STORAGE", description: "Cloudflare R2 Secret Access Key" },
-      { key: "R2_BUCKET_NAME", value: "astro-pdf-reports", category: "STORAGE", description: "Cloudflare R2 Storage Bucket Name" },
+      { key: "R2_ACCOUNT_ID", value: "", category: "STORAGE", description: "Cloudflare Account ID for PDF Object Storage" },
+      { key: "R2_ACCESS_KEY_ID", value: "", category: "STORAGE", description: "Cloudflare R2 Access Key ID" },
+      { key: "R2_SECRET_ACCESS_KEY", value: "", category: "STORAGE", description: "Cloudflare R2 Secret Access Key" },
+      { key: "R2_BUCKET_NAME", value: "", category: "STORAGE", description: "Cloudflare R2 Storage Bucket Name" },
       { key: "R2_PUBLIC_DOMAIN", value: "https://cdn.astroengine.io", category: "STORAGE", description: "Public CDN domain or custom domain for PDF downloads" },
       // SMTP Email Delivery Settings from Database
       { key: "SMTP_HOST", value: "smtp.gmail.com", category: "EMAIL", description: "Outgoing Mail Server Host" },
       { key: "SMTP_PORT", value: "587", category: "EMAIL", description: "SMTP Port (587 for TLS, 465 for SSL)" },
-      { key: "SMTP_USER", value: "notifications@astroengine.io", category: "EMAIL", description: "SMTP Username / Sender Email Address" },
-      { key: "SMTP_PASSWORD", value: "abcd efgh ijkl mnop", category: "EMAIL", description: "SMTP App Password" },
+      { key: "SMTP_USER", value: "", category: "EMAIL", description: "SMTP Username / Sender Email Address" },
+      { key: "SMTP_PASSWORD", value: "", category: "EMAIL", description: "SMTP App Password" },
       { key: "SMTP_FROM_NAME", value: "AstroEngine Cloud Notifications", category: "EMAIL", description: "Sender Display Name" }
     ];
 
@@ -180,6 +172,20 @@ export async function POST(req: NextRequest) {
         create: p
       });
     }
+
+    // Purge public dummy credentials that older seed versions wrote into the DB.
+    await prisma.systemSetting.updateMany({
+      where: {
+        value: {
+          in: [
+            "rzp_test_1DP5mmOlF5G5ag", "s8e8w9f0a1b2c3d4e5f6g7h8", "whsec_astro_enterprise_live2026",
+            "cf_acc_9012a3b4c5d6e7f8", "r2_key_817291a0b2c3", "r2_sec_99182736450192837465",
+            "astro-pdf-reports", "abcd efgh ijkl mnop", "notifications@astroengine.io"
+          ]
+        }
+      },
+      data: { value: "" }
+    });
 
     // Seed default PLAN_MODULES settings into MySQL SystemSetting table
     const defaultTierModules = [
@@ -343,10 +349,12 @@ export async function POST(req: NextRequest) {
         email: admin.email,
         role: admin.role,
         tier: admin.planTier
-      }
+      },
+      // Shown once, only when no ADMIN_INITIAL_PASSWORD was configured.
+      ...(generatedPassword ? { generatedAdminPassword: adminPassword } : {})
     });
   } catch (error: unknown) {
-    const err = error as { message?: string };
-    return NextResponse.json({ status: "error", message: err.message }, { status: 500 });
+    console.error("[admin/seed]", error);
+    return NextResponse.json({ status: "error", message: "Seed failed. See server logs." }, { status: 500 });
   }
 }

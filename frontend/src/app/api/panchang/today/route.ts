@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import axios from "axios";
+import { publicMessage } from "@/lib/apiErrors";
 
 const BACKEND_URL = process.env.ASTRO_BACKEND_URL || "http://127.0.0.1:8000";
 const INTERNAL_API_KEY = process.env.ASTRO_INTERNAL_API_KEY || "ak_live_dev_test_master_key_astro2026";
@@ -55,7 +56,7 @@ export async function GET() {
   } catch (error: unknown) {
     const err = error as { message?: string };
     return NextResponse.json(
-      { status: "error", message: err.message || "Failed to load today's panchang" },
+      { status: "error", message: publicMessage(err, "Failed to load today's panchang") },
       { status: 502 }
     );
   }

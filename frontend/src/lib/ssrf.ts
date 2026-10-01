@@ -1,5 +1,7 @@
 import dns from "dns/promises";
 import net from "net";
+import http from "http";
+import https from "https";
 
 /**
  * Validates if an IP address belongs to a private, loopback, link-local,
@@ -36,6 +38,10 @@ export function isPrivateIp(ip: string): boolean {
     // 100.64.0.0/10 (Carrier-grade NAT)
     if (parts[0] === 100 && parts[1] >= 64 && parts[1] <= 127) return true;
 
+    // 192.0.0.0/24 (IETF protocol assignments) & 198.18.0.0/15 (benchmarking)
+    if (parts[0] === 192 && parts[1] === 0 && parts[2] === 0) return true;
+    if (parts[0] === 198 && (parts[1] === 18 || parts[1] === 19)) return true;
+
     // 224.0.0.0/4 (Multicast) & 240.0.0.0/4 (Reserved)
     if (parts[0] >= 224) return true;
 
@@ -53,13 +59,21 @@ export function isPrivateIp(ip: string): boolean {
     if (normalized.startsWith("fc") || normalized.startsWith("fd")) return true;
     // Link-local address (fe80::/10)
     if (normalized.startsWith("fe8") || normalized.startsWith("fe9") || normalized.startsWith("fea") || normalized.startsWith("feb")) return true;
-    // IPv4-mapped IPv6 (::ffff:127.0.0.1)
-    if (normalized.includes("::ffff:")) {
-      const v4Part = normalized.split("::ffff:")[1];
-      if (v4Part && net.isIPv4(v4Part)) {
-        return isPrivateIp(v4Part);
+    // IPv4-mapped IPv6: dotted (::ffff:127.0.0.1) or hex (::ffff:7f00:1) form
+    const mapped = normalized.match(/^(?:0{0,4}:){0,5}:?ffff:(.+)$/);
+    if (mapped) {
+      const tail = mapped[1];
+      if (net.isIPv4(tail)) return isPrivateIp(tail);
+      const hex = tail.split(":");
+      if (hex.length === 2 && hex.every((h) => /^[0-9a-f]{1,4}$/.test(h))) {
+        const hi = parseInt(hex[0], 16);
+        const lo = parseInt(hex[1], 16);
+        return isPrivateIp(`${hi >> 8}.${hi & 255}.${lo >> 8}.${lo & 255}`);
       }
+      return true;
     }
+    // NAT64 (64:ff9b::/96) can embed private IPv4 targets
+    if (normalized.startsWith("64:ff9b:")) return true;
   }
 
   return false;
@@ -135,4 +149,66 @@ export async function validateSafeWebhookUrl(urlStr: string): Promise<{ valid: b
   }
 
   return { valid: true };
+}
+
+
+export interface SafePostResult {
+  ok: boolean;
+  status: number;
+}
+
+/**
+ * POSTs JSON to a user-supplied URL with SSRF protection that cannot be
+ * bypassed by DNS rebinding: the destination IP is validated inside the socket
+ * `lookup` hook, i.e. for the exact address that is connected to. Redirects are
+ * never followed and the response body is discarded.
+ */
+export async function safePostJson(
+  urlStr: string,
+  body: string,
+  extraHeaders: Record<string, string> = {},
+  timeoutMs = 5000
+): Promise<SafePostResult> {
+  const check = await validateSafeWebhookUrl(urlStr);
+  if (!check.valid) throw new Error(`SSRF blocked: ${check.reason}`);
+
+  const url = new URL(urlStr.trim());
+  const client = url.protocol === "https:" ? https : http;
+
+  return new Promise<SafePostResult>((resolve, reject) => {
+    const req = client.request(
+      url,
+      {
+        method: "POST",
+        timeout: timeoutMs,
+        headers: {
+          "Content-Type": "application/json",
+          "Content-Length": Buffer.byteLength(body),
+          ...extraHeaders,
+        },
+        lookup: (hostname, options, callback) => {
+          dns.lookup(hostname, { ...options, all: true }).then(
+            (addresses) => {
+              const bad = addresses.find((a) => isPrivateIp(a.address));
+              if (bad || addresses.length === 0) {
+                return callback(new Error("SSRF blocked: destination resolves to a private address"), "", 4);
+              }
+              if ((options as { all?: boolean }).all) {
+                return callback(null, addresses);
+              }
+              callback(null, addresses[0].address, addresses[0].family);
+            },
+            (err) => callback(err, "", 4)
+          );
+        },
+      },
+      (res) => {
+        res.resume();
+        resolve({ ok: (res.statusCode ?? 500) >= 200 && (res.statusCode ?? 500) < 300, status: res.statusCode ?? 0 });
+      }
+    );
+    req.on("timeout", () => req.destroy(new Error("Webhook request timed out")));
+    req.on("error", reject);
+    req.end(body);
+  });
 }

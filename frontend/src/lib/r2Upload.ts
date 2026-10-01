@@ -1,7 +1,22 @@
 import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
 
-const ALLOWED_LOGO_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/webp", "image/svg+xml"];
+// SVG is deliberately not allowed: it can carry script and the files are served
+// from a public origin. Raster formats only, verified by magic bytes below.
+const ALLOWED_LOGO_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
+const LOGO_EXT: Record<string, string> = { "image/png": "png", "image/jpeg": "jpg", "image/jpg": "jpg", "image/webp": "webp" };
+
+/** Extension derived from the validated MIME type - never from the client filename. */
+export function logoExtension(file: File): string {
+  return LOGO_EXT[file.type] || "png";
+}
+
+function detectImageType(b: Buffer): string | null {
+  if (b.length > 8 && b.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) return "image/png";
+  if (b.length > 3 && b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return "image/jpeg";
+  if (b.length > 12 && b.subarray(0, 4).toString("ascii") === "RIFF" && b.subarray(8, 12).toString("ascii") === "WEBP") return "image/webp";
+  return null;
+}
 const MAX_LOGO_BYTES = 5 * 1024 * 1024;
 
 export class LogoUploadError extends Error {
@@ -15,7 +30,7 @@ export class LogoUploadError extends Error {
 export function validateLogoFile(file: File | null): asserts file is File {
   if (!file) throw new LogoUploadError("No logo file provided.", 400);
   if (!ALLOWED_LOGO_TYPES.includes(file.type)) {
-    throw new LogoUploadError("Invalid file type. Please upload a PNG, JPG, WebP, or SVG logo.", 400);
+    throw new LogoUploadError("Invalid file type. Please upload a PNG, JPG, or WebP logo.", 400);
   }
   if (file.size > MAX_LOGO_BYTES) {
     throw new LogoUploadError("Logo file size must be less than 5MB.", 400);
@@ -28,6 +43,15 @@ export function validateLogoFile(file: File | null): asserts file is File {
 export async function uploadFileToR2(file: File, objectKey: string): Promise<string> {
   const bytes = await file.arrayBuffer();
   const buffer = Buffer.from(bytes);
+
+  const detected = detectImageType(buffer);
+  const declared = file.type === "image/jpg" ? "image/jpeg" : file.type;
+  if (!detected || detected !== declared) {
+    throw new LogoUploadError("File content does not match a valid PNG, JPG, or WebP image.", 400);
+  }
+  if (!/^[a-zA-Z0-9_\-./]+$/.test(objectKey) || objectKey.includes("..")) {
+    throw new LogoUploadError("Invalid storage key.", 400);
+  }
 
   const r2Settings = await prisma.systemSetting.findMany({
     where: {
@@ -90,8 +114,8 @@ export async function uploadFileToR2(file: File, objectKey: string): Promise<str
   });
 
   if (r2Res.status !== 200 && r2Res.status !== 201) {
-    const errBody = await r2Res.text();
-    throw new LogoUploadError(`Cloudflare R2 Upload failed (HTTP ${r2Res.status}): ${errBody}`, 502);
+    console.error(`[r2Upload] R2 upload failed (HTTP ${r2Res.status}):`, await r2Res.text());
+    throw new LogoUploadError(`Cloudflare R2 upload failed (HTTP ${r2Res.status}).`, 502);
   }
 
   return `${publicDomain.replace(/\/$/, "")}/${objectKey}`;

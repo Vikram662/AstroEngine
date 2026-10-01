@@ -3,6 +3,7 @@
 import React from "react";
 import { ShieldAlert, Loader2 } from "lucide-react";
 import type { ApiData } from "@/lib/apiTypes";
+import { sanitizeSvg } from "@/lib/sanitizeSvg";
 
 interface OverviewTabProps {
   d1Chart: ApiData;
@@ -243,10 +244,11 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               <div
                 className="w-full max-w-[360px] aspect-square flex items-center justify-center [&>svg]:w-full [&>svg]:h-full [&>svg]:drop-shadow-xs"
                 dangerouslySetInnerHTML={{
-                  __html:
+                  __html: sanitizeSvg(
                     vargaSvgMap[`D1_${chartStyle}`] ||
                     vargaSvgMap["D1"] ||
-                    svgChartD1,
+                    svgChartD1
+                )
                 }}
               />
             ) : vargaLoading ? (

@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getVerifiedSession } from "@/lib/authGuard";
-import { hashPassword, verifyPassword } from "@/lib/session";
+import { hashPasswordAsync, validatePasswordStrength, verifyPasswordAsync } from "@/lib/passwords";
 import { toJsonSafe } from "@/lib/money";
+import { publicMessage } from "@/lib/apiErrors";
 
 export async function GET() {
   try {
@@ -63,7 +64,7 @@ export async function GET() {
     });
   } catch (error: unknown) {
     const err = error as { message?: string };
-    return NextResponse.json({ status: "error", message: err.message }, { status: 500 });
+    return NextResponse.json({ status: "error", message: publicMessage(err) }, { status: 500 });
   }
 }
 
@@ -122,14 +123,15 @@ export async function PATCH(req: Request) {
       if (!currentPassword) {
         return NextResponse.json({ status: "error", message: "Current password is required." }, { status: 400 });
       }
-      const isMatch = verifyPassword(currentPassword, user.password || "");
+      const isMatch = await verifyPasswordAsync(currentPassword, user.password);
       if (!isMatch) {
         return NextResponse.json({ status: "error", message: "Current password does not match." }, { status: 400 });
       }
-      if (newPassword.length < 8) {
-        return NextResponse.json({ status: "error", message: "New password must be at least 8 characters long." }, { status: 400 });
+      const weak = validatePasswordStrength(newPassword);
+      if (weak) {
+        return NextResponse.json({ status: "error", message: weak }, { status: 400 });
       }
-      updateData.password = hashPassword(newPassword);
+      updateData.password = await hashPasswordAsync(newPassword);
     }
 
     const updated = await prisma.user.update({
@@ -149,6 +151,6 @@ export async function PATCH(req: Request) {
     });
   } catch (error: unknown) {
     const err = error as { message?: string };
-    return NextResponse.json({ status: "error", message: err.message }, { status: 500 });
+    return NextResponse.json({ status: "error", message: publicMessage(err) }, { status: 500 });
   }
 }

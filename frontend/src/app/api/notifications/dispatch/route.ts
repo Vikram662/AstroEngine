@@ -2,16 +2,24 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendNotificationEmail } from "@/lib/email";
 import { requireAdminSession } from "@/lib/authGuard";
+import { hasValidInternalSecret } from "@/lib/internalAuth";
+import { safePostJson } from "@/lib/ssrf";
+import { escapeHtml, safeHttpUrl } from "@/lib/html";
 
-const INTERNAL_SECRET = process.env.ASTRO_INTERNAL_SECRET;
+// Strip control characters (incl. CR/LF) so user data cannot inject mail headers.
+function cleanHeader(value: unknown): string {
+  return Array.from(String(value))
+    .map((c) => (c.charCodeAt(0) < 32 ? " " : c))
+    .join("")
+    .slice(0, 80);
+}
 
 // Event types based on §14:
 // 'LOW_BALANCE' | 'QUOTA_80' | 'QUOTA_100' | 'ERROR_SPIKE' | 'PDF_READY' | 'PDF_FAILED'
 export async function POST(req: NextRequest) {
   try {
     // Strict Internal/Admin Authorization Guard:
-    const authHeader = req.headers.get("x-internal-secret");
-    const isInternalAuth = INTERNAL_SECRET && authHeader === INTERNAL_SECRET;
+    const isInternalAuth = Boolean(process.env.ASTRO_INTERNAL_SECRET) && hasValidInternalSecret(req);
     
     if (!isInternalAuth) {
       const admin = await requireAdminSession();
@@ -66,8 +74,8 @@ export async function POST(req: NextRequest) {
       html = `
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; rounded: 8px;">
           <h2 style="color: #0f172a;">AstroEngine Wallet Warning</h2>
-          <p>Hi ${user.name || "Developer"},</p>
-          <p>Your wallet balance is currently <strong>₹${data?.balance || user.walletBalance.toFixed(2)}</strong>.</p>
+          <p>Hi ${escapeHtml(user.name || "Developer")},</p>
+          <p>Your wallet balance is currently <strong>₹${escapeHtml(String(data?.balance ?? user.walletBalance.toFixed(2)))}</strong>.</p>
           <p>To prevent sudden interruption of your live API integrations, please top up your prepaid balance.</p>
           <a href="${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/billing" style="display: inline-block; background: #0f172a; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px; font-weight: bold; margin-top: 10px;">Recharge Wallet</a>
         </div>
@@ -94,12 +102,12 @@ export async function POST(req: NextRequest) {
       `;
     } else if (eventType === "PDF_READY") {
       if (!prefs.emailPdfReady) shouldSendEmail = false;
-      subject = `Your ${data?.reportType || "Brihat Kundli"} report is ready`;
+      subject = `Your ${cleanHeader(data?.reportType || "Brihat Kundli")} report is ready`;
       html = `
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0;">
           <h2 style="color: #10b981;">PDF Compilation Complete</h2>
           <p>Your report has finished rendering.</p>
-          <a href="${data?.downloadUrl || "#"}" style="display: inline-block; background: #0f172a; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px;">Download PDF</a>
+          <a href="${escapeHtml(safeHttpUrl(data?.downloadUrl))}" style="display: inline-block; background: #0f172a; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px;">Download PDF</a>
           <p style="font-size: 11px; color: #64748b; margin-top: 10px;">Link expires in 24 hours per Cloudflare R2 auto-expiry policy.</p>
         </div>
       `;
@@ -119,37 +127,25 @@ export async function POST(req: NextRequest) {
     let webhookResult = null;
     if (user.accountWebhookUrl) {
       try {
-        const { validateSafeWebhookUrl } = await import("@/lib/ssrf");
-        const safetyCheck = await validateSafeWebhookUrl(user.accountWebhookUrl);
+        const crypto = await import("crypto");
+        const payload = JSON.stringify({
+          event: eventType,
+          userId: user.id,
+          timestamp: new Date().toISOString(),
+          data
+        });
+        const signature = user.accountWebhookSecret
+          ? crypto.createHmac("sha256", user.accountWebhookSecret).update(payload).digest("hex")
+          : "";
 
-        if (!safetyCheck.valid) {
-          webhookResult = { delivered: false, error: `SSRF Blocked: ${safetyCheck.reason}` };
-        } else {
-          const crypto = await import("crypto");
-          const payload = JSON.stringify({
-            event: eventType,
-            userId: user.id,
-            timestamp: new Date().toISOString(),
-            data
-          });
-          const signature = user.accountWebhookSecret 
-            ? crypto.createHmac("sha256", user.accountWebhookSecret).update(payload).digest("hex")
-            : "";
-
-          const whRes = await fetch(user.accountWebhookUrl, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "x-astroengine-signature": signature
-            },
-            body: payload,
-            signal: AbortSignal.timeout(5000)
-          });
-          webhookResult = { delivered: whRes.ok, status: whRes.status };
-        }
+        // safePostJson validates every resolved IP at connect time (no DNS
+        // rebinding) and never follows redirects.
+        const whRes = await safePostJson(user.accountWebhookUrl, payload, {
+          "x-astroengine-signature": signature
+        });
+        webhookResult = { delivered: whRes.ok, status: whRes.status };
       } catch (err: unknown) {
-        const error = err as { message?: string };
-        webhookResult = { delivered: false, error: error.message };
+        webhookResult = { delivered: false, error: err instanceof Error ? err.message : "Webhook delivery failed" };
       }
     }
 
@@ -160,7 +156,7 @@ export async function POST(req: NextRequest) {
       webhookResult
     });
   } catch (error: unknown) {
-    const err = error as { message?: string };
-    return NextResponse.json({ status: "error", message: err.message }, { status: 500 });
+    console.error("[notifications/dispatch]", error);
+    return NextResponse.json({ status: "error", message: "Dispatch failed." }, { status: 500 });
   }
 }

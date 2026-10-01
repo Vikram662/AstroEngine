@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdminSession } from "@/lib/authGuard";
 import { toMoney } from "@/lib/money";
+import { publicMessage } from "@/lib/apiErrors";
 
 // GET /api/admin/stats - Live aggregated KPIs directly from MySQL
 export async function GET() {
@@ -85,6 +86,6 @@ export async function GET() {
     });
   } catch (error: unknown) {
     const err = error as { message?: string };
-    return NextResponse.json({ status: "error", message: err.message }, { status: 500 });
+    return NextResponse.json({ status: "error", message: publicMessage(err) }, { status: 500 });
   }
 }

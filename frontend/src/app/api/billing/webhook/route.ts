@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import crypto from "crypto";
 import { Prisma } from "@prisma/client";
 import { toMoney } from "@/lib/money";
+import {
+  creditsForAmount,
+  getRazorpayWebhookSecret,
+  isPlanTier,
+  verifyHmacHex,
+} from "@/lib/razorpay";
 
 export async function POST(req: NextRequest) {
   try {
@@ -13,44 +18,25 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ status: "error", message: "Missing x-razorpay-signature header" }, { status: 400 });
     }
 
-    // 1. Fetch Razorpay Webhook Secret (Priority: MySQL SystemSetting -> env)
-    const secretSetting = await prisma.systemSetting.findUnique({
-      where: { key: "RAZORPAY_WEBHOOK_SECRET" },
-    });
-    const webhookSecret =
-      secretSetting?.value ||
-      process.env.RAZORPAY_WEBHOOK_SECRET ||
-      "whsec_astro_enterprise_live2026";
-
-    // 2. Cryptographic signature verification
-    const expectedSignature = crypto
-      .createHmac("sha256", webhookSecret)
-      .update(rawBody)
-      .digest("hex");
-
-    let isSigValid = false;
-    try {
-      isSigValid = crypto.timingSafeEqual(
-        Buffer.from(expectedSignature, "utf-8"),
-        Buffer.from(signature, "utf-8")
-      );
-    } catch {
-      isSigValid = false;
+    // No hardcoded fallback: if the secret is not configured (or is one of the
+    // known public dummy values) every webhook is refused.
+    const webhookSecret = await getRazorpayWebhookSecret();
+    if (!webhookSecret) {
+      console.error("[Razorpay Webhook] RAZORPAY_WEBHOOK_SECRET is not configured; rejecting event");
+      return NextResponse.json({ status: "error", message: "Webhook not configured" }, { status: 503 });
     }
 
-    if (!isSigValid) {
+    if (!verifyHmacHex(rawBody, signature, webhookSecret)) {
       console.warn("[Razorpay Webhook] Invalid signature rejected");
       return NextResponse.json({ status: "error", message: "Invalid signature" }, { status: 400 });
     }
 
-    // 3. Parse JSON event payload
     const event = JSON.parse(rawBody);
     const eventType = event?.event;
     const payload = event?.payload;
 
     console.log(`[Razorpay Webhook] Received verified event: ${eventType}`);
 
-    // Handle payment.captured or order.paid
     if (eventType === "payment.captured" || eventType === "order.paid") {
       const paymentEntity = payload?.payment?.entity;
       const orderEntity = payload?.order?.entity;
@@ -62,10 +48,8 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ status: "ignored", message: "No order_id in event payload" }, { status: 200 });
       }
 
-      // Check if transaction exists
       const transaction = await prisma.transaction.findFirst({
         where: { gatewayOrderId: orderId },
-        include: { user: true },
       });
 
       if (!transaction) {
@@ -73,85 +57,91 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ status: "ignored", message: "Transaction record not found" }, { status: 200 });
       }
 
-      // Idempotency: If already settled, return 200 OK immediately
       if (transaction.status === "SUCCESS") {
         return NextResponse.json({ status: "success", message: "Already processed" }, { status: 200 });
       }
 
       const verifiedAmount = toMoney(transaction.amount);
 
-      // Check if this transaction is for a subscription or wallet recharge
-      // Check if user has an associated pending subscription or notes
-      const notes = paymentEntity?.notes || orderEntity?.notes || {};
-      const planTier = notes.planTier || notes.plan;
+      // The paid amount must match what we recorded when the order was created.
+      const paidPaise = paymentEntity?.amount ?? orderEntity?.amount_paid;
+      if (typeof paidPaise === "number" && Math.round(verifiedAmount * 100) !== paidPaise) {
+        console.error(`[Razorpay Webhook] Amount mismatch for ${orderId}: recorded ${verifiedAmount}, paid ${paidPaise / 100}`);
+        return NextResponse.json({ status: "error", message: "Amount mismatch" }, { status: 400 });
+      }
 
-      if (planTier && (planTier === "STARTER" || planTier === "PRO" || planTier === "ENTERPRISE")) {
-        // Handle Subscription upgrade via Webhook
-        const plan = await prisma.subscriptionPlan.findUnique({
-          where: { tier: planTier },
-        });
+      // A plan is activated from the webhook only if the amount actually paid
+      // covers it. The notes are client-influenced, so they are never trusted
+      // on their own: an underpaid "plan" order is treated as a wallet top-up.
+      const notes = paymentEntity?.notes || orderEntity?.notes || {};
+      const requestedTier = notes.planTier || notes.plan;
+
+      if (isPlanTier(requestedTier)) {
+        const [plan, user] = await Promise.all([
+          prisma.subscriptionPlan.findUnique({ where: { tier: requestedTier } }),
+          prisma.user.findUnique({ where: { id: transaction.userId }, select: { planTier: true } }),
+        ]);
+        const currentPlan = user ? await prisma.subscriptionPlan.findUnique({ where: { tier: user.planTier } }) : null;
 
         if (plan) {
-          await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-            const updateCount = await tx.transaction.updateMany({
-              where: { id: transaction.id, status: "PENDING" },
-              data: {
-                status: "SUCCESS",
-                gatewayPaymentId: paymentId || transaction.gatewayPaymentId,
-                webhookVerified: true,
-              },
-            });
+          // Proration can credit at most the current plan's full price.
+          const floor = Math.max(0, toMoney(plan.priceMonthly) - toMoney(currentPlan?.priceMonthly));
 
-            if (updateCount.count === 1) {
-              const now = new Date();
-              const periodEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-
-              await tx.user.update({
-                where: { id: transaction.userId },
+          if (verifiedAmount + 0.005 >= floor && verifiedAmount > 0) {
+            await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+              const updateCount = await tx.transaction.updateMany({
+                where: { id: transaction.id, status: { in: ["PENDING", "FAILED"] } }, // FAILED: client-side dismissal before a late capture
                 data: {
-                  planTier: plan.tier,
-                  monthlyQuota: plan.includedQuota,
-                  rateLimitPerMin: plan.rateLimitPerMin,
+                  status: "SUCCESS",
+                  gatewayPaymentId: paymentId || transaction.gatewayPaymentId,
+                  webhookVerified: true,
                 },
               });
 
-              await tx.subscription.upsert({
-                where: { userId: transaction.userId },
-                update: {
-                  planTier: plan.tier,
-                  status: "ACTIVE",
-                  currentPeriodEnd: periodEnd,
-                  gatewaySubId: orderId,
-                  updatedAt: now,
-                },
-                create: {
-                  userId: transaction.userId,
-                  planTier: plan.tier,
-                  status: "ACTIVE",
-                  currentPeriodEnd: periodEnd,
-                  gatewaySubId: orderId,
-                },
-              });
-            }
-          });
-          return NextResponse.json({ status: "success", message: "Subscription activated" }, { status: 200 });
+              if (updateCount.count === 1) {
+                const now = new Date();
+                const periodEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+                await tx.user.update({
+                  where: { id: transaction.userId },
+                  data: {
+                    planTier: plan.tier,
+                    monthlyQuota: plan.includedQuota,
+                    rateLimitPerMin: plan.rateLimitPerMin,
+                  },
+                });
+
+                await tx.subscription.upsert({
+                  where: { userId: transaction.userId },
+                  update: {
+                    planTier: plan.tier,
+                    status: "ACTIVE",
+                    currentPeriodEnd: periodEnd,
+                    gatewaySubId: orderId,
+                    updatedAt: now,
+                  },
+                  create: {
+                    userId: transaction.userId,
+                    planTier: plan.tier,
+                    status: "ACTIVE",
+                    currentPeriodEnd: periodEnd,
+                    gatewaySubId: orderId,
+                  },
+                });
+              }
+            });
+            return NextResponse.json({ status: "success", message: "Subscription activated" }, { status: 200 });
+          }
+          console.warn(`[Razorpay Webhook] Order ${orderId} paid ₹${verifiedAmount} < plan floor ₹${floor}; crediting wallet instead`);
         }
       }
 
-      // Default: Wallet Recharge
-      // Calculate bonus credits based on amount tiers
-      const creditsToAdd =
-        verifiedAmount >= 10000
-          ? verifiedAmount * 1.25
-          : verifiedAmount >= 5000
-          ? verifiedAmount * 1.16
-          : verifiedAmount >= 2000
-          ? verifiedAmount * 1.1
-          : verifiedAmount;
+      // Default: wallet recharge
+      const creditsToAdd = creditsForAmount(verifiedAmount);
 
       await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
         const updateCount = await tx.transaction.updateMany({
-          where: { id: transaction.id, status: "PENDING" },
+          where: { id: transaction.id, status: { in: ["PENDING", "FAILED"] } }, // FAILED: client-side dismissal before a late capture
           data: {
             creditsAdded: creditsToAdd,
             gatewayPaymentId: paymentId || transaction.gatewayPaymentId,
@@ -160,22 +150,18 @@ export async function POST(req: NextRequest) {
           },
         });
 
-        // If updated, credit wallet balance
         if (updateCount.count === 1) {
           await tx.user.update({
             where: { id: transaction.userId },
-            data: {
-              walletBalance: { increment: creditsToAdd },
-            },
+            data: { walletBalance: { increment: creditsToAdd } },
           });
-          console.log(`[Razorpay Webhook] Successfully credited ₹${creditsToAdd} to user ${transaction.userId}`);
+          console.log(`[Razorpay Webhook] Credited ₹${creditsToAdd} to user ${transaction.userId}`);
         }
       });
 
       return NextResponse.json({ status: "success", message: "Payment processed successfully" }, { status: 200 });
     }
 
-    // Handle payment.failed event
     if (eventType === "payment.failed") {
       const paymentEntity = payload?.payment?.entity;
       const orderId = paymentEntity?.order_id;
@@ -197,8 +183,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ status: "ignored", message: `Event ${eventType} not handled` }, { status: 200 });
   } catch (error: unknown) {
-    const err = error as { message?: string };
-    console.error("[Razorpay Webhook Error]:", err);
-    return NextResponse.json({ status: "error", message: err.message || "Internal server error" }, { status: 500 });
+    console.error("[Razorpay Webhook Error]:", error);
+    return NextResponse.json({ status: "error", message: "Internal server error" }, { status: 500 });
   }
 }

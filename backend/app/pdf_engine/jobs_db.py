@@ -138,11 +138,19 @@ class PersistentJobStore:
                 ))
                 conn.commit()
 
-    def get_all_jobs(self, limit: int = 100) -> List[Dict[str, Any]]:
+    def get_all_jobs(self, limit: int = 100, owner_key_hash: Optional[str] = None) -> List[Dict[str, Any]]:
+        """Most recent jobs. Pass owner_key_hash to restrict to one API key's jobs."""
+        limit = max(1, min(int(limit), 200))
         with sqlite3.connect(DB_PATH) as conn:
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
-            cursor.execute("SELECT * FROM pdf_jobs ORDER BY created_at DESC LIMIT ?", (limit,))
+            if owner_key_hash is None:
+                cursor.execute("SELECT * FROM pdf_jobs ORDER BY created_at DESC LIMIT ?", (limit,))
+            else:
+                cursor.execute(
+                    "SELECT * FROM pdf_jobs WHERE owner_key_hash = ? ORDER BY created_at DESC LIMIT ?",
+                    (owner_key_hash, limit),
+                )
             rows = cursor.fetchall()
             result = []
             for r in rows:

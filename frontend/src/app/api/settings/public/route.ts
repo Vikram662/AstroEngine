@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { publicMessage } from "@/lib/apiErrors";
 
 // GET /api/settings/public - Returns safe non-sensitive branding, company details and social media links
 export async function GET() {
@@ -62,6 +63,6 @@ export async function GET() {
     });
   } catch (error: unknown) {
     const err = error as { message?: string };
-    return NextResponse.json({ status: "error", message: err.message }, { status: 500 });
+    return NextResponse.json({ status: "error", message: publicMessage(err) }, { status: 500 });
   }
 }

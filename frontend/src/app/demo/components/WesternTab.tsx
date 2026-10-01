@@ -3,6 +3,7 @@
 import React from "react";
 import { Sun, Moon, Compass } from "lucide-react";
 import type { ApiData } from "@/lib/apiTypes";
+import { sanitizeSvg } from "@/lib/sanitizeSvg";
 
 interface WesternTabProps {
   westernData: ApiData;
@@ -98,7 +99,7 @@ export const WesternTab: React.FC<WesternTabProps> = ({
             {westernWheelSvg ? (
               <div
                 className="w-full max-w-[320px] aspect-square"
-                dangerouslySetInnerHTML={{ __html: westernWheelSvg }}
+                dangerouslySetInnerHTML={{ __html: sanitizeSvg(westernWheelSvg) }}
               />
             ) : (
               <div className="text-xs text-ink-muted">Circular wheel SVG calculated by Module 11</div>

@@ -1,3 +1,5 @@
+import { getSessionSecret } from "@/lib/sessionSecret";
+
 // Web Crypto compatible session token signing & verification
 // Works in both Node.js and Edge Runtime (Next.js middleware) without requiring 'crypto' module
 
@@ -6,17 +8,6 @@ export interface SessionPayload {
   email: string;
   role: "USER" | "SUPPORT_ADMIN" | "BILLING_ADMIN" | "AUDITOR" | "ADMIN" | "SUPER_ADMIN";
   exp: number; // Unix timestamp in seconds
-}
-
-function getSessionSecret(): string {
-  const secret = process.env.SESSION_SECRET || process.env.ASTRO_INTERNAL_SECRET;
-  if (!secret) {
-    if (process.env.NODE_ENV === "production") {
-      throw new Error("CRITICAL SECURITY ERROR: SESSION_SECRET or ASTRO_INTERNAL_SECRET must be defined in production environment.");
-    }
-    return "sec_astro_enterprise_session_sign_key_2026_salt_dev_only";
-  }
-  return secret;
 }
 
 function base64UrlEncode(buffer: ArrayBuffer | Uint8Array): string {
@@ -111,7 +102,7 @@ export async function verifySessionToken(token: string | undefined | null): Prom
     const payloadJson = base64UrlDecode(payloadB64);
     const payload: SessionPayload = JSON.parse(payloadJson);
     const now = Math.floor(Date.now() / 1000);
-    if (payload.exp && payload.exp < now) {
+    if (!payload.exp || payload.exp < now) {
       return null;
     }
     return payload;

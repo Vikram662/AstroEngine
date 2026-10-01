@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getVerifiedSession } from "@/lib/authGuard";
+import { publicMessage } from "@/lib/apiErrors";
 
 export async function POST(req: NextRequest) {
   try {
@@ -41,7 +42,7 @@ export async function POST(req: NextRequest) {
     const error = err as { message?: string };
     return NextResponse.json({
       status: "error",
-      message: error.message || "Failed to save branding configuration."
+      message: publicMessage(error, "Failed to save branding configuration.")
     }, { status: 500 });
   }
 }

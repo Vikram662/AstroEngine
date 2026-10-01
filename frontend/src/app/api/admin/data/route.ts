@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdminSession } from "@/lib/authGuard";
 import { toJsonSafe } from "@/lib/money";
+import { publicMessage } from "@/lib/apiErrors";
 
 export async function GET(req: NextRequest) {
   try {
@@ -124,7 +125,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ status: "error", message: "Invalid type" }, { status: 400 });
   } catch (err: unknown) {
     const error = err as { message?: string };
-    return NextResponse.json({ status: "error", message: error.message }, { status: 500 });
+    return NextResponse.json({ status: "error", message: publicMessage(error) }, { status: 500 });
   }
 }
 
@@ -183,6 +184,6 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ status: "success", data: toJsonSafe(updatedUser) });
   } catch (err: unknown) {
     const error = err as { message?: string };
-    return NextResponse.json({ status: "error", message: error.message }, { status: 500 });
+    return NextResponse.json({ status: "error", message: publicMessage(error) }, { status: 500 });
   }
 }

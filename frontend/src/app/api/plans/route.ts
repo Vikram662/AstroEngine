@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAdminSession } from "@/lib/authGuard";
 import { toJsonSafe } from "@/lib/money";
 import type { ApiData } from "@/lib/apiTypes";
+import { publicMessage } from "@/lib/apiErrors";
 
 export async function GET() {
   try {
@@ -130,6 +131,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ status: "success", plan: toJsonSafe(plan), allowedModules });
   } catch (error: unknown) {
     const err = error as { message?: string };
-    return NextResponse.json({ status: "error", message: err.message }, { status: 500 });
+    return NextResponse.json({ status: "error", message: publicMessage(err) }, { status: 500 });
   }
 }

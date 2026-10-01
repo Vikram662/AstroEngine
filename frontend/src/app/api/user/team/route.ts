@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getVerifiedSession } from "@/lib/authGuard";
+import { publicMessage } from "@/lib/apiErrors";
 
 export async function GET() {
   try {
@@ -28,7 +29,7 @@ export async function GET() {
     });
   } catch (error: unknown) {
     const err = error as { message?: string };
-    return NextResponse.json({ status: "error", message: err.message }, { status: 500 });
+    return NextResponse.json({ status: "error", message: publicMessage(err) }, { status: 500 });
   }
 }
 
@@ -70,7 +71,7 @@ export async function POST(req: NextRequest) {
     });
   } catch (error: unknown) {
     const err = error as { message?: string };
-    return NextResponse.json({ status: "error", message: err.message }, { status: 500 });
+    return NextResponse.json({ status: "error", message: publicMessage(err) }, { status: 500 });
   }
 }
 
@@ -112,6 +113,6 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ status: "success", message: "Member removed" });
   } catch (error: unknown) {
     const err = error as { message?: string };
-    return NextResponse.json({ status: "error", message: err.message }, { status: 500 });
+    return NextResponse.json({ status: "error", message: publicMessage(err) }, { status: 500 });
   }
 }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getVerifiedSession } from "@/lib/authGuard";
 import { toMoney } from "@/lib/money";
+import { publicMessage } from "@/lib/apiErrors";
 
 export async function GET(req: NextRequest) {
   try {
@@ -104,6 +105,6 @@ export async function GET(req: NextRequest) {
     });
   } catch (error: unknown) {
     const err = error as { message?: string };
-    return NextResponse.json({ status: "error", message: err.message }, { status: 500 });
+    return NextResponse.json({ status: "error", message: publicMessage(err) }, { status: 500 });
   }
 }

@@ -5,6 +5,7 @@ import { Prisma } from "@prisma/client";
 import { OfferValidationError, recordOfferRedemption, resolveOfferForUser } from "@/lib/offers";
 import { toMoney, toJsonSafe } from "@/lib/money";
 import { ApiData, toApiError } from "@/lib/apiTypes";
+import { publicMessage } from "@/lib/apiErrors";
 
 export interface AddonItem {
   id: string;
@@ -53,7 +54,7 @@ export async function GET() {
     });
   } catch (error: unknown) {
     const err = error as { message?: string };
-    return NextResponse.json({ status: "error", message: err.message }, { status: 500 });
+    return NextResponse.json({ status: "error", message: publicMessage(err) }, { status: 500 });
   }
 }
 
@@ -297,7 +298,7 @@ export async function POST(req: NextRequest) {
   } catch (error: unknown) {
     const err = error as { message?: string };
     return NextResponse.json(
-      { status: "error", message: err.message },
+      { status: "error", message: publicMessage(err) },
       { status: error instanceof OfferValidationError ? 400 : 500 },
     );
   }

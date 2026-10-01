@@ -3,6 +3,7 @@
 import React from "react";
 import { Layers, Loader2 } from "lucide-react";
 import type { ApiData } from "@/lib/apiTypes";
+import { sanitizeSvg } from "@/lib/sanitizeSvg";
 
 interface KundliTabProps {
   chartStyle: "NORTH_INDIAN" | "SOUTH_INDIAN";
@@ -159,11 +160,12 @@ export const KundliTab: React.FC<KundliTabProps> = ({
               <div
                 className="w-full max-w-[350px] aspect-square flex items-center justify-center"
                 dangerouslySetInnerHTML={{
-                  __html:
+                  __html: sanitizeSvg(
                     vargaSvgMap[`${selectedVarga}_${chartStyle}`] ||
                     (chartStyle === "NORTH_INDIAN"
                       ? vargaSvgMap[selectedVarga]
-                      : ""),
+                      : "")
+                )
                 }}
               />
             ) : vargaLoading ? (
@@ -214,10 +216,11 @@ export const KundliTab: React.FC<KundliTabProps> = ({
               <div
                 className="w-full max-w-[350px] aspect-square flex items-center justify-center"
                 dangerouslySetInnerHTML={{
-                  __html:
+                  __html: sanitizeSvg(
                     vargaSvgMap[`D1_${chartStyle}`] ||
                     vargaSvgMap["D1"] ||
-                    svgChartD1,
+                    svgChartD1
+                )
                 }}
               />
             ) : (

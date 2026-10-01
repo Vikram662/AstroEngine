@@ -1,12 +1,12 @@
 import os
 import uuid
 from typing import Dict, Any, Optional
-import httpx
 from jinja2 import Environment, FileSystemLoader
 from app.modules.parashari.calculator import compute_varga_chart, generate_chart_svg
 from app.pdf_engine.jobs_db import jobs_store, PersistentJobStore
 from app.pdf_engine.renderer import render_real_pdf_bytes
 from app.pdf_engine.storage import store_report_pdf
+from app.core.ssrf import post_webhook_json
 
 TEMPLATES_DIR = os.path.join(os.path.dirname(__file__), "templates")
 jinja_env = Environment(loader=FileSystemLoader(TEMPLATES_DIR), autoescape=True)
@@ -109,8 +109,8 @@ async def process_pdf_job_async(
                     "download_url": download_url,
                     "file_size_bytes": len(pdf_bytes)
                 }
-                async with httpx.AsyncClient(timeout=10.0) as client:
-                    await client.post(webhook_url, json=payload)
+                # Re-validates the destination and pins the resolved IP (anti DNS-rebinding)
+                await post_webhook_json(webhook_url, payload)
             except Exception:
                 # Webhook failure should not fail the completed PDF job
                 pass
@@ -121,6 +121,6 @@ async def process_pdf_job_async(
         jobs_store.update_status(
             job_id=job_id,
             status="FAILED",
-            failure_reason=str(e),
+            failure_reason="Report generation failed. Please retry or contact support.",
             refunded=True
         )

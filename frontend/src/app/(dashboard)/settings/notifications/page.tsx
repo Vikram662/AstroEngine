@@ -12,6 +12,13 @@ import {
   Loader2
 } from "lucide-react";
 
+// Cryptographically secure signing secret (256 bits).
+function generateWebhookSecret(): string {
+  const bytes = new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+  return "whsec_" + Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
 export default function NotificationsSettingsPage() {
   const [emailLowBalance, setEmailLowBalance] = useState(true);
   const [emailQuotaWarning, setEmailQuotaWarning] = useState(true);
@@ -31,7 +38,7 @@ export default function NotificationsSettingsPage() {
         if (json.status === "success" && json.data) {
           const u = json.data;
           setAccountWebhookUrl(u.accountWebhookUrl || "");
-          setWebhookSecret(u.accountWebhookSecret || `whsec_live_${Math.random().toString(36).substring(2, 12)}`);
+          setWebhookSecret(u.accountWebhookSecret || generateWebhookSecret());
           if (u.notificationPrefs) {
             setEmailLowBalance(u.notificationPrefs.emailLowBalance ?? true);
             setEmailQuotaWarning(u.notificationPrefs.emailQuotaWarning ?? true);
@@ -203,7 +210,7 @@ export default function NotificationsSettingsPage() {
                 />
                 <button
                   type="button"
-                  onClick={() => setWebhookSecret(`whsec_live_${Math.random().toString(36).substring(2, 12)}`)}
+                  onClick={() => setWebhookSecret(generateWebhookSecret())}
                   className="px-3 py-2 text-xs font-semibold bg-white hover:bg-surface border border-line text-ink rounded-lg whitespace-nowrap shadow-xs transition"
                 >
                   Rotate Secret

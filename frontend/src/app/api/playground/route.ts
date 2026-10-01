@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import axios from "axios";
+import { getClientIp } from "@/lib/clientIp";
+import { RateLimiter } from "@/lib/rateLimit";
 
 const BACKEND_URL = process.env.ASTRO_BACKEND_URL || "http://127.0.0.1:8000";
 const INTERNAL_API_KEY = process.env.ASTRO_INTERNAL_API_KEY;
+
+// Unauthenticated endpoint: keep it tight (per IP).
+const playgroundLimiter = new RateLimiter(Number(process.env.PLAYGROUND_RPM) || 20, 60_000);
 
 // Allowed playground endpoints for public testing without authentication
 const ALLOWED_PLAYGROUND_TARGETS = [
@@ -19,7 +24,14 @@ const ALLOWED_PLAYGROUND_TARGETS = [
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    if (playgroundLimiter.hit(getClientIp(request))) {
+      return NextResponse.json(
+        { status: "error", message: "Playground rate limit exceeded. Please wait a minute." },
+        { status: 429 }
+      );
+    }
+
+    const body = await request.json().catch(() => ({}));
     const { endpoint, payload, queryParams } = body;
 
     if (!INTERNAL_API_KEY) {
@@ -51,6 +63,7 @@ export async function POST(request: NextRequest) {
     }
 
     const response = await axios.post(targetUrl.toString(), payload, {
+      maxRedirects: 0,
       headers: {
         "x-api-key": INTERNAL_API_KEY,
         "Content-Type": "application/json"
@@ -61,14 +74,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(response.data);
   } catch (err: unknown) {
     const error = err as { response?: { data?: unknown; status?: number }; message?: string };
-    if (error.response) {
+    if (error.response && (error.response.status ?? 500) < 500) {
       return NextResponse.json(error.response.data, { status: error.response.status });
     }
+    console.error("[playground] upstream failure:", error.message);
     return NextResponse.json(
       {
         status: "error",
-        message: "Failed to communicate with AstroEngine calculation backend",
-        detail: error.message || "Unknown error"
+        message: "Failed to communicate with AstroEngine calculation backend"
       },
       { status: 502 }
     );

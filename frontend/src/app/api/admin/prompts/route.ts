@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdminSession } from "@/lib/authGuard";
+import { publicMessage } from "@/lib/apiErrors";
 
 // CRUD for AstrologicalPrediction — the multi-lingual interpretation rules
 // injected into PDF reports. The model already existed in the schema, but no
@@ -43,7 +44,7 @@ export async function POST(req: NextRequest) {
     if (err.code === "P2002") {
       return NextResponse.json({ status: "error", message: "A rule with this ruleKey + lang combination already exists." }, { status: 409 });
     }
-    return NextResponse.json({ status: "error", message: err.message || "Failed to create rule." }, { status: 500 });
+    return NextResponse.json({ status: "error", message: publicMessage(err, "Failed to create rule.") }, { status: 500 });
   }
 }
 
@@ -89,7 +90,7 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ status: "success", data: updated });
   } catch (error: unknown) {
     const err = error as { message?: string };
-    return NextResponse.json({ status: "error", message: err.message || "Failed to update rule." }, { status: 500 });
+    return NextResponse.json({ status: "error", message: publicMessage(err, "Failed to update rule.") }, { status: 500 });
   }
 }
 
@@ -123,6 +124,6 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ status: "success" });
   } catch (error: unknown) {
     const err = error as { message?: string };
-    return NextResponse.json({ status: "error", message: err.message || "Failed to delete rule." }, { status: 500 });
+    return NextResponse.json({ status: "error", message: publicMessage(err, "Failed to delete rule.") }, { status: 500 });
   }
 }

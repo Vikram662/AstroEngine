@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { generateApiKey } from "@/lib/apiKey";
 import { getVerifiedSession } from "@/lib/authGuard";
+import { publicMessage } from "@/lib/apiErrors";
 
 export async function POST() {
   try {
@@ -42,7 +43,7 @@ export async function POST() {
     const err = error as { message?: string };
     return NextResponse.json({
       status: "error",
-      message: err.message || "Failed to persist API key in database."
+      message: publicMessage(err, "Failed to persist API key in database.")
     }, { status: 500 });
   }
 }

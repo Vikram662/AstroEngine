@@ -1,17 +1,7 @@
 import crypto from "crypto";
 
-function getSessionSecret(): string {
-  const secret = process.env.SESSION_SECRET || process.env.ASTRO_INTERNAL_SECRET;
-  if (!secret) {
-    if (process.env.NODE_ENV === "production") {
-      throw new Error("CRITICAL SECURITY FATAL: SESSION_SECRET or ASTRO_INTERNAL_SECRET must be configured in production environment.");
-    }
-    return "sec_astro_enterprise_session_sign_key_2026_salt_dev_only";
-  }
-  return secret;
-}
-
-const SESSION_SECRET = getSessionSecret();
+import { getSessionSecret } from "@/lib/sessionSecret";
+import { safeEqual } from "@/lib/internalAuth";
 
 export interface SessionPayload {
   userId: string;
@@ -35,7 +25,7 @@ export function createSessionToken(data: { userId: string; email: string; role: 
 
   const payloadB64 = Buffer.from(JSON.stringify(payload)).toString("base64url");
   const signature = crypto
-    .createHmac("sha256", SESSION_SECRET)
+    .createHmac("sha256", getSessionSecret())
     .update(payloadB64)
     .digest("base64url");
 
@@ -56,21 +46,19 @@ export function verifySessionToken(token: string | undefined | null): SessionPay
   if (!payloadB64 || !signature) return null;
 
   const expectedSignature = crypto
-    .createHmac("sha256", SESSION_SECRET)
+    .createHmac("sha256", getSessionSecret())
     .update(payloadB64)
     .digest("base64url");
 
   // Constant-time comparison to prevent timing attacks
-  const sigBuf = Buffer.from(signature);
-  const expBuf = Buffer.from(expectedSignature);
-  if (sigBuf.length !== expBuf.length || !crypto.timingSafeEqual(sigBuf, expBuf)) {
+  if (!safeEqual(signature, expectedSignature)) {
     return null;
   }
 
   try {
     const payload: SessionPayload = JSON.parse(Buffer.from(payloadB64, "base64url").toString("utf8"));
     const now = Math.floor(Date.now() / 1000);
-    if (payload.exp && payload.exp < now) {
+    if (!payload.exp || payload.exp < now) {
       return null; // Expired
     }
     return payload;
@@ -110,7 +98,7 @@ export function verifyPassword(password: string, storedHash: string): boolean {
 
   // Legacy SHA-256 fallback compatibility check
   const sha256Hashed = crypto.createHash("sha256").update(password).digest("hex");
-  if (storedHash === sha256Hashed) {
+  if (safeEqual(storedHash, sha256Hashed)) {
     return true;
   }
 

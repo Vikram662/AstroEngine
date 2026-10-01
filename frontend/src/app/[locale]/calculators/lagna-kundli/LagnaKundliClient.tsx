@@ -10,6 +10,7 @@ import { ResultSection, ResultRow, ResultBadge, SubmitButton, ErrorNote } from "
 import { Loader2 } from "lucide-react";
 import type { Locale } from "@/lib/locale";
 import type { ApiData } from "@/lib/apiTypes";
+import { sanitizeSvg } from "@/lib/sanitizeSvg";
 
 export default function LagnaKundliClient({ locale }: { locale: Locale }) {
   const [form, setForm] = useState<BirthDataValue>(() => ({
@@ -197,7 +198,7 @@ export default function LagnaKundliClient({ locale }: { locale: Locale }) {
                 <ResultSection title={lang === "en" ? "Lagna Kundli (D1 Chart)" : "लग्न कुंडली (D1 चक्र)"}>
                   <div
                     className="w-full max-w-lg mx-auto aspect-square flex items-center justify-center bg-surface-alt/40 rounded-lg p-4 border border-line shadow-xs"
-                    dangerouslySetInnerHTML={{ __html: svgChart }}
+                    dangerouslySetInnerHTML={{ __html: sanitizeSvg(svgChart) }}
                   />
                 </ResultSection>
               )}

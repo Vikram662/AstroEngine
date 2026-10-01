@@ -1,7 +1,14 @@
 import hashlib
+import logging
 import httpx
 from fastapi import Header, HTTPException, Request, status
 from app.core.config import settings
+
+logger = logging.getLogger("astroengine.security")
+
+ADMIN_ROLES = ("ADMIN", "SUPER_ADMIN")
+# Error codes from the Next.js verifier that map to HTTP 403 and are passed through verbatim.
+_FORBIDDEN_CODES = ("PLAN_UPGRADE_REQUIRED", "PLAN_UPGRADE_OR_ADDON_REQUIRED", "QUOTA_AND_CREDITS_EXHAUSTED", "ADDON_QUOTA_EXHAUSTED", "ACCOUNT_SUSPENDED")
 
 def hash_api_key(raw_key: str) -> str:
     """Generate SHA-256 hash of raw API key for secure lookup."""
@@ -60,47 +67,23 @@ async def verify_api_key(
         "endpoint": endpoint,
         "module": module_name
     }
-    print(f"[SECURITY] Checking API Key: {cleaned_api_key[:16]}... len={len(cleaned_api_key)}")
 
     try:
         async with httpx.AsyncClient(timeout=4.0) as client:
             resp = await client.post(next_service_url, json=payload, headers=headers)
             data = resp.json()
             if resp.status_code != 200 or not data.get("valid"):
-                # Handle plan tier module access restriction (Option A)
-                if data.get("error_code") == "PLAN_UPGRADE_REQUIRED":
+                error_code = data.get("error_code")
+                if error_code == "MAINTENANCE_MODE":
                     raise HTTPException(
-                        status_code=status.HTTP_403_FORBIDDEN,
-                        detail={
-                            "status": "error",
-                            "error_code": "PLAN_UPGRADE_REQUIRED",
-                            "message": data.get("message"),
-                            "details": data.get("details")
-                        }
+                        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                        detail={"status": "error", "error_code": error_code, "message": data.get("message")}
                     )
-
-                # Handle quota and credits exhausted scenario
-                if data.get("error_code") == "QUOTA_AND_CREDITS_EXHAUSTED":
-                    raise HTTPException(
-                        status_code=status.HTTP_403_FORBIDDEN,
-                        detail={
-                            "status": "error",
-                            "error_code": "QUOTA_AND_CREDITS_EXHAUSTED",
-                            "message": data.get("message"),
-                            "details": data.get("details")
-                        }
-                    )
-
-                # Handle account suspended or blocked
-                if data.get("error_code") == "ACCOUNT_SUSPENDED":
-                    raise HTTPException(
-                        status_code=status.HTTP_403_FORBIDDEN,
-                        detail={
-                            "status": "error",
-                            "error_code": "ACCOUNT_SUSPENDED",
-                            "message": data.get("message")
-                        }
-                    )
+                if error_code in _FORBIDDEN_CODES:
+                    detail = {"status": "error", "error_code": error_code, "message": data.get("message")}
+                    if data.get("details") is not None:
+                        detail["details"] = data.get("details")
+                    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=detail)
 
                 # Invalid API key
                 raise HTTPException(
@@ -118,10 +101,12 @@ async def verify_api_key(
             plan_tier = data.get("planTier") or quota_obj.get("plan") or "STARTER"
             db_rpm = quota_obj.get("rateLimitPerMin") or data.get("rateLimitPerMin") or 60
             
-            # Internal master key / development keys are exempt from sliding-window throttles
-            is_internal_master = "master_key" in cleaned_api_key or "internal" in cleaned_api_key or data.get("role") in ["ADMIN", "SUPER_ADMIN"]
+            # Only accounts the verifier reports as ADMIN/SUPER_ADMIN are exempt from throttling.
+            # (Never decide this from the key string itself.)
+            is_internal_master = data.get("role") in ADMIN_ROLES
             if not is_internal_master:
-                allowed, retry_after = check_sliding_window_rate_limit(cleaned_api_key[:16], dynamic_rpm=db_rpm)
+                # Hash, not the 16-char prefix: distinct keys never share a bucket.
+                allowed, retry_after = check_sliding_window_rate_limit(hash_api_key(cleaned_api_key)[:32], dynamic_rpm=db_rpm)
                 if not allowed:
                     raise HTTPException(
                         status_code=status.HTTP_429_TOO_MANY_REQUESTS,
@@ -160,11 +145,12 @@ async def verify_api_key(
             request.state.auth_data = dev_data
             request.state.quota = dev_data["quota"]
             return dev_data
+        logger.error("Authentication & quota verification service error: %s", ex)
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail={
                 "status": "error",
-                "message": f"Authentication & quota verification service error: {str(ex)}"
+                "message": "Authentication service is temporarily unavailable. Please retry shortly."
             }
         )
 

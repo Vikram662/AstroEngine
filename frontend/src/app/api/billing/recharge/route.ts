@@ -2,9 +2,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getVerifiedSession } from "@/lib/authGuard";
 import { Prisma } from "@prisma/client";
-import crypto from "crypto";
 import { toMoney, toJsonSafe } from "@/lib/money";
 import { toApiError } from "@/lib/apiTypes";
+import {
+  creditsForAmount,
+  getRazorpayCredentials,
+  getRazorpayKeySecret,
+  isPlanTier,
+  verifyHmacHex,
+} from "@/lib/razorpay";
+
+const MIN_ORDER_AMOUNT = 1;
+const MAX_ORDER_AMOUNT = 500000;
 
 export async function GET() {
   try {
@@ -32,8 +41,8 @@ export async function GET() {
       transactions: toJsonSafe(user.transactions)
     });
   } catch (error: unknown) {
-    const err = error as { message?: string };
-    return NextResponse.json({ status: "error", message: err.message }, { status: 500 });
+    console.error("[recharge GET]", error);
+    return NextResponse.json({ status: "error", message: "Failed to load transactions." }, { status: 500 });
   }
 }
 
@@ -57,42 +66,37 @@ export async function POST(req: NextRequest) {
 
     // Action: create_order (Creates real server-side order with verified amount)
     if (action === "create_order") {
-      const parsedAmount = parseFloat(amount);
-      if (isNaN(parsedAmount) || parsedAmount <= 0) {
-        return NextResponse.json({ status: "error", message: "Invalid order amount." }, { status: 400 });
+      const parsedAmount = Number(amount);
+      if (!Number.isFinite(parsedAmount) || parsedAmount < MIN_ORDER_AMOUNT || parsedAmount > MAX_ORDER_AMOUNT) {
+        return NextResponse.json({
+          status: "error",
+          message: `Order amount must be between ₹${MIN_ORDER_AMOUNT} and ₹${MAX_ORDER_AMOUNT}.`
+        }, { status: 400 });
       }
-      
-      // 1. Fetch Razorpay Key and Secret — DB takes priority, fallback to env
-      const dbKeySetting = await prisma.systemSetting.findUnique({
-        where: { key: "RAZORPAY_KEY_ID" }
-      });
-      const dbSecretSetting = await prisma.systemSetting.findUnique({
-        where: { key: "RAZORPAY_KEY_SECRET" }
-      });
+      // Paise precision only
+      const orderAmount = Math.round(parsedAmount * 100) / 100;
 
-      // Reject placeholder/demo values — must be real keys
-      const isPlaceholder = (v?: string | null) =>
-        !v || v.includes("placeholder") || v.includes("mock") || v.includes("test_mock") || v.trim() === "";
+      if (planTier !== undefined && planTier !== null && !isPlanTier(planTier)) {
+        return NextResponse.json({ status: "error", message: "Invalid plan tier." }, { status: 400 });
+      }
 
-      const dbKey = !isPlaceholder(dbKeySetting?.value) ? dbKeySetting!.value! : null;
-      const dbSecret = !isPlaceholder(dbSecretSetting?.value) ? dbSecretSetting!.value! : null;
-
-      const razorpayKey = dbKey || process.env.RAZORPAY_KEY_ID || "";
-      const razorpaySecret = dbSecret || process.env.RAZORPAY_KEY_SECRET || "";
-
-      if (!razorpayKey || !razorpaySecret) {
+      // Credentials come from DB/env; known dummy or placeholder values are rejected.
+      const creds = await getRazorpayCredentials();
+      if (!creds) {
         return NextResponse.json({
           status: "error",
           message: "Payment gateway not configured. Please set Razorpay Key ID and Secret in Admin → Settings → Payments."
         }, { status: 500 });
       }
+      const razorpayKey = creds.keyId;
+      const razorpaySecret = creds.keySecret;
 
       let orderId = "";
       try {
         // Create real server-side order on Razorpay Orders API
         const authHeader = Buffer.from(`${razorpayKey}:${razorpaySecret}`).toString("base64");
         const orderPayload = {
-          amount: Math.round(parsedAmount * 100), // amount in paise
+          amount: Math.round(orderAmount * 100), // amount in paise
           currency: "INR",
           receipt: `rcpt_${user.id.slice(0, 8)}_${Date.now().toString().slice(-6)}`,
           notes: {
@@ -123,10 +127,10 @@ export async function POST(req: NextRequest) {
         const rzpData = await rzpRes.json();
         orderId = rzpData.id;
       } catch (err: unknown) {
-        const error = err as { message?: string };
+        console.error("[recharge] Razorpay order network error:", err);
         return NextResponse.json({
           status: "error",
-          message: `Network error connecting to Razorpay Orders API: ${error.message || "Unknown"}`
+          message: "Network error connecting to the payment gateway."
         }, { status: 502 });
       }
 
@@ -134,7 +138,7 @@ export async function POST(req: NextRequest) {
       await prisma.transaction.create({
         data: {
           userId: user.id,
-          amount: parsedAmount,
+          amount: orderAmount,
           creditsAdded: 0,
           paymentGateway: "RAZORPAY",
           gatewayOrderId: orderId,
@@ -146,7 +150,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         status: "success",
         orderId,
-        amount: parsedAmount,
+        amount: orderAmount,
         currency: "INR",
         key: razorpayKey
       });
@@ -155,20 +159,8 @@ export async function POST(req: NextRequest) {
     // Action: verify_and_credit (Strictly verifies Razorpay HMAC SHA-256 signature)
     if (action === "verify_and_credit") {
       const { razorpayOrderId, razorpayPaymentId, razorpaySignature } = body;
-      const parsedAmount = parseFloat(amount);
-
-      if (isNaN(parsedAmount) || parsedAmount <= 0) {
-        return NextResponse.json({ status: "error", message: "Invalid recharge amount." }, { status: 400 });
-      }
-
-      // Fetch Razorpay Secret: Database (SystemSetting) takes priority
-      const dbSecretSetting = await prisma.systemSetting.findUnique({
-        where: { key: "RAZORPAY_KEY_SECRET" }
-      });
-      let razorpaySecret = dbSecretSetting?.value || process.env.RAZORPAY_KEY_SECRET || "";
-      if (razorpaySecret.includes("placeholder")) {
-        razorpaySecret = dbSecretSetting?.value || "";
-      }
+      // The amount is taken from the server-side pending order, never from the client.
+      const razorpaySecret = await getRazorpayKeySecret();
       if (!razorpaySecret) {
         return NextResponse.json({
           status: "error",
@@ -176,27 +168,17 @@ export async function POST(req: NextRequest) {
         }, { status: 500 });
       }
 
-      // 1. Signature, paymentId, and orderId are strictly mandatory
-      if (!razorpayOrderId || !razorpayPaymentId || !razorpaySignature) {
+      if (
+        typeof razorpayOrderId !== "string" || typeof razorpayPaymentId !== "string" ||
+        typeof razorpaySignature !== "string" || !razorpayOrderId || !razorpayPaymentId || !razorpaySignature
+      ) {
         return NextResponse.json({
           status: "error",
           message: "Missing Razorpay payment verification parameters."
         }, { status: 400 });
       }
 
-      // Cryptographic HMAC SHA-256 Signature Verification:
-      const bodyToSign = `${razorpayOrderId}|${razorpayPaymentId}`;
-      const expectedSignature = crypto
-        .createHmac("sha256", razorpaySecret)
-        .update(bodyToSign)
-        .digest("hex");
-
-      const isSigValid = crypto.timingSafeEqual(
-        Buffer.from(expectedSignature, "utf-8"),
-        Buffer.from(razorpaySignature, "utf-8")
-      );
-
-      if (!isSigValid) {
+      if (!verifyHmacHex(`${razorpayOrderId}|${razorpayPaymentId}`, razorpaySignature, razorpaySecret)) {
         return NextResponse.json({
           status: "error",
           message: "Cryptographic payment verification failed. Invalid Razorpay signature."
@@ -250,8 +232,8 @@ export async function POST(req: NextRequest) {
       }
 
       // Calculate tier bonus credits strictly based on server-verified amount
-      const creditsToAdd = verifiedAmount >= 10000 ? verifiedAmount * 1.25 : verifiedAmount >= 5000 ? verifiedAmount * 1.16 : verifiedAmount >= 2000 ? verifiedAmount * 1.10 : verifiedAmount;
-      const finalPaymentId = razorpayPaymentId || `pay_${crypto.randomBytes(8).toString("hex")}`;
+      const creditsToAdd = creditsForAmount(verifiedAmount);
+      const finalPaymentId = razorpayPaymentId;
 
       // ATOMIC RACE-CONDITION SAFE SETTLEMENT:
       // Interactive transaction rolls back automatically if count !== 1, preventing double credits
@@ -324,7 +306,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ status: "error", message: "Invalid action" }, { status: 400 });
   } catch (error: unknown) {
-    const err = error as { message?: string };
-    return NextResponse.json({ status: "error", message: err.message }, { status: 500 });
+    console.error("[recharge POST]", error);
+    return NextResponse.json({ status: "error", message: "Payment request failed. Please try again." }, { status: 500 });
   }
 }

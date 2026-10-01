@@ -224,3 +224,17 @@ The old docs disagreed with each other on several numbers. Resolutions:
 - `frontend/src/lib/offers.ts` — shared server-side offer validation, price calculation, and one-time redemption recording.
 - `frontend/src/lib/r2Upload.ts` — shared Cloudflare R2 upload/signing helper.
 - `C:\xampp\htdocs\my-app\docs\astroengine_review_scripts\` (outside this repo) — the independent verification harness referenced in §6.
+
+## Security configuration (required for production)
+
+| Variable | Where | Purpose |
+| --- | --- | --- |
+| `SESSION_SECRET` | frontend | Signs session cookies. **Mandatory** outside `next dev`; no fallback. Use 32+ random bytes. Keep it different from `ASTRO_INTERNAL_SECRET`. |
+| `ASTRO_INTERNAL_SECRET` / `INTERNAL_SECRET_KEY` | frontend / backend | Shared service-to-service secret (must match). |
+| `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET` | frontend | Payment gateway. The webhook is refused (503) until the webhook secret is configured. |
+| `ASTRO_INTERNAL_API_KEY` | frontend | API key (of an ADMIN account) used by the public calculator proxy. |
+| `TRUSTED_PROXY_HOPS` | frontend | Number of reverse proxies in front of Next.js (default `1`); used to read the real client IP. |
+| `PROXY_ANON_RPM`, `PROXY_USER_RPM`, `PROXY_HEAVY_RPM`, `PLAYGROUND_RPM` | frontend | Optional rate-limit tuning. |
+
+Run in production with `npm run build && npm run start` and `uvicorn` without `--reload`
+(see `ecosystem.config.js`). Run backend tests with `pip install -r backend/requirements-dev.txt && pytest`.

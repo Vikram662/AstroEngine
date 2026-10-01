@@ -1,59 +1,41 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { createSessionToken, hashPassword, verifyPassword } from "@/lib/session";
-import crypto from "crypto";
+import { createSessionToken } from "@/lib/session";
+import { hashPasswordAsync, validatePasswordStrength, verifyPasswordAsync } from "@/lib/passwords";
+import { otpMatches, OTP_MAX_VERIFY_ATTEMPTS } from "@/lib/otp";
+import { RateLimiter } from "@/lib/rateLimit";
+import { getClientIp } from "@/lib/clientIp";
 
-export const hashNewPassword = hashPassword;
+// Failed sign-ins: 6 per IP and 8 per account per 5 minutes.
+const loginFailsByIp = new RateLimiter(6, 5 * 60 * 1000);
+const loginFailsByEmail = new RateLimiter(8, 5 * 60 * 1000);
+// Wrong OTP guesses per email; exceeding the cap burns the OTP.
+const otpFailsByEmail = new RateLimiter(OTP_MAX_VERIFY_ATTEMPTS, 10 * 60 * 1000);
 
-// Memory-based rate limiter for login protection: 5 attempts per IP in 5 minutes
-const loginAttempts = new Map<string, { count: number; firstAttempt: number }>();
-
-function isRateLimited(ip: string): boolean {
-  const now = Date.now();
-  const record = loginAttempts.get(ip);
-  if (!record) return false;
-
-  // 5 minute window
-  if (now - record.firstAttempt > 5 * 60 * 1000) {
-    loginAttempts.delete(ip);
-    return false;
-  }
-  return record.count >= 6;
+function tooMany(message: string) {
+  return NextResponse.json({ status: "error", message }, { status: 429 });
 }
 
-function recordFailedAttempt(ip: string) {
-  const now = Date.now();
-  const record = loginAttempts.get(ip);
-  if (!record || now - record.firstAttempt > 5 * 60 * 1000) {
-    loginAttempts.set(ip, { count: 1, firstAttempt: now });
-  } else {
-    record.count += 1;
-  }
+function setSessionCookies(response: NextResponse, token: string, user: { role: string; email: string }) {
+  const isProd = process.env.NODE_ENV === "production";
+  const base = { path: "/", httpOnly: true, secure: isProd, sameSite: "lax" as const };
+  response.cookies.set("astro_session_token", token, { ...base, maxAge: 72 * 3600 });
+  response.cookies.set("astro_session_role", user.role, base);
+  response.cookies.set("astro_session_email", user.email, base);
 }
-
-function clearFailedAttempts(ip: string) {
-  loginAttempts.delete(ip);
-}
-
-const verifyPasswordHash = verifyPassword;
-
-
 
 export async function POST(req: NextRequest) {
   try {
-    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    const ip = getClientIp(req);
 
-    if (isRateLimited(ip)) {
-      return NextResponse.json(
-        { status: "error", message: "Too many failed login attempts. Please wait 5 minutes." },
-        { status: 429 }
-      );
+    if (loginFailsByIp.isLimited(ip)) {
+      return tooMany("Too many failed attempts. Please wait 5 minutes.");
     }
 
-    const body = await req.json();
-    const { email, password, action } = body;
+    const body = await req.json().catch(() => null);
+    const { email, password, action } = body || {};
 
-    if (!email || !password) {
+    if (typeof email !== "string" || typeof password !== "string" || !email || !password) {
       return NextResponse.json(
         { status: "error", message: "Email and password are required." },
         { status: 400 }
@@ -62,21 +44,28 @@ export async function POST(req: NextRequest) {
 
     const normalizedEmail = email.toLowerCase().trim();
 
-    // ACTION 1: Register (Requires Verified Email OTP)
+    // ACTION 1: Register (requires a verified email OTP)
     if (action === "register") {
       const { otp } = body;
 
-      if (!otp || typeof otp !== "string" || otp.trim().length !== 6) {
+      const weak = validatePasswordStrength(password);
+      if (weak) {
+        return NextResponse.json({ status: "error", message: weak }, { status: 400 });
+      }
+
+      if (!otp || typeof otp !== "string" || !/^\d{6}$/.test(otp.trim())) {
         return NextResponse.json(
           { status: "error", message: "A valid 6-digit email verification code (OTP) is required to register." },
           { status: 400 }
         );
       }
 
-      // Check OTP in database
-      const otpRecord = await prisma.emailOtp.findUnique({
-        where: { email: normalizedEmail }
-      });
+      if (otpFailsByEmail.isLimited(normalizedEmail)) {
+        await prisma.emailOtp.deleteMany({ where: { email: normalizedEmail } });
+        return tooMany("Too many incorrect codes. Please request a new verification code.");
+      }
+
+      const otpRecord = await prisma.emailOtp.findUnique({ where: { email: normalizedEmail } });
 
       if (!otpRecord) {
         return NextResponse.json(
@@ -92,39 +81,41 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      if (otpRecord.otp !== otp.trim()) {
+      if (!otpMatches(normalizedEmail, otp.trim(), otpRecord.otp)) {
+        otpFailsByEmail.hit(normalizedEmail);
+        loginFailsByIp.hit(ip);
         return NextResponse.json(
           { status: "error", message: "Invalid verification code. Please check your email and enter the correct 6 digits." },
           { status: 400 }
         );
       }
 
-      const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+      // Burn the OTP atomically: only one concurrent request can consume it.
+      const burned = await prisma.emailOtp.deleteMany({ where: { id: otpRecord.id } });
+      if (burned.count !== 1) {
+        return NextResponse.json(
+          { status: "error", message: "This verification code was already used. Please request a new one." },
+          { status: 400 }
+        );
+      }
+      otpFailsByEmail.reset(normalizedEmail);
+
+      const existing = await prisma.user.findUnique({ where: { email: normalizedEmail }, select: { id: true } });
       if (existing) {
         return NextResponse.json(
-          { status: "error", message: "An account with this email already exists." },
+          { status: "error", message: "Unable to register with this email. Please sign in or reset your password." },
           { status: 400 }
         );
       }
 
-      // Burn OTP immediately to prevent reuse
-      await prisma.emailOtp.delete({
-        where: { email: normalizedEmail }
+      const settings = await prisma.systemSetting.findMany({
+        where: { key: { in: ["DEFAULT_FREE_CREDITS", "DEFAULT_MONTHLY_QUOTA", "DEFAULT_STARTER_RPM"] } }
       });
+      const setting = (k: string) => settings.find((s: { key: string; value: string }) => s.key === k)?.value;
 
-      const freeCreditsSetting = await prisma.systemSetting.findUnique({
-        where: { key: "DEFAULT_FREE_CREDITS" }
-      });
-      const monthlyQuotaSetting = await prisma.systemSetting.findUnique({
-        where: { key: "DEFAULT_MONTHLY_QUOTA" }
-      });
-      const starterRpmSetting = await prisma.systemSetting.findUnique({
-        where: { key: "DEFAULT_STARTER_RPM" }
-      });
-
-      const initialCredits = freeCreditsSetting ? parseFloat(freeCreditsSetting.value) : 100.0;
-      const initialQuota = monthlyQuotaSetting ? parseInt(monthlyQuotaSetting.value, 10) : 35000;
-      const initialRpm = starterRpmSetting ? parseInt(starterRpmSetting.value, 10) : 60;
+      const credits = parseFloat(setting("DEFAULT_FREE_CREDITS") ?? "");
+      const quota = parseInt(setting("DEFAULT_MONTHLY_QUOTA") ?? "", 10);
+      const rpm = parseInt(setting("DEFAULT_STARTER_RPM") ?? "", 10);
 
       const { generateApiKey } = await import("@/lib/apiKey");
       const keyData = generateApiKey();
@@ -133,53 +124,43 @@ export async function POST(req: NextRequest) {
         data: {
           email: normalizedEmail,
           emailVerified: true,
-          password: hashNewPassword(password),
+          password: await hashPasswordAsync(password),
           name: normalizedEmail.split("@")[0],
           role: "USER",
           apiKeyHash: keyData.keyHash,
           apiKeyPrefix: keyData.keyPrefix,
           apiKeyCreatedAt: new Date(),
-          walletBalance: isNaN(initialCredits) ? 100.0 : initialCredits,
+          walletBalance: isNaN(credits) ? 100.0 : credits,
           planTier: "STARTER",
-          monthlyQuota: isNaN(initialQuota) ? 35000 : initialQuota,
-          rateLimitPerMin: isNaN(initialRpm) ? 60 : initialRpm,
+          monthlyQuota: isNaN(quota) ? 35000 : quota,
+          rateLimitPerMin: isNaN(rpm) ? 60 : rpm,
           monthlyUsage: 0
         }
       });
 
-      const token = createSessionToken({
-        userId: newUser.id,
-        email: newUser.email,
-        role: newUser.role
-      });
-
+      const token = createSessionToken({ userId: newUser.id, email: newUser.email, role: newUser.role });
       const response = NextResponse.json({
         status: "success",
         message: "Account created successfully.",
         role: newUser.role
       });
-
-      const isProd = process.env.NODE_ENV === "production";
-      response.cookies.set("astro_session_token", token, {
-        path: "/",
-        httpOnly: true,
-        secure: isProd,
-        sameSite: "lax",
-        maxAge: 72 * 3600
-      });
-      // Safe non-sensitive UI indicators only
-      response.cookies.set("astro_session_role", newUser.role, { path: "/", httpOnly: true, secure: isProd, sameSite: "lax" });
-      response.cookies.set("astro_session_email", newUser.email, { path: "/", httpOnly: true, secure: isProd, sameSite: "lax" });
-
-      clearFailedAttempts(ip);
+      setSessionCookies(response, token, newUser);
       return response;
     }
 
-    // ACTION 2: Sign In
+    // ACTION 2: Sign in
+    if (loginFailsByEmail.isLimited(normalizedEmail)) {
+      return tooMany("Too many failed attempts for this account. Please wait a few minutes.");
+    }
+
     const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
 
-    if (!user || !verifyPasswordHash(password, user.password || "")) {
-      recordFailedAttempt(ip);
+    // Always run the hash comparison (dummy hash for unknown emails) so response
+    // timing does not reveal whether the account exists.
+    const passwordOk = await verifyPasswordAsync(password, user?.password);
+    if (!user || !passwordOk) {
+      loginFailsByIp.hit(ip);
+      loginFailsByEmail.hit(normalizedEmail);
       return NextResponse.json(
         { status: "error", message: "Invalid email or password." },
         { status: 401 }
@@ -193,51 +174,37 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    clearFailedAttempts(ip);
+    loginFailsByIp.reset(ip);
+    loginFailsByEmail.reset(normalizedEmail);
 
-    // If password was stored in legacy single-pass sha256, upgrade to scrypt transparently
+    // Transparently upgrade legacy unsalted SHA-256 hashes to scrypt.
     if (user.password && !user.password.startsWith("scrypt$")) {
       await prisma.user.update({
         where: { id: user.id },
-        data: { password: hashNewPassword(password) }
+        data: { password: await hashPasswordAsync(password) }
       });
     }
 
-    const token = createSessionToken({
-      userId: user.id,
-      email: user.email,
-      role: user.role
-    });
-
+    const token = createSessionToken({ userId: user.id, email: user.email, role: user.role });
     const response = NextResponse.json({
       status: "success",
       message: `Signed in successfully as ${user.role}`,
       role: user.role
     });
-
-    const isProd = process.env.NODE_ENV === "production";
-    response.cookies.set("astro_session_token", token, {
-      path: "/",
-      httpOnly: true,
-      secure: isProd,
-      sameSite: "lax",
-      maxAge: 72 * 3600
-    });
-    // Set httpOnly on all session cookies to prevent document.cookie forgery
-    response.cookies.set("astro_session_role", user.role, { path: "/", httpOnly: true, secure: isProd, sameSite: "lax" });
-    response.cookies.set("astro_session_email", user.email, { path: "/", httpOnly: true, secure: isProd, sameSite: "lax" });
-
+    setSessionCookies(response, token, user);
     return response;
   } catch (err: unknown) {
-    const error = err as { message?: string };
-    return NextResponse.json({ status: "error", message: error.message }, { status: 500 });
+    console.error("Auth session error:", err);
+    return NextResponse.json({ status: "error", message: "Authentication failed. Please try again." }, { status: 500 });
   }
 }
 
 export async function DELETE() {
+  const isProd = process.env.NODE_ENV === "production";
+  const base = { path: "/", httpOnly: true, secure: isProd, sameSite: "lax" as const, maxAge: 0 };
   const response = NextResponse.json({ status: "success", message: "Logged out" });
-  response.cookies.set("astro_session_token", "", { path: "/", maxAge: 0 });
-  response.cookies.set("astro_session_role", "", { path: "/", maxAge: 0 });
-  response.cookies.set("astro_session_email", "", { path: "/", maxAge: 0 });
+  response.cookies.set("astro_session_token", "", base);
+  response.cookies.set("astro_session_role", "", base);
+  response.cookies.set("astro_session_email", "", base);
   return response;
 }

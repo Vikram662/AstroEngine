@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdminSession } from "@/lib/authGuard";
+import { publicMessage } from "@/lib/apiErrors";
 
 // GET /api/admin/settings - Read ALL dynamic system settings directly from MySQL table (Admin Only)
 export async function GET() {
@@ -12,18 +13,18 @@ export async function GET() {
 
     // Default system keys definitions
     const standardKeys = [
-      { key: "RAZORPAY_KEY_ID", value: "rzp_test_1DP5mmOlF5G5ag", category: "PAYMENTS", description: "Razorpay Standard Test Key ID" },
-      { key: "RAZORPAY_KEY_SECRET", value: "s8e8w9f0a1b2c3d4e5f6g7h8", category: "PAYMENTS", description: "Razorpay Secret Key for HMAC signature verification" },
-      { key: "RAZORPAY_WEBHOOK_SECRET", value: "whsec_astro_enterprise_live2026", category: "PAYMENTS", description: "Razorpay Webhook secret for auto-verification" },
-      { key: "R2_ACCOUNT_ID", value: "cf_acc_9012a3b4c5d6e7f8", category: "STORAGE", description: "Cloudflare Account ID for PDF Object Storage" },
-      { key: "R2_ACCESS_KEY_ID", value: "r2_key_817291a0b2c3", category: "STORAGE", description: "Cloudflare R2 Access Key ID" },
-      { key: "R2_SECRET_ACCESS_KEY", value: "r2_sec_99182736450192837465", category: "STORAGE", description: "Cloudflare R2 Secret Access Key" },
-      { key: "R2_BUCKET_NAME", value: "astro-pdf-reports", category: "STORAGE", description: "Cloudflare R2 Storage Bucket Name" },
+      { key: "RAZORPAY_KEY_ID", value: "", category: "PAYMENTS", description: "Razorpay Standard Test Key ID" },
+      { key: "RAZORPAY_KEY_SECRET", value: "", category: "PAYMENTS", description: "Razorpay Secret Key for HMAC signature verification" },
+      { key: "RAZORPAY_WEBHOOK_SECRET", value: "", category: "PAYMENTS", description: "Razorpay Webhook secret for auto-verification" },
+      { key: "R2_ACCOUNT_ID", value: "", category: "STORAGE", description: "Cloudflare Account ID for PDF Object Storage" },
+      { key: "R2_ACCESS_KEY_ID", value: "", category: "STORAGE", description: "Cloudflare R2 Access Key ID" },
+      { key: "R2_SECRET_ACCESS_KEY", value: "", category: "STORAGE", description: "Cloudflare R2 Secret Access Key" },
+      { key: "R2_BUCKET_NAME", value: "", category: "STORAGE", description: "Cloudflare R2 Storage Bucket Name" },
       { key: "R2_PUBLIC_DOMAIN", value: "https://cdn.astroengine.io", category: "STORAGE", description: "Public CDN domain or custom domain for PDF downloads" },
       { key: "SMTP_HOST", value: "smtp.gmail.com", category: "EMAIL", description: "Outgoing Mail Server Host" },
       { key: "SMTP_PORT", value: "587", category: "EMAIL", description: "SMTP Port (587 for TLS, 465 for SSL)" },
-      { key: "SMTP_USER", value: "notifications@astroengine.io", category: "EMAIL", description: "SMTP Username / Sender Email Address" },
-      { key: "SMTP_PASSWORD", value: "abcd efgh ijkl mnop", category: "EMAIL", description: "SMTP App Password" },
+      { key: "SMTP_USER", value: "", category: "EMAIL", description: "SMTP Username / Sender Email Address" },
+      { key: "SMTP_PASSWORD", value: "", category: "EMAIL", description: "SMTP App Password" },
       { key: "SMTP_FROM_NAME", value: "AstroEngine Cloud Notifications", category: "EMAIL", description: "Sender Display Name" },
       
       // Company & Legal Invoicing Profile
@@ -99,7 +100,7 @@ export async function GET() {
     });
   } catch (error: unknown) {
     const err = error as { message?: string };
-    return NextResponse.json({ status: "error", message: err.message }, { status: 500 });
+    return NextResponse.json({ status: "error", message: publicMessage(err) }, { status: 500 });
   }
 }
 
@@ -140,7 +141,7 @@ export async function POST(req: NextRequest) {
     });
   } catch (error: unknown) {
     const err = error as { message?: string };
-    return NextResponse.json({ status: "error", message: err.message }, { status: 500 });
+    return NextResponse.json({ status: "error", message: publicMessage(err) }, { status: 500 });
   }
 }
 
@@ -167,6 +168,6 @@ export async function DELETE(req: NextRequest) {
     });
   } catch (error: unknown) {
     const err = error as { message?: string };
-    return NextResponse.json({ status: "error", message: err.message }, { status: 500 });
+    return NextResponse.json({ status: "error", message: publicMessage(err) }, { status: 500 });
   }
 }

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getVerifiedSession } from "@/lib/authGuard";
 import { toMoney } from "@/lib/money";
 import type { ApiData } from "@/lib/apiTypes";
+import { publicMessage } from "@/lib/apiErrors";
 
 // GET /api/billing/invoice/[id] - Generates a printable Tax Invoice / GST Invoice HTML
 export async function GET(
@@ -385,6 +386,6 @@ export async function GET(
     });
   } catch (error: unknown) {
     const err = error as { message?: string };
-    return new NextResponse(`Server Error: ${err.message}`, { status: 500 });
+    return new NextResponse(publicMessage(err, "Server Error"), { status: 500 });
   }
 }

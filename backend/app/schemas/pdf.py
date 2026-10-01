@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, field_validator
 from typing import Optional
 
 class BrandingConfig(BaseModel):
@@ -18,6 +18,31 @@ class BrandingConfig(BaseModel):
     website: Optional[str] = Field("www.divineastro.com", description="Company portal link", example="www.divinejyotish.com")
     contact_number: Optional[str] = Field("+91 98765 43210", description="Support phone number printed on report footer", example="+91 98765 43210")
     primary_color: Optional[str] = Field("#b45309", description="Hex accent color code for charts & headers", example="#b45309")
+
+    @field_validator("primary_color")
+    @classmethod
+    def _hex_color_only(cls, v):
+        # Interpolated into CSS in the HTML preview: only a plain hex colour is safe.
+        import re
+        if v is not None and not re.fullmatch(r"#[0-9a-fA-F]{3,8}", v.strip()):
+            raise ValueError("primary_color must be a hex colour such as #b45309")
+        return v.strip() if v else v
+
+    @field_validator("logo_url")
+    @classmethod
+    def _https_logo_only(cls, v):
+        if v and not v.strip().lower().startswith("https://"):
+            raise ValueError("logo_url must be an https:// URL")
+        if v and len(v) > 500:
+            raise ValueError("logo_url is too long")
+        return v
+
+    @field_validator("company_name", "website", "contact_number")
+    @classmethod
+    def _bounded_text(cls, v):
+        if v and len(v) > 200:
+            raise ValueError("value is too long (max 200 characters)")
+        return v
 
 class PdfReportRequest(BaseModel):
     model_config = ConfigDict(

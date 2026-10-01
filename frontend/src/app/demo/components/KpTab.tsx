@@ -3,6 +3,7 @@
 import React from "react";
 import { Sliders, Sun, Sparkles, Loader2 } from "lucide-react";
 import type { ApiData } from "@/lib/apiTypes";
+import { sanitizeSvg } from "@/lib/sanitizeSvg";
 
 interface KpTabProps {
   kpChartSvg: string;
@@ -52,7 +53,7 @@ export const KpTab: React.FC<KpTabProps> = ({
             {kpChartSvg ? (
               <div
                 className="w-full h-full flex items-center justify-center [&>svg]:w-full [&>svg]:h-full [&>svg]:drop-shadow-xs"
-                dangerouslySetInnerHTML={{ __html: kpChartSvg }}
+                dangerouslySetInnerHTML={{ __html: sanitizeSvg(kpChartSvg) }}
               />
             ) : (
               <div className="flex flex-col items-center justify-center text-ink-muted gap-2">

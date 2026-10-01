@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdminSession } from "@/lib/authGuard";
-import { validateLogoFile, uploadFileToR2, LogoUploadError } from "@/lib/r2Upload";
+import { validateLogoFile, uploadFileToR2, logoExtension, LogoUploadError } from "@/lib/r2Upload";
+import { publicMessage } from "@/lib/apiErrors";
 
 export async function POST(req: NextRequest) {
   try {
@@ -14,7 +15,7 @@ export async function POST(req: NextRequest) {
     const file = formData.get("logo") as File | null;
     validateLogoFile(file);
 
-    const ext = file.name.split(".").pop() || "png";
+    const ext = logoExtension(file);
     const objectKey = `branding/company_logo_${Date.now()}.${ext}`;
     const publicUrl = await uploadFileToR2(file, objectKey);
 
@@ -38,9 +39,9 @@ export async function POST(req: NextRequest) {
 
   } catch (error: unknown) {
     if (error instanceof LogoUploadError) {
-      return NextResponse.json({ status: "error", message: error.message }, { status: error.status });
+      return NextResponse.json({ status: "error", message: publicMessage(error) }, { status: error.status });
     }
-    const err = error as { message?: string };
-    return NextResponse.json({ status: "error", message: err.message }, { status: 500 });
+    console.error("[upload-logo]", error);
+    return NextResponse.json({ status: "error", message: "Upload failed." }, { status: 500 });
   }
 }

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getVerifiedSession } from "@/lib/authGuard";
 import { buildPdfPayload, dispatchPdfJob } from "@/lib/pdfEngine";
 import { toJsonSafe } from "@/lib/money";
+import { publicMessage } from "@/lib/apiErrors";
 
 export async function GET() {
   try {
@@ -81,7 +82,7 @@ export async function POST(req: NextRequest) {
     const err = error as { message?: string };
     return NextResponse.json({
       status: "error",
-      message: err.message || "Failed to trigger PDF generation worker"
+      message: publicMessage(err, "Failed to trigger PDF generation worker")
     }, { status: 500 });
   }
 }

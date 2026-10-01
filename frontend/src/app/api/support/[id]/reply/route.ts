@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getVerifiedSession } from "@/lib/authGuard";
+import { publicMessage } from "@/lib/apiErrors";
 
 // POST /api/support/[id]/reply - Reply to a ticket or update status
 export async function POST(
@@ -89,6 +90,6 @@ export async function POST(
     });
   } catch (error: unknown) {
     const err = error as { message?: string };
-    return NextResponse.json({ status: "error", message: err.message }, { status: 500 });
+    return NextResponse.json({ status: "error", message: publicMessage(err) }, { status: 500 });
   }
 }
