@@ -3,21 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import axios from "axios";
 import Link from "next/link";
-import { 
-  CreditCard, 
-  Wallet, 
-  CheckCircle2, 
-  Zap, 
-  Download, 
-  ShieldCheck,
-  Loader2,
-  AlertCircle,
-  ArrowUpRight,
-  FileText,
-  BadgePercent,
-  Check,
-  X
-} from "lucide-react";
+import { CreditCard, Wallet, CheckCircle2, Zap, ShieldCheck, Loader2, AlertCircle, ArrowUpRight, FileText, BadgePercent, Check, X } from "lucide-react";
 import { ApiData, toApiError } from "@/lib/apiTypes";
 
 interface WalletTier {

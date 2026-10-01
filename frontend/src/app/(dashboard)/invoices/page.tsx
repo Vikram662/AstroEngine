@@ -3,20 +3,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import Link from "next/link";
-import { 
-  Receipt, 
-  FileText, 
-  Download, 
-  Building2, 
-  CreditCard, 
-  Save, 
-  CheckCircle2, 
-  AlertCircle, 
-  Loader2,
-  ExternalLink,
-  ShieldCheck,
-  Info
-} from "lucide-react";
+import { Receipt, FileText, Download, Building2, CreditCard, Save, CheckCircle2, AlertCircle, Loader2, ExternalLink, ShieldCheck } from "lucide-react";
 import type { ApiData } from "@/lib/apiTypes";
 
 interface TaxProfile {

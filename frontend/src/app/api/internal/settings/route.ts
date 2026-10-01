@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hasValidInternalSecret } from "@/lib/internalAuth";
+import { decryptSetting } from "@/lib/secretBox";
 
 // Least privilege: the Python engine only needs object-storage settings.
 // Payment-gateway and SMTP secrets are never exposed through this endpoint.
@@ -25,7 +26,7 @@ export async function GET(req: NextRequest) {
     const settings = await prisma.systemSetting.findMany({ where: { key: { in: BACKEND_SETTING_KEYS } } });
     const settingsMap: Record<string, string> = {};
     for (const s of settings) {
-      settingsMap[s.key] = s.value;
+      settingsMap[s.key] = decryptSetting(s.value);
     }
 
     return NextResponse.json({

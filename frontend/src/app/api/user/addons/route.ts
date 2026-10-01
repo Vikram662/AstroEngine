@@ -6,6 +6,7 @@ import { OfferValidationError, recordOfferRedemption, resolveOfferForUser } from
 import { toMoney, toJsonSafe } from "@/lib/money";
 import { ApiData, toApiError } from "@/lib/apiTypes";
 import { publicMessage } from "@/lib/apiErrors";
+import { getRazorpayKeySecret, verifyHmacHex } from "@/lib/razorpay";
 
 export interface AddonItem {
   id: string;
@@ -99,10 +100,7 @@ export async function POST(req: NextRequest) {
       // OPTION 1: Pay via Razorpay Gateway directly
       if (paymentMethod === "GATEWAY") {
         const { gatewaySignature } = body;
-        const dbSecretSetting = await prisma.systemSetting.findUnique({
-          where: { key: "RAZORPAY_KEY_SECRET" }
-        });
-        const razorpaySecret = dbSecretSetting?.value || process.env.RAZORPAY_KEY_SECRET;
+        const razorpaySecret = await getRazorpayKeySecret();
         if (!razorpaySecret) {
           return NextResponse.json({
             status: "error",
@@ -110,32 +108,22 @@ export async function POST(req: NextRequest) {
           }, { status: 500 });
         }
 
-        if (!gatewayOrderId || !gatewayPaymentId || !gatewaySignature) {
-          if (process.env.NODE_ENV === "production") {
-            return NextResponse.json({
-              status: "error",
-              message: "Missing Razorpay payment verification parameters."
-            }, { status: 400 });
-          }
-        } else {
-          const crypto = await import("crypto");
-          const bodyToSign = `${gatewayOrderId}|${gatewayPaymentId}`;
-          const expectedSignature = crypto
-            .createHmac("sha256", razorpaySecret)
-            .update(bodyToSign)
-            .digest("hex");
+        // Signature verification is mandatory in every environment.
+        if (
+          typeof gatewayOrderId !== "string" || typeof gatewayPaymentId !== "string" ||
+          typeof gatewaySignature !== "string" || !gatewayOrderId || !gatewayPaymentId || !gatewaySignature
+        ) {
+          return NextResponse.json({
+            status: "error",
+            message: "Missing Razorpay payment verification parameters."
+          }, { status: 400 });
+        }
 
-          const isSigValid = crypto.timingSafeEqual(
-            Buffer.from(expectedSignature, "utf-8"),
-            Buffer.from(gatewaySignature, "utf-8")
-          );
-
-          if (!isSigValid) {
-            return NextResponse.json({
-              status: "error",
-              message: "Cryptographic payment verification failed. Invalid Razorpay signature."
-            }, { status: 400 });
-          }
+        if (!verifyHmacHex(`${gatewayOrderId}|${gatewayPaymentId}`, gatewaySignature, razorpaySecret)) {
+          return NextResponse.json({
+            status: "error",
+            message: "Cryptographic payment verification failed. Invalid Razorpay signature."
+          }, { status: 400 });
         }
 
         // Prevent replay attacks

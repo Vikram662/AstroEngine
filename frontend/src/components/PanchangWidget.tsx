@@ -3,21 +3,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import Link from "next/link";
-import { 
-  Sun, 
-  Moon, 
-  Clock, 
-  Calendar, 
-  Flame, 
-  AlertTriangle, 
-  CheckCircle2, 
-  ChevronRight, 
-  ExternalLink,
-  Loader2,
-  Sparkles,
-  MapPin,
-  Compass
-} from "lucide-react";
+import { Sun, Moon, Calendar, AlertTriangle, CheckCircle2, ChevronRight, Loader2, MapPin, Compass } from "lucide-react";
 
 import { useLocale } from "@/hooks/useLocale";
 import { getDictionary } from "@/dictionaries/dictionary";

@@ -372,6 +372,21 @@ PDF generation is an asynchronous non-blocking background pipeline:
 | `EPHEMERIS_CALCULATION_ERROR` | `500` | Date out of 1800-2100 CE Swiss Ephemeris range | Check historical date range |
 """
 
+# Optional error monitoring: active only when SENTRY_DSN is set AND sentry-sdk is installed
+# (pip install "sentry-sdk[fastapi]"). Personal data (birth details, API keys) is not sent.
+if settings.SENTRY_DSN:
+    try:
+        import sentry_sdk
+        sentry_sdk.init(
+            dsn=settings.SENTRY_DSN,
+            environment=settings.ENVIRONMENT or "production",
+            send_default_pii=False,
+            traces_sample_rate=0.0,
+        )
+    except ImportError:
+        import logging
+        logging.getLogger("astroengine").warning("SENTRY_DSN is set but sentry-sdk is not installed; monitoring disabled.")
+
 app = FastAPI(
     title="AstroEngine B2B API Suite",
     description=build_api_description(get_dynamic_plans_markdown()),

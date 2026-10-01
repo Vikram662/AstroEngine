@@ -1,17 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { 
-  User, 
-  Mail, 
-  Lock, 
-  ShieldCheck, 
-  Save, 
-  CheckCircle2, 
-  AlertCircle,
-  KeyRound,
-  Calendar
-} from "lucide-react";
+import { User, Mail, Lock, Save, CheckCircle2, AlertCircle } from "lucide-react";
 
 export default function ProfilePage() {
   const [profile, setProfile] = useState<{

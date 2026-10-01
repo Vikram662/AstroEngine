@@ -2,41 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import {
-  Sparkles,
-  Compass,
-  Calendar,
-  Sun,
-  Moon,
-  ShieldAlert,
-  HeartHandshake,
-  Hash,
-  Flame,
-  BookOpen,
-  Globe,
-  Loader2,
-  CheckCircle2,
-  AlertCircle,
-  ArrowRight,
-  RefreshCw,
-  Eye,
-  Sliders,
-  Award,
-  Clock,
-  MapPin,
-  FileDown,
-  ChevronDown,
-  ChevronRight,
-  Layers,
-  Table,
-  X,
-  ArrowLeft,
-  Star,
-  Bot,
-  MessageSquare,
-  Send,
-  ExternalLink
-} from "lucide-react";
+import { Sparkles, Compass, Calendar, Sun, ShieldAlert, HeartHandshake, Hash, Flame, BookOpen, Globe, Loader2, RefreshCw, Eye, Sliders, Award, Clock, FileDown, X, Star, Bot, ExternalLink } from "lucide-react";
 
 import { OverviewTab } from "./components/OverviewTab";
 import { AiAstrologerTab } from "./components/AiAstrologerTab";

@@ -1,3 +1,4 @@
+import asyncio
 import os
 import uuid
 from typing import Dict, Any, Optional
@@ -11,6 +12,19 @@ from app.core.billing import refund_receipt
 
 TEMPLATES_DIR = os.path.join(os.path.dirname(__file__), "templates")
 jinja_env = Environment(loader=FileSystemLoader(TEMPLATES_DIR), autoescape=True)
+
+# CPU-heavy report generation must neither block the event loop nor run unbounded:
+# work is pushed to threads and limited by PDF_MAX_CONCURRENCY (default 2).
+_pdf_semaphore: Optional[asyncio.Semaphore] = None
+
+
+def _get_pdf_semaphore() -> asyncio.Semaphore:
+    global _pdf_semaphore
+    if _pdf_semaphore is None:
+        limit = max(1, int(os.getenv("PDF_MAX_CONCURRENCY", "2") or 2))
+        _pdf_semaphore = asyncio.Semaphore(limit)
+    return _pdf_semaphore
+
 
 # Backward-compatible alias for existing router references (now SQLite persistent)
 PDF_JOBS = jobs_store
@@ -64,34 +78,37 @@ async def process_pdf_job_async(
     5. Dispatches webhook notification if requested.
     """
     try:
-        jobs_store.update_status(job_id=job_id, status="PROCESSING")
+        async with _get_pdf_semaphore():
+            jobs_store.update_status(job_id=job_id, status="PROCESSING")
 
-        # 1. Real Astrological Calculation, localized to the requested report language
-        # (planet/sign names come back pre-translated via translate_entity()).
-        chart = compute_varga_chart(
-            dob=birth_data["dob"],
-            tob=birth_data["tob"],
-            lat=birth_data["lat"],
-            lon=birth_data["lon"],
-            tz=birth_data["tz"],
-            varga="D1",
-            lang=lang
-        )
+            # 1. Real astrological calculation, localized to the requested report language
+            # (planet/sign names come back pre-translated via translate_entity()).
+            chart = await asyncio.to_thread(
+                compute_varga_chart,
+                dob=birth_data["dob"],
+                tob=birth_data["tob"],
+                lat=birth_data["lat"],
+                lon=birth_data["lon"],
+                tz=birth_data["tz"],
+                varga="D1",
+                lang=lang
+            )
 
-        title_readable = report_type.replace("_", " ").title()
+            title_readable = report_type.replace("_", " ").title()
 
-        # 2. Real PDF Rendering (Tailored Multi-Page Binary PDF 1.4 vector stream)
-        pdf_bytes = render_real_pdf_bytes(
-            report_title=f"{title_readable} Horoscope",
-            birth_data=birth_data,
-            chart=chart,
-            branding=branding,
-            report_type=report_type,
-            lang=lang
-        )
+            # 2. Real PDF rendering (multi-page binary PDF with vector chart) off the event loop
+            pdf_bytes = await asyncio.to_thread(
+                render_real_pdf_bytes,
+                report_title=f"{title_readable} Horoscope",
+                birth_data=birth_data,
+                chart=chart,
+                branding=branding,
+                report_type=report_type,
+                lang=lang
+            )
 
-        # 3. Persistent Storage: Local disk + Optional R2 Cloudflare Upload (organized subfolders)
-        file_path, download_url = await store_report_pdf(job_id=job_id, pdf_bytes=pdf_bytes, report_type=report_type)
+            # 3. Persistent storage: local disk + optional R2 upload (organized subfolders)
+            file_path, download_url = await store_report_pdf(job_id=job_id, pdf_bytes=pdf_bytes, report_type=report_type)
 
         # 4. Mark Job Completed in SQLite
         jobs_store.update_status(

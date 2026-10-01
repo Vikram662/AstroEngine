@@ -5,7 +5,7 @@ import axios from "axios";
 import { CalculatorPageShell } from "@/components/calculators/CalculatorPageShell";
 import type { Locale } from "@/lib/locale";
 import { BirthDataFields, DEFAULT_BIRTH_DATA, BirthDataValue } from "@/components/calculators/BirthDataFields";
-import { ResultSection, ResultRow, ResultBadge, SubmitButton, ErrorNote } from "@/components/calculators/ResultRows";
+import { ResultSection, SubmitButton, ErrorNote } from "@/components/calculators/ResultRows";
 import { Loader2 } from "lucide-react";
 import { ApiData, toApiError } from "@/lib/apiTypes";
 

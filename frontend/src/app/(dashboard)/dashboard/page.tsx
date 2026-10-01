@@ -3,16 +3,7 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { 
-  Wallet, 
-  BarChart3, 
-  Key, 
-  ArrowUpRight, 
-  FileText,
-  Activity,
-  CheckCircle2,
-  Loader2
-} from "lucide-react";
+import { Wallet, BarChart3, Key, ArrowUpRight, FileText, CheckCircle2 } from "lucide-react";
 
 export default function DashboardOverviewPage() {
   const router = useRouter();

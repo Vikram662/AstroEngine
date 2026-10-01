@@ -6,7 +6,7 @@ import { CalculatorPageShell } from "@/components/calculators/CalculatorPageShel
 import type { Locale } from "@/lib/locale";
 import { BirthDataFields, DEFAULT_BIRTH_DATA, BirthDataValue } from "@/components/calculators/BirthDataFields";
 import { fetchParallelSettled } from "@/lib/calculatorApi";
-import { ResultSection, ResultRow, ResultBadge, SubmitButton, ErrorNote } from "@/components/calculators/ResultRows";
+import { ResultSection, ResultBadge, SubmitButton, ErrorNote } from "@/components/calculators/ResultRows";
 import { Loader2 } from "lucide-react";
 import { ApiData, toApiError } from "@/lib/apiTypes";
 

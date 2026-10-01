@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
 import { safeEqual } from "@/lib/internalAuth";
+import { decryptSetting } from "@/lib/secretBox";
 
 // Values that older versions of the seed script wrote into the database. They
 // are public (they live in the git history) so they must never be trusted.
@@ -23,7 +24,8 @@ export function isUnusableSecret(v?: string | null): boolean {
 
 async function resolveSetting(key: string, envName: string): Promise<string | null> {
   const row = await prisma.systemSetting.findUnique({ where: { key } });
-  if (row && !isUnusableSecret(row.value)) return row.value;
+  const dbValue = row ? decryptSetting(row.value) : "";
+  if (dbValue && !isUnusableSecret(dbValue)) return dbValue;
   const env = process.env[envName];
   return isUnusableSecret(env) ? null : (env as string);
 }

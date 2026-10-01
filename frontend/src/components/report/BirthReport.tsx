@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Loader2, RefreshCw, TriangleAlert } from "lucide-react";
+import { Loader2, TriangleAlert } from "lucide-react";
 import {
   REPORT_ENDPOINTS,
   REPORT_GROUPS,

@@ -3,20 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import axios from "axios";
-import { 
-  Mail, 
-  Phone, 
-  MapPin, 
-  ExternalLink,
-  ShieldCheck,
-  Sparkles,
-  Flame,
-  ChevronRight,
-  Compass,
-  HeartHandshake,
-  Sun,
-  FileText
-} from "lucide-react";
+import { Mail, Phone, MapPin, ShieldCheck, Sparkles, Flame, ChevronRight, Compass, HeartHandshake, FileText } from "lucide-react";
 import { useLocale } from "@/hooks/useLocale";
 import { getDictionary } from "@/dictionaries/dictionary";
 

@@ -3,18 +3,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import Link from "next/link";
-import { 
-  Sparkles, 
-  ChevronRight, 
-  Loader2, 
-  TrendingUp, 
-  Heart, 
-  Briefcase, 
-  ShieldCheck, 
-  ExternalLink,
-  Calendar,
-  X
-} from "lucide-react";
+import { Sparkles, ChevronRight, TrendingUp, Heart, Briefcase, X } from "lucide-react";
 import { useLocale } from "@/hooks/useLocale";
 import { getDictionary } from "@/dictionaries/dictionary";
 import type { ApiData } from "@/lib/apiTypes";

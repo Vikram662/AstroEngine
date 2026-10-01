@@ -1,16 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { 
-  Bell, 
-  Webhook, 
-  Mail, 
-  ShieldAlert, 
-  CheckCircle2, 
-  Save, 
-  AlertTriangle,
-  Loader2
-} from "lucide-react";
+import { Webhook, Mail, CheckCircle2, Save, Loader2 } from "lucide-react";
 
 // Cryptographically secure signing secret (256 bits).
 function generateWebhookSecret(): string {

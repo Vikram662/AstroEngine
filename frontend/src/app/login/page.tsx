@@ -175,6 +175,14 @@ export default function LoginPage() {
               </div>
             </div>
 
+            {!isRegistering && (
+              <div className="text-right -mt-2">
+                <Link href="/forgot-password" className="text-xs font-semibold text-accent hover:underline">
+                  Forgot password?
+                </Link>
+              </div>
+            )}
+
             {/* OTP Input Block (Shown during registration once OTP is requested) */}
             {isRegistering && otpSent && (
               <div className="p-3.5 bg-surface-alt border border-line rounded-md space-y-2">

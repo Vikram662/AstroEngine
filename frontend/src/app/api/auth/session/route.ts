@@ -3,14 +3,14 @@ import { prisma } from "@/lib/prisma";
 import { createSessionToken } from "@/lib/session";
 import { hashPasswordAsync, validatePasswordStrength, verifyPasswordAsync } from "@/lib/passwords";
 import { otpMatches, OTP_MAX_VERIFY_ATTEMPTS } from "@/lib/otp";
-import { RateLimiter } from "@/lib/rateLimit";
+import { SharedRateLimiter } from "@/lib/rateLimit";
 import { getClientIp } from "@/lib/clientIp";
 
 // Failed sign-ins: 6 per IP and 8 per account per 5 minutes.
-const loginFailsByIp = new RateLimiter(6, 5 * 60 * 1000);
-const loginFailsByEmail = new RateLimiter(8, 5 * 60 * 1000);
+const loginFailsByIp = new SharedRateLimiter("loginFailsByIp", 6, 5 * 60 * 1000);
+const loginFailsByEmail = new SharedRateLimiter("loginFailsByEmail", 8, 5 * 60 * 1000);
 // Wrong OTP guesses per email; exceeding the cap burns the OTP.
-const otpFailsByEmail = new RateLimiter(OTP_MAX_VERIFY_ATTEMPTS, 10 * 60 * 1000);
+const otpFailsByEmail = new SharedRateLimiter("otpFailsByEmail", OTP_MAX_VERIFY_ATTEMPTS, 10 * 60 * 1000);
 
 function tooMany(message: string) {
   return NextResponse.json({ status: "error", message }, { status: 429 });
@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
   try {
     const ip = getClientIp(req);
 
-    if (loginFailsByIp.isLimited(ip)) {
+    if (await loginFailsByIp.isLimited(ip)) {
       return tooMany("Too many failed attempts. Please wait 5 minutes.");
     }
 
@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      if (otpFailsByEmail.isLimited(normalizedEmail)) {
+      if (await otpFailsByEmail.isLimited(normalizedEmail)) {
         await prisma.emailOtp.deleteMany({ where: { email: normalizedEmail } });
         return tooMany("Too many incorrect codes. Please request a new verification code.");
       }
@@ -82,8 +82,8 @@ export async function POST(req: NextRequest) {
       }
 
       if (!otpMatches(normalizedEmail, otp.trim(), otpRecord.otp)) {
-        otpFailsByEmail.hit(normalizedEmail);
-        loginFailsByIp.hit(ip);
+        await otpFailsByEmail.hit(normalizedEmail);
+        await loginFailsByIp.hit(ip);
         return NextResponse.json(
           { status: "error", message: "Invalid verification code. Please check your email and enter the correct 6 digits." },
           { status: 400 }
@@ -98,7 +98,7 @@ export async function POST(req: NextRequest) {
           { status: 400 }
         );
       }
-      otpFailsByEmail.reset(normalizedEmail);
+      await otpFailsByEmail.reset(normalizedEmail);
 
       const existing = await prisma.user.findUnique({ where: { email: normalizedEmail }, select: { id: true } });
       if (existing) {
@@ -149,7 +149,7 @@ export async function POST(req: NextRequest) {
     }
 
     // ACTION 2: Sign in
-    if (loginFailsByEmail.isLimited(normalizedEmail)) {
+    if (await loginFailsByEmail.isLimited(normalizedEmail)) {
       return tooMany("Too many failed attempts for this account. Please wait a few minutes.");
     }
 
@@ -159,8 +159,8 @@ export async function POST(req: NextRequest) {
     // timing does not reveal whether the account exists.
     const passwordOk = await verifyPasswordAsync(password, user?.password);
     if (!user || !passwordOk) {
-      loginFailsByIp.hit(ip);
-      loginFailsByEmail.hit(normalizedEmail);
+      await loginFailsByIp.hit(ip);
+      await loginFailsByEmail.hit(normalizedEmail);
       return NextResponse.json(
         { status: "error", message: "Invalid email or password." },
         { status: 401 }
@@ -174,8 +174,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    loginFailsByIp.reset(ip);
-    loginFailsByEmail.reset(normalizedEmail);
+    await loginFailsByIp.reset(ip);
+    await loginFailsByEmail.reset(normalizedEmail);
 
     // Transparently upgrade legacy unsalted SHA-256 hashes to scrypt.
     if (user.password && !user.password.startsWith("scrypt$")) {

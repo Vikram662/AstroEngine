@@ -2,18 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { 
-  Users, 
-  Search, 
-  CheckCircle, 
-  Loader2,
-  Edit,
-  ShieldAlert,
-  Coins,
-  Package,
-  Check,
-  X
-} from "lucide-react";
+import { Search, CheckCircle, Loader2, Edit, Package, X } from "lucide-react";
 
 interface TenantUser {
   id: string;

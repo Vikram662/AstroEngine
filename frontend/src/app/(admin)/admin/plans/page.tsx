@@ -2,30 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { 
-  Layers, 
-  Plus, 
-  Check, 
-  Edit3, 
-  Zap, 
-  CheckCircle2, 
-  Loader2,
-  X,
-  Package,
-  FileText,
-  Hash,
-  Compass,
-  BookOpen,
-  Star,
-  Heart,
-  Clock,
-  ToggleLeft,
-  ToggleRight,
-  Trash2,
-  AlertCircle,
-  Sparkles,
-  ShieldAlert
-} from "lucide-react";
+import { Layers, Plus, Check, Edit3, Zap, CheckCircle2, Loader2, X, Package, FileText, Hash, Compass, BookOpen, Star, Heart, Clock, ToggleLeft, ToggleRight, AlertCircle, Sparkles, ShieldAlert } from "lucide-react";
 import type { ApiData } from "@/lib/apiTypes";
 
 interface PlanItem {

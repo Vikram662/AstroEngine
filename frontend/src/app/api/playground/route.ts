@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import axios from "axios";
 import { getClientIp } from "@/lib/clientIp";
-import { RateLimiter } from "@/lib/rateLimit";
+import { SharedRateLimiter } from "@/lib/rateLimit";
 
 const BACKEND_URL = process.env.ASTRO_BACKEND_URL || "http://127.0.0.1:8000";
 const INTERNAL_API_KEY = process.env.ASTRO_INTERNAL_API_KEY;
 
 // Unauthenticated endpoint: keep it tight (per IP).
-const playgroundLimiter = new RateLimiter(Number(process.env.PLAYGROUND_RPM) || 20, 60_000);
+const playgroundLimiter = new SharedRateLimiter("playgroundLimiter", Number(process.env.PLAYGROUND_RPM) || 20, 60_000);
 
 // Allowed playground endpoints for public testing without authentication
 const ALLOWED_PLAYGROUND_TARGETS = [
@@ -24,7 +24,7 @@ const ALLOWED_PLAYGROUND_TARGETS = [
 
 export async function POST(request: NextRequest) {
   try {
-    if (playgroundLimiter.hit(getClientIp(request))) {
+    if (await playgroundLimiter.hit(getClientIp(request))) {
       return NextResponse.json(
         { status: "error", message: "Playground rate limit exceeded. Please wait a minute." },
         { status: 429 }

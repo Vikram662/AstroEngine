@@ -2,14 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendVerificationOtpEmail } from "@/lib/email";
 import { generateOtp, hashOtp, OTP_TTL_MS } from "@/lib/otp";
-import { RateLimiter } from "@/lib/rateLimit";
+import { SharedRateLimiter } from "@/lib/rateLimit";
 import { getClientIp } from "@/lib/clientIp";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // 3 codes per email and 10 per IP in 10 minutes.
-const perEmail = new RateLimiter(3, 10 * 60 * 1000);
-const perIp = new RateLimiter(10, 10 * 60 * 1000);
+const perEmail = new SharedRateLimiter("perEmail", 3, 10 * 60 * 1000);
+const perIp = new SharedRateLimiter("perIp", 10, 10 * 60 * 1000);
 
 export async function POST(req: NextRequest) {
   try {
@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
 
     const normalizedEmail = email.toLowerCase().trim();
 
-    if (perIp.hit(getClientIp(req)) || perEmail.hit(normalizedEmail)) {
+    if (await perIp.hit(getClientIp(req)) || await perEmail.hit(normalizedEmail)) {
       return NextResponse.json(
         { status: "error", message: "Too many OTP requests. Please wait a few minutes before trying again." },
         { status: 429 }

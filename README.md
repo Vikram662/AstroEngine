@@ -244,6 +244,8 @@ Never commit real values: `.env` files are git-ignored. Only the variable names 
 | `RAZORPAY_WEBHOOK_SECRET` | yes (billing) | Webhook signing secret. Webhooks are refused (503) until it is set. |
 | `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`, `R2_PUBLIC_DOMAIN` | for logo/PDF storage | Cloudflare R2 (Admin > Settings overrides these). |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD` (or `SMTP_PASS`), `SMTP_FROM`, `SMTP_FROM_NAME` | for email | Outgoing mail (OTP, notifications). |
+| `REDIS_URL` | recommended (prod) | e.g. `redis://:password@host:6379`. Makes rate limits (login, OTP, reset, proxy) shared across instances. Without it limits are per process. |
+| `SETTINGS_ENCRYPTION_KEY` | recommended (prod) | Encrypts Razorpay / R2 / SMTP secrets stored in the DB (AES-256-GCM). After setting it run `npm run encrypt-settings` once to encrypt existing values. **Back this key up**: losing it makes the stored secrets unreadable. |
 | `TRUSTED_PROXY_HOPS` | optional (default `1`) | Number of reverse proxies in front of Next.js; used to read the real client IP. |
 | `PROXY_ANON_RPM`, `PROXY_USER_RPM`, `PROXY_HEAVY_RPM`, `PLAYGROUND_RPM` | optional | Rate-limit tuning (defaults 120 / 600 / 10 / 20 per minute). |
 | `ADMIN_INITIAL_PASSWORD`, `ASTRO_MASTER_API_KEY` | seed only | Used by `/api/admin/seed`. If the password is unset, a random one is generated and returned once. |
@@ -262,10 +264,14 @@ Never commit real values: `.env` files are git-ignored. Only the variable names 
 | `PORT` | optional | Default `8000`. |
 | `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD` | optional | Shared rate limiting; without Redis limits are per process (keep a single worker). |
 | `R2_*` | optional | Fallback R2 settings if not provided by the frontend settings API. |
-| `SENTRY_DSN` | optional | Error telemetry. |
+| `SENTRY_DSN` | optional | Error monitoring. Also `pip install "sentry-sdk[fastapi]"`; no personal data is sent. |
+| `PDF_MAX_CONCURRENCY` | optional (default `2`) | How many PDF reports render at the same time (CPU bound, runs in threads). |
 
 ### Production notes
 
 - Build and run: `npm run build && npm run start`, and `uvicorn` without `--reload` (see `ecosystem.config.js`).
 - Tests: `pip install -r backend/requirements-dev.txt && pytest`.
 - Rotate any Razorpay / R2 / SMTP credentials that were ever seeded with dummy values (they exist in git history).
+- Backups: `scripts/backup.ps1` dumps MySQL and the PDF job SQLite DB with retention (`-KeepDays`); schedule it with Task Scheduler (example in the script header) and copy the output off the machine.
+- Password reset: users can use **Forgot password?** on the sign-in page (`/forgot-password`, email code, 10 minute validity). Existing sessions stay valid until they expire (72h).
+- Config caching: plan, add-on and maintenance-mode lookups used by API-key verification are cached for 10-30 seconds per server process, so admin changes can take that long to apply.

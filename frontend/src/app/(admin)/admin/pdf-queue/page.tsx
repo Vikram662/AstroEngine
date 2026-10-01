@@ -1,18 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { 
-  FileText, 
-  RotateCw, 
-  Search, 
-  Clock, 
-  CheckCircle2, 
-  XCircle, 
-  Loader2, 
-  ExternalLink,
-  HardDrive,
-  AlertCircle
-} from "lucide-react";
+import { RotateCw, Search, Clock, CheckCircle2, XCircle, Loader2, ExternalLink, HardDrive, AlertCircle } from "lucide-react";
 
 interface PdfJob {
   id: string;

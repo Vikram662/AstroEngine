@@ -3,16 +3,16 @@ import axios, { type AxiosRequestConfig } from "axios";
 import { getVerifiedSession } from "@/lib/authGuard";
 import { resolveProxyTarget } from "@/lib/backendProxy";
 import { getClientIp } from "@/lib/clientIp";
-import { RateLimiter } from "@/lib/rateLimit";
+import { SharedRateLimiter } from "@/lib/rateLimit";
 
 const BACKEND_URL = (process.env.ASTRO_BACKEND_URL || "http://127.0.0.1:8000").replace(/\/$/, "");
 const INTERNAL_API_KEY = process.env.ASTRO_INTERNAL_API_KEY;
 
 // Anonymous calculator traffic is limited per IP; signed-in users get a larger
 // per-user budget. Expensive (PDF / AI) calls have their own, much lower cap.
-const anonLimiter = new RateLimiter(Number(process.env.PROXY_ANON_RPM) || 120, 60_000);
-const userLimiter = new RateLimiter(Number(process.env.PROXY_USER_RPM) || 600, 60_000);
-const heavyLimiter = new RateLimiter(Number(process.env.PROXY_HEAVY_RPM) || 10, 60_000);
+const anonLimiter = new SharedRateLimiter("anonLimiter", Number(process.env.PROXY_ANON_RPM) || 120, 60_000);
+const userLimiter = new SharedRateLimiter("userLimiter", Number(process.env.PROXY_USER_RPM) || 600, 60_000);
+const heavyLimiter = new SharedRateLimiter("heavyLimiter", Number(process.env.PROXY_HEAVY_RPM) || 10, 60_000);
 
 const ALLOWED_METHODS = ["GET", "POST"];
 
@@ -63,11 +63,11 @@ export async function POST(request: NextRequest) {
       if (target.adminOnly && session.role !== "ADMIN" && session.role !== "SUPER_ADMIN") {
         return NextResponse.json({ status: "error", message: "Forbidden." }, { status: 403 });
       }
-      if (method === "POST" && heavyLimiter.hit(`u:${session.userId}`)) return rateLimited();
+      if (method === "POST" && await heavyLimiter.hit(`u:${session.userId}`)) return rateLimited();
     } else {
       session = await getVerifiedSession();
     }
-    if (session ? userLimiter.hit(`u:${session.userId}`) : anonLimiter.hit(`ip:${ip}`)) return rateLimited();
+    if (session ? await userLimiter.hit(`u:${session.userId}`) : await anonLimiter.hit(`ip:${ip}`)) return rateLimited();
 
     const targetUrl = target.url;
     if (queryParams && typeof queryParams === "object") {
@@ -118,7 +118,7 @@ export async function GET(request: NextRequest) {
     if (!session) {
       return NextResponse.json({ status: "error", message: "Please sign in to use this feature." }, { status: 401 });
     }
-    if (userLimiter.hit(`u:${session.userId}`)) return rateLimited();
+    if (await userLimiter.hit(`u:${session.userId}`)) return rateLimited();
 
     const { searchParams } = new URL(request.url);
     const dlMode = searchParams.get("dl");

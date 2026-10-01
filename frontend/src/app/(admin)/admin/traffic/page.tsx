@@ -1,19 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { 
-  Activity, 
-  Search, 
-  RefreshCw, 
-  Filter, 
-  Clock, 
-  CheckCircle2, 
-  AlertTriangle, 
-  XCircle,
-  Zap,
-  Globe,
-  SlidersHorizontal
-} from "lucide-react";
+import { Activity, Search, RefreshCw, Clock, CheckCircle2, AlertTriangle, XCircle, Zap } from "lucide-react";
 
 interface RequestLog {
   id: string;

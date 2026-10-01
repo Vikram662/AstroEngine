@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdminSession } from "@/lib/authGuard";
+import { ENCRYPTED_SETTING_KEYS, decryptSetting, encryptSetting } from "@/lib/secretBox";
 import { publicMessage } from "@/lib/apiErrors";
 
 // GET /api/admin/settings - Read ALL dynamic system settings directly from MySQL table (Admin Only)
@@ -61,9 +62,12 @@ export async function GET() {
       }
     }
 
-    const existing = await prisma.systemSetting.findMany({
+    const existing = (await prisma.systemSetting.findMany({
       orderBy: { key: "asc" }
-    });
+    })).map((row: { key: string; value: string }) => ({
+      ...row,
+      value: ENCRYPTED_SETTING_KEYS.includes(row.key) ? decryptSetting(row.value) : row.value
+    }));
 
     const SENSITIVE_KEYS = [
       "RAZORPAY_KEY_SECRET",
@@ -117,9 +121,11 @@ export async function POST(req: NextRequest) {
 
     for (const item of updates) {
       if (!item.key) continue;
-      const strVal = String(item.value ?? "");
+      const rawVal = String(item.value ?? "");
       // Skip updating if value was left masked
-      if (strVal.includes("••••••••")) continue;
+      if (rawVal.includes("••••••••")) continue;
+      // Secrets are encrypted at rest when SETTINGS_ENCRYPTION_KEY is configured.
+      const strVal = ENCRYPTED_SETTING_KEYS.includes(item.key) ? encryptSetting(rawVal) : rawVal;
 
       await prisma.systemSetting.upsert({
         where: { key: item.key },
@@ -128,7 +134,7 @@ export async function POST(req: NextRequest) {
         },
         create: {
           key: item.key,
-          value: String(item.value ?? ""),
+          value: strVal,
           category: item.category || "GENERAL",
           description: item.description || null
         }

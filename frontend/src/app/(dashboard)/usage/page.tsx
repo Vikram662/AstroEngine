@@ -2,16 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import axios from "axios";
-import { 
-  Activity, 
-  Search, 
-  Loader2,
-  ChevronLeft,
-  ChevronRight,
-  ChevronsLeft,
-  ChevronsRight,
-  Filter
-} from "lucide-react";
+import { Search, Loader2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
 
 interface ApiLog {
   id: string;

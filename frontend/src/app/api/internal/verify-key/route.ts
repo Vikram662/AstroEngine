@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
 import { hasValidInternalSecret } from "@/lib/internalAuth";
+import { cached } from "@/lib/ttlCache";
+
+// Plan / add-on / switch lookups are identical for every request, so they are cached
+// briefly; only the user row (balance, quota, blocked flag) is read fresh each call.
+const CONFIG_TTL_MS = 30_000;
+const MAINTENANCE_TTL_MS = 10_000;
 import { toMoney } from "@/lib/money";
 import type { ApiData } from "@/lib/apiTypes";
 
@@ -60,9 +66,9 @@ export async function POST(req: NextRequest) {
     }
 
     // Check system maintenance mode from SystemSetting
-    const maintenanceSetting = await prisma.systemSetting.findUnique({
-      where: { key: "MAINTENANCE_MODE" }
-    });
+    const maintenanceSetting = await cached("setting:MAINTENANCE_MODE", MAINTENANCE_TTL_MS, () =>
+      prisma.systemSetting.findUnique({ where: { key: "MAINTENANCE_MODE" } })
+    );
     if (maintenanceSetting?.value === "true" && user.role !== "ADMIN" && user.role !== "SUPER_ADMIN") {
       const notice = await prisma.systemSetting.findUnique({ where: { key: "MAINTENANCE_NOTICE" } });
       return NextResponse.json({
@@ -80,9 +86,11 @@ export async function POST(req: NextRequest) {
 
     // 1. Fetch live plans, user's plan record, and all active addons directly from MySQL
     const [allDbAddons, planRecord, planModulesSetting] = await Promise.all([
-      (prisma as ApiData).addonPackage.findMany({ where: { isActive: true } }),
-      prisma.subscriptionPlan.findUnique({ where: { tier: user.planTier } }),
-      prisma.systemSetting.findUnique({ where: { key: `PLAN_MODULES_${user.planTier}` } })
+      cached<ApiData[]>("addons:active", CONFIG_TTL_MS, () => (prisma as ApiData).addonPackage.findMany({ where: { isActive: true } })),
+      cached(`plan:${user.planTier}`, CONFIG_TTL_MS, () => prisma.subscriptionPlan.findUnique({ where: { tier: user.planTier } })),
+      cached(`setting:PLAN_MODULES_${user.planTier}`, CONFIG_TTL_MS, () =>
+        prisma.systemSetting.findUnique({ where: { key: `PLAN_MODULES_${user.planTier}` } })
+      )
     ]);
 
     // 2. Determine allowed modules strictly from MySQL:
@@ -238,9 +246,9 @@ export async function POST(req: NextRequest) {
         ? toMoney(planRecord.overageCost)
         : null;
       if (costPerCall === null) {
-        const overageSetting = await prisma.systemSetting.findUnique({
-          where: { key: "OVERAGE_COST_PER_CALL" }
-        });
+        const overageSetting = await cached("setting:OVERAGE_COST_PER_CALL", CONFIG_TTL_MS, () =>
+          prisma.systemSetting.findUnique({ where: { key: "OVERAGE_COST_PER_CALL" } })
+        );
         costPerCall = overageSetting ? parseFloat(overageSetting.value) || 0.02 : 0.02;
       }
 

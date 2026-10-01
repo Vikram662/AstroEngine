@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
-import { verifySessionToken, SessionPayload } from "@/lib/session";
+import { verifySessionToken } from "@/lib/session";
 
 export interface AuthContext {
   userId: string;

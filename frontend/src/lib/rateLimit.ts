@@ -45,3 +45,69 @@ export class RateLimiter {
     if (this.hits.size >= this.maxKeys) this.hits.clear(); // hard cap: never grow unbounded
   }
 }
+
+// ── Shared (Redis-backed) limiter ────────────────────────────────────────────
+import { getRedis } from "@/lib/redis";
+
+/**
+ * Fixed-window limiter that is shared across instances when REDIS_URL is set and
+ * transparently falls back to the per-process RateLimiter otherwise (or when Redis
+ * is unreachable, so an outage never blocks legitimate traffic).
+ */
+export class SharedRateLimiter {
+  private readonly local: RateLimiter;
+
+  constructor(
+    private readonly name: string,
+    private readonly limit: number,
+    private readonly windowMs: number
+  ) {
+    this.local = new RateLimiter(limit, windowMs);
+  }
+
+  private key(k: string) {
+    return `rl:${this.name}:${k}`;
+  }
+
+  /** Records a hit; true when the caller is over the limit. */
+  async hit(k: string): Promise<boolean> {
+    const redis = getRedis();
+    if (redis) {
+      try {
+        const key = this.key(k);
+        const count = await redis.incr(key);
+        if (count === 1) await redis.pexpire(key, this.windowMs);
+        return count > this.limit;
+      } catch {
+        /* fall through to local */
+      }
+    }
+    return this.local.hit(k);
+  }
+
+  /** Read-only check. */
+  async isLimited(k: string): Promise<boolean> {
+    const redis = getRedis();
+    if (redis) {
+      try {
+        const v = await redis.get(this.key(k));
+        return v !== null && parseInt(v, 10) >= this.limit;
+      } catch {
+        /* fall through to local */
+      }
+    }
+    return this.local.isLimited(k);
+  }
+
+  async reset(k: string): Promise<void> {
+    const redis = getRedis();
+    if (redis) {
+      try {
+        await redis.del(this.key(k));
+      } catch {
+        /* ignore */
+      }
+    }
+    this.local.reset(k);
+  }
+}

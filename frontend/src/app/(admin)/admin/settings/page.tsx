@@ -2,31 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { 
-  Settings, 
-  Sliders, 
-  ShieldAlert, 
-  Save, 
-  CheckCircle2, 
-  Coins, 
-  Loader2, 
-  RefreshCw, 
-  Plus, 
-  Trash2, 
-  Database, 
-  KeyRound,
-  CreditCard,
-  HardDrive,
-  Mail,
-  ToggleLeft,
-  ToggleRight,
-  Layers,
-  Wrench,
-  Search,
-  Upload,
-  Image,
-  Copy
-} from "lucide-react";
+import { Sliders, ShieldAlert, Save, CheckCircle2, Coins, Loader2, RefreshCw, Plus, Trash2, Database, CreditCard, HardDrive, Mail, Layers, Wrench, Search, Upload, Image } from "lucide-react";
 
 interface SettingItem {
   id: string;

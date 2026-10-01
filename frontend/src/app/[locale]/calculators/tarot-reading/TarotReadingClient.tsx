@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import axios from "axios";
 import { CalculatorPageShell } from "@/components/calculators/CalculatorPageShell";
 import type { Locale } from "@/lib/locale";
-import { ResultSection, ResultRow, ResultBadge, SubmitButton, ErrorNote } from "@/components/calculators/ResultRows";
+import { ResultSection, ResultBadge, SubmitButton, ErrorNote } from "@/components/calculators/ResultRows";
 import { Sparkles, HelpCircle, Loader2 } from "lucide-react";
 import { ApiData, toApiError } from "@/lib/apiTypes";
 

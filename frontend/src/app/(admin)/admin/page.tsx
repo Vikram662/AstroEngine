@@ -2,20 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { 
-  Activity, 
-  Server, 
-  Users, 
-  CreditCard, 
-  CheckCircle2, 
-  AlertTriangle, 
-  RefreshCw, 
-  Clock, 
-  ShieldCheck,
-  Loader2,
-  TrendingUp,
-  FileCheck
-} from "lucide-react";
+import { Activity, Server, Users, RefreshCw, TrendingUp, FileCheck } from "lucide-react";
 
 interface AdminStats {
   totalUsers: number;

@@ -1,17 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { 
-  Users, 
-  UserPlus, 
-  ShieldCheck, 
-  Mail, 
-  Trash2, 
-  CheckCircle2, 
-  Sparkles,
-  KeyRound,
-  Lock
-} from "lucide-react";
+import { UserPlus, Mail, Trash2, CheckCircle2, Sparkles, KeyRound } from "lucide-react";
 
 interface TeamMember {
   id: string;

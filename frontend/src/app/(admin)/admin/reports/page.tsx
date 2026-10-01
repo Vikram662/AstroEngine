@@ -2,16 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { 
-  BarChart3, 
-  Download, 
-  TrendingUp, 
-  FileSpreadsheet, 
-  Layers, 
-  Users, 
-  Calendar,
-  Loader2
-} from "lucide-react";
+import { Download, FileSpreadsheet, Users, Calendar, Loader2 } from "lucide-react";
 
 interface ModuleShare {
   name: string;

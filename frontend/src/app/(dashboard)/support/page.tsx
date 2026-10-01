@@ -2,18 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { 
-  HelpCircle, 
-  Plus, 
-  MessageSquare, 
-  Clock, 
-  CheckCircle2, 
-  AlertCircle, 
-  Loader2, 
-  Send,
-  ArrowLeft,
-  Filter
-} from "lucide-react";
+import { Plus, MessageSquare, Loader2, Send, ArrowLeft } from "lucide-react";
 import { toApiError } from "@/lib/apiTypes";
 
 interface TicketMessage {

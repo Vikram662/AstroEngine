@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
+import { decryptSetting } from "@/lib/secretBox";
 
 // SVG is deliberately not allowed: it can carry script and the files are served
 // from a public origin. Raster formats only, verified by magic bytes below.
@@ -59,7 +60,7 @@ export async function uploadFileToR2(file: File, objectKey: string): Promise<str
     }
   });
   const r2Map: Record<string, string> = {};
-  for (const s of r2Settings) r2Map[s.key] = s.value;
+  for (const s of r2Settings) r2Map[s.key] = decryptSetting(s.value);
 
   const accountId = r2Map["R2_ACCOUNT_ID"] || process.env.R2_ACCOUNT_ID;
   const accessKey = r2Map["R2_ACCESS_KEY_ID"] || process.env.R2_ACCESS_KEY_ID;

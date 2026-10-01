@@ -145,3 +145,55 @@ describe("safeEqual", () => {
     expect(safeEqual("", "x")).toBe(false);
   });
 });
+
+import { decryptSetting, encryptSetting, isEncrypted } from "@/lib/secretBox";
+import { SharedRateLimiter } from "@/lib/rateLimit";
+import { cached, clearCache } from "@/lib/ttlCache";
+
+describe("secretBox", () => {
+  it("passes values through unchanged when no key is configured", () => {
+    delete process.env.SETTINGS_ENCRYPTION_KEY;
+    expect(encryptSetting("plain")).toBe("plain");
+    expect(decryptSetting("plain")).toBe("plain");
+  });
+
+  it("round-trips with a key, uses a fresh IV, and detects tampering or a wrong key", () => {
+    process.env.SETTINGS_ENCRYPTION_KEY = "unit-test-key";
+    const a = encryptSetting("rzp_secret_value");
+    const b = encryptSetting("rzp_secret_value");
+    expect(isEncrypted(a)).toBe(true);
+    expect(a).not.toContain("rzp_secret_value");
+    expect(a).not.toBe(b);
+    expect(decryptSetting(a)).toBe("rzp_secret_value");
+    expect(encryptSetting(a)).toBe(a); // idempotent
+
+    const tampered = a.slice(0, -2) + (a.endsWith("AA") ? "BB" : "AA");
+    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    expect(decryptSetting(tampered)).toBe("");
+    process.env.SETTINGS_ENCRYPTION_KEY = "another-key";
+    expect(decryptSetting(a)).toBe("");
+    errSpy.mockRestore();
+    delete process.env.SETTINGS_ENCRYPTION_KEY;
+  });
+});
+
+describe("shared rate limiter (in-memory fallback without REDIS_URL)", () => {
+  it("limits, and resets", async () => {
+    const rl = new SharedRateLimiter("t", 2, 60_000);
+    expect([await rl.hit("k"), await rl.hit("k"), await rl.hit("k")]).toEqual([false, false, true]);
+    expect(await rl.isLimited("k")).toBe(true);
+    await rl.reset("k");
+    expect(await rl.isLimited("k")).toBe(false);
+  });
+});
+
+describe("ttl cache", () => {
+  it("serves cached values and collapses concurrent misses", async () => {
+    clearCache();
+    const loader = vi.fn(async () => "v");
+    const [a, b] = await Promise.all([cached("k1", 1000, loader), cached("k1", 1000, loader)]);
+    expect([a, b]).toEqual(["v", "v"]);
+    await cached("k1", 1000, loader);
+    expect(loader).toHaveBeenCalledTimes(1);
+  });
+});

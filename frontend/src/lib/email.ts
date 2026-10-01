@@ -1,5 +1,6 @@
 import nodemailer from "nodemailer";
 import { prisma } from "./prisma";
+import { decryptSetting } from "./secretBox";
 
 interface EmailPayload {
   to: string;
@@ -19,7 +20,7 @@ export async function getSmtpConfig() {
 
     const configMap: Record<string, string> = {};
     for (const s of settings) {
-      configMap[s.key] = s.value;
+      configMap[s.key] = decryptSetting(s.value);
     }
 
     return {
@@ -116,4 +117,25 @@ export async function sendVerificationOtpEmail(to: string, otp: string) {
     subject: `Your AstroEngine Verification Code: ${otp}`,
     html
   });
+}
+
+export async function sendPasswordResetEmail(to: string, code: string) {
+  const html = `
+    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 520px; margin: 0 auto; padding: 30px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px;">
+      <h2 style="color: #0f172a; margin: 0 0 8px; font-size: 22px;">Reset your AstroEngine password</h2>
+      <p style="color: #334155; font-size: 14px; line-height: 1.6;">
+        Use the code below to choose a new password. It is valid for <strong>10 minutes</strong>.
+      </p>
+      <div style="margin: 24px 0; text-align: center;">
+        <div style="display: inline-block; padding: 14px 28px; background: #f8fafc; border: 2px dashed #6366f1; border-radius: 8px; font-size: 32px; font-weight: 800; letter-spacing: 6px; color: #4338ca; font-family: monospace;">
+          ${code}
+        </div>
+      </div>
+      <p style="color: #64748b; font-size: 12px; line-height: 1.5;">
+        If you did not request this, you can ignore this email: your password stays unchanged.
+      </p>
+    </div>
+  `;
+
+  return sendNotificationEmail({ to, subject: "Your AstroEngine password reset code", html });
 }

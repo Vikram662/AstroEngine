@@ -2,12 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { 
-  CreditCard, 
-  Search, 
-  Loader2,
-  FileText
-} from "lucide-react";
+import { Search, Loader2, FileText } from "lucide-react";
 
 interface AdminTx {
   id: string;
