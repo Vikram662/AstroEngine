@@ -14,6 +14,8 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [otp, setOtp] = useState("");
+  const [totp, setTotp] = useState("");
+  const [needTotp, setNeedTotp] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
   const [sendingOtp, setSendingOtp] = useState(false);
@@ -63,7 +65,7 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const payload: { email: string; password: string; action: string; otp?: string } = {
+      const payload: { email: string; password: string; action: string; otp?: string; totp?: string } = {
         email,
         password,
         action: isRegistering ? "register" : "login"
@@ -71,6 +73,9 @@ export default function LoginPage() {
 
       if (isRegistering) {
         payload.otp = otp.trim();
+      }
+      if (!isRegistering && needTotp) {
+        payload.totp = totp.trim();
       }
 
       const res = await axios.post("/api/auth/session", payload);
@@ -83,8 +88,14 @@ export default function LoginPage() {
         }
       }
     } catch (err: unknown) {
-      const errorObj = err as { response?: { data?: { message?: string } }; message?: string };
-      setError(errorObj.response?.data?.message || errorObj.message || "Authentication failed.");
+      const errorObj = err as { response?: { data?: { status?: string; message?: string } }; message?: string };
+      if (errorObj.response?.data?.status === "totp_required") {
+        // Password accepted: ask for the authenticator code (message shown only on a retry).
+        if (needTotp) setError(errorObj.response.data.message || "Invalid authentication code.");
+        setNeedTotp(true);
+      } else {
+        setError(errorObj.response?.data?.message || errorObj.message || "Authentication failed.");
+      }
     } finally {
       setLoading(false);
     }
@@ -96,6 +107,8 @@ export default function LoginPage() {
     setSuccessMsg(null);
     setOtpSent(false);
     setOtp("");
+    setNeedTotp(false);
+    setTotp("");
   };
 
   return (
@@ -174,6 +187,30 @@ export default function LoginPage() {
                 />
               </div>
             </div>
+
+            {!isRegistering && needTotp && (
+              <div className="p-3.5 bg-surface-alt border border-line rounded-md space-y-2">
+                <label className="block text-xs font-bold text-ink-soft uppercase tracking-wider">
+                  Authenticator Code
+                </label>
+                <div className="relative">
+                  <KeyRound className="w-4 h-4 text-ink-muted absolute left-3 top-2.5" />
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    maxLength={6}
+                    value={totp}
+                    onChange={(e) => setTotp(e.target.value.replace(/\D/g, ""))}
+                    placeholder="6-digit code"
+                    className="w-full bg-card border border-line rounded-lg pl-9 pr-3 py-2.5 text-base tracking-widest font-mono text-ink focus:outline-none focus:border-accent"
+                    autoFocus
+                    required
+                  />
+                </div>
+                <p className="text-xs text-ink-muted">Open your authenticator app and enter the current code.</p>
+              </div>
+            )}
 
             {!isRegistering && (
               <div className="text-right -mt-2">

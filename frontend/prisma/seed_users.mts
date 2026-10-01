@@ -1,20 +1,18 @@
 import { PrismaClient } from "@prisma/client";
-import crypto from "crypto";
-import { hashPassword } from "../src/lib/session";
+import { apiKeyFromEnvOrNew, hashPassword, passwordFromEnvOrRandom, refuseInProduction } from "./seed-helpers.mts";
 
 const prisma = new PrismaClient();
 
 async function main() {
-  if (process.env.NODE_ENV === "production") {
-    console.error("CRITICAL: prisma/seed_users.ts is disabled in production to prevent credential resets.");
-    process.exit(0);
-  }
+  refuseInProduction("prisma/seed_users.mts");
 
   console.log("Seeding Admin and Developer User credentials...");
 
   // 1. Super Admin Account (do NOT overwrite existing password on update)
   const adminEmail = "admin@astroengine.io";
-  const adminPassword = process.env.SEED_ADMIN_PASSWORD || "Admin@12345";
+  const adminPassword = passwordFromEnvOrRandom(process.env.SEED_ADMIN_PASSWORD);
+  const adminKey = apiKeyFromEnvOrNew(process.env.ASTRO_MASTER_API_KEY);
+  const adminExisted = Boolean(await prisma.user.findUnique({ where: { email: adminEmail }, select: { id: true } }));
   const admin = await prisma.user.upsert({
     where: { email: adminEmail },
     update: {
@@ -24,11 +22,12 @@ async function main() {
     },
     create: {
       email: adminEmail,
-      password: hashPassword(adminPassword),
+      emailVerified: true,
+      password: hashPassword(adminPassword.value),
       name: "Master Administrator",
       role: "ADMIN",
-      apiKeyHash: crypto.randomBytes(32).toString("hex"),
-      apiKeyPrefix: "ak_live_admin_root",
+      apiKeyHash: adminKey.keyHash,
+      apiKeyPrefix: adminKey.keyPrefix,
       walletBalance: 999999.0,
       planTier: "ENTERPRISE",
       monthlyQuota: 1000000,
@@ -40,7 +39,9 @@ async function main() {
 
   // 2. Demo Customer / Developer User Account (do NOT overwrite existing password on update)
   const userEmail = "developer@astroengine.io";
-  const userPassword = process.env.SEED_DEV_PASSWORD || "User@12345";
+  const userPassword = passwordFromEnvOrRandom(process.env.SEED_DEV_PASSWORD);
+  const devKey = apiKeyFromEnvOrNew();
+  const devExisted = Boolean(await prisma.user.findUnique({ where: { email: userEmail }, select: { id: true } }));
   const devUser = await prisma.user.upsert({
     where: { email: userEmail },
     update: {
@@ -50,11 +51,12 @@ async function main() {
     },
     create: {
       email: userEmail,
-      password: hashPassword(userPassword),
+      emailVerified: true,
+      password: hashPassword(userPassword.value),
       name: "Demo Developer",
       role: "USER",
-      apiKeyHash: crypto.randomBytes(32).toString("hex"),
-      apiKeyPrefix: "ak_live_demo_dev",
+      apiKeyHash: devKey.keyHash,
+      apiKeyPrefix: devKey.keyPrefix,
       walletBalance: 100.0,
       planTier: "STARTER",
       monthlyQuota: 35000,
@@ -63,7 +65,15 @@ async function main() {
     },
   });
   console.log(`✓ Developer User seeded successfully: ${devUser.email}`);
-  console.log("\nCredentials Ready!");
+  console.log("\nCredentials (shown once; existing accounts are never modified):");
+  if (!adminExisted) {
+    console.log(`  ${adminEmail}  password: ${adminPassword.generated ? adminPassword.value : "(from SEED_ADMIN_PASSWORD)"}`);
+    console.log(`  admin API key: ${adminKey.rawKey}`);
+  }
+  if (!devExisted) {
+    console.log(`  ${userEmail}  password: ${userPassword.generated ? userPassword.value : "(from SEED_DEV_PASSWORD)"}`);
+    console.log(`  developer API key: ${devKey.rawKey}`);
+  }
 }
 
 main()

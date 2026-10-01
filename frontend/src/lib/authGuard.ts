@@ -24,10 +24,15 @@ export async function getVerifiedSession(): Promise<AuthContext | null> {
   // Double check that user still exists in DB and is not blocked
   const user = await prisma.user.findUnique({
     where: { email: verified.email },
-    select: { id: true, email: true, role: true, isBlocked: true }
+    select: { id: true, email: true, role: true, isBlocked: true, passwordChangedAt: true }
   });
 
   if (!user || user.isBlocked) {
+    return null;
+  }
+
+  // A password change / reset revokes every session issued before it.
+  if (user.passwordChangedAt && (verified.iat ?? 0) < Math.floor(user.passwordChangedAt.getTime() / 1000)) {
     return null;
   }
 

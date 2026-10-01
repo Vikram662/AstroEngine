@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { TwoFactorCard } from "@/components/TwoFactorCard";
 import { User, Mail, Lock, Save, CheckCircle2, AlertCircle } from "lucide-react";
 
 export default function ProfilePage() {
@@ -211,6 +212,8 @@ export default function ProfilePage() {
           </button>
         </div>
       </form>
+
+      <TwoFactorCard />
     </div>
   );
 }

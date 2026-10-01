@@ -8,11 +8,13 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
+    "seed:users": "node --experimental-strip-types --no-warnings prisma/seed_users.mts",
+    "seed:company": "node --experimental-strip-types --no-warnings prisma/seed_company_settings.mts",
     "typecheck": "tsc --noEmit",
     "encrypt-settings": "node --experimental-strip-types --no-warnings scripts/encrypt-settings.mts"
   },
   "prisma": {
-    "seed": "node --loader ts-node/esm prisma/seed.ts"
+    "seed": "node --experimental-strip-types --no-warnings prisma/seed.mts"
   },
   "dependencies": {
     "@prisma/client": "5.22.0",

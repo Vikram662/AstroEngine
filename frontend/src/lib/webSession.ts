@@ -8,6 +8,7 @@ export interface SessionPayload {
   email: string;
   role: "USER" | "SUPPORT_ADMIN" | "BILLING_ADMIN" | "AUDITOR" | "ADMIN" | "SUPER_ADMIN";
   exp: number; // Unix timestamp in seconds
+  iat?: number;
 }
 
 function base64UrlEncode(buffer: ArrayBuffer | Uint8Array): string {
@@ -50,12 +51,14 @@ export async function createSessionToken(
   expiresInHours: number = 72
 ): Promise<string> {
   const secret = getSessionSecret();
-  const exp = Math.floor(Date.now() / 1000) + expiresInHours * 3600;
+  const iat = Math.floor(Date.now() / 1000);
+  const exp = iat + expiresInHours * 3600;
   const payload: SessionPayload = {
     userId: data.userId,
     email: data.email.toLowerCase().trim(),
     role: data.role as SessionPayload["role"],
-    exp
+    exp,
+    iat
   };
 
   const enc = new TextEncoder();

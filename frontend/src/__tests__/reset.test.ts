@@ -3,7 +3,7 @@ import { NextRequest } from "next/server";
 
 const db = vi.hoisted(() => ({
   user: { findUnique: vi.fn(), update: vi.fn() },
-  emailOtp: { upsert: vi.fn(), findUnique: vi.fn(), deleteMany: vi.fn() },
+  emailOtp: { upsert: vi.fn(), findUnique: vi.fn(), deleteMany: vi.fn(), updateMany: vi.fn() },
 }));
 const mail = vi.hoisted(() => ({ sendPasswordResetEmail: vi.fn(async () => ({ success: true })) }));
 vi.mock("@/lib/prisma", () => ({ prisma: db }));
@@ -65,6 +65,7 @@ describe("PUT /api/auth/reset (set a new password)", () => {
   const record = (code: string, email = EMAIL, expiresInMs = 60_000) => ({
     id: "o1",
     email,
+    attempts: 0,
     otp: hashOtp(`reset:${email}`, code),
     expiresAt: new Date(Date.now() + expiresInMs),
   });
@@ -89,7 +90,7 @@ describe("PUT /api/auth/reset (set a new password)", () => {
 
   it("does not accept a sign-up verification code as a reset code", async () => {
     db.emailOtp.findUnique.mockResolvedValue({
-      id: "o2", email: EMAIL, otp: hashOtp(EMAIL, "123456"), expiresAt: new Date(Date.now() + 60_000),
+      id: "o2", email: EMAIL, attempts: 0, otp: hashOtp(EMAIL, "123456"), expiresAt: new Date(Date.now() + 60_000),
     });
     expect((await PUT(req("PUT", { email: EMAIL, otp: "123456", newPassword: "a-new-password" }))).status).toBe(400);
     expect(db.user.update).not.toHaveBeenCalled();
@@ -103,15 +104,31 @@ describe("PUT /api/auth/reset (set a new password)", () => {
     expect(db.user.update).not.toHaveBeenCalled();
   });
 
-  it("locks guessing after repeated wrong codes and invalidates the code", async () => {
+  it("persists attempts with the code and burns it after 5 wrong guesses", async () => {
     const email = "brute@example.com";
-    db.emailOtp.findUnique.mockResolvedValue(record("123456", email));
+    const row = { ...record("123456", email), attempts: 0 };
+    db.emailOtp.findUnique.mockImplementation(async () => ({ ...row }));
+    db.emailOtp.updateMany.mockImplementation(async ({ data }: { data: { attempts: { increment: number } } }) => {
+      row.attempts += data.attempts.increment;
+      return { count: 1 };
+    });
     const statuses: number[] = [];
     for (let i = 0; i < 7; i++) {
       statuses.push((await PUT(req("PUT", { email, otp: "000000", newPassword: "a-new-password" }))).status);
     }
     expect(statuses.slice(0, 5)).toEqual([400, 400, 400, 400, 400]);
     expect(statuses[5]).toBe(429);
-    expect(db.emailOtp.deleteMany).toHaveBeenCalledWith({ where: { email } });
+    expect(row.attempts).toBe(5);
+    expect(db.emailOtp.deleteMany).toHaveBeenCalledWith({ where: { id: "o1" } });
+    // even the CORRECT code is refused once the attempt budget is spent
+    row.attempts = 5;
+    expect((await PUT(req("PUT", { email, otp: "123456", newPassword: "a-new-password" }))).status).toBe(429);
+    expect(db.user.update).not.toHaveBeenCalled();
+  });
+
+  it("stamps passwordChangedAt so older sessions are revoked", async () => {
+    db.emailOtp.findUnique.mockResolvedValue(record("123456"));
+    await PUT(req("PUT", { email: EMAIL, otp: "123456", newPassword: "a-new-password" }));
+    expect(db.user.update.mock.calls[0][0].data.passwordChangedAt).toBeInstanceOf(Date);
   });
 });

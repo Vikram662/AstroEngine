@@ -5,12 +5,15 @@ import { hashPasswordAsync, validatePasswordStrength, verifyPasswordAsync } from
 import { otpMatches, OTP_MAX_VERIFY_ATTEMPTS } from "@/lib/otp";
 import { SharedRateLimiter } from "@/lib/rateLimit";
 import { getClientIp } from "@/lib/clientIp";
+import { decryptSetting } from "@/lib/secretBox";
+import { verifyTotp } from "@/lib/totp";
 
 // Failed sign-ins: 6 per IP and 8 per account per 5 minutes.
 const loginFailsByIp = new SharedRateLimiter("loginFailsByIp", 6, 5 * 60 * 1000);
 const loginFailsByEmail = new SharedRateLimiter("loginFailsByEmail", 8, 5 * 60 * 1000);
-// Wrong OTP guesses per email; exceeding the cap burns the OTP.
-const otpFailsByEmail = new SharedRateLimiter("otpFailsByEmail", OTP_MAX_VERIFY_ATTEMPTS, 10 * 60 * 1000);
+
+// Wrong authenticator codes per account (password was already correct at that point).
+const totpFailsByEmail = new SharedRateLimiter("totpFailsByEmail", 5, 10 * 60 * 1000);
 
 function tooMany(message: string) {
   return NextResponse.json({ status: "error", message }, { status: 429 });
@@ -60,11 +63,6 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      if (await otpFailsByEmail.isLimited(normalizedEmail)) {
-        await prisma.emailOtp.deleteMany({ where: { email: normalizedEmail } });
-        return tooMany("Too many incorrect codes. Please request a new verification code.");
-      }
-
       const otpRecord = await prisma.emailOtp.findUnique({ where: { email: normalizedEmail } });
 
       if (!otpRecord) {
@@ -72,6 +70,12 @@ export async function POST(req: NextRequest) {
           { status: "error", message: "No verification code requested for this email. Please request an OTP first." },
           { status: 400 }
         );
+      }
+
+      // Attempts are stored with the code, so the limit holds across restarts and instances.
+      if (otpRecord.attempts >= OTP_MAX_VERIFY_ATTEMPTS) {
+        await prisma.emailOtp.deleteMany({ where: { id: otpRecord.id } });
+        return tooMany("Too many incorrect codes. Please request a new verification code.");
       }
 
       if (new Date() > otpRecord.expiresAt) {
@@ -82,7 +86,7 @@ export async function POST(req: NextRequest) {
       }
 
       if (!otpMatches(normalizedEmail, otp.trim(), otpRecord.otp)) {
-        await otpFailsByEmail.hit(normalizedEmail);
+        await prisma.emailOtp.updateMany({ where: { id: otpRecord.id }, data: { attempts: { increment: 1 } } });
         await loginFailsByIp.hit(ip);
         return NextResponse.json(
           { status: "error", message: "Invalid verification code. Please check your email and enter the correct 6 digits." },
@@ -98,7 +102,6 @@ export async function POST(req: NextRequest) {
           { status: 400 }
         );
       }
-      await otpFailsByEmail.reset(normalizedEmail);
 
       const existing = await prisma.user.findUnique({ where: { email: normalizedEmail }, select: { id: true } });
       if (existing) {
@@ -172,6 +175,38 @@ export async function POST(req: NextRequest) {
         { status: "error", message: "This account has been suspended by administration." },
         { status: 403 }
       );
+    }
+
+    // Second factor: only asked for after the password is verified.
+    if (user.totpEnabled && user.totpSecret) {
+      const totp = typeof body.totp === "string" ? body.totp.trim() : "";
+      if (!totp) {
+        return NextResponse.json(
+          { status: "totp_required", message: "Enter the 6-digit code from your authenticator app." },
+          { status: 401 }
+        );
+      }
+      if (await totpFailsByEmail.isLimited(normalizedEmail)) {
+        return tooMany("Too many incorrect authentication codes. Please wait a few minutes.");
+      }
+      const step = verifyTotp(decryptSetting(user.totpSecret), totp);
+      // Each 30s code is accepted once: the step must be newer than the last accepted one.
+      const claimed =
+        step === null
+          ? { count: 0 }
+          : await prisma.user.updateMany({
+              where: { id: user.id, OR: [{ totpLastStep: null }, { totpLastStep: { lt: step } }] },
+              data: { totpLastStep: step }
+            });
+      if (claimed.count !== 1) {
+        await totpFailsByEmail.hit(normalizedEmail);
+        await loginFailsByIp.hit(ip);
+        return NextResponse.json(
+          { status: "totp_required", message: "Invalid authentication code. Please try again." },
+          { status: 401 }
+        );
+      }
+      await totpFailsByEmail.reset(normalizedEmail);
     }
 
     await loginFailsByIp.reset(ip);

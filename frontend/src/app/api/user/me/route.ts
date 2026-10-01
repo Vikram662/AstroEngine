@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getVerifiedSession } from "@/lib/authGuard";
+import { createSessionToken } from "@/lib/session";
 import { hashPasswordAsync, validatePasswordStrength, verifyPasswordAsync } from "@/lib/passwords";
 import { toJsonSafe } from "@/lib/money";
 import { publicMessage } from "@/lib/apiErrors";
@@ -46,6 +47,7 @@ export async function GET() {
       password: _pwd, 
       apiKeyHash: _keyHash, 
       accountWebhookSecret: _hookSec, 
+      totpSecret: _totp,
       ...safeUser 
     } = user;
 
@@ -132,6 +134,7 @@ export async function PATCH(req: Request) {
         return NextResponse.json({ status: "error", message: weak }, { status: 400 });
       }
       updateData.password = await hashPasswordAsync(newPassword);
+      updateData.passwordChangedAt = new Date();
     }
 
     const updated = await prisma.user.update({
@@ -139,7 +142,7 @@ export async function PATCH(req: Request) {
       data: updateData
     });
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       status: "success",
       message: "Profile updated successfully.",
       data: {
@@ -149,6 +152,19 @@ export async function PATCH(req: Request) {
         role: updated.role
       }
     });
+
+    if (newPassword) {
+      // Other devices are signed out (passwordChangedAt); keep this one signed in.
+      const token = createSessionToken({ userId: updated.id, email: updated.email, role: updated.role });
+      response.cookies.set("astro_session_token", token, {
+        path: "/",
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: 72 * 3600
+      });
+    }
+    return response;
   } catch (error: unknown) {
     const err = error as { message?: string };
     return NextResponse.json({ status: "error", message: publicMessage(err) }, { status: 500 });

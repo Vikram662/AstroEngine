@@ -1,4 +1,4 @@
-import { prisma } from "./src/lib/prisma";
+import { prisma } from "../src/lib/prisma.ts";
 
 async function seedCompanySettings() {
   console.log("=" .repeat(70));

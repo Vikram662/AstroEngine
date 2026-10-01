@@ -8,6 +8,7 @@ export interface SessionPayload {
   email: string;
   role: "USER" | "SUPPORT_ADMIN" | "BILLING_ADMIN" | "AUDITOR" | "ADMIN" | "SUPER_ADMIN";
   exp: number; // Unix timestamp in seconds
+  iat?: number; // issued-at (seconds); lets a password change revoke older sessions
 }
 
 /**
@@ -15,12 +16,14 @@ export interface SessionPayload {
  * base64url(payload) + "." + hmac_sha256(base64url(payload), SESSION_SECRET)
  */
 export function createSessionToken(data: { userId: string; email: string; role: string }, expiresInHours: number = 72): string {
-  const exp = Math.floor(Date.now() / 1000) + expiresInHours * 3600;
+  const iat = Math.floor(Date.now() / 1000);
+  const exp = iat + expiresInHours * 3600;
   const payload: SessionPayload = {
     userId: data.userId,
     email: data.email.toLowerCase().trim(),
     role: data.role as SessionPayload["role"],
-    exp
+    exp,
+    iat
   };
 
   const payloadB64 = Buffer.from(JSON.stringify(payload)).toString("base64url");

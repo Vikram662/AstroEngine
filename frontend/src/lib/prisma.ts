@@ -4,6 +4,7 @@ export interface EmailOtpModel {
   id: string;
   email: string;
   otp: string;
+  attempts: number;
   expiresAt: Date;
   createdAt: Date;
 }
@@ -13,8 +14,8 @@ export type AppPrismaClient = PrismaClient & {
     findUnique(args: { where: { email: string } }): Promise<EmailOtpModel | null>;
     upsert(args: {
       where: { email: string };
-      update: { otp: string; expiresAt: Date; createdAt?: Date };
-      create: { email: string; otp: string; expiresAt: Date };
+      update: { otp: string; attempts?: number; expiresAt: Date; createdAt?: Date };
+      create: { email: string; otp: string; attempts?: number; expiresAt: Date };
     }): Promise<EmailOtpModel>;
     delete(args: { where: { email: string } }): Promise<EmailOtpModel>;
   };

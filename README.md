@@ -248,9 +248,9 @@ Never commit real values: `.env` files are git-ignored. Only the variable names 
 | `SETTINGS_ENCRYPTION_KEY` | recommended (prod) | Encrypts Razorpay / R2 / SMTP secrets stored in the DB (AES-256-GCM). After setting it run `npm run encrypt-settings` once to encrypt existing values. **Back this key up**: losing it makes the stored secrets unreadable. |
 | `TRUSTED_PROXY_HOPS` | optional (default `1`) | Number of reverse proxies in front of Next.js; used to read the real client IP. |
 | `PROXY_ANON_RPM`, `PROXY_USER_RPM`, `PROXY_HEAVY_RPM`, `PLAYGROUND_RPM` | optional | Rate-limit tuning (defaults 120 / 600 / 10 / 20 per minute). |
-| `ADMIN_INITIAL_PASSWORD`, `ASTRO_MASTER_API_KEY` | seed only | Used by `/api/admin/seed`. If the password is unset, a random one is generated and returned once. |
+| `ADMIN_INITIAL_PASSWORD`, `ASTRO_MASTER_API_KEY` | seed only | Used by `/api/admin/seed` and `npm run seed`. If unset, a random password / API key is generated and shown once. |
 | `ALLOW_PROD_SEED` | seed only | Must be `true` to run the seed endpoint in production. |
-| `SEED_ADMIN_PASSWORD`, `SEED_DEV_PASSWORD` | seed scripts only | Used by `prisma/seed*.ts`. |
+| `SEED_ADMIN_PASSWORD`, `SEED_DEV_PASSWORD` | seed scripts only | Used by `prisma/seed*.mts`. Unset = random password printed once (there are no default passwords). |
 
 ### Backend (`backend/.env`)
 
@@ -275,3 +275,31 @@ Never commit real values: `.env` files are git-ignored. Only the variable names 
 - Backups: `scripts/backup.ps1` dumps MySQL and the PDF job SQLite DB with retention (`-KeepDays`); schedule it with Task Scheduler (example in the script header) and copy the output off the machine.
 - Password reset: users can use **Forgot password?** on the sign-in page (`/forgot-password`, email code, 10 minute validity). Existing sessions stay valid until they expire (72h).
 - Config caching: plan, add-on and maintenance-mode lookups used by API-key verification are cached for 10-30 seconds per server process, so admin changes can take that long to apply.
+
+### Database changes (run once after pulling)
+
+```bash
+cd frontend
+npx prisma db push        # adds the new columns below (all nullable / defaulted, existing rows are fine)
+npx prisma generate
+```
+
+New columns: `EmailOtp.attempts` (OTP guess counter stored with the code), and on `User`:
+`passwordChangedAt` (sessions issued before it are rejected), `totpSecret`, `totpEnabled`, `totpLastStep` (two-factor auth).
+Deploy the new code **after** `db push`, otherwise sign-up / login queries reference columns that do not exist yet.
+
+### Seeding
+
+Seed scripts run on plain Node 22+ (no ts-node) and refuse to run when `NODE_ENV=production`:
+
+```bash
+npm run seed            # admin, settings (empty credential placeholders), plans, plan-module switches
+npm run seed:users      # demo admin + developer accounts
+npm run seed:company    # company / social settings
+```
+
+They never overwrite an existing account. Passwords and API keys that were generated are printed **once**: copy the admin API key into `ASTRO_INTERNAL_API_KEY`.
+
+### Two-factor authentication
+
+Any user can enable TOTP (Google Authenticator, Authy, 1Password) under **Dashboard > Profile**. Once enabled, sign-in asks for the 6-digit code after the password; each code works only once. Turn it on for every admin account.

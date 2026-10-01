@@ -1,20 +1,17 @@
 import { PrismaClient } from "@prisma/client";
-import crypto from "crypto";
-import { hashPassword } from "../src/lib/session";
+import { apiKeyFromEnvOrNew, hashPassword, passwordFromEnvOrRandom, refuseInProduction } from "./seed-helpers.mts";
 
 const prisma = new PrismaClient();
 
 async function main() {
-  if (process.env.NODE_ENV === "production") {
-    console.error("CRITICAL: prisma/seed.ts is disabled in production to prevent credential resets.");
-    process.exit(0);
-  }
+  refuseInProduction("prisma/seed.mts");
 
   console.log("Seeding Master Admin and Core Platform Data...");
 
   // 1. Seed or Update Master Admin (do NOT overwrite existing password on update)
-  const adminPassword = process.env.SEED_ADMIN_PASSWORD || "Admin@12345";
-  const adminPasswordHash = hashPassword(adminPassword);
+  const adminPassword = passwordFromEnvOrRandom(process.env.SEED_ADMIN_PASSWORD);
+  const adminKey = apiKeyFromEnvOrNew(process.env.ASTRO_MASTER_API_KEY);
+  const existingAdmin = await prisma.user.findUnique({ where: { email: "admin@astroengine.io" }, select: { id: true } });
   const admin = await prisma.user.upsert({
     where: { email: "admin@astroengine.io" },
     update: {
@@ -26,9 +23,10 @@ async function main() {
       email: "admin@astroengine.io",
       name: "Master Administrator",
       role: "ADMIN",
-      password: adminPasswordHash,
-      apiKeyHash: crypto.randomBytes(32).toString("hex"),
-      apiKeyPrefix: "ak_live_admin_root",
+      emailVerified: true,
+      password: hashPassword(adminPassword.value),
+      apiKeyHash: adminKey.keyHash,
+      apiKeyPrefix: adminKey.keyPrefix,
       walletBalance: 999999.0,
       planTier: "ENTERPRISE",
       monthlyQuota: 10000000,
@@ -50,6 +48,25 @@ async function main() {
     { key: "OVERAGE_COST_PER_CALL", value: "0.02", category: "BILLING", description: "Overage fee deducted per call after quota exhaustion" },
     { key: "MAINTENANCE_MODE", value: "false", category: "MAINTENANCE", description: "Public maintenance mode 503 switch" },
     { key: "MAINTENANCE_NOTICE", value: "Scheduled maintenance in progress. APIs resume shortly.", category: "MAINTENANCE", description: "503 maintenance message" },
+    // Credentials are created EMPTY on purpose: fill them in Admin > Settings (or via env).
+    // They are encrypted at rest when SETTINGS_ENCRYPTION_KEY is configured.
+    { key: "RAZORPAY_KEY_ID", value: "", category: "PAYMENTS", description: "Razorpay Key ID" },
+    { key: "RAZORPAY_KEY_SECRET", value: "", category: "PAYMENTS", description: "Razorpay Key Secret (payment signature verification)" },
+    { key: "RAZORPAY_WEBHOOK_SECRET", value: "", category: "PAYMENTS", description: "Razorpay webhook signing secret (webhooks are refused until set)" },
+    { key: "R2_ACCOUNT_ID", value: "", category: "STORAGE", description: "Cloudflare Account ID for PDF/logo storage" },
+    { key: "R2_ACCESS_KEY_ID", value: "", category: "STORAGE", description: "Cloudflare R2 Access Key ID" },
+    { key: "R2_SECRET_ACCESS_KEY", value: "", category: "STORAGE", description: "Cloudflare R2 Secret Access Key" },
+    { key: "R2_BUCKET_NAME", value: "", category: "STORAGE", description: "Cloudflare R2 bucket name" },
+    { key: "R2_PUBLIC_DOMAIN", value: "", category: "STORAGE", description: "Public CDN domain for stored files" },
+    { key: "SMTP_HOST", value: "", category: "EMAIL", description: "Outgoing mail server host" },
+    { key: "SMTP_PORT", value: "587", category: "EMAIL", description: "SMTP port (587 TLS / 465 SSL)" },
+    { key: "SMTP_USER", value: "", category: "EMAIL", description: "SMTP username / sender address" },
+    { key: "SMTP_PASSWORD", value: "", category: "EMAIL", description: "SMTP app password" },
+    { key: "SMTP_FROM_NAME", value: "AstroEngine", category: "EMAIL", description: "Sender display name" },
+    // Which API modules each plan may call (checked on every request)
+    { key: "PLAN_MODULES_STARTER", value: "core,panchang,parashari,general", category: "PERMISSIONS", description: "Allowed API modules for STARTER" },
+    { key: "PLAN_MODULES_PRO", value: "core,panchang,parashari,dasha,kp,dosha,matching,dosha_matching,remedies,numerology,western,lalkitab,advanced,general", category: "PERMISSIONS", description: "Allowed API modules for PRO" },
+    { key: "PLAN_MODULES_ENTERPRISE", value: "*", category: "PERMISSIONS", description: "Allowed API modules for ENTERPRISE" },
   ];
 
   for (const s of defaultSettings) {
@@ -137,9 +154,16 @@ async function main() {
   }
   console.log(`✓ Seeded ${plans.length} Subscription Plans`);
 
-  console.log("\nSetup complete! You can now log in with:");
-  console.log("Email: admin@astroengine.io");
-  console.log(process.env.SEED_ADMIN_PASSWORD ? "Password: (from SEED_ADMIN_PASSWORD)" : "Password: Admin@12345 (default — set SEED_ADMIN_PASSWORD to override)\n");
+  console.log("\nSetup complete! Admin login: admin@astroengine.io");
+  if (existingAdmin) {
+    console.log("Admin already existed: its password and API key were NOT changed.");
+  } else {
+    console.log(adminPassword.generated
+      ? `Password (generated, shown once): ${adminPassword.value}`
+      : "Password: (from SEED_ADMIN_PASSWORD)");
+    console.log(`Admin API key (shown once, use it as ASTRO_INTERNAL_API_KEY): ${adminKey.rawKey}`);
+  }
+  console.log("Next: set SESSION_SECRET / ASTRO_INTERNAL_SECRET, fill Razorpay/R2/SMTP in Admin > Settings, and enable 2FA on the admin profile.\n");
 }
 
 main()

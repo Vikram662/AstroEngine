@@ -70,6 +70,12 @@ model User {
   name          String?
   role          Role    @default(USER)
 
+  // Credential lifecycle & two-factor auth (TOTP, RFC 6238)
+  passwordChangedAt DateTime? // sessions issued before this moment are rejected
+  totpSecret        String? // base32 secret, AES-GCM encrypted when SETTINGS_ENCRYPTION_KEY is set
+  totpEnabled       Boolean   @default(false)
+  totpLastStep      Int? // last accepted 30s time-step (blocks code replay)
+
   // Onboarding & analytics (§8.2.0)
   signupSource          String? // 'pricing_page' | 'landing_page' | 'playground' | 'team_invite'
   signupIp              String?
@@ -408,7 +414,8 @@ model SystemSetting {
 model EmailOtp {
   id        String   @id @default(uuid())
   email     String   @unique
-  otp       String
+  otp       String // keyed hash of the code, never the code itself
+  attempts  Int      @default(0) // wrong guesses so far; the code is burned after 5
   expiresAt DateTime
   createdAt DateTime @default(now())
 }

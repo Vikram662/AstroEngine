@@ -15,7 +15,6 @@ const purpose = (email: string) => `reset:${email}`;
 
 const requestsPerEmail = new SharedRateLimiter("reset-req-email", 3, 10 * 60 * 1000);
 const requestsPerIp = new SharedRateLimiter("reset-req-ip", 10, 10 * 60 * 1000);
-const guessesPerEmail = new SharedRateLimiter("reset-guess-email", OTP_MAX_VERIFY_ATTEMPTS, 10 * 60 * 1000);
 const guessesPerIp = new SharedRateLimiter("reset-guess-ip", 20, 10 * 60 * 1000);
 
 function validEmail(v: unknown): v is string {
@@ -51,7 +50,7 @@ export async function POST(req: NextRequest) {
     const expiresAt = new Date(Date.now() + OTP_TTL_MS);
     await prisma.emailOtp.upsert({
       where: { email },
-      update: { otp: hashOtp(purpose(email), code), expiresAt, createdAt: new Date() },
+      update: { otp: hashOtp(purpose(email), code), attempts: 0, expiresAt, createdAt: new Date() },
       create: { email, otp: hashOtp(purpose(email), code), expiresAt }
     });
     await sendPasswordResetEmail(email, code);
@@ -77,20 +76,25 @@ export async function PUT(req: NextRequest) {
     const email = body.email.toLowerCase().trim();
     const ip = getClientIp(req);
 
-    if ((await guessesPerEmail.isLimited(email)) || (await guessesPerIp.isLimited(ip))) {
-      await prisma.emailOtp.deleteMany({ where: { email } });
-      return NextResponse.json(
+    const tooMany = () =>
+      NextResponse.json(
         { status: "error", message: "Too many incorrect codes. Please request a new reset code." },
         { status: 429 }
       );
-    }
+    if (await guessesPerIp.isLimited(ip)) return tooMany();
 
     const record = await prisma.emailOtp.findUnique({ where: { email } });
     const invalid = () =>
       NextResponse.json({ status: "error", message: "Invalid or expired reset code." }, { status: 400 });
 
+    // Attempts are stored with the code (persistent, shared across instances).
+    if (record && record.attempts >= OTP_MAX_VERIFY_ATTEMPTS) {
+      await prisma.emailOtp.deleteMany({ where: { id: record.id } });
+      return tooMany();
+    }
+
     if (!record || new Date() > record.expiresAt || !otpMatches(purpose(email), otp.trim(), record.otp)) {
-      await guessesPerEmail.hit(email);
+      if (record) await prisma.emailOtp.updateMany({ where: { id: record.id }, data: { attempts: { increment: 1 } } });
       await guessesPerIp.hit(ip);
       return invalid();
     }
@@ -102,8 +106,11 @@ export async function PUT(req: NextRequest) {
     const user = await prisma.user.findUnique({ where: { email }, select: { id: true, isBlocked: true } });
     if (!user || user.isBlocked) return invalid();
 
-    await prisma.user.update({ where: { id: user.id }, data: { password: await hashPasswordAsync(newPassword) } });
-    await guessesPerEmail.reset(email);
+    // passwordChangedAt invalidates every session issued before the reset.
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { password: await hashPasswordAsync(newPassword), passwordChangedAt: new Date() }
+    });
 
     return NextResponse.json({ status: "success", message: "Password updated. You can now sign in." });
   } catch (error: unknown) {

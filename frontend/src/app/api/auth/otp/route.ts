@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
 
     await prisma.emailOtp.upsert({
       where: { email: normalizedEmail },
-      update: { otp: otpHash, expiresAt, createdAt: new Date() },
+      update: { otp: otpHash, attempts: 0, expiresAt, createdAt: new Date() },
       create: { email: normalizedEmail, otp: otpHash, expiresAt }
     });
 
