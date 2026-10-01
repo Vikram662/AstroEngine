@@ -5,7 +5,7 @@ const db = vi.hoisted(() => ({
   systemSetting: { findUnique: vi.fn() },
   subscriptionPlan: { findUnique: vi.fn() },
   addonPackage: { findMany: vi.fn() },
-  user: { updateMany: vi.fn(), findUnique: vi.fn() },
+  user: { updateMany: vi.fn(), findUnique: vi.fn(), update: vi.fn() },
   apiRequestLog: { create: vi.fn() },
   pdfGenerationJob: { create: vi.fn(), findFirst: vi.fn() },
 }));
@@ -152,5 +152,81 @@ describe("/api/proxy", () => {
     auth.getVerifiedSession.mockResolvedValue({ userId: "adm", email: "a@example.com", role: "ADMIN" });
     db.pdfGenerationJob.findFirst.mockResolvedValue(null);
     expect((await proxyGet(get("endpoint=/api/v1/pdf/status/pdf_job_other"))).status).toBe(200);
+  });
+});
+
+// ── Pay-per-report pricing (Rs 4 - Rs 12) ────────────────────────────────────────────
+import { reportPriceForPath, reportPriceList, isFreePdfEndpoint } from "@/lib/reportPricing";
+
+describe("report pricing", () => {
+  it("every report costs between Rs 4 and Rs 12 and unknown paths are not reports", () => {
+    const list = reportPriceList();
+    expect(list.length).toBe(7);
+    for (const r of list) {
+      expect(r.price).toBeGreaterThanOrEqual(4);
+      expect(r.price).toBeLessThanOrEqual(12);
+    }
+    expect(reportPriceForPath("/api/v1/pdf/kundli/brihat")).toBe(12);
+    expect(reportPriceForPath("/api/v1/pdf/dosha/sade-sati")).toBe(4);
+    expect(reportPriceForPath("/api/v1/pdf/preview/html")).toBeNull();
+    expect(reportPriceForPath("/api/v1/core/planets")).toBeNull();
+  });
+
+  it("recognises free polling / download endpoints only", () => {
+    expect(isFreePdfEndpoint("/api/v1/pdf/status/pdf_job_abc")).toBe(true);
+    expect(isFreePdfEndpoint("/api/v1/pdf/download/pdf_job_abc")).toBe(true);
+    expect(isFreePdfEndpoint("/api/v1/pdf/jobs")).toBe(true);
+    expect(isFreePdfEndpoint("/api/v1/pdf/kundli/basic")).toBe(false);
+    expect(isFreePdfEndpoint("/api/v1/pdf/status/../../x")).toBe(false);
+  });
+});
+
+describe("meterCall for reports", () => {
+  const pdfAddon = { id: "pdf", name: "Automated PDF Report Engine", category: "REPORTS", monthlyQuota: 500, overageCost: 5, features: [], isActive: true };
+
+  it("charges the report's own price from the wallet", async () => {
+    const res = await meterCall(baseUser(), "/api/v1/pdf/kundli/brihat", "pdf");
+    const body = await res.json();
+    expect(body).toMatchObject({ valid: true, deductionType: "WALLET_CREDIT", creditsDeducted: 12, reportPrice: 12, receiptId: "123" });
+    expect(db.user.updateMany.mock.calls[0][0].where).toEqual({ id: "u1", walletBalance: { gte: 12 } });
+    expect(db.user.updateMany.mock.calls[0][0].data.walletBalance).toEqual({ decrement: 12 });
+    expect(db.apiRequestLog.create.mock.calls[0][0].data.creditsCost).toBe(12);
+  });
+
+  it("refuses (and records nothing) when the wallet cannot cover the report", async () => {
+    db.user.updateMany.mockResolvedValue({ count: 0 });
+    const res = await meterCall(baseUser({ walletBalance: 3 } as never), "/api/v1/pdf/kundli/basic", "pdf");
+    const body = await res.json();
+    expect(res.status).toBe(403);
+    expect(body.error_code).toBe("INSUFFICIENT_WALLET_FOR_REPORT");
+    expect(body.message).toContain("₹5.00");
+    expect(db.apiRequestLog.create).not.toHaveBeenCalled();
+  });
+
+  it("gives reports included in the PDF add-on for free, then charges the price", async () => {
+    db.addonPackage.findMany.mockResolvedValue([pdfAddon]);
+    const withAddon = (used: number) => baseUser({ activeAddons: ["pdf"], addonUsage: { pdf: used } } as never);
+
+    const included = await (await meterCall(withAddon(10), "/api/v1/pdf/matching/report", "pdf")).json();
+    expect(included).toMatchObject({ valid: true, deductionType: "ADDON_QUOTA", creditsDeducted: 0, addonId: "pdf" });
+
+    db.user.updateMany.mockClear();
+    const over = await (await meterCall(withAddon(500), "/api/v1/pdf/matching/report", "pdf")).json();
+    expect(over).toMatchObject({ valid: true, deductionType: "ADDON_OVERAGE", creditsDeducted: 6, addonId: "pdf" });
+    expect(db.user.updateMany.mock.calls[0][0].data.addonUsage).toEqual({ pdf: 501 });
+  });
+
+  it("never charges for status polls or downloads", async () => {
+    const body = await (await meterCall(baseUser(), "/api/v1/pdf/status/pdf_job_abc", "pdf")).json();
+    expect(body).toMatchObject({ valid: true, deductionType: "FREE", creditsDeducted: 0, receiptId: null });
+    expect(db.user.updateMany).not.toHaveBeenCalled();
+    expect(db.apiRequestLog.create).not.toHaveBeenCalled();
+  });
+
+  it("does not bill the admin account that the internal key belongs to", async () => {
+    const body = await (await meterCall(baseUser({ role: "ADMIN" } as never), "/api/v1/pdf/kundli/basic", "pdf")).json();
+    expect(body.valid).toBe(true);
+    expect(body.creditsDeducted).toBe(0);
+    expect(body.reportPrice).toBeUndefined();
   });
 });

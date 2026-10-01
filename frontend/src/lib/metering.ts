@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { toMoney } from "@/lib/money";
 import { cached } from "@/lib/ttlCache";
 import type { ApiData } from "@/lib/apiTypes";
+import { isFreePdfEndpoint, reportPriceForPath } from "@/lib/reportPricing";
 
 // Plan / add-on / switch lookups are identical for every request, so they are cached
 // briefly; only the user row (balance, quota, blocked flag) is read fresh each call.
@@ -36,6 +37,14 @@ export async function meterCall(
       error_code: "MAINTENANCE_MODE",
       message: notice?.value || "Platform maintenance in progress. Please retry in a few moments."
     }, { status: 503 });
+  }
+
+  // ── Reports are priced per report (Rs 4 - Rs 12), not as a generic API call ──────
+  const isAdminUser = user.role === "ADMIN" || user.role === "SUPER_ADMIN";
+  if (!isAdminUser) {
+    if (isFreePdfEndpoint(endpoint)) return freePdfCall(user);
+    const price = reportPriceForPath(endpoint);
+    if (price !== null) return meterReport(user, endpoint, moduleName, price, responseTime);
   }
 
   // =========================================================================
@@ -99,10 +108,11 @@ export async function meterCall(
 
   const isAddonActive = matchedAddonRecord ? userActiveAddons.includes(matchedAddonRecord.id) : false;
 
-  // 4. Pay-per-use fallback for PDF reports (₹10/PDF if wallet balance is positive)
+  // 4. Other PDF endpoints (e.g. HTML preview) stay available to anyone with a funded
+  //    wallet and are metered like a normal call. Report generation itself never gets here.
   let isPayPerUsePdf = false;
   if (normalizedModule.includes("pdf") && !isWildcardAllowed && !isAddonActive) {
-    if (toMoney(user.walletBalance) >= 10.0) {
+    if (toMoney(user.walletBalance) >= 1.0) {
       isPayPerUsePdf = true;
     }
   }
@@ -302,4 +312,146 @@ export async function meterCall(
     }
   });
 
+}
+
+function quotaBlock(user: MeteredUser, planRecord: ApiData | null, deductionType: string, walletAfter: number, usageAfter: number) {
+  return {
+    plan: user.planTier,
+    planName: planRecord?.name || user.planTier,
+    priceMonthly: planRecord?.priceMonthly !== undefined ? toMoney(planRecord.priceMonthly) : 4999,
+    monthlyQuota: planRecord?.includedQuota || user.monthlyQuota || 35000,
+    rateLimitPerMin: planRecord?.rateLimitPerMin || 60,
+    monthlyUsage: usageAfter,
+    deductionType,
+    walletBalance: walletAfter,
+  };
+}
+
+/** Status polls and downloads of a report: authenticated, never charged, nothing to refund. */
+async function freePdfCall(user: MeteredUser): Promise<NextResponse> {
+  const planRecord = await cached(`plan:${user.planTier}`, CONFIG_TTL_MS, () => prisma.subscriptionPlan.findUnique({ where: { tier: user.planTier } }));
+  return NextResponse.json({
+    valid: true,
+    role: user.role,
+    receiptId: null,
+    addonId: null,
+    userId: user.id,
+    email: user.email,
+    planTier: user.planTier,
+    deductionType: "FREE",
+    creditsDeducted: 0,
+    quota: quotaBlock(user, planRecord, "FREE", toMoney(user.walletBalance), user.monthlyUsage || 0),
+  });
+}
+
+/**
+ * Bills ONE report. The price depends on the report type. Customers with the PDF add-on
+ * get its monthly included reports for free; beyond that (and for everyone else) the
+ * report price is taken from the wallet. The debit is a single conditional update, so
+ * concurrent requests cannot overdraw the wallet.
+ */
+async function meterReport(
+  user: MeteredUser,
+  endpoint: string,
+  moduleName: string,
+  price: number,
+  responseTime: number
+): Promise<NextResponse> {
+  const [allDbAddons, planRecord] = await Promise.all([
+    cached<ApiData[]>("addons:active", CONFIG_TTL_MS, () => (prisma as ApiData).addonPackage.findMany({ where: { isActive: true } })),
+    cached(`plan:${user.planTier}`, CONFIG_TTL_MS, () => prisma.subscriptionPlan.findUnique({ where: { tier: user.planTier } })),
+  ]);
+
+  const activeAddons: string[] = Array.isArray(user.activeAddons) ? (user.activeAddons as string[]) : [];
+  const pdfAddon = allDbAddons.find((a: ApiData) => a.id === "pdf");
+  const hasPdfAddon = Boolean(pdfAddon) && activeAddons.includes("pdf");
+
+  const walletBefore = toMoney(user.walletBalance);
+  let deductionType = "WALLET_CREDIT";
+  let creditsDeducted = 0;
+  let addonId: string | null = null;
+
+  const debitWallet = async (extra: Record<string, unknown> = {}) => {
+    const claim = await prisma.user.updateMany({
+      where: { id: user.id, walletBalance: { gte: price } },
+      data: {
+        walletBalance: { decrement: price },
+        monthlyUsage: { increment: 1 },
+        apiKeyLastUsedAt: new Date(),
+        ...extra,
+      },
+    });
+    return claim.count === 1;
+  };
+
+  if (hasPdfAddon) {
+    addonId = "pdf";
+    const usageMap = (user.addonUsage && typeof user.addonUsage === "object" ? user.addonUsage : {}) as Record<string, number>;
+    const used = Number(usageMap.pdf || 0);
+    const included = pdfAddon!.monthlyQuota !== undefined ? Number(pdfAddon!.monthlyQuota) : 500;
+    const nextUsage = { ...usageMap, pdf: used + 1 };
+
+    if (used < included) {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { addonUsage: nextUsage, monthlyUsage: { increment: 1 }, apiKeyLastUsedAt: new Date() },
+      });
+      deductionType = "ADDON_QUOTA";
+    } else if (await debitWallet({ addonUsage: nextUsage })) {
+      deductionType = "ADDON_OVERAGE";
+      creditsDeducted = price;
+    } else {
+      return insufficient(price, walletBefore, `You have used all ${included} reports included in your PDF add-on this month.`);
+    }
+  } else if (await debitWallet()) {
+    creditsDeducted = price;
+  } else {
+    return insufficient(price, walletBefore, "Recharge your wallet to generate this report.");
+  }
+
+  let receiptId: string | null = null;
+  try {
+    const log = await prisma.apiRequestLog.create({
+      data: {
+        userId: user.id,
+        endpoint: endpoint.substring(0, 100),
+        module: moduleName.substring(0, 50),
+        creditsCost: creditsDeducted,
+        responseTime: responseTime || 12,
+        statusCode: 200,
+      },
+    });
+    receiptId = log.id.toString();
+  } catch {
+    // a missing log row only means this call cannot be auto-refunded
+  }
+
+  const walletAfter = creditsDeducted > 0 ? Math.max(0, walletBefore - creditsDeducted) : walletBefore;
+  return NextResponse.json({
+    valid: true,
+    role: user.role,
+    receiptId,
+    addonId,
+    userId: user.id,
+    email: user.email,
+    planTier: user.planTier,
+    deductionType,
+    creditsDeducted,
+    reportPrice: price,
+    quota: quotaBlock(user, planRecord, deductionType, walletAfter, (user.monthlyUsage || 0) + 1),
+  });
+}
+
+function insufficient(price: number, walletBalance: number, hint: string): NextResponse {
+  const base = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  return NextResponse.json({
+    valid: false,
+    error_code: "INSUFFICIENT_WALLET_FOR_REPORT",
+    message: `This report costs ₹${price.toFixed(2)} and your wallet balance is ₹${walletBalance.toFixed(2)}. ${hint}`,
+    details: {
+      reportPrice: price,
+      walletBalance: Number(walletBalance.toFixed(2)),
+      rechargeUrl: `${base}/billing`,
+    },
+  }, { status: 403 });
 }

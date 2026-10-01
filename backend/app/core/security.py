@@ -9,7 +9,7 @@ logger = logging.getLogger("astroengine.security")
 
 ADMIN_ROLES = ("ADMIN", "SUPER_ADMIN")
 # Error codes from the Next.js verifier that map to HTTP 403 and are passed through verbatim.
-_FORBIDDEN_CODES = ("PLAN_UPGRADE_REQUIRED", "PLAN_UPGRADE_OR_ADDON_REQUIRED", "QUOTA_AND_CREDITS_EXHAUSTED", "ADDON_QUOTA_EXHAUSTED", "ACCOUNT_SUSPENDED")
+_FORBIDDEN_CODES = ("PLAN_UPGRADE_REQUIRED", "PLAN_UPGRADE_OR_ADDON_REQUIRED", "QUOTA_AND_CREDITS_EXHAUSTED", "ADDON_QUOTA_EXHAUSTED", "INSUFFICIENT_WALLET_FOR_REPORT", "ACCOUNT_SUSPENDED")
 
 def hash_api_key(raw_key: str) -> str:
     """Generate SHA-256 hash of raw API key for secure lookup."""
