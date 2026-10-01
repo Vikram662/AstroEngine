@@ -9,17 +9,23 @@ const securityHeaders = [
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(self), payment=(self)" },
   { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" },
-  {
-    key: "Content-Security-Policy",
-    value: "frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'",
-  },
 ];
+
+const pageCsp = {
+  key: "Content-Security-Policy",
+  value: "frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'",
+};
 
 const nextConfig: NextConfig = {
   reactCompiler: true,
   poweredByHeader: false,
   async headers() {
-    return [{ source: "/:path*", headers: securityHeaders }];
+    return [
+      { source: "/:path*", headers: securityHeaders },
+      // The invoice route sends its own, stricter CSP (default-src 'none' + a script nonce).
+      // A header set here would replace it, so the global CSP skips that route.
+      { source: "/:path((?!api/billing/invoice/).*)", headers: [pageCsp] },
+    ];
   },
 };
 

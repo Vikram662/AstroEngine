@@ -11,7 +11,8 @@
     "seed:users": "node --experimental-strip-types --no-warnings prisma/seed_users.mts",
     "seed:company": "node --experimental-strip-types --no-warnings prisma/seed_company_settings.mts",
     "typecheck": "tsc --noEmit",
-    "encrypt-settings": "node --experimental-strip-types --no-warnings scripts/encrypt-settings.mts"
+    "encrypt-settings": "node --experimental-strip-types --no-warnings scripts/encrypt-settings.mts",
+    "seed": "node --experimental-strip-types --no-warnings prisma/seed.mts"
   },
   "prisma": {
     "seed": "node --experimental-strip-types --no-warnings prisma/seed.mts"

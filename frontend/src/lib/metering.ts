@@ -354,6 +354,7 @@ export async function meterCall(
       monthlyQuota: planRecord?.includedQuota || user.monthlyQuota || 35000,
       rateLimitPerMin: planRecord?.rateLimitPerMin || 60,
       monthlyUsage: (user.monthlyUsage || 0) + 1,
+      remainingQuota: Math.max(0, (planRecord?.includedQuota || user.monthlyQuota || 35000) - ((user.monthlyUsage || 0) + 1)),
       deductionType: deductionType,
       walletBalance: deductionType.includes("OVERAGE") || deductionType === "WALLET_CREDIT" ? Math.max(0, walletBalance - creditsDeducted) : walletBalance
     }
@@ -367,6 +368,7 @@ function quotaBlock(user: MeteredUser, planRecord: ApiData | null, deductionType
     planName: planRecord?.name || user.planTier,
     priceMonthly: planRecord?.priceMonthly !== undefined ? toMoney(planRecord.priceMonthly) : 4999,
     monthlyQuota: planRecord?.includedQuota || user.monthlyQuota || 35000,
+    remainingQuota: Math.max(0, (planRecord?.includedQuota || user.monthlyQuota || 35000) - usageAfter),
     rateLimitPerMin: planRecord?.rateLimitPerMin || 60,
     monthlyUsage: usageAfter,
     deductionType,

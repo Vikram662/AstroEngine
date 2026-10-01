@@ -50,6 +50,9 @@ export async function GET() {
       apiKeyHash: _keyHash, 
       accountWebhookSecret: _hookSec, 
       totpSecret: _totp,
+      totpLastStep: _totpStep,
+      apiKeyTestHash: _testKeyHash,
+      passwordChangedAt: _pwChanged,
       ...safeUser 
     } = user;
 

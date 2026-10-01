@@ -72,6 +72,18 @@ async def verify_api_key(
     try:
         async with httpx.AsyncClient(timeout=4.0) as client:
             resp = await client.post(next_service_url, json=payload, headers=headers)
+            # The billing service itself failed (database down, bug...): that is not the
+            # caller's fault, so never present it as an invalid key.
+            if resp.status_code >= 500:
+                logger.error("verify-key service returned HTTP %s", resp.status_code)
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail={
+                        "status": "error",
+                        "error_code": "AUTH_SERVICE_UNAVAILABLE",
+                        "message": "Authentication service is temporarily unavailable. Please retry shortly."
+                    }
+                )
             data = resp.json()
             if resp.status_code != 200 or not data.get("valid"):
                 error_code = data.get("error_code")

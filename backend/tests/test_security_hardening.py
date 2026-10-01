@@ -210,3 +210,29 @@ def test_complete_receipt_posts_latency(monkeypatch):
     asyncio.run(billing.complete_receipt({"receiptId": "9"}, 37))
     assert seen["url"] == "http://next.test/api/internal/complete"
     assert '"receiptId":"9"' in seen["body"] and '"responseTimeMs":37' in seen["body"]
+
+
+def test_billing_service_outage_is_503_not_invalid_key(monkeypatch):
+    import httpx
+    from app.core import security
+
+    monkeypatch.setattr(security.settings, "NEXT_APP_URL", "http://next.test")
+    real_client = httpx.AsyncClient
+    state = {"status": 500}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(state["status"], json={"valid": False, "error_code": "SERVER_ERROR", "message": "Internal auth error"})
+
+    monkeypatch.setattr(security.httpx, "AsyncClient", lambda **kw: real_client(transport=httpx.MockTransport(handler), **kw))
+    c = TestClient(app)
+    r = c.post("/api/v1/core/planets/positions", json=_BODY, headers={"x-api-key": "ak_live_x"})
+    assert r.status_code == 503
+    assert r.json()["detail"]["error_code"] == "AUTH_SERVICE_UNAVAILABLE"
+
+    # a genuinely unknown key is still a 401
+    state["status"] = 401
+    def handler401(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(401, json={"valid": False, "error_code": "INVALID_KEY", "message": "Invalid API key."})
+    monkeypatch.setattr(security.httpx, "AsyncClient", lambda **kw: real_client(transport=httpx.MockTransport(handler401), **kw))
+    r = c.post("/api/v1/core/planets/positions", json=_BODY, headers={"x-api-key": "ak_live_x"})
+    assert r.status_code == 401
