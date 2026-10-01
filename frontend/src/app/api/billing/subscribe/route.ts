@@ -9,6 +9,7 @@ import { toApiError } from "@/lib/apiTypes";
 import { getRazorpayKeySecret, verifyHmacHex } from "@/lib/razorpay";
 import { publicMessage } from "@/lib/apiErrors";
 import { issueSaleInvoice } from "@/lib/invoicing";
+import { safeEnqueue } from "@/lib/notifications";
 
 export async function POST(req: NextRequest) {
   try {
@@ -155,6 +156,7 @@ export async function POST(req: NextRequest) {
         });
         // Consecutive GST invoice number, committed together with the payment.
         await issueSaleInvoice(db, transaction);
+        await safeEnqueue(db, user.id, "PAYMENT_RECEIVED", { amount: netPayablePrice, description: `${plan.name} plan (paid from wallet)` }, { dedupeKey: `PAYMENT:${transaction.id}` });
         return { sub, transaction };
       });
 
@@ -300,6 +302,7 @@ export async function POST(req: NextRequest) {
           });
 
           if (settledTx) await issueSaleInvoice(tx, settledTx);
+          await safeEnqueue(tx, user.id, "PAYMENT_RECEIVED", { amount: pendingOrderAmount, description: `${plan.name} plan` }, { dedupeKey: `PAYMENT:${pendingOrder.id}` });
 
           return { updatedUser, sub, settledTx };
         });

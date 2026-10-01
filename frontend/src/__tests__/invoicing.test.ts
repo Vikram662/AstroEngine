@@ -17,6 +17,7 @@ const db = vi.hoisted(() => {
     pdfGenerationJob: { update: vi.fn() },
     invoice: { findUnique: vi.fn(), findFirst: vi.fn(), findMany: vi.fn(), create: vi.fn() },
     invoiceCounter: { upsert: vi.fn() },
+    notification: { createMany: vi.fn(async () => ({ count: 0 })) },
     $transaction: vi.fn(),
   };
   return m;

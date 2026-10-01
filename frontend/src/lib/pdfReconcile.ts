@@ -1,11 +1,14 @@
 import axios from "axios";
 import { prisma } from "@/lib/prisma";
 import { applyRefund, isValidReceipt, type Receipt } from "@/lib/billingRefund";
+import { notify } from "@/lib/notifications";
 
 const BACKEND_URL = (process.env.ASTRO_BACKEND_URL || "http://127.0.0.1:8000").replace(/\/$/, "");
 
 interface JobRow {
   id: string;
+  userId?: string;
+  reportType?: string;
   status: string;
   refunded: boolean;
   createdAt: Date;
@@ -57,6 +60,13 @@ export async function reconcileJob(job: JobRow): Promise<{ status?: string; file
         refunded,
       },
     });
+    if (job.userId) {
+      if (status === "COMPLETED") {
+        await notify(job.userId, "PDF_READY", { reportType: job.reportType, jobId: job.id, downloadUrl: data?.file_url || null }, { dedupeKey: `PDF_READY:${job.id}` });
+      } else if (status === "FAILED") {
+        await notify(job.userId, "PDF_FAILED", { reportType: job.reportType, jobId: job.id, refunded }, { dedupeKey: `PDF_FAILED:${job.id}` });
+      }
+    }
     return { status, fileUrl: data?.file_url || null, refunded };
   } catch {
     return null; // backend unreachable: keep the stored state, try again on the next listing
@@ -68,4 +78,22 @@ export async function canAccessJob(jobId: string, session: { userId: string; rol
   if (session.role === "ADMIN" || session.role === "SUPER_ADMIN") return true;
   const job = await prisma.pdfGenerationJob.findFirst({ where: { id: jobId, userId: session.userId }, select: { id: true } });
   return Boolean(job);
+}
+
+/**
+ * Worker sweep: reports that were still running when they were requested are re-checked
+ * here (not only when the customer opens the page), so the "report ready / failed" alert
+ * and the refund of a failed report happen without anyone looking.
+ */
+export async function reconcileOpenPdfJobs(limit = 50): Promise<number> {
+  const jobs = await prisma.pdfGenerationJob.findMany({
+    where: { status: { in: ["PENDING", "PROCESSING"] }, createdAt: { gte: new Date(Date.now() - 24 * 3600 * 1000) } },
+    orderBy: { createdAt: "asc" },
+    take: limit,
+  });
+  let changed = 0;
+  for (const j of jobs as JobRow[]) {
+    if (await reconcileJob(j)) changed++;
+  }
+  return changed;
 }

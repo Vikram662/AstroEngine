@@ -5,6 +5,8 @@ import { createSessionToken } from "@/lib/session";
 import { hashPasswordAsync, validatePasswordStrength, verifyPasswordAsync } from "@/lib/passwords";
 import { toJsonSafe } from "@/lib/money";
 import { publicMessage } from "@/lib/apiErrors";
+import { notify } from "@/lib/notifications";
+import { resolvePrefs } from "@/lib/notificationPrefs";
 
 export async function GET() {
   try {
@@ -118,7 +120,8 @@ export async function PATCH(req: Request) {
     }
 
     if (accountWebhookSecret !== undefined) updateData.accountWebhookSecret = accountWebhookSecret;
-    if (notificationPrefs !== undefined) updateData.notificationPrefs = notificationPrefs;
+    // Only the known on/off switches are stored (anything else in the body is ignored).
+    if (notificationPrefs !== undefined) updateData.notificationPrefs = resolvePrefs(notificationPrefs);
     if (taxProfile !== undefined) updateData.taxProfile = taxProfile;
 
     if (newPassword) {
@@ -154,6 +157,7 @@ export async function PATCH(req: Request) {
     });
 
     if (newPassword) {
+      await notify(updated.id, "PASSWORD_CHANGED", { via: "account settings" });
       // Other devices are signed out (passwordChangedAt); keep this one signed in.
       const token = createSessionToken({ userId: updated.id, email: updated.email, role: updated.role });
       response.cookies.set("astro_session_token", token, {

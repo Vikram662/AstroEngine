@@ -5,6 +5,7 @@ import { generateOtp, hashOtp, otpMatches, OTP_MAX_VERIFY_ATTEMPTS, OTP_TTL_MS }
 import { hashPasswordAsync, validatePasswordStrength } from "@/lib/passwords";
 import { SharedRateLimiter } from "@/lib/rateLimit";
 import { getClientIp } from "@/lib/clientIp";
+import { notify } from "@/lib/notifications";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -111,6 +112,8 @@ export async function PUT(req: NextRequest) {
       where: { id: user.id },
       data: { password: await hashPasswordAsync(newPassword), passwordChangedAt: new Date() }
     });
+
+    await notify(user.id, "PASSWORD_CHANGED", { via: "password reset" });
 
     return NextResponse.json({ status: "success", message: "Password updated. You can now sign in." });
   } catch (error: unknown) {

@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { toMoney } from "@/lib/money";
+import { notify } from "@/lib/notifications";
 
 const WALLET_TYPES = ["WALLET_CREDIT", "ADDON_OVERAGE"];
 const QUOTA_TYPES = ["QUOTA", "ADDON_QUOTA"];
@@ -73,6 +74,12 @@ export async function applyRefund(receipt: Receipt, httpStatus = 500): Promise<R
     }
     return true;
   });
+
+  // Money coming back is worth an e-mail (a quota unit is not).
+  if (refunded && credits > 0) {
+    const reason = log.module === "pdf" ? "your report could not be generated" : "a request did not complete";
+    await notify(log.userId, "REFUND_ISSUED", { amount: credits, reason }, { dedupeKey: `REFUND:${receipt.receiptId}` });
+  }
 
   return { ok: true, refunded, creditsReturned: refunded ? credits : 0 };
 }

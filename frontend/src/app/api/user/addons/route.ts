@@ -8,6 +8,7 @@ import { ApiData, toApiError } from "@/lib/apiTypes";
 import { publicMessage } from "@/lib/apiErrors";
 import { getRazorpayKeySecret, verifyHmacHex } from "@/lib/razorpay";
 import { issueSaleInvoice } from "@/lib/invoicing";
+import { safeEnqueue } from "@/lib/notifications";
 
 export interface AddonItem {
   id: string;
@@ -193,6 +194,7 @@ export async function POST(req: NextRequest) {
               }
             });
             await issueSaleInvoice(tx, { ...pendingOrder, status: "SUCCESS" });
+            await safeEnqueue(tx, user.id, "PAYMENT_RECEIVED", { amount: payablePrice, description: `${addon.name} add-on` }, { dedupeKey: `PAYMENT:${pendingOrder.id}` });
           });
         } catch (txErrCaught) { const txErr = toApiError(txErrCaught);
           if (txErr?.message === "ORDER_ALREADY_SETTLED") {
@@ -246,6 +248,7 @@ export async function POST(req: NextRequest) {
               }
             });
             await issueSaleInvoice(tx, purchase);
+            await safeEnqueue(tx, user.id, "PAYMENT_RECEIVED", { amount: payablePrice, description: `${addon.name} add-on (paid from wallet)` }, { dedupeKey: `PAYMENT:${purchase.id}` });
           }
 
           return await tx.user.update({

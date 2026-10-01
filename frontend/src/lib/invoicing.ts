@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { toMoney } from "@/lib/money";
 import { computeGst, isWalletTopUp, supplyValue } from "@/lib/invoice";
 import { safeHttpUrl } from "@/lib/html";
+import { safeEnqueue } from "@/lib/notifications";
 
 // GST tax invoices with consecutive numbering.
 //
@@ -111,7 +112,7 @@ async function createInvoice(db: Db, input: IssueInput, now = new Date()) {
   const fiscalYear = fiscalYearOf(now);
   const seq = await nextSeq(db, fiscalYear);
 
-  return db.invoice.create({
+  const invoice = await db.invoice.create({
     data: {
       number: formatInvoiceNumber(fiscalYear, seq),
       fiscalYear,
@@ -134,6 +135,13 @@ async function createInvoice(db: Db, input: IssueInput, now = new Date()) {
       issuedAt: now,
     },
   });
+
+  // Queued inside the same transaction: the e-mail exists if and only if the invoice does.
+  const period = input.periodStart
+    ? input.periodStart.toLocaleDateString("en-IN", { month: "long", year: "numeric", timeZone: "Asia/Kolkata" })
+    : undefined;
+  await safeEnqueue(db, input.userId, "INVOICE_ISSUED", { number: invoice.number, gross: gst.gross, invoiceId: invoice.id, period }, { dedupeKey: `INVOICE:${invoice.id}` });
+  return invoice;
 }
 
 interface PurchaseTx {

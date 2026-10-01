@@ -5,11 +5,51 @@ import { toMoney } from "@/lib/money";
 import { cached } from "@/lib/ttlCache";
 import type { ApiData } from "@/lib/apiTypes";
 import { isFreePdfEndpoint, reportPriceForPath } from "@/lib/reportPricing";
+import { notify } from "@/lib/notifications";
 
 // Plan / add-on / switch lookups are identical for every request, so they are cached
 // briefly; only the user row (balance, quota, blocked flag) is read fresh each call.
 const CONFIG_TTL_MS = 30_000;
 const MAINTENANCE_TTL_MS = 10_000;
+
+const LOW_BALANCE_THRESHOLD = 50;
+const lowBalanceSeen = new Set<string>(); // per process: avoids a DB round-trip on every call while the balance stays low
+
+/**
+ * Raises the usage alerts the user can switch on/off in the panel: wallet below Rs 50, and
+ * the plan quota crossing 80% / 100%. Fire-and-forget: it never delays or fails a call.
+ * One alert per day (balance) / per month (quota).
+ */
+function afterMetering(
+  user: MeteredUser,
+  info: { deductionType: string; creditsDeducted: number; walletBefore: number; quota?: number }
+) {
+  if (user.role === "ADMIN" || user.role === "SUPER_ADMIN") return;
+  const day = new Date().toISOString().substring(0, 10);
+
+  if (info.creditsDeducted > 0) {
+    const after = info.walletBefore - info.creditsDeducted;
+    if (after < LOW_BALANCE_THRESHOLD) {
+      const memo = `${user.id}:${day}`;
+      if (!lowBalanceSeen.has(memo)) {
+        if (lowBalanceSeen.size > 10_000) lowBalanceSeen.clear();
+        lowBalanceSeen.add(memo);
+        void notify(user.id, "LOW_BALANCE", { balance: Math.max(0, after) }, { dedupeKey: `LOW_BALANCE:${user.id}:${day}` });
+      }
+    }
+  }
+
+  if (info.deductionType === "QUOTA" && info.quota) {
+    const used = (user.monthlyUsage || 0) + 1;
+    const month = day.substring(0, 7);
+    for (const [event, share] of [["QUOTA_80", 0.8], ["QUOTA_100", 1]] as const) {
+      const threshold = Math.ceil(info.quota * share);
+      if (used >= threshold && used - 1 < threshold) {
+        void notify(user.id, event, { used, quota: info.quota, plan: user.planTier }, { dedupeKey: `${event}:${user.id}:${month}` });
+      }
+    }
+  }
+}
 
 export type MeteredUser = Prisma.UserGetPayload<{ include: { subscription: true } }>;
 
@@ -290,6 +330,13 @@ export async function meterCall(
     // Non-blocking log failure (such a call simply cannot be auto-refunded)
   }
 
+  afterMetering(user, {
+    deductionType,
+    creditsDeducted,
+    walletBefore: walletBalance,
+    quota: planRecord?.includedQuota || user.monthlyQuota || 35000,
+  });
+
   return NextResponse.json({
     valid: true,
     role: user.role,
@@ -427,6 +474,8 @@ async function meterReport(
   }
 
   const walletAfter = creditsDeducted > 0 ? Math.max(0, walletBefore - creditsDeducted) : walletBefore;
+  afterMetering(user, { deductionType, creditsDeducted, walletBefore });
+
   return NextResponse.json({
     valid: true,
     role: user.role,

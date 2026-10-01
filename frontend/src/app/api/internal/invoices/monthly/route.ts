@@ -4,6 +4,7 @@ import { requireAdminSession } from "@/lib/authGuard";
 import { hasValidInternalSecret } from "@/lib/internalAuth";
 import { getClientIp } from "@/lib/clientIp";
 import { issueMissingSaleInvoices, issueUsageInvoicesForMonth } from "@/lib/invoicing";
+import { kickWorker } from "@/lib/notifications";
 
 /** Calendar month before now, in IST. */
 function previousIstMonth(now = new Date()): { year: number; month: number } {
@@ -47,6 +48,8 @@ export async function POST(req: NextRequest) {
 
     const sales = await issueMissingSaleInvoices();
     const usage = await issueUsageInvoicesForMonth(year, month);
+
+    kickWorker(); // "invoice issued" e-mails are in the queue now: start sending
 
     if (admin) {
       await prisma.auditLog

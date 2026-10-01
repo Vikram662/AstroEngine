@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { toMoney } from "@/lib/money";
 import { issueSaleInvoice } from "@/lib/invoicing";
+import { safeEnqueue } from "@/lib/notifications";
 import {
   creditsForAmount,
   getRazorpayWebhookSecret,
@@ -101,6 +102,7 @@ export async function POST(req: NextRequest) {
 
               if (updateCount.count === 1) {
                 await issueSaleInvoice(tx, { ...transaction, status: "SUCCESS" });
+                await safeEnqueue(tx, transaction.userId, "PAYMENT_RECEIVED", { amount: verifiedAmount, description: `${plan.name} plan` }, { dedupeKey: `PAYMENT:${transaction.id}` });
                 const now = new Date();
                 const periodEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
@@ -157,6 +159,7 @@ export async function POST(req: NextRequest) {
             where: { id: transaction.userId },
             data: { walletBalance: { increment: creditsToAdd } },
           });
+          await safeEnqueue(tx, transaction.userId, "PAYMENT_RECEIVED", { amount: verifiedAmount, creditsAdded: creditsToAdd, description: "wallet top-up" }, { dedupeKey: `PAYMENT:${transaction.id}` });
           console.log(`[Razorpay Webhook] Credited ₹${creditsToAdd} to user ${transaction.userId}`);
         }
       });

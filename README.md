@@ -285,7 +285,7 @@ npx prisma db push        # adds the new columns below (all nullable / defaulted
 npx prisma generate
 ```
 
-New tables: `Invoice` and `InvoiceCounter` (consecutive GST invoice numbers).
+New tables: `Invoice` and `InvoiceCounter` (consecutive GST invoice numbers) and `Notification` (the notification queue).
 New columns: `EmailOtp.attempts` (OTP guess counter stored with the code), and on `User`:
 `passwordChangedAt` (sessions issued before it are rejected), `totpSecret`, `totpEnabled`, `totpLastStep` (two-factor auth).
 Deploy the new code **after** `db push`, otherwise sign-up / login queries reference columns that do not exist yet.
@@ -316,3 +316,30 @@ Any user can enable TOTP (Google Authenticator, Authy, 1Password) under **Dashbo
 - **Admin revenue** = plans/add-ons sold + usage charges (`revenueBreakdown`); wallet top-ups are reported separately as `walletTopUps`, so one rupee is never counted as both a deposit and a sale.
 - **Admin retry of a failed report:** the customer was refunded when it failed, so a retry **charges them again** (report price) before it runs, and refunds again if the retry fails too. If the customer's wallet cannot cover it the retry is refused with a message. A report that was never refunded is already paid for, so its retry is free.
 - **Report prices (INR, GST-inclusive):** each report type has its own price, between Rs 4 and Rs 12 (Sade Sati 4, Basic Kundli / Numerology 5, Matchmaking 6, Varshphal 8, Lal Kitab 9, Brihat Kundli 12), taken from the customer's wallet whether the report is started from the dashboard, the calculators page or the API. Customers with the PDF add-on get its monthly included reports (500) free, then pay the report price. Status polls and downloads are free. A failed report is refunded automatically. The price list lives in one place: `REPORT_ENDPOINTS` in `src/lib/pdfEngine.ts`.
+
+### Notifications (user switches + queue)
+
+Every customer controls what they hear about under **Dashboard > Settings > Notifications**. Each event group has its own on/off switch (stored in `User.notificationPrefs`; a switch the user never touched uses its default, so new events never silently change existing accounts):
+
+| Switch | Events | Default |
+| --- | --- | --- |
+| Low prepaid balance | wallet falls below Rs 50 (once a day) | on |
+| Monthly quota | usage crosses 80% and 100% of the plan quota (once a month each) | on |
+| Payment received | wallet top-up, plan purchase, add-on purchase | on |
+| Tax invoice issued | each purchase invoice + the monthly usage invoice | on |
+| Refund issued | money returned to the wallet after a failed call / report | on |
+| Report ready | a PDF report finished (with download link) | **off** |
+| Report failed | a PDF report failed (and whether it was refunded) | on |
+| Error spike | more than 5% of calls failing in 10 minutes (once an hour) | on |
+| *Security (always on)* | password changed / reset, 2FA turned on / off | cannot be switched off, e-mail only |
+
+**How it works (queue / outbox):** when an event happens the app checks the user's switch for it; only if it is ON (or it is a security event) a row is written to the `Notification` table, in the *same database transaction* as the thing that happened (a payment, an invoice...), one row per channel: e-mail, plus the user's account webhook if they set one (signed with their secret, never used for security alerts). A worker sends the rows, retrying with back-off (1 min, 5 min, 30 min, 2 h, 6 h; then marked `FAILED`). If the user switches an event off while it waits in the queue it is skipped, not sent. Duplicates are prevented by a dedupe key. A notification problem can never break a payment, call or report.
+
+Delivery starts immediately by itself. As a safety net (retries, plus re-checking reports that were still running, so "report ready/failed" alerts and refunds happen without anybody opening the page, plus the error-spike check) run the worker every minute:
+
+```powershell
+.\scripts\process-notifications.ps1 -BaseUrl https://your-app
+# schtasks /Create /SC MINUTE /MO 1 /TN AstroEngineNotifications /TR "powershell -File C:\...\scripts\process-notifications.ps1 -BaseUrl https://your-app"
+```
+
+The engine / admins can queue an event with `POST /api/notifications/dispatch {userId, eventType, data}` (the user's switches still apply, `force: true` bypasses them). Customers see the delivery status of their latest alerts at the bottom of the notifications page and can send themselves a test.

@@ -8,6 +8,7 @@ const db = vi.hoisted(() => {
     systemSetting: { findUnique: vi.fn(), findMany: vi.fn() },
     invoice: { findUnique: vi.fn(), create: vi.fn() },
     invoiceCounter: { upsert: vi.fn() },
+    notification: { createMany: vi.fn(async () => ({ count: 0 })) },
     transaction: { findFirst: vi.fn(), updateMany: vi.fn() },
     subscriptionPlan: { findUnique: vi.fn() },
     subscription: { upsert: vi.fn() },

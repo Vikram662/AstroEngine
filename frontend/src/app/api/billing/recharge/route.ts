@@ -4,6 +4,7 @@ import { getVerifiedSession } from "@/lib/authGuard";
 import { Prisma } from "@prisma/client";
 import { toMoney, toJsonSafe } from "@/lib/money";
 import { toApiError } from "@/lib/apiTypes";
+import { notify } from "@/lib/notifications";
 import {
   creditsForAmount,
   getRazorpayCredentials,
@@ -279,6 +280,8 @@ export async function POST(req: NextRequest) {
         }
         throw txErr;
       }
+
+      await notify(user.id, "PAYMENT_RECEIVED", { amount: verifiedAmount, creditsAdded: creditsToAdd, description: "wallet top-up" }, { dedupeKey: `PAYMENT:${pendingOrder.id}` });
 
       return NextResponse.json({
         status: "success",

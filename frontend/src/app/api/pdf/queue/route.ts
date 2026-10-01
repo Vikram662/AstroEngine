@@ -8,6 +8,7 @@ import { meterCall } from "@/lib/metering";
 import { applyRefund, type Receipt } from "@/lib/billingRefund";
 import { reconcileJob } from "@/lib/pdfReconcile";
 import { SharedRateLimiter } from "@/lib/rateLimit";
+import { notify } from "@/lib/notifications";
 
 // Report generation is CPU heavy: a user may start 10 reports per minute.
 const reportLimiter = new SharedRateLimiter("pdf-queue-user", 10, 60_000);
@@ -140,6 +141,12 @@ export async function POST(req: NextRequest) {
         requestPayload: JSON.parse(JSON.stringify({ birthData, branding, lang: resolvedLang, billing: receipt }))
       }
     });
+
+    if (finalStatus === "COMPLETED") {
+      await notify(user.id, "PDF_READY", { reportType: report.backendType, jobId, downloadUrl: fileUrl }, { dedupeKey: `PDF_READY:${jobId}` });
+    } else if (finalStatus === "FAILED") {
+      await notify(user.id, "PDF_FAILED", { reportType: report.backendType, jobId, refunded }, { dedupeKey: `PDF_FAILED:${jobId}` });
+    }
 
     return NextResponse.json({
       status: "success",

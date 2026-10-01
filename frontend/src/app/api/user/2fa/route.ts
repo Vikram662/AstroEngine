@@ -5,6 +5,7 @@ import { verifyPasswordAsync } from "@/lib/passwords";
 import { decryptSetting, encryptSetting } from "@/lib/secretBox";
 import { generateTotpSecret, otpauthUri, verifyTotp } from "@/lib/totp";
 import { SharedRateLimiter } from "@/lib/rateLimit";
+import { notify } from "@/lib/notifications";
 
 // 5 wrong codes / passwords per user per 10 minutes on every 2FA management action.
 const failures = new SharedRateLimiter("2fa-manage", 5, 10 * 60 * 1000);
@@ -54,6 +55,7 @@ export async function POST(req: NextRequest) {
         return fail("Invalid code. Check the time on your phone and try again.");
       }
       await prisma.user.update({ where: { id: user.id }, data: { totpEnabled: true, totpLastStep: step } });
+      await notify(user.id, "TWO_FA_CHANGED", { enabled: true });
       return NextResponse.json({ status: "success", message: "Two-factor authentication enabled." });
     }
 
@@ -69,6 +71,7 @@ export async function POST(req: NextRequest) {
         return fail("Password or code is incorrect.");
       }
       await prisma.user.update({ where: { id: user.id }, data: { totpEnabled: false, totpSecret: null, totpLastStep: null } });
+      await notify(user.id, "TWO_FA_CHANGED", { enabled: false });
       return NextResponse.json({ status: "success", message: "Two-factor authentication disabled." });
     }
 

@@ -124,6 +124,7 @@ model User {
   assignedOffers   Offer[]            @relation("PersonalizedOffers")
   offerRedemptions OfferRedemption[]
   invoices         Invoice[]
+  notifications    Notification[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -462,4 +463,36 @@ model Invoice {
   @@unique([fiscalYear, seq])
   @@unique([userId, type, periodStart]) // one usage invoice per user per month
   @@index([userId, issuedAt])
+}
+
+// ── Notification queue (transactional outbox) ───────────────────────────────────────
+// Every event that may notify a user is written here, in the same database transaction
+// as the thing that happened, but only if the user's notification preferences allow it.
+// A worker sends the rows (email / account webhook) with retries and back-off.
+enum NotificationStatus {
+  PENDING
+  SENDING
+  SENT
+  FAILED // gave up after the maximum number of attempts
+  SKIPPED // the user switched this event off after it was queued
+}
+
+model Notification {
+  id            String             @id @default(uuid())
+  userId        String
+  user          User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event         String // LOW_BALANCE, QUOTA_80, PAYMENT_RECEIVED, INVOICE_ISSUED, ...
+  channel       String // EMAIL | WEBHOOK
+  status        NotificationStatus @default(PENDING)
+  payload       Json
+  attempts      Int                @default(0)
+  nextAttemptAt DateTime           @default(now())
+  lastError     String?
+  dedupeKey     String? // one notification per key and channel, e.g. LOW_BALANCE:<user>:2026-03-05
+  createdAt     DateTime           @default(now())
+  sentAt        DateTime?
+
+  @@unique([dedupeKey, channel])
+  @@index([status, nextAttemptAt])
+  @@index([userId, createdAt])
 }
