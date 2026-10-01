@@ -1,7 +1,13 @@
 import axios from "axios";
 
-const BACKEND_URL = process.env.ASTRO_BACKEND_URL || "http://127.0.0.1:8000";
-const INTERNAL_API_KEY = process.env.ASTRO_INTERNAL_API_KEY || "ak_live_dev_test_master_key_astro2026";
+const BACKEND_URL = (process.env.ASTRO_BACKEND_URL || "http://127.0.0.1:8000").replace(/\/$/, "");
+
+// No hardcoded fallback: a published default key would be a credential for anyone.
+function internalApiKey(): string {
+  const key = process.env.ASTRO_INTERNAL_API_KEY;
+  if (!key) throw new Error("ASTRO_INTERNAL_API_KEY is not configured.");
+  return key;
+}
 
 // The FastAPI backend has no single POST /api/v1/pdf/generate route — each report
 // type is its own endpoint (see backend/app/pdf_engine/router.py). Both the
@@ -88,7 +94,7 @@ export async function dispatchPdfJob(
 ) {
   const backendRes = await axios.post(`${BACKEND_URL}${report.path}`, payload, {
     headers: {
-      "x-api-key": INTERNAL_API_KEY,
+      "x-api-key": internalApiKey(),
       "Content-Type": "application/json"
     },
     timeout: 10000
@@ -103,7 +109,7 @@ export async function dispatchPdfJob(
     await sleep(1500);
     try {
       const statusRes = await axios.get(`${BACKEND_URL}/api/v1/pdf/status/${jobId}`, {
-        headers: { "x-api-key": INTERNAL_API_KEY },
+        headers: { "x-api-key": internalApiKey() },
         timeout: 5000
       });
       const statusData = statusRes.data?.data || statusRes.data;

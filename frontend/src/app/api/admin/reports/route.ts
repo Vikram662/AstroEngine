@@ -3,8 +3,47 @@ import { prisma } from "@/lib/prisma";
 import { requireAdminSession } from "@/lib/authGuard";
 import { toMoney } from "@/lib/money";
 import { publicMessage } from "@/lib/apiErrors";
+import { computeGst, invoiceNumber } from "@/lib/invoice";
+import { csvRow } from "@/lib/csv";
+import { getClientIp } from "@/lib/clientIp";
 
-// GET /api/admin/reports - Live module popularity & CSV generator from MySQL
+const MAX_EXPORT_ROWS = 20000;
+
+function parseDate(value: string | null, endOfDay = false): Date | null {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const d = new Date(`${value}T${endOfDay ? "23:59:59.999" : "00:00:00.000"}Z`);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+async function audit(admin: { userId: string; role: string }, req: NextRequest, action: string, metadata: object) {
+  // Exports contain customer data: always leave a trail.
+  await prisma.auditLog
+    .create({
+      data: {
+        actorUserId: admin.userId,
+        actorRole: admin.role as "ADMIN" | "SUPER_ADMIN",
+        action,
+        targetType: "Report",
+        targetId: action,
+        metadata,
+        ipAddress: getClientIp(req),
+      },
+    })
+    .catch((e: unknown) => console.error("[admin/reports] audit log failed:", e));
+}
+
+function csvResponse(csv: string, filename: string) {
+  return new NextResponse(csv, {
+    headers: {
+      "Content-Type": "text/csv; charset=utf-8",
+      "Content-Disposition": `attachment; filename="${filename}"`,
+      "Cache-Control": "private, no-store",
+      "X-Content-Type-Options": "nosniff",
+    },
+  });
+}
+
+// GET /api/admin/reports - module popularity (JSON) and CSV exports
 export async function GET(req: NextRequest) {
   try {
     const admin = await requireAdminSession();
@@ -15,70 +54,102 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const exportType = searchParams.get("export");
 
-    // Module Popularity from real ApiRequestLog
-    const logs = await prisma.apiRequestLog.findMany({
-      select: { module: true },
-      take: 500
-    });
-
-    const total = logs.length;
-    const moduleCounts: Record<string, number> = {};
-    for (const l of logs) {
-      const mod = l.module || "General";
-      moduleCounts[mod] = (moduleCounts[mod] || 0) + 1;
-    }
-
-    const breakdown = Object.entries(moduleCounts).map(([name, count]) => ({
-      name,
-      count,
-      percentage: total > 0 ? ((count / total) * 100).toFixed(1) : "0.0"
-    }));
-
-    // CSV Exports from real DB
+    // ── GSTR-1 style sales register ────────────────────────────────────────────
+    // Cash-received basis: only money that came in through the payment gateway. Plan
+    // purchases paid from the wallet are a second record of the same rupees (they were
+    // counted when the wallet was topped up), so they are excluded unless
+    // include_wallet=1 is passed.
     if (exportType === "gstr1_returns") {
+      const from = parseDate(searchParams.get("from"));
+      const to = parseDate(searchParams.get("to"), true);
+      const includeWallet = searchParams.get("include_wallet") === "1";
+
+      const settings = await prisma.systemSetting.findMany({
+        where: { key: { in: ["COMPANY_STATE", "COMPANY_STATE_CODE"] } },
+      });
+      const sellerState = settings.find((s: { key: string; value: string }) => s.key === "COMPANY_STATE")?.value || "Maharashtra";
+      const sellerStateCode = (settings.find((s: { key: string; value: string }) => s.key === "COMPANY_STATE_CODE")?.value || "27").replace(/\D/g, "").slice(0, 2) || "27";
+
       const txs = await prisma.transaction.findMany({
-        where: { status: "SUCCESS" },
-        include: { user: true },
-        orderBy: { createdAt: "desc" }
+        where: {
+          status: "SUCCESS",
+          ...(includeWallet ? {} : { paymentGateway: { not: "WALLET" } }),
+          ...(from || to ? { createdAt: { ...(from ? { gte: from } : {}), ...(to ? { lte: to } : {}) } } : {}),
+        },
+        select: {
+          id: true, createdAt: true, amount: true, paymentGateway: true, gatewayPaymentId: true,
+          user: { select: { email: true, taxProfile: true } },
+        },
+        orderBy: { createdAt: "asc" },
+        take: MAX_EXPORT_ROWS,
       });
 
-      let csv = "InvoiceNumber,Date,UserEmail,Amount,TaxableValue,CGST,SGST,Status\n";
+      let csv = csvRow([
+        "InvoiceNumber", "Date", "CustomerEmail", "CustomerGSTIN", "CustomerState",
+        "Gross", "TaxableValue", "CGST", "SGST", "IGST", "PaymentGateway", "GatewayPaymentId",
+      ]) + "\n";
+      const totals = { gross: 0, taxable: 0, cgst: 0, sgst: 0, igst: 0 };
+
       for (const t of txs) {
-        const amount = toMoney(t.amount);
-        const taxable = (amount / 1.18).toFixed(2);
-        const gst = ((amount - parseFloat(taxable)) / 2).toFixed(2);
-        csv += `${t.id.substring(0, 8)},${t.createdAt.toISOString().substring(0, 10)},${t.user.email},${amount},${taxable},${gst},${gst},${t.status}\n`;
+        const profile = (t.user.taxProfile || {}) as { gstin?: string; state?: string };
+        const g = computeGst(toMoney(t.amount), { state: sellerState, stateCode: sellerStateCode }, profile);
+        totals.gross += g.gross; totals.taxable += g.taxable; totals.cgst += g.cgst; totals.sgst += g.sgst; totals.igst += g.igst;
+        csv += csvRow([
+          invoiceNumber(t), t.createdAt.toISOString().substring(0, 10), t.user.email,
+          profile.gstin || "", profile.state || "",
+          g.gross.toFixed(2), g.taxable.toFixed(2), g.cgst.toFixed(2), g.sgst.toFixed(2), g.igst.toFixed(2),
+          t.paymentGateway, t.gatewayPaymentId || "",
+        ]) + "\n";
       }
-      return new NextResponse(csv, {
-        headers: {
-          "Content-Type": "text/csv",
-          "Content-Disposition": `attachment; filename="GSTR1_${Date.now()}.csv"`
-        }
-      });
+      const r2 = (n: number) => n.toFixed(2);
+      csv += csvRow(["TOTAL", "", "", "", "", r2(totals.gross), r2(totals.taxable), r2(totals.cgst), r2(totals.sgst), r2(totals.igst), "", ""]) + "\n";
+      if (txs.length === MAX_EXPORT_ROWS) csv += csvRow([`NOTE: export truncated at ${MAX_EXPORT_ROWS} rows - narrow the date range`]) + "\n";
+
+      await audit(admin, req, "REPORT_EXPORT_GSTR1", { rows: txs.length, from: from?.toISOString(), to: to?.toISOString(), includeWallet });
+      return csvResponse(csv, `GSTR1_${new Date().toISOString().substring(0, 10)}.csv`);
     }
 
     if (exportType === "top_consumers") {
       const users = await prisma.user.findMany({
         orderBy: { monthlyUsage: "desc" },
-        take: 50
+        take: 50,
+        select: { id: true, email: true, planTier: true, monthlyUsage: true, monthlyQuota: true, walletBalance: true },
       });
 
-      let csv = "UserId,Email,PlanTier,MonthlyUsage,MonthlyQuota,WalletBalance\n";
+      let csv = csvRow(["UserId", "Email", "PlanTier", "MonthlyUsage", "MonthlyQuota", "WalletBalance"]) + "\n";
       for (const u of users) {
-        csv += `${u.id},${u.email},${u.planTier},${u.monthlyUsage},${u.monthlyQuota},${toMoney(u.walletBalance)}\n`;
+        csv += csvRow([u.id, u.email, u.planTier, u.monthlyUsage, u.monthlyQuota, toMoney(u.walletBalance)]) + "\n";
       }
-      return new NextResponse(csv, {
-        headers: {
-          "Content-Type": "text/csv",
-          "Content-Disposition": `attachment; filename="TopConsumers_${Date.now()}.csv"`
-        }
-      });
+
+      await audit(admin, req, "REPORT_EXPORT_TOP_CONSUMERS", { rows: users.length });
+      return csvResponse(csv, `TopConsumers_${new Date().toISOString().substring(0, 10)}.csv`);
     }
+
+    // ── Module popularity: counted in the database over a time window ─────────────
+    const days = Math.min(365, Math.max(1, parseInt(searchParams.get("days") || "30", 10) || 30));
+    const since = new Date(Date.now() - days * 24 * 3600 * 1000);
+
+    const grouped = await prisma.apiRequestLog.groupBy({
+      by: ["module"],
+      where: { createdAt: { gte: since } },
+      _count: { _all: true },
+      orderBy: { _count: { module: "desc" } },
+      take: 20,
+    });
+    const total = await prisma.apiRequestLog.count({ where: { createdAt: { gte: since } } });
+
+    const breakdown = grouped.map((g: { module: string; _count: { _all: number } }) => ({
+      name: g.module || "General",
+      count: g._count._all,
+      percentage: total > 0 ? ((g._count._all / total) * 100).toFixed(1) : "0.0",
+    }));
 
     return NextResponse.json({
       status: "success",
       data: {
-        totalCallsSampled: total,
+        windowDays: days,
+        totalCalls: total,
+        totalCallsSampled: total, // kept for the existing UI
         breakdown: breakdown.length > 0 ? breakdown : [
           { name: "Panchang & Muhurat", count: 0, percentage: "0.0" },
           { name: "KP Horary", count: 0, percentage: "0.0" },
@@ -88,7 +159,6 @@ export async function GET(req: NextRequest) {
       }
     });
   } catch (error: unknown) {
-    const err = error as { message?: string };
-    return NextResponse.json({ status: "error", message: publicMessage(err) }, { status: 500 });
+    return NextResponse.json({ status: "error", message: publicMessage(error) }, { status: 500 });
   }
 }

@@ -12,33 +12,31 @@ export async function GET() {
       return NextResponse.json({ status: "error", message: "Forbidden: Admin authorization required." }, { status: 403 });
     }
 
-    // 1. Total Tenants & Tier breakdown
-    const totalUsers = await prisma.user.count();
-    const starterUsers = await prisma.user.count({ where: { planTier: "STARTER" } });
-    const proUsers = await prisma.user.count({ where: { planTier: "PRO" } });
-    const enterpriseUsers = await prisma.user.count({ where: { planTier: "ENTERPRISE" } });
+    const since24h = new Date(Date.now() - 24 * 3600 * 1000);
 
-    // 2. Gross Revenue (Total Successful Transactions)
-    const revenueAgg = await prisma.transaction.aggregate({
-      where: { status: "SUCCESS" },
-      _sum: { amount: true }
-    });
+    // All independent counts run in parallel. Revenue is cash received through the payment
+    // gateway: plan purchases paid from the wallet spend money that was already counted
+    // when the wallet was topped up, so they must not be added a second time.
+    const [
+      totalUsers, starterUsers, proUsers, enterpriseUsers,
+      revenueAgg, totalApiRequests, latencyAgg, failedPdfJobs, activePdfJobs,
+    ] = await Promise.all([
+      prisma.user.count(),
+      prisma.user.count({ where: { planTier: "STARTER" } }),
+      prisma.user.count({ where: { planTier: "PRO" } }),
+      prisma.user.count({ where: { planTier: "ENTERPRISE" } }),
+      prisma.transaction.aggregate({
+        where: { status: "SUCCESS", paymentGateway: { not: "WALLET" } },
+        _sum: { amount: true },
+      }),
+      prisma.apiRequestLog.count(),
+      prisma.apiRequestLog.aggregate({ _avg: { responseTime: true } }),
+      prisma.pdfGenerationJob.count({ where: { status: "FAILED", createdAt: { gte: since24h } } }),
+      prisma.pdfGenerationJob.count({ where: { status: { in: ["PENDING", "PROCESSING"] } } }),
+    ]);
+
     const totalRevenue = toMoney(revenueAgg._sum.amount);
-
-    // 3. API Telemetry logs count & latency
-    const totalApiRequests = await prisma.apiRequestLog.count();
-    const latencyAgg = await prisma.apiRequestLog.aggregate({
-      _avg: { responseTime: true }
-    });
     const avgLatency = latencyAgg._avg.responseTime ? Math.round(latencyAgg._avg.responseTime) : 0;
-
-    // 4. PDF Worker Pipeline Health
-    const failedPdfJobs = await prisma.pdfGenerationJob.count({
-      where: { status: "FAILED" }
-    });
-    const activePdfJobs = await prisma.pdfGenerationJob.count({
-      where: { status: "PROCESSING" }
-    });
 
     // 5. Live DB Query Latency Check
     const dbStartTime = Date.now();

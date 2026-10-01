@@ -265,6 +265,7 @@ Never commit real values: `.env` files are git-ignored. Only the variable names 
 | `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD` | optional | Shared rate limiting; without Redis limits are per process (keep a single worker). |
 | `R2_*` | optional | Fallback R2 settings if not provided by the frontend settings API. |
 | `SENTRY_DSN` | optional | Error monitoring. Also `pip install "sentry-sdk[fastapi]"`; no personal data is sent. |
+| `BILLING_LOG_LATENCY` | optional (default `true`) | Set `false` to skip the per-request call that records real latency in the usage log. |
 | `PDF_MAX_CONCURRENCY` | optional (default `2`) | How many PDF reports render at the same time (CPU bound, runs in threads). |
 
 ### Production notes
@@ -303,3 +304,10 @@ They never overwrite an existing account. Passwords and API keys that were gener
 ### Two-factor authentication
 
 Any user can enable TOTP (Google Authenticator, Authy, 1Password) under **Dashboard > Profile**. Once enabled, sign-in asks for the 6-digit code after the password; each code works only once. Turn it on for every admin account.
+
+### Billing, invoices and reports: how it works
+
+- **Every report is billed to the customer who asked for it**, whether it is started from the dashboard (`/api/pdf/queue`), the calculators page (`/api/proxy`) or the public API. The internal admin key is only used to talk to the engine, never to pay. A failed report (engine down, immediate or later failure) gives the quota / wallet credit back exactly once. Open dashboard reports are re-synced with the engine when the list is loaded.
+- **Invoices** are issued only for payments with status `SUCCESS`, share one number format (`INV-<year>-<id>`) and one GST calculation (18% inclusive; CGST+SGST in the seller's state, IGST otherwise; the parts always add up to the total) with the GSTR-1 CSV.
+- **GSTR-1 export** (`/api/admin/reports?export=gstr1_returns&from=YYYY-MM-DD&to=YYYY-MM-DD`): cash-received basis, gateway payments only. Plan purchases paid from the wallet are excluded (the money was counted when the wallet was topped up); add `&include_wallet=1` to list them. Every export is written to the audit log. Please have your accountant confirm the GST treatment (see open questions below).
+- **Admin revenue** counts gateway payments only, for the same reason.

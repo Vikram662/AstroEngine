@@ -178,3 +178,35 @@ def test_refund_posts_to_billing_service(monkeypatch):
     assert '"receiptId":"42"' in seen["body"].replace(" ", "") and '"httpStatus":422' in seen["body"].replace(" ", "")
     assert seen["secret"] == "s3cret"
     assert asyncio.run(billing.refund_receipt(None)) is False
+
+
+def test_successful_call_reports_latency(monkeypatch):
+    completions = []
+    c = _metered_client(monkeypatch, [])
+    monkeypatch.setattr(main_module, "schedule_complete", lambda receipt, ms: completions.append((receipt["receiptId"], ms)))
+    try:
+        r = c.post("/api/v1/core/planets/positions", json=_BODY, headers={"x-api-key": "k"})
+        assert r.status_code == 200
+        assert len(completions) == 1 and completions[0][0] == "42" and completions[0][1] >= 0
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_complete_receipt_posts_latency(monkeypatch):
+    import asyncio
+    import httpx
+    from app.core import billing
+
+    seen = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen["url"] = str(request.url)
+        seen["body"] = request.content.decode().replace(" ", "")
+        return httpx.Response(200, json={"status": "success"})
+
+    real_client = httpx.AsyncClient
+    monkeypatch.setattr(billing.settings, "NEXT_APP_URL", "http://next.test")
+    monkeypatch.setattr(billing.httpx, "AsyncClient", lambda **kw: real_client(transport=httpx.MockTransport(handler), **kw))
+    asyncio.run(billing.complete_receipt({"receiptId": "9"}, 37))
+    assert seen["url"] == "http://next.test/api/internal/complete"
+    assert '"receiptId":"9"' in seen["body"] and '"responseTimeMs":37' in seen["body"]

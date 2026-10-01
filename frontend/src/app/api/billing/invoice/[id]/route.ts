@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
+import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
 import { getVerifiedSession } from "@/lib/authGuard";
 import { toMoney } from "@/lib/money";
 import type { ApiData } from "@/lib/apiTypes";
 import { publicMessage } from "@/lib/apiErrors";
+import { computeGst, invoiceNumber as buildInvoiceNumber } from "@/lib/invoice";
+import { safeHttpUrl } from "@/lib/html";
 
 // GET /api/billing/invoice/[id] - Generates a printable Tax Invoice / GST Invoice HTML
 export async function GET(
@@ -24,6 +27,11 @@ export async function GET(
 
     if (!tx) {
       return new NextResponse("Invoice not found", { status: 404 });
+    }
+
+    // A tax invoice is only issued for money actually received.
+    if (tx.status !== "SUCCESS") {
+      return new NextResponse("Invoice is available once the payment has succeeded.", { status: 409 });
     }
 
     // Only account owner or admin can download invoice
@@ -72,7 +80,9 @@ export async function GET(
     }
 
     const sellerName = escapeHtml(companyMap["COMPANY_NAME"] || "AstroEngine Technologies Pvt. Ltd.");
-    const sellerLogoUrl = escapeHtml(companyMap["COMPANY_LOGO_URL"] || "");
+    // Only a real http(s) logo URL is embedded (no javascript:/data: URLs).
+    const rawLogo = companyMap["COMPANY_LOGO_URL"] || "";
+    const sellerLogoUrl = rawLogo && safeHttpUrl(rawLogo) !== "#" ? escapeHtml(safeHttpUrl(rawLogo)) : "";
     const sellerLegalName = escapeHtml(companyMap["COMPANY_LEGAL_NAME"] || "AstroEngine Cloud Services");
     const sellerTagline = escapeHtml(companyMap["COMPANY_TAGLINE"] || "Enterprise Vedic & Western Astrology API Infrastructure");
     const sellerGstin = escapeHtml(companyMap["COMPANY_GSTIN"] || "27AABCA1234F1Z8");
@@ -80,7 +90,7 @@ export async function GET(
     const sellerAddress = escapeHtml(companyMap["COMPANY_ADDRESS_LINE1"] || "Level 4, Tech Park, Bandra Kurla Complex");
     const sellerCity = escapeHtml(companyMap["COMPANY_CITY"] || "Mumbai");
     const sellerState = escapeHtml(companyMap["COMPANY_STATE"] || "Maharashtra");
-    const sellerStateCode = companyMap["COMPANY_STATE_CODE"] || "27";
+    const sellerStateCode = (companyMap["COMPANY_STATE_CODE"] || "27").replace(/\D/g, "").slice(0, 2) || "27";
     const sellerPincode = escapeHtml(companyMap["COMPANY_PINCODE"] || "400051");
     const sellerPhone = escapeHtml(companyMap["COMPANY_PHONE"] || "+91 22 4910 8800");
     const sellerEmail = escapeHtml(companyMap["COMPANY_EMAIL"] || "billing@astroengine.io");
@@ -93,26 +103,24 @@ export async function GET(
     const customerState = escapeHtml(taxProfile.state || "");
     const customerPan = escapeHtml(taxProfile.pan || (customerGstin.length >= 12 ? customerGstin.substring(2, 12) : ""));
 
-    // Calculations for 18% GST:
-    // If customer is in same state as seller (State Code match or state name match), CGST 9% + SGST 9%. Otherwise IGST 18%.
-    const isIntraState = !customerState || 
-      customerState.toLowerCase().includes(sellerState.toLowerCase()) || 
-      customerGstin.startsWith(sellerStateCode);
-    
+    // 18% GST (price is GST-inclusive); CGST+SGST within the seller's state, IGST otherwise.
     const grossAmount = toMoney(tx.amount);
     const creditsAdded = toMoney(tx.creditsAdded);
-    const taxableValue = grossAmount / 1.18;
-    const totalGst = grossAmount - taxableValue;
-    const cgst = isIntraState ? totalGst / 2 : 0;
-    const sgst = isIntraState ? totalGst / 2 : 0;
-    const igst = isIntraState ? 0 : totalGst;
-    
-    const invoiceNumber = `INV-${new Date(tx.createdAt).getFullYear()}-${tx.id.substring(0, 8).toUpperCase()}`;
+    const gst = computeGst(
+      grossAmount,
+      { state: companyMap["COMPANY_STATE"] || "Maharashtra", stateCode: sellerStateCode },
+      { state: taxProfile.state, gstin: taxProfile.gstin }
+    );
+    const { taxable: taxableValue, cgst, sgst, igst, intraState: isIntraState } = gst;
+
+    const invoiceNumber = buildInvoiceNumber(tx);
     const invoiceDate = new Date(tx.createdAt).toLocaleDateString("en-IN", {
       year: "numeric",
       month: "long",
       day: "numeric"
     });
+
+    const nonce = crypto.randomBytes(16).toString("base64");
 
     const html = `<!DOCTYPE html>
 <html lang="en">
@@ -267,7 +275,7 @@ export async function GET(
 </head>
 <body>
   <div class="print-bar">
-    <button class="btn" onclick="window.print()">Print / Save as PDF</button>
+    <button class="btn" id="print-btn">Print / Save as PDF</button>
   </div>
 
   <div class="invoice-card">
@@ -283,7 +291,7 @@ export async function GET(
         <div class="invoice-meta">
           <div><strong>Invoice No:</strong> ${invoiceNumber}</div>
           <div><strong>Date of Issue:</strong> ${invoiceDate}</div>
-          <div><strong>Place of Supply:</strong> ${sellerState} (${sellerStateCode})</div>
+          <div><strong>Place of Supply:</strong> ${isIntraState ? `${sellerState} (${sellerStateCode})` : (customerState || sellerState)}</div>
         </div>
       </div>
     </div>
@@ -376,12 +384,17 @@ export async function GET(
       No physical signature is required. For any billing inquiries, contact <strong>billing@astroengine.io</strong>.
     </div>
   </div>
+<script nonce="${nonce}">document.getElementById("print-btn").addEventListener("click", function () { window.print(); });</script>
 </body>
 </html>`;
 
     return new NextResponse(html, {
       headers: {
-        "Content-Type": "text/html; charset=utf-8"
+        "Content-Type": "text/html; charset=utf-8",
+        // Contains billing data: never cached, never framed, and no script can run.
+        "Cache-Control": "private, no-store",
+        "X-Content-Type-Options": "nosniff",
+        "Content-Security-Policy": `default-src 'none'; script-src 'nonce-${nonce}'; img-src https: data:; style-src 'unsafe-inline'; frame-ancestors 'self'`,
       }
     });
   } catch (error: unknown) {

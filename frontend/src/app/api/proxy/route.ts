@@ -4,6 +4,11 @@ import { getVerifiedSession } from "@/lib/authGuard";
 import { resolveProxyTarget } from "@/lib/backendProxy";
 import { getClientIp } from "@/lib/clientIp";
 import { SharedRateLimiter } from "@/lib/rateLimit";
+import { prisma } from "@/lib/prisma";
+import { meterCall } from "@/lib/metering";
+import { applyRefund, type Receipt } from "@/lib/billingRefund";
+import { REPORT_ENDPOINTS } from "@/lib/pdfEngine";
+import { canAccessJob } from "@/lib/pdfReconcile";
 
 const BACKEND_URL = (process.env.ASTRO_BACKEND_URL || "http://127.0.0.1:8000").replace(/\/$/, "");
 const INTERNAL_API_KEY = process.env.ASTRO_INTERNAL_API_KEY;
@@ -34,7 +39,13 @@ function upstreamError(err: unknown) {
   return NextResponse.json({ status: "error", message: "Calculation service is unavailable." }, { status: 502 });
 }
 
+// Report-generation endpoints (the ones that cost CPU and must be billed to the caller).
+const GENERATION_PATHS = new Set(Object.values(REPORT_ENDPOINTS).map((r) => r.path));
+const JOB_ID_PATH = /^\/api\/v1\/pdf\/(?:status|download)\/([A-Za-z0-9_-]+)$/;
+
 export async function POST(request: NextRequest) {
+  // Receipt of the metered call: refunded if the upstream call does not succeed.
+  let receipt: Receipt | null = null;
   try {
     if (!INTERNAL_API_KEY) {
       return NextResponse.json({ status: "error", message: "Server is not configured." }, { status: 500 });
@@ -70,6 +81,23 @@ export async function POST(request: NextRequest) {
     if (session ? await userLimiter.hit(`u:${session.userId}`) : await anonLimiter.hit(`ip:${ip}`)) return rateLimited();
 
     const targetUrl = target.url;
+
+    // The internal key belongs to an admin account, so without this step a report would
+    // be billed to the admin and be free for the customer.
+    const isGeneration = method === "POST" && GENERATION_PATHS.has(targetUrl.pathname);
+    if (isGeneration && session) {
+      const user = await prisma.user.findUnique({ where: { id: session.userId }, include: { subscription: true } });
+      if (!user) return NextResponse.json({ status: "error", message: "User not found." }, { status: 401 });
+      const metered = await meterCall(user, targetUrl.pathname, "pdf");
+      const meterBody = await metered.json();
+      if (metered.status !== 200 || !meterBody.valid) {
+        return NextResponse.json({ status: "error", ...meterBody }, { status: metered.status === 200 ? 403 : metered.status });
+      }
+      receipt = meterBody.receiptId
+        ? { receiptId: String(meterBody.receiptId), deductionType: meterBody.deductionType, addonId: meterBody.addonId ?? null }
+        : null;
+    }
+
     if (queryParams && typeof queryParams === "object") {
       Object.entries(queryParams as Record<string, unknown>).forEach(([k, v]) => {
         if (v !== undefined && v !== null) targetUrl.searchParams.append(k, String(v));
@@ -101,8 +129,31 @@ export async function POST(request: NextRequest) {
     }
 
     const response = await axios(axiosConfig);
+
+    // Track the job under the customer so only they can poll / download it, and so a
+    // later failure can still be refunded (see lib/pdfReconcile.ts).
+    if (isGeneration && session) {
+      const job = response.data?.data || response.data;
+      const report = Object.values(REPORT_ENDPOINTS).find((r) => r.path === targetUrl.pathname);
+      if (job?.job_id && report) {
+        await prisma.pdfGenerationJob
+          .create({
+            data: {
+              id: String(job.job_id),
+              userId: session.userId,
+              reportType: report.backendType,
+              language: String(payload?.lang || "en").slice(0, 8),
+              status: "PENDING",
+              creditsCost: report.creditsCost,
+              requestPayload: JSON.parse(JSON.stringify({ birthData: payload, billing: receipt })),
+            },
+          })
+          .catch((e: unknown) => console.error("[proxy] could not record PDF job:", e));
+      }
+    }
     return NextResponse.json(response.data, { status: response.status });
   } catch (err: unknown) {
+    if (receipt) await applyRefund(receipt, axios.isAxiosError(err) ? err.response?.status ?? 502 : 502).catch(() => undefined);
     return upstreamError(err);
   }
 }
@@ -127,6 +178,9 @@ export async function GET(request: NextRequest) {
 
     if (dlMode === "pdf" && jobId) {
       const safeJobId = jobId.replace(/[^a-zA-Z0-9_-]/g, "");
+      if (!(await canAccessJob(safeJobId, session))) {
+        return NextResponse.json({ status: "error", message: "Report not found." }, { status: 404 });
+      }
       const response = await axios({
         method: "GET",
         url: `${BACKEND_URL}/api/v1/pdf/download/${safeJobId}`,
@@ -149,6 +203,10 @@ export async function GET(request: NextRequest) {
     if (target.ok) {
       if (target.adminOnly && session.role !== "ADMIN" && session.role !== "SUPER_ADMIN") {
         return NextResponse.json({ status: "error", message: "Forbidden." }, { status: 403 });
+      }
+      const jobMatch = JOB_ID_PATH.exec(target.url.pathname);
+      if (jobMatch && !(await canAccessJob(jobMatch[1], session))) {
+        return NextResponse.json({ status: "error", message: "Report not found." }, { status: 404 });
       }
       const response = await axios({
         method: "GET",

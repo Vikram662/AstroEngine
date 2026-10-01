@@ -1,8 +1,9 @@
+import time
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, HTMLResponse
 from app.core.config import settings
-from app.core.billing import schedule_refund
+from app.core.billing import schedule_complete, schedule_refund
 from app.modules.core_astronomy.router import router as core_astronomy_router
 from app.modules.panchang.router import router as panchang_router
 from app.modules.parashari.router import router as parashari_router
@@ -421,13 +422,17 @@ async def attach_quota_to_response(request: Request, call_next):
     Middleware that automatically injects subscription quota & balance details
     into both HTTP response headers and the JSON response body (`quota` field).
     """
+    started = time.perf_counter()
     response = await call_next(request)
+    elapsed_ms = int((time.perf_counter() - started) * 1000)
 
     # Refund metered calls that failed (validation error, throttling, server error):
     # the customer should not pay for a request that returned no result.
     receipt = getattr(request.state, "billing_receipt", None)
     if receipt and response.status_code >= 400:
         schedule_refund(receipt, response.status_code)
+    elif receipt:
+        schedule_complete(receipt, elapsed_ms)
 
     # Attach quota headers if authenticated
     quota = getattr(request.state, "quota", None)

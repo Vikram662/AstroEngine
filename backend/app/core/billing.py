@@ -1,6 +1,7 @@
 """Refund of billed API calls that did not produce a result."""
 import asyncio
 import logging
+import os
 from typing import Any, Dict, Optional, Set
 
 import httpx
@@ -53,5 +54,32 @@ def schedule_refund(receipt: Optional[Dict[str, Any]], http_status: int) -> None
     if not receipt:
         return
     task = asyncio.create_task(refund_receipt(receipt, http_status))
+    _pending.add(task)
+    task.add_done_callback(_pending.discard)
+
+
+async def complete_receipt(receipt: Optional[Dict[str, Any]], response_time_ms: int) -> None:
+    """Report the real latency of a successful metered call (best effort)."""
+    if not receipt or not receipt.get("receiptId"):
+        return
+    base_url = (settings.NEXT_APP_URL or "").rstrip("/")
+    if not base_url:
+        return
+    try:
+        async with httpx.AsyncClient(timeout=3.0) as client:
+            await client.post(
+                f"{base_url}/api/internal/complete",
+                json={"receiptId": receipt["receiptId"], "responseTimeMs": response_time_ms},
+                headers={"x-internal-secret": settings.INTERNAL_SECRET_KEY},
+            )
+    except Exception as exc:
+        logger.debug("Completion report for receipt %s failed: %s", receipt.get("receiptId"), exc)
+
+
+def schedule_complete(receipt: Optional[Dict[str, Any]], response_time_ms: int) -> None:
+    """Fire-and-forget. Disable with BILLING_LOG_LATENCY=false to save one internal call per request."""
+    if not receipt or os.getenv("BILLING_LOG_LATENCY", "true").lower() == "false":
+        return
+    task = asyncio.create_task(complete_receipt(receipt, response_time_ms))
     _pending.add(task)
     task.add_done_callback(_pending.discard)

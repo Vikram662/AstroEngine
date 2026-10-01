@@ -9,6 +9,7 @@ export default defineConfig({
     env: {
       SESSION_SECRET: "test-session-secret-0123456789abcdef",
       ASTRO_INTERNAL_SECRET: "test-internal-secret",
+      ASTRO_INTERNAL_API_KEY: "ak_live_test_internal",
     },
   },
 });

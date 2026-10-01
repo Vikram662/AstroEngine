@@ -4,6 +4,7 @@ import { requireAdminSession } from "@/lib/authGuard";
 import { REPORT_ENDPOINTS, buildPdfPayload, dispatchPdfJob } from "@/lib/pdfEngine";
 import { toJsonSafe } from "@/lib/money";
 import { publicMessage } from "@/lib/apiErrors";
+import { getClientIp } from "@/lib/clientIp";
 
 // Actually resubmits a failed PDF job to the backend using its originally stored
 // birth-data payload — jobs created before `requestPayload` was added have no
@@ -55,13 +56,14 @@ export async function POST(req: NextRequest) {
       });
     } catch (dispatchErr: unknown) {
       const dErr = dispatchErr as { message?: string };
+      console.error("[admin/pdf-queue/retry] dispatch error:", dErr.message);
       updatedJob = await prisma.pdfGenerationJob.update({
         where: { id: jobId },
-        data: { status: "FAILED", failureReason: `Retry dispatch error: ${dErr.message || "unknown"}` }
+        data: { status: "FAILED", failureReason: "Retry could not be dispatched to the report engine." }
       });
     }
 
-    const requestIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    const requestIp = getClientIp(req);
     await prisma.auditLog.create({
       data: {
         actorUserId: admin.userId,

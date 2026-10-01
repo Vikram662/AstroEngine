@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Parallel fetch: Paginated logs + Total Count + Global Metrics
-    const [logs, totalFilteredCount, totalLifetimeCalls] = await Promise.all([
+    const [logs, totalFilteredCount, totalLifetimeCalls, lifetimeCredits] = await Promise.all([
       prisma.apiRequestLog.findMany({
         where: whereClause,
         orderBy: { createdAt: "desc" },
@@ -54,6 +54,11 @@ export async function GET(req: NextRequest) {
       }),
       prisma.apiRequestLog.count({
         where: { userId: user.id }
+      }),
+      // Real total over ALL calls (not just the latest sample)
+      prisma.apiRequestLog.aggregate({
+        where: { userId: user.id },
+        _sum: { creditsCost: true }
       })
     ]);
 
@@ -81,7 +86,7 @@ export async function GET(req: NextRequest) {
     const successRate = sampleCount > 0
       ? ((successCount / sampleCount) * 100).toFixed(1)
       : "100.0";
-    const totalCreditsDeducted = recentMetricsSample.reduce((acc, curr) => acc + toMoney(curr.creditsCost), 0);
+    const totalCreditsDeducted = toMoney(lifetimeCredits._sum.creditsCost);
 
     const totalPages = Math.ceil(totalFilteredCount / limit) || 1;
 
