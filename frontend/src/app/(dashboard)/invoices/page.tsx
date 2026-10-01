@@ -427,10 +427,10 @@ export default function InvoicesPage() {
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-line bg-white hover:bg-surface text-ink font-semibold text-xs shadow-2xs transition"
-                      title="View & Download Official GST Tax Invoice (PDF)"
+                      title={tx.creditsAdded > 0 ? "View payment receipt (wallet top-ups carry no GST)" : "View & Download Official GST Tax Invoice (PDF)"}
                     >
                       <FileText className="w-3.5 h-3.5 text-accent" />
-                      <span>GST Invoice (PDF)</span>
+                      <span>{tx.creditsAdded > 0 ? "Receipt" : "GST Invoice (PDF)"}</span>
                       <ExternalLink className="w-3 h-3 text-ink-muted" />
                     </a>
                   </div>

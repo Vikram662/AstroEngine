@@ -2,10 +2,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 
 const db = vi.hoisted(() => ({
-  user: { findUnique: vi.fn() },
-  transaction: { findUnique: vi.fn(), findMany: vi.fn() },
+  user: { findUnique: vi.fn(), count: vi.fn() },
+  transaction: { findUnique: vi.fn(), findMany: vi.fn(), aggregate: vi.fn() },
+  apiRequestLog: { count: vi.fn(), aggregate: vi.fn() },
+  $queryRaw: vi.fn(),
   systemSetting: { findMany: vi.fn() },
-  pdfGenerationJob: { findMany: vi.fn(), create: vi.fn(), update: vi.fn(), findFirst: vi.fn() },
+  pdfGenerationJob: { findMany: vi.fn(), create: vi.fn(), update: vi.fn(), findFirst: vi.fn(), count: vi.fn() },
   auditLog: { create: vi.fn() },
 }));
 vi.mock("@/lib/prisma", () => ({ prisma: db }));
@@ -22,11 +24,12 @@ vi.mock("@/lib/billingRefund", () => refund);
 const engine = vi.hoisted(() => ({ dispatchPdfJob: vi.fn() }));
 vi.mock("@/lib/pdfEngine", async (orig) => ({ ...(await orig<typeof import("@/lib/pdfEngine")>()), dispatchPdfJob: engine.dispatchPdfJob }));
 
-import { computeGst, invoiceNumber } from "@/lib/invoice";
+import { computeGst, invoiceNumber, isWalletTopUp, supplyValue } from "@/lib/invoice";
 import { csvCell, csvRow } from "@/lib/csv";
 import { GET as invoiceGet } from "@/app/api/billing/invoice/[id]/route";
 import { GET as reportsGet } from "@/app/api/admin/reports/route";
 import { POST as queuePost } from "@/app/api/pdf/queue/route";
+import { GET as statsGet } from "@/app/api/admin/stats/route";
 
 const SELLER = { state: "Maharashtra", stateCode: "27" };
 
@@ -53,6 +56,16 @@ describe("computeGst", () => {
   });
 });
 
+describe("GST policy helpers", () => {
+  it("classifies top-ups vs purchases", () => {
+    expect(isWalletTopUp({ creditsAdded: 500 })).toBe(true);
+    expect(isWalletTopUp({ creditsAdded: 0 })).toBe(false);      // plan paid from wallet / gateway
+    expect(isWalletTopUp({ creditsAdded: -299 })).toBe(false);   // add-on bought from the wallet
+    expect(supplyValue({ amount: -299 })).toBe(299);
+    expect(supplyValue({ amount: 4999 })).toBe(4999);
+  });
+});
+
 describe("csv", () => {
   it("neutralises formula injection and quotes separators", () => {
     expect(csvCell("=HYPERLINK(\"http://evil\")")).toBe("\"'=HYPERLINK(\"\"http://evil\"\")\"");
@@ -71,7 +84,7 @@ describe("csv", () => {
 const ctx = (id = "tx1") => ({ params: Promise.resolve({ id }) });
 const invoiceReq = () => new NextRequest("http://x/api/billing/invoice/tx1");
 const baseTx = {
-  id: "abcdef12-1111", userId: "user-0000-1111-2222", status: "SUCCESS", amount: 118, creditsAdded: 118, createdAt: new Date("2026-03-05T10:00:00Z"),
+  id: "abcdef12-1111", userId: "user-0000-1111-2222", status: "SUCCESS", amount: 118, creditsAdded: 0, paymentGateway: "WALLET", createdAt: new Date("2026-03-05T10:00:00Z"),
   user: { email: "owner@example.com", name: "Owner <script>", taxProfile: { businessName: "<b>Evil</b> Co", state: "Karnataka" } },
 };
 
@@ -97,6 +110,31 @@ describe("GET /api/billing/invoice/[id]", () => {
       db.transaction.findUnique.mockResolvedValue({ ...baseTx, status });
       expect((await invoiceGet(invoiceReq(), ctx())).status).toBe(409);
     }
+  });
+
+  it("wallet top-ups get a payment receipt with NO GST; purchases get the tax invoice", async () => {
+    db.transaction.findUnique.mockResolvedValue({ ...baseTx, creditsAdded: 118, paymentGateway: "RAZORPAY" });
+    const receipt = await (await invoiceGet(invoiceReq(), ctx())).text();
+    expect(receipt).toContain("Payment Receipt");
+    expect(receipt).toContain("REC-2026-ABCDEF12");
+    expect(receipt).toContain("Total Amount Received");
+    expect(receipt).toContain("not a tax invoice");
+    expect(receipt).not.toMatch(/CGST|SGST|IGST|Taxable Subtotal/);
+
+    db.transaction.findUnique.mockResolvedValue(baseTx); // paid a plan from the wallet
+    const invoice = await (await invoiceGet(invoiceReq(), ctx())).text();
+    expect(invoice).toContain("Tax Invoice");
+    expect(invoice).toContain("INV-2026-ABCDEF12");
+    expect(invoice).toContain("Taxable Subtotal");
+    expect(invoice).toContain("Paid from wallet balance");
+  });
+
+  it("invoices a wallet add-on purchase (stored with a negative amount) at its positive value", async () => {
+    db.transaction.findUnique.mockResolvedValue({ ...baseTx, amount: -118, creditsAdded: -118, paymentGateway: "WALLET_INTERNAL" });
+    const html = await (await invoiceGet(invoiceReq(), ctx())).text();
+    expect(html).toContain("Modular engine add-on");
+    expect(html).toContain("₹100.00");
+    expect(html).not.toContain("₹-");
   });
 
   it("renders escaped, correct, locked-down HTML", async () => {
@@ -144,11 +182,12 @@ describe("GET /api/admin/reports?export=gstr1_returns", () => {
     expect((await reportsGet(req())).status).toBe(403);
   });
 
-  it("exports gateway payments only, with totals, matching invoice numbers, and escaped cells", async () => {
+  it("exports taxable purchases only (no wallet top-ups), with totals, matching invoice numbers, and escaped cells", async () => {
     const res = await reportsGet(req("&from=2026-03-01&to=2026-03-31"));
     expect(res.status).toBe(200);
     const where = db.transaction.findMany.mock.calls[0][0].where;
-    expect(where.paymentGateway).toEqual({ not: "WALLET" });
+    expect(where.creditsAdded).toEqual({ lte: 0 });        // top-ups add credits: excluded, they carry no GST
+    expect(where.paymentGateway).toBeUndefined();         // wallet-paid purchases ARE taxable sales
     expect(where.status).toBe("SUCCESS");
     expect(where.createdAt.gte).toBeInstanceOf(Date);
 
@@ -163,9 +202,16 @@ describe("GET /api/admin/reports?export=gstr1_returns", () => {
     expect(db.auditLog.create).toHaveBeenCalledTimes(1);
   });
 
-  it("can include wallet-paid rows only on request", async () => {
-    await reportsGet(req("&include_wallet=1"));
-    expect(db.transaction.findMany.mock.calls[0][0].where.paymentGateway).toBeUndefined();
+  it("reports an add-on bought from the wallet (negative amount) as a positive sale", async () => {
+    db.transaction.findMany.mockResolvedValue([
+      { id: "11111111-1", createdAt: new Date("2026-03-05T10:00:00Z"), amount: -118, paymentGateway: "WALLET_INTERNAL", gatewayPaymentId: "addon_pdf_1",
+        user: { email: "c@example.com", taxProfile: null } },
+    ]);
+    const csv = await (await reportsGet(req())).text();
+    const lines = csv.trim().split("\n");
+    expect(lines[1]).toContain("118.00");
+    expect(lines[1]).toContain("100.00");
+    expect(lines[1]).not.toContain("-118");
   });
 });
 
@@ -228,5 +274,27 @@ describe("POST /api/pdf/queue", () => {
     const statuses: number[] = [];
     for (let i = 0; i < 12; i++) statuses.push((await queuePost(req({ reportType: "kundli_basic", birthData: birth }))).status);
     expect(statuses.filter((s) => s === 429).length).toBeGreaterThanOrEqual(2);
+  });
+});
+
+// ── Admin stats: sales vs deposits ────────────────────────────────────────────────
+describe("GET /api/admin/stats revenue", () => {
+  it("counts purchases as revenue and reports wallet top-ups separately", async () => {
+    auth.requireAdminSession.mockResolvedValue({ userId: "a1", role: "ADMIN" });
+    db.user.count.mockResolvedValue(3);
+    db.apiRequestLog.count.mockResolvedValue(10);
+    db.apiRequestLog.aggregate.mockResolvedValue({ _avg: { responseTime: 20 } });
+    db.pdfGenerationJob.count.mockResolvedValue(0);
+    db.$queryRaw.mockResolvedValue([{ 1: 1 }]);
+    vi.stubGlobal("fetch", vi.fn(async () => ({ ok: true })));
+    db.transaction.aggregate.mockImplementation(async ({ where }: { where: { creditsAdded: Record<string, number>; amount?: Record<string, number> } }) => {
+      if (where.creditsAdded.gt === 0) return { _sum: { amount: 10000 } };                 // top-ups
+      if (where.amount?.gt === 0) return { _sum: { amount: 4999 } };                        // plans
+      return { _sum: { amount: -499 } };                                                     // add-ons (negative)
+    });
+    const body = await (await statsGet()).json();
+    expect(body.data.totalRevenue).toBe(5498);
+    expect(body.data.walletTopUps).toBe(10000);
+    vi.unstubAllGlobals();
   });
 });

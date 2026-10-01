@@ -14,19 +14,28 @@ export async function GET() {
 
     const since24h = new Date(Date.now() - 24 * 3600 * 1000);
 
-    // All independent counts run in parallel. Revenue is cash received through the payment
-    // gateway: plan purchases paid from the wallet spend money that was already counted
-    // when the wallet was topped up, so they must not be added a second time.
+    // All independent counts run in parallel. Revenue = sales: plans and add-ons that were
+    // paid for (from the wallet or directly). Wallet top-ups are prepaid deposits, reported
+    // separately, so the same rupee is never counted as both a deposit and a sale.
     const [
       totalUsers, starterUsers, proUsers, enterpriseUsers,
-      revenueAgg, totalApiRequests, latencyAgg, failedPdfJobs, activePdfJobs,
+      salesAgg, addonSalesAgg, topUpAgg, totalApiRequests, latencyAgg, failedPdfJobs, activePdfJobs,
     ] = await Promise.all([
       prisma.user.count(),
       prisma.user.count({ where: { planTier: "STARTER" } }),
       prisma.user.count({ where: { planTier: "PRO" } }),
       prisma.user.count({ where: { planTier: "ENTERPRISE" } }),
       prisma.transaction.aggregate({
-        where: { status: "SUCCESS", paymentGateway: { not: "WALLET" } },
+        where: { status: "SUCCESS", creditsAdded: { lte: 0 }, amount: { gt: 0 } },
+        _sum: { amount: true },
+      }),
+      // wallet add-on purchases are stored with a negative amount
+      prisma.transaction.aggregate({
+        where: { status: "SUCCESS", creditsAdded: { lte: 0 }, amount: { lt: 0 } },
+        _sum: { amount: true },
+      }),
+      prisma.transaction.aggregate({
+        where: { status: "SUCCESS", creditsAdded: { gt: 0 } },
         _sum: { amount: true },
       }),
       prisma.apiRequestLog.count(),
@@ -35,7 +44,8 @@ export async function GET() {
       prisma.pdfGenerationJob.count({ where: { status: { in: ["PENDING", "PROCESSING"] } } }),
     ]);
 
-    const totalRevenue = toMoney(revenueAgg._sum.amount);
+    const totalRevenue = toMoney(salesAgg._sum.amount) + Math.abs(toMoney(addonSalesAgg._sum.amount));
+    const walletTopUps = toMoney(topUpAgg._sum.amount);
     const avgLatency = latencyAgg._avg.responseTime ? Math.round(latencyAgg._avg.responseTime) : 0;
 
     // 5. Live DB Query Latency Check
@@ -67,6 +77,7 @@ export async function GET() {
           enterprise: enterpriseUsers
         },
         totalRevenue,
+        walletTopUps,
         totalApiRequests,
         avgLatency,
         dbHealth: {

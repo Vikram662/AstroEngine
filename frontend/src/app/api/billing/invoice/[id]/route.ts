@@ -5,7 +5,7 @@ import { getVerifiedSession } from "@/lib/authGuard";
 import { toMoney } from "@/lib/money";
 import type { ApiData } from "@/lib/apiTypes";
 import { publicMessage } from "@/lib/apiErrors";
-import { computeGst, invoiceNumber as buildInvoiceNumber } from "@/lib/invoice";
+import { computeGst, invoiceNumber as buildInvoiceNumber, isWalletTopUp, receiptNumber, supplyValue } from "@/lib/invoice";
 import { safeHttpUrl } from "@/lib/html";
 
 // GET /api/billing/invoice/[id] - Generates a printable Tax Invoice / GST Invoice HTML
@@ -104,8 +104,10 @@ export async function GET(
     const customerPan = escapeHtml(taxProfile.pan || (customerGstin.length >= 12 ? customerGstin.substring(2, 12) : ""));
 
     // 18% GST (price is GST-inclusive); CGST+SGST within the seller's state, IGST otherwise.
-    const grossAmount = toMoney(tx.amount);
+    const grossAmount = supplyValue(tx);
     const creditsAdded = toMoney(tx.creditsAdded);
+    // Wallet top-ups are deposits: a receipt without GST. GST is invoiced on purchases.
+    const isTopUp = isWalletTopUp(tx);
     const gst = computeGst(
       grossAmount,
       { state: companyMap["COMPANY_STATE"] || "Maharashtra", stateCode: sellerStateCode },
@@ -113,7 +115,16 @@ export async function GET(
     );
     const { taxable: taxableValue, cgst, sgst, igst, intraState: isIntraState } = gst;
 
-    const invoiceNumber = buildInvoiceNumber(tx);
+    const invoiceNumber = isTopUp ? receiptNumber(tx) : buildInvoiceNumber(tx);
+    const docTitle = isTopUp ? "Payment Receipt" : "Tax Invoice";
+    const paidFromWallet = tx.paymentGateway === "WALLET" || tx.paymentGateway === "WALLET_INTERNAL";
+    const isAddon = toMoney(tx.amount) < 0 || tx.paymentGateway === "WALLET_INTERNAL";
+    const lineTitle = isTopUp
+      ? "Prepaid wallet top-up"
+      : isAddon ? "Modular engine add-on" : "Monthly SaaS Platform Subscription";
+    const lineNote = isTopUp
+      ? `${creditsAdded.toLocaleString()} wallet credits added. A top-up is a prepaid deposit, not a supply of services: GST is charged and invoiced when the wallet is used to purchase services.`
+      : `${paidFromWallet ? "Paid from wallet balance" : "Paid via payment gateway"} • Tiered developer license &amp; quota`;
     const invoiceDate = new Date(tx.createdAt).toLocaleDateString("en-IN", {
       year: "numeric",
       month: "long",
@@ -126,7 +137,7 @@ export async function GET(
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Tax Invoice - ${invoiceNumber}</title>
+  <title>${docTitle} - ${invoiceNumber}</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
     body { background-color: #f8fafc; padding: 40px 20px; color: #0f172a; }
@@ -287,9 +298,9 @@ export async function GET(
         <div class="brand-sub" style="margin-top: 6px;">GSTIN: <strong>${sellerGstin}</strong> • SAC Code: <strong>${sellerSacCode}</strong></div>
       </div>
       <div class="tax-badge">
-        <span class="badge-pill">Tax Invoice</span>
+        <span class="badge-pill">${docTitle}</span>
         <div class="invoice-meta">
-          <div><strong>Invoice No:</strong> ${invoiceNumber}</div>
+          <div><strong>${isTopUp ? "Receipt No" : "Invoice No"}:</strong> ${invoiceNumber}</div>
           <div><strong>Date of Issue:</strong> ${invoiceDate}</div>
           <div><strong>Place of Supply:</strong> ${isIntraState ? `${sellerState} (${sellerStateCode})` : (customerState || sellerState)}</div>
         </div>
@@ -339,20 +350,21 @@ export async function GET(
         <tr>
           <td>1</td>
           <td>
-            <strong>${creditsAdded > 0 ? "Prepaid API Compute Credits Top-up" : "Monthly SaaS Platform Subscription"}</strong>
+            <strong>${lineTitle}</strong>
             <div style="font-size: 11px; color: #64748b; margin-top: 2px;">
-              ${creditsAdded > 0 ? `Dispatched ${creditsAdded.toLocaleString()} computational wallet credits for calculations & PDFs` : "Tiered developer license & quota"}
+              ${lineNote}
             </div>
           </td>
-          <td class="num-col">998313</td>
+          <td class="num-col">${isTopUp ? "-" : sellerSacCode}</td>
           <td class="num-col">1</td>
-          <td class="num-col">₹${taxableValue.toFixed(2)}</td>
+          <td class="num-col">₹${(isTopUp ? grossAmount : taxableValue).toFixed(2)}</td>
         </tr>
       </tbody>
     </table>
 
     <div class="totals-area">
       <table class="totals-table">
+        ${isTopUp ? "" : `
         <tr>
           <td>Taxable Subtotal</td>
           <td class="num-col">₹${taxableValue.toFixed(2)}</td>
@@ -372,15 +384,16 @@ export async function GET(
           <td class="num-col">₹${igst.toFixed(2)}</td>
         </tr>
         `}
+        `}
         <tr class="total-row">
-          <td>Total Gross Invoice (INR)</td>
+          <td>${isTopUp ? "Total Amount Received (INR)" : "Total Gross Invoice (INR)"}</td>
           <td class="num-col">₹${grossAmount.toFixed(2)}</td>
         </tr>
       </table>
     </div>
 
     <div class="footer">
-      This is a computer-generated tax invoice issued pursuant to Section 31 of the CGST Act, 2017.<br>
+      ${isTopUp ? "This is a computer-generated payment receipt. It is not a tax invoice." : "This is a computer-generated tax invoice issued pursuant to Section 31 of the CGST Act, 2017."}<br>
       No physical signature is required. For any billing inquiries, contact <strong>billing@astroengine.io</strong>.
     </div>
   </div>

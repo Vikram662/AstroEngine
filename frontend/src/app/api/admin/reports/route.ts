@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAdminSession } from "@/lib/authGuard";
 import { toMoney } from "@/lib/money";
 import { publicMessage } from "@/lib/apiErrors";
-import { computeGst, invoiceNumber } from "@/lib/invoice";
+import { computeGst, invoiceNumber, supplyValue } from "@/lib/invoice";
 import { csvRow } from "@/lib/csv";
 import { getClientIp } from "@/lib/clientIp";
 
@@ -55,14 +55,12 @@ export async function GET(req: NextRequest) {
     const exportType = searchParams.get("export");
 
     // ── GSTR-1 style sales register ────────────────────────────────────────────
-    // Cash-received basis: only money that came in through the payment gateway. Plan
-    // purchases paid from the wallet are a second record of the same rupees (they were
-    // counted when the wallet was topped up), so they are excluded unless
-    // include_wallet=1 is passed.
+    // Taxable supplies only: plans / add-ons bought from the wallet or directly through
+    // the gateway. Wallet top-ups are prepaid deposits without GST (they get a receipt,
+    // not a tax invoice), so they are not in this register.
     if (exportType === "gstr1_returns") {
       const from = parseDate(searchParams.get("from"));
       const to = parseDate(searchParams.get("to"), true);
-      const includeWallet = searchParams.get("include_wallet") === "1";
 
       const settings = await prisma.systemSetting.findMany({
         where: { key: { in: ["COMPANY_STATE", "COMPANY_STATE_CODE"] } },
@@ -73,7 +71,7 @@ export async function GET(req: NextRequest) {
       const txs = await prisma.transaction.findMany({
         where: {
           status: "SUCCESS",
-          ...(includeWallet ? {} : { paymentGateway: { not: "WALLET" } }),
+          creditsAdded: { lte: 0 }, // purchases only (top-ups add credits)
           ...(from || to ? { createdAt: { ...(from ? { gte: from } : {}), ...(to ? { lte: to } : {}) } } : {}),
         },
         select: {
@@ -92,7 +90,7 @@ export async function GET(req: NextRequest) {
 
       for (const t of txs) {
         const profile = (t.user.taxProfile || {}) as { gstin?: string; state?: string };
-        const g = computeGst(toMoney(t.amount), { state: sellerState, stateCode: sellerStateCode }, profile);
+        const g = computeGst(supplyValue(t), { state: sellerState, stateCode: sellerStateCode }, profile);
         totals.gross += g.gross; totals.taxable += g.taxable; totals.cgst += g.cgst; totals.sgst += g.sgst; totals.igst += g.igst;
         csv += csvRow([
           invoiceNumber(t), t.createdAt.toISOString().substring(0, 10), t.user.email,
@@ -105,7 +103,7 @@ export async function GET(req: NextRequest) {
       csv += csvRow(["TOTAL", "", "", "", "", r2(totals.gross), r2(totals.taxable), r2(totals.cgst), r2(totals.sgst), r2(totals.igst), "", ""]) + "\n";
       if (txs.length === MAX_EXPORT_ROWS) csv += csvRow([`NOTE: export truncated at ${MAX_EXPORT_ROWS} rows - narrow the date range`]) + "\n";
 
-      await audit(admin, req, "REPORT_EXPORT_GSTR1", { rows: txs.length, from: from?.toISOString(), to: to?.toISOString(), includeWallet });
+      await audit(admin, req, "REPORT_EXPORT_GSTR1", { rows: txs.length, from: from?.toISOString(), to: to?.toISOString() });
       return csvResponse(csv, `GSTR1_${new Date().toISOString().substring(0, 10)}.csv`);
     }
 

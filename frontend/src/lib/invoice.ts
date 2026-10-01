@@ -1,7 +1,29 @@
 // Single source of truth for invoice numbering and GST maths, shared by the
 // printable invoice and the GSTR-1 CSV export so the two always agree.
 
+import { toMoney } from "@/lib/money";
+
 export const GST_RATE = 0.18;
+
+/**
+ * Policy: a wallet TOP-UP is a prepaid deposit, not a sale, so it carries no GST and gets
+ * a payment receipt. GST is charged (and a tax invoice issued) when the money is used to
+ * BUY something: a plan or add-on paid from the wallet, or a plan paid directly through
+ * the gateway. Top-ups are recognised by the credits they add (> 0); every purchase
+ * record has creditsAdded <= 0 (add-on purchases from the wallet store negative values).
+ */
+export function isWalletTopUp(tx: { creditsAdded: unknown }): boolean {
+  return toMoney(tx.creditsAdded as never) > 0;
+}
+
+/** Value of the supply in rupees (add-on wallet purchases store a negative amount). */
+export function supplyValue(tx: { amount: unknown }): number {
+  return Math.abs(toMoney(tx.amount as never));
+}
+
+export function receiptNumber(tx: { id: string; createdAt: Date | string }): string {
+  return `REC-${new Date(tx.createdAt).getFullYear()}-${tx.id.substring(0, 8).toUpperCase()}`;
+}
 
 const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 
