@@ -189,8 +189,8 @@ export async function POST(req: NextRequest) {
 
     // Seed default PLAN_MODULES settings into MySQL SystemSetting table
     const defaultTierModules = [
-      { key: "PLAN_MODULES_STARTER", value: "core,panchang,parashari,general" },
-      { key: "PLAN_MODULES_PRO", value: "core,panchang,parashari,dasha,kp,dosha,matching,dosha_matching,remedies,numerology,western,lalkitab,advanced,general" },
+      { key: "PLAN_MODULES_STARTER", value: "core,panchang,parashari,general,tarot,vastu" },
+      { key: "PLAN_MODULES_PRO", value: "core,panchang,parashari,dasha,kp,dosha,matching,dosha_matching,remedies,numerology,western,lalkitab,advanced,general,tarot,vastu" },
       { key: "PLAN_MODULES_ENTERPRISE", value: "*" }
     ];
 

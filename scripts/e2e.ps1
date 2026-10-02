@@ -52,6 +52,9 @@ try {
   if ($LASTEXITCODE -ne 0) { throw "Could not connect to the temporary database (see $tmp\mysql.err)." }
 
   $env:DATABASE_URL = "mysql://root:$dbPass@127.0.0.1:$DbPort/astro_e2e"
+  # Prisma's occasional "update available" box goes to stderr, which PowerShell 5.1 turns
+  # into a terminating error under ErrorActionPreference=Stop.
+  $env:PRISMA_HIDE_UPDATE_MESSAGE = "1"
 
   Write-Host "[2/7] Schema + seed ..."
   Push-Location $fe

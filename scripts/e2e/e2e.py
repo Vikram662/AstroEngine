@@ -217,8 +217,10 @@ sql(f"UPDATE User SET activeAddons='[]' {DEV_WHERE}")
 code, _, _ = api.req("POST", BE + "/api/v1/tarot/daily-card", {}, {})
 code_v, _, _ = api.req("GET", BE + "/api/v1/vastu/zones-guide", None, {})
 check("tarot and vastu need an API key", code == 401 and code_v == 401, f"{code} {code_v}")
-code, body, _ = api.req("POST", BE + "/api/v1/tarot/daily-card", {}, {"x-api-key": DEV_KEY})
-check("tarot is plan-gated like other modules (STARTER -> 403)", code == 403 and body.get("detail", {}).get("error_code") == "PLAN_UPGRADE_OR_ADDON_REQUIRED", f"{code} {body}")
+tu0 = int(sql(f"SELECT monthlyUsage FROM User {DEV_WHERE}")[0][0])
+code, body, h = api.req("POST", BE + "/api/v1/tarot/daily-card", {}, {"x-api-key": DEV_KEY})
+tu1 = int(sql(f"SELECT monthlyUsage FROM User {DEV_WHERE}")[0][0])
+check("tarot is in the STARTER plan and metered from its quota", code == 200 and tu1 == tu0 + 1 and {k.lower(): v for k, v in h.items()}.get("x-quota-deduction-type") == "QUOTA", f"{code} {tu0}->{tu1} {str(body)[:120]}")
 restore = lambda v: "NULL" if v == "null" else "'" + v.replace("'", "''") + "'"
 sql(f"UPDATE User SET activeAddons={restore(saved_addons[0])}, addonUsage={restore(saved_addons[1])}, walletBalance=100 {DEV_WHERE}")
 

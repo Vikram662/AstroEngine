@@ -64,8 +64,8 @@ async function main() {
     { key: "SMTP_PASSWORD", value: "", category: "EMAIL", description: "SMTP app password" },
     { key: "SMTP_FROM_NAME", value: "AstroEngine", category: "EMAIL", description: "Sender display name" },
     // Which API modules each plan may call (checked on every request)
-    { key: "PLAN_MODULES_STARTER", value: "core,panchang,parashari,general", category: "PERMISSIONS", description: "Allowed API modules for STARTER" },
-    { key: "PLAN_MODULES_PRO", value: "core,panchang,parashari,dasha,kp,dosha,matching,dosha_matching,remedies,numerology,western,lalkitab,advanced,general", category: "PERMISSIONS", description: "Allowed API modules for PRO" },
+    { key: "PLAN_MODULES_STARTER", value: "core,panchang,parashari,general,tarot,vastu", category: "PERMISSIONS", description: "Allowed API modules for STARTER" },
+    { key: "PLAN_MODULES_PRO", value: "core,panchang,parashari,dasha,kp,dosha,matching,dosha_matching,remedies,numerology,western,lalkitab,advanced,general,tarot,vastu", category: "PERMISSIONS", description: "Allowed API modules for PRO" },
     { key: "PLAN_MODULES_ENTERPRISE", value: "*", category: "PERMISSIONS", description: "Allowed API modules for ENTERPRISE" },
   ];
 
