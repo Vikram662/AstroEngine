@@ -10,14 +10,16 @@ This is the repository's single maintained Markdown document. It consolidates th
 
 Everything below is needed once, in this order. Details for each step are further down.
 
-1. **CI:** push to GitHub and check the Actions tab is green (typecheck, lint, 155 frontend + 73 backend tests, dependency audits).
+1. **CI:** push to GitHub and check the Actions tab is green (typecheck, lint, 159 frontend + 92 backend tests, dependency audits).
 2. **Database:** `cd frontend && npx prisma db push && npx prisma generate`, **then** restart the app (never the other way round: the new code reads the new tables / columns).
 3. **Environment:** fill `frontend/.env` and `backend/.env` (see *Environment variables*). Mandatory: `DATABASE_URL`, `SESSION_SECRET`, `ASTRO_INTERNAL_SECRET` (= backend `INTERNAL_SECRET_KEY`), `NEXT_APP_URL` (backend), `ASTRO_BACKEND_URL`, `ASTRO_INTERNAL_API_KEY`, `NEXT_PUBLIC_APP_URL`. Recommended: `REDIS_URL`, `SETTINGS_ENCRYPTION_KEY` (back it up).
 4. **Seed once:** `npm run seed`. Copy the admin password and the admin API key it prints (shown once); the API key goes into `ASTRO_INTERNAL_API_KEY`.
 5. **Credentials in Admin > Settings:** Razorpay (key, secret, webhook secret), SMTP, Cloudflare R2, company / GST details. Rotate any credential that was ever seeded with a dummy value. Then run `npm run encrypt-settings` if you set `SETTINGS_ENCRYPTION_KEY`.
-6. **Admin accounts:** enable two-factor authentication (Dashboard > Profile).
-7. **Scheduled jobs** (Windows Task Scheduler, or cron): see the table below.
-8. **Smoke-test on staging** with real MySQL / SMTP / Razorpay test keys: sign-up (OTP), login, forgot password, 2FA login; recharge (receipt + email); buy a plan (invoice number, same number on reload); generate a report (customer's wallet is charged, "report ready" email); make a report fail (refund + email); switch a notification off and confirm nothing arrives; run the monthly invoice job for last month.
+6. **Plan modules (existing databases only):** Tarot and Vastu now need an API key and are plan-gated. A fresh seed already includes them in STARTER and PRO; on a database that existed before, add `,tarot,vastu` to `PLAN_MODULES_STARTER` and `PLAN_MODULES_PRO` in Admin > Settings (seeds never overwrite an existing setting).
+7. **Admin accounts:** enable two-factor authentication (Dashboard > Profile).
+8. **Scheduled jobs** (Windows Task Scheduler, or cron): see the table below.
+9. **Backend environment:** `ENVIRONMENT=production` (otherwise the local test-key bypass is active), the Swiss Ephemeris files in `EPHE_PATH`, and Redis if you run more than one worker.
+10. **Smoke-test on staging** with real MySQL / SMTP / Razorpay test keys: sign-up (OTP), login, forgot password, 2FA login; recharge (receipt + email); buy a plan (invoice number, same number on reload); generate a report (customer's wallet is charged, "report ready" email); make a report fail (refund + email); switch a notification off and confirm nothing arrives; run the monthly invoice job for last month.
 
 ### Scheduled jobs
 
@@ -27,16 +29,18 @@ Everything below is needed once, in this order. Details for each step are furthe
 | `scripts/monthly-invoices.ps1 -BaseUrl <app>` | 1st of every month | Issues one consolidated GST usage invoice per customer for last month (per-call overage + report charges) and any missing purchase invoices. Idempotent. |
 | `scripts/backup.ps1` | daily | MySQL dump + the PDF-job SQLite DB, with retention. Copy the output off the machine. |
 
-Each script header contains a ready-made `schtasks` command. The two billing scripts read `ASTRO_INTERNAL_SECRET` from the environment or `frontend/.env`.
+Each script header contains a ready-made `schtasks` command. The two billing scripts read `ASTRO_INTERNAL_SECRET` from the environment or `frontend/.env`. Without the every-minute job new e-mails are still sent (the app tries immediately), but failed e-mails are never retried, failed reports are not refunded in the background and error-spike alerts never fire; how the queue works is described under *Notifications* at the end.
+
+`scripts/e2e.ps1` + `scripts/e2e/` are not scheduled jobs: they are the end-to-end test described below.
 
 ### Testing and CI
 
 ```bash
-cd frontend && npm test && npm run typecheck && npm run lint     # Vitest (155 tests), tsc, eslint
-cd backend  && pip install -r requirements-dev.txt && pytest      # 73 tests
+cd frontend && npm test && npm run typecheck && npm run lint     # Vitest (159 tests), tsc, eslint
+cd backend  && pip install -r requirements-dev.txt && pytest      # 92 tests (backend/pytest.ini puts backend/ on the import path)
 ```
 
-GitHub Actions (`.github/workflows/ci.yml`) runs both on every push and pull request, plus `npm audit` and `pip-audit`; Dependabot proposes dependency updates weekly. One legacy test, `test_all_117_endpoints_live`, needs the Swiss Ephemeris data and a running Next.js, so CI deselects it: run it by hand against a full stack. The unit tests use mocked databases. For a **real end-to-end check without mocks** run `.\scripts\e2e.ps1` (add `-SkipBuild` to reuse the production build): it starts a temporary MariaDB (XAMPP binaries, separate data folder in `%TEMP%`, port 3399; your own databases and dev servers are not touched), pushes the schema, seeds, starts the production Next.js build (port 3010) and the Python engine (port 8010), and runs 73 checks: sign-up with e-mail OTP, login, password reset with session revocation, 2FA, API-key metering / quota headers / refund of a failed call, reports billed to the customer (API and dashboard), free polling, PDF download, wallet purchase with a consecutive GST invoice, notification switches and worker, month-end usage invoice, GSTR-1 and access control. It removes everything it created and exits non-zero if any check fails. It does not replace a staging test with your real SMTP / Razorpay.
+GitHub Actions (`.github/workflows/ci.yml`) runs both on every push and pull request, plus `npm audit` and `pip-audit`; Dependabot proposes dependency updates weekly. One legacy test, `test_all_117_endpoints_live`, needs the Swiss Ephemeris data and a running Next.js, so CI deselects it: run it by hand against a full stack. The unit tests use mocked databases. For a **real end-to-end check without mocks** run `.\scripts\e2e.ps1` (add `-SkipBuild` to reuse the production build): it starts a temporary MariaDB (XAMPP binaries, separate data folder in `%TEMP%`, port 3399; your own databases and dev servers are not touched), pushes the schema, seeds, starts the production Next.js build (port 3010) and the Python engine (port 8010), and runs 79 checks: sign-up with e-mail OTP, login, password reset with session revocation, 2FA, API-key metering / quota headers / refund of a failed call, 20 parallel add-on calls (exact usage count and overage under real row locks), add-on and plan-module matching, Tarot / Vastu authentication, reports billed to the customer (API and dashboard), free polling, PDF download, wallet purchase with a consecutive GST invoice, notification switches and worker, month-end usage invoice, GSTR-1 and access control. It removes everything it created and exits non-zero if any check fails. It does not replace a staging test with your real SMTP / Razorpay.
 
 ---
 
@@ -94,7 +98,7 @@ No Docker — both services deploy on native runtimes (`pip install` + `uvicorn`
 
 The backend exposes REST endpoints across these modules: Core Astronomy, Panchang & Muhurat, Parashari Kundli & Divisional Charts (Vargas), Dasha Systems (Vimshottari, Yogini, Char/Jaimini), KP System, Lal Kitab, Jaimini & Tajik Varshphal, Dosha Analysis & Matchmaking, Astrological Remedies, Numerology, Western Astrology, AI Astrologer, Tarot, Vastu Shastra, and White-Label PDF Reports.
 
-Standard request body (`BirthDataRequest`): `dob, tob, lat, lon, tz (default 5.5), ayanamsa (default LAHIRI), lang (default en)`. Auth via `x-api-key` header only (never a query param). Standard response envelopes: `200` success `{status, language, data}`; `202` async job `{status:"PENDING", job_id, poll_url}`.
+Standard request body (`BirthDataRequest`): `dob, tob, lat, lon, tz (default 5.5), ayanamsa (default LAHIRI), lang (default en)`. Auth via `x-api-key` header only (never a query param); this applies to every module, including Tarot and Vastu (until 2026-10 those two were open without a key). Each module is gated by the caller's plan (`PLAN_MODULES_<TIER>`) or an active add-on. Standard response envelopes: `200` success `{status, language, data}`; `202` async job `{status:"PENDING", job_id, poll_url}`.
 
 **Endpoint count:** treat the live `app.openapi()` route count as the only source of truth — historical docs quoted 37, ~115, and 135 in different places (see §8). Confirm the current number by hitting `/openapi.json` rather than trusting any document, including this one.
 
@@ -141,6 +145,10 @@ Core astronomy (planetary positions, ascendant, Panchang) matches raw `pyswissep
 - A deep formula audit (beyond the original review's scope) fixed real bugs in Avasthas (unreachable Swapna state) and rewrote Shadbala/Bhavabala's Dig/Kaala/Chesta/Drik Bala components against classical reference sources (Saravali, PyJHora) — some components remain documented approximations rather than exact (e.g. Chesta Bala for non-Sun/Moon planets), not silently claimed as fully exact.
 
 - **Endpoint calculation implementation completed:** Commit `f475bc5` implemented classical astrological calculations across all modules (including Tajik Sahams, Karakamsha, Muntha, Arudhas, Dasha systems, Sade Sati transits, Ashtakvarga, KP horary, 12 Houses predictions, etc.). The automated test suite (`backend/tests/verify_117_endpoints.py`) executed against all live paths confirmed **125 endpoints REAL & VALIDATED**, 7 Real Async PDF jobs, and 0 fake stopgap responses.
+- **Independent accuracy check (2026-10):** results were compared with NASA JPL DE421 (Skyfield, independent of Swiss Ephemeris) and with classical rules, for places in both hemispheres and on both sides of Greenwich, including a birth just after midnight. Planet longitudes agree within 1 arc-second, the ascendant within 0.02 deg, sunrise / sunset within 5 seconds. Tithi on known Purnima / Amavasya days, Vimshottari dasha, all 15 Varga rules (D2-D60), the KP 249 table, Lal Kitab houses, Jaimini karakas, numerology / Lo Shu, Rahu Kaal / Yamaganda / Gulika, Choghadiya and Hora were all correct. Ashtakoot totals stay within 0-36 for all 108 x 108 nakshatra-pada pairs.
+- **Fixed by that check:** Yogini dasha started one yogini late for every chart (now `(nakshatra + 3) mod 8`: Ashwini = Bhramari, Ardra = Mangala); KP sub-sub horary 1-2193 split each sub into 9 equal parts starting from Ketu (now in Vimshottari proportion, starting from the sub lord, with sign-boundary splits: 243 x 9 + 6 = 2193 arcs).
+- **Known differences, not bugs:** the engine uses Swiss Ephemeris' default `SIDM_LAHIRI`. Drik Panchang appears to use a slightly different Lahiri (`SIDM_LAHIRI_VP285` matched its published times), so Sankranti / muhurat times come out 7-10 minutes earlier than Drik Panchang (about 22 arc-seconds; a chart only changes for a birth right on a sign or nakshatra boundary). The `ayanamsa_degree` shown includes nutation (23.8571 deg on 2000-01-01) while positions use the mean value (23.8532 deg). Rahu / Ketu are the mean node. Dasha years are 365.2422 days. Interpretive text (predictions, remedies, AI astrologer) cannot be checked this way and needs an astrologer's review.
+- Swiss Ephemeris keeps the ayanamsa per thread (a new thread starts on Fagan-Bradley), so every calculation sets its own; a test checks that PDF calculations, which run in worker threads, give the same result as on the main thread.
 - Historical reports that `frontend/src/lib` was missing are no longer current; locale, PDF dispatch, and R2 upload helpers now live there.
 - The dashboard PDF queue now dispatches through `frontend/src/lib/pdfEngine.ts`, persists the original request payload, and supports a real admin retry route instead of a dead UI action.
 
@@ -164,11 +172,13 @@ A full security review was carried out and its findings fixed (history in `git l
 **Money**
 - Razorpay signatures are mandatory in every environment, the amount is always taken from the server-side order, the webhook is refused until its secret is configured, and a plan is activated only if the amount actually paid covers it.
 - Quota and wallet debits are single conditional database statements (no overdraw under concurrency); every metered call has a receipt, and a failed call or report is **refunded exactly once**.
+- Add-on usage (one JSON column per user) is read and written under a row lock (`SELECT ... FOR UPDATE` inside a transaction, `frontend/src/lib/addonUsage.ts`) for API add-ons, the PDF add-on and refunds, so parallel calls cannot exceed an add-on's quota or overwrite another add-on's counter (verified with 20 parallel calls on real MariaDB).
+- Plans and add-ons unlock modules by **exact id**. The engine sends module ids as URL segments (`dosha-matching`) and the database stores them with underscores (`dosha_matching`); both are normalised before comparing (until 2026-10 this mismatch gave PRO plans and the Matchmaking / Dosha add-ons a 403). The `doshas` add-on also unlocks `dosha_matching`. Add-ons no longer match on words in their name or feature list.
+- A PDF uploaded to R2 is only linked through `R2_PUBLIC_DOMAIN`; without it the customer gets the local download URL (the private S3 endpoint never works as a link).
 - Money fields are `Decimal`, converted at one place (`frontend/src/lib/money.ts`).
 - Razorpay / R2 / SMTP secrets can be encrypted at rest (`SETTINGS_ENCRYPTION_KEY`); only the storage settings are exposed to the engine.
 
 **Known limitations** (deliberately left, with the reason)
-- The per-add-on usage counter is a read-modify-write on a JSON column (small race on very bursty add-on traffic); fixing it needs raw SQL that must be tested on MySQL.
 - PDF generation runs in threads inside the API process (bounded by `PDF_MAX_CONCURRENCY`), not in a separate job queue; rate limits are per process unless Redis is configured.
 - Two-factor authentication has no backup codes yet (an admin who loses their phone needs a database reset of the 2FA columns), and it is optional.
 - Reports created straight through the public API (not the dashboard) are not tracked in the database, so they get no "ready / failed" notification.
@@ -280,12 +290,13 @@ The old docs disagreed with each other on several numbers. Resolutions:
 - `frontend/src/lib/offers.ts` — shared server-side offer validation, price calculation, and one-time redemption recording.
 - `frontend/src/lib/r2Upload.ts` — shared Cloudflare R2 upload/signing helper.
 - `frontend/src/lib/metering.ts` — the billing core: entitlement, atomic quota / wallet debit, per-report price, receipts, usage alerts. Used by the API gateway, the dashboard and the proxy.
+- `frontend/src/lib/addonUsage.ts` — add-on usage under a row lock (`claimAddonUnit`, `lockAddonUsage`).
 - `frontend/src/lib/billingRefund.ts`, `pdfReconcile.ts` — exactly-once refunds; re-sync of running reports.
 - `frontend/src/lib/invoicing.ts`, `invoice.ts`, `invoiceHtml.ts` — consecutive GST invoice numbers, GST maths, invoice / receipt rendering. `csv.ts` — safe CSV cells.
 - `frontend/src/lib/notifications.ts`, `notificationPrefs.ts`, `notificationTemplates.ts` — notification queue, the user's on/off switches, e-mail templates.
 - `frontend/src/lib/session.ts`, `webSession.ts`, `sessionSecret.ts`, `passwords.ts`, `otp.ts`, `totp.ts`, `rateLimit.ts`, `ssrf.ts`, `secretBox.ts` — auth and hardening primitives.
 - `frontend/src/__tests__/` — Vitest suites (billing, invoices, notifications, auth, 2FA, proxy, libs). `backend/tests/` — pytest.
-- `frontend/prisma/` — schema and the seed scripts (`seed*.mts`). `scripts/` — the scheduled jobs. `.github/` — CI and Dependabot.
+- `frontend/prisma/` — schema and the seed scripts (`seed*.mts`). `scripts/` — the scheduled jobs and the end-to-end test (`e2e.ps1`, `e2e/`). `.github/` — CI and Dependabot.
 - `C:\xampp\htdocs\my-app\docs\astroengine_review_scripts\` (outside this repo) — the independent verification harness referenced in §6.
 
 ## Environment variables
