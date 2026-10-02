@@ -55,3 +55,25 @@ def test_planetary_positions_execution():
     assert sun["name"] == "सूर्य"
     assert sun["sign"]["name"] == "कन्या" or sun["sign"]["name"] == "सिंह" # Verified by math
     assert "ascendant" in res
+
+
+
+def test_pdf_calculations_match_in_a_fresh_worker_thread():
+    """PDF jobs compute in worker threads (asyncio.to_thread). Swiss Ephemeris keeps the
+    ayanamsa per thread and a new thread starts on Fagan-Bradley, so every calculation
+    must set its own mode; one that forgot would give PDFs a chart ~0.9 deg off."""
+    import json
+    import threading
+    from app.modules.parashari.calculator import compute_varga_chart, calculate_parashari_yogas
+
+    birth = dict(dob="1995-10-05", tob="14:30", lat=24.5854, lon=73.7125, tz=5.5)
+    calls = [lambda: compute_varga_chart(**birth, varga="D1"),
+             lambda: compute_varga_chart(**birth, varga="D9"),
+             lambda: calculate_parashari_yogas(**birth)]
+    for call in calls:
+        expected = json.dumps(call(), default=str, sort_keys=True)
+        result = {}
+        worker = threading.Thread(target=lambda: result.update(v=json.dumps(call(), default=str, sort_keys=True)))
+        worker.start()
+        worker.join()
+        assert result["v"] == expected

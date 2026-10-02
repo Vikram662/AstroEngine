@@ -3,8 +3,11 @@ import hashlib
 import hmac
 import datetime
 from typing import Optional, Tuple
+import logging
 import httpx
 from app.core.config import settings, get_dynamic_setting
+
+logger = logging.getLogger("astroengine.storage")
 
 STORAGE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "storage"))
 REPORTS_DIR = os.path.join(STORAGE_DIR, "reports")
@@ -95,7 +98,11 @@ async def upload_to_r2_async(job_id: str, pdf_bytes: bytes, report_type: str = "
                 if public_domain:
                     domain = public_domain.rstrip("/")
                     return f"{domain}/{object_key}"
-                return endpoint_url
+                # The S3 endpoint itself needs signed requests, so handing it to a
+                # customer gives a link that never opens. Keep the R2 copy as a backup
+                # and let the caller serve the local download URL instead.
+                logger.warning("R2_PUBLIC_DOMAIN is not set; serving report %s from local storage", job_id)
+                return None
     except Exception:
         # Fallback to local if network/credentials fail
         pass

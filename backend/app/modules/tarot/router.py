@@ -7,7 +7,8 @@ Endpoints:
 - GET  /api/v1/tarot/deck
 """
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from app.core.security import verify_api_key
 from pydantic import BaseModel, Field
 from typing import Optional, List
 from app.modules.tarot.spreads import (
@@ -17,7 +18,8 @@ from app.modules.tarot.spreads import (
 )
 from app.modules.tarot.deck import ALL_TAROT_CARDS
 
-router = APIRouter(prefix="/api/v1/tarot", tags=["Tarot Card Readings"])
+# Every route is metered and rate-limited like the rest of the API.
+router = APIRouter(prefix="/api/v1/tarot", tags=["Tarot Card Readings"], dependencies=[Depends(verify_api_key)])
 
 class QuestionRequest(BaseModel):
     question: Optional[str] = Field(None, description="User's query or focus intention")

@@ -6,7 +6,8 @@ Endpoints:
 - GET  /api/v1/vastu/preset-layouts
 """
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from app.core.security import verify_api_key
 from typing import Optional, List
 from app.modules.vastu.engine import (
     evaluate_vastu_harmony,
@@ -15,7 +16,8 @@ from app.modules.vastu.engine import (
     VASTU_ZONES_CONFIG
 )
 
-router = APIRouter(prefix="/api/v1/vastu", tags=["Vastu Shastra Engine"])
+# Every route is metered and rate-limited like the rest of the API.
+router = APIRouter(prefix="/api/v1/vastu", tags=["Vastu Shastra Engine"], dependencies=[Depends(verify_api_key)])
 
 @router.post("/evaluate")
 def evaluate_property_vastu(req: VastuEvaluationRequest):

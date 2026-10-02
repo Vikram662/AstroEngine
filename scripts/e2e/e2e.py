@@ -87,6 +87,11 @@ LOG = sys.argv[1]
 for t in ("Notification", "Invoice", "InvoiceCounter", "PdfGenerationJob", "ApiRequestLog", "Transaction"):
     sql(f"DELETE FROM {t}")
 sql("UPDATE User SET walletBalance=100, monthlyUsage=0, planTier='STARTER', notificationPrefs=NULL, totpEnabled=0, totpSecret=NULL WHERE email='developer@astroengine.io'")
+# Add-ons used by section 4b, created before the first metered call (the app caches the add-on list).
+sql("INSERT INTO AddonPackage (id, name, category, priceMonthly, monthlyQuota, rateLimitPerMin, overageCost, description, features, icon, isActive, updatedAt) VALUES "
+    "('kp', 'KP Astrology', 'CALCULATIONS', 0, 5, 60, 0.05, 'e2e', '[]', 'Star', 1, NOW()), "
+    "('dosha_matching', 'Matchmaking & Dosha Engine', 'CALCULATIONS', 0, 1000, 60, 0.05, 'e2e', '[]', 'Heart', 1, NOW()) "
+    "ON DUPLICATE KEY UPDATE monthlyQuota=VALUES(monthlyQuota), overageCost=VALUES(overageCost), isActive=1, updatedAt=NOW()")
 
 # ────────────────────────────────────────────────────────────────────────────────────────────
 print("== 1. sign-up with e-mail OTP, login, session")
@@ -189,6 +194,33 @@ code, body, _ = api.req("POST", BE + "/api/v1/core/planets/positions", {"dob": "
 check("unknown key -> 401", code == 401, f"{code}")
 code, _, _ = api.req("POST", BE + "/api/v1/core/planets/positions", {}, {})
 check("no key -> 401", code == 401)
+
+# ────────────────────────────────────────────────────────────────────────────────────────────
+print("== 4b. add-on metering under concurrency (real row locks), module ids, tarot/vastu auth")
+from concurrent.futures import ThreadPoolExecutor
+DEV_WHERE = "WHERE email='developer@astroengine.io'"
+saved_addons = sql(f"SELECT COALESCE(activeAddons, 'null'), COALESCE(addonUsage, 'null') FROM User {DEV_WHERE}")[0]
+sql(f"UPDATE User SET activeAddons='[\"kp\"]', addonUsage='{{\"pdf\": 2}}', walletBalance=100 {DEV_WHERE}")
+birth = {"dob": "1995-10-05", "tob": "14:30", "lat": 24.58, "lon": 73.71, "tz": 5.5}
+wk0 = float(sql(f"SELECT walletBalance FROM User {DEV_WHERE}")[0][0])
+with ThreadPoolExecutor(20) as pool:
+    codes = list(pool.map(lambda _: Client().req("POST", BE + "/api/v1/kp/planets", birth, {"x-api-key": DEV_KEY})[0], range(20)))
+check("20 parallel KP add-on calls all succeed", codes.count(200) == 20, str(codes))
+kp_usage = json.loads(sql(f"SELECT addonUsage FROM User {DEV_WHERE}")[0][0])
+check("add-on counter exact under concurrency (20) and other counters kept", kp_usage.get("kp") == 20 and kp_usage.get("pdf") == 2, str(kp_usage))
+wk1 = float(sql(f"SELECT walletBalance FROM User {DEV_WHERE}")[0][0])
+check("only the 15 calls beyond the 5 included were charged (Rs 0.75)", abs((wk0 - wk1) - 0.75) < 0.0001, f"{wk0} -> {wk1}")
+sql(f"UPDATE User SET activeAddons='[\"dosha_matching\"]' {DEV_WHERE}")
+code, _, _ = api.req("POST", BE + "/api/v1/dosha-matching/manglik", birth, {"x-api-key": DEV_KEY})
+check("dosha_matching add-on unlocks /dosha-matching/* (dash vs underscore ids)", code == 200, str(code))
+sql(f"UPDATE User SET activeAddons='[]' {DEV_WHERE}")
+code, _, _ = api.req("POST", BE + "/api/v1/tarot/daily-card", {}, {})
+code_v, _, _ = api.req("GET", BE + "/api/v1/vastu/zones-guide", None, {})
+check("tarot and vastu need an API key", code == 401 and code_v == 401, f"{code} {code_v}")
+code, body, _ = api.req("POST", BE + "/api/v1/tarot/daily-card", {}, {"x-api-key": DEV_KEY})
+check("tarot is plan-gated like other modules (STARTER -> 403)", code == 403 and body.get("detail", {}).get("error_code") == "PLAN_UPGRADE_OR_ADDON_REQUIRED", f"{code} {body}")
+restore = lambda v: "NULL" if v == "null" else "'" + v.replace("'", "''") + "'"
+sql(f"UPDATE User SET activeAddons={restore(saved_addons[0])}, addonUsage={restore(saved_addons[1])}, walletBalance=100 {DEV_WHERE}")
 
 # ────────────────────────────────────────────────────────────────────────────────────────────
 print("== 5. reports are billed to the customer (API + dashboard), free polling, refunds")

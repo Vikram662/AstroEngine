@@ -71,3 +71,16 @@ def test_running_dasha_tree():
     assert "prana_dasha" in tree
     assert "start_time" in tree["sookshma_dasha"]
     assert "start_time" in tree["prana_dasha"]
+
+@pytest.mark.parametrize("moon_lon,expected", [
+    (1.0, "BHRAMARI"),    # Ashwini (1): (1 + 3) % 8 = 4
+    (70.0, "MANGALA"),    # Ardra (6): 9 % 8 = 1
+    (180.0, "MANGALA"),   # Chitra (14): 17 % 8 = 1
+    (285.0, "MANGALA"),   # Shravana (22): 25 % 8 = 1
+    (355.0, "ULKA"),      # Revati (27): 30 % 8 = 6
+    (55.0, "SANKATA"),    # Mrigashira (5): 8 % 8 = 0
+])
+def test_yogini_starting_dasha(moon_lon, expected):
+    from app.modules.dasha.calculator import calculate_yogini_dasha
+    res = calculate_yogini_dasha("2000-01-01", "12:00", 5.5, moon_lon)
+    assert res["periods"][0]["yogini"] == expected

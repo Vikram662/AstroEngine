@@ -8,6 +8,8 @@ const db = vi.hoisted(() => ({
   user: { updateMany: vi.fn(), findUnique: vi.fn(), update: vi.fn() },
   apiRequestLog: { create: vi.fn() },
   pdfGenerationJob: { create: vi.fn(), findFirst: vi.fn() },
+  $transaction: vi.fn(),
+  $queryRaw: vi.fn(),
 }));
 vi.mock("@/lib/prisma", () => ({ prisma: db }));
 
@@ -42,6 +44,8 @@ beforeEach(() => {
   db.addonPackage.findMany.mockResolvedValue([]);
   db.user.updateMany.mockResolvedValue({ count: 1 });
   db.apiRequestLog.create.mockResolvedValue({ id: BigInt(123) });
+  db.$transaction.mockImplementation(async (fn: (tx: typeof db) => unknown) => fn(db));
+  db.$queryRaw.mockResolvedValue([{ addonUsage: {} }]);
 });
 
 describe("meterCall (shared billing core)", () => {
@@ -205,7 +209,11 @@ describe("meterCall for reports", () => {
 
   it("gives reports included in the PDF add-on for free, then charges the price", async () => {
     db.addonPackage.findMany.mockResolvedValue([pdfAddon]);
-    const withAddon = (used: number) => baseUser({ activeAddons: ["pdf"], addonUsage: { pdf: used } } as never);
+    // The usage that counts is the one read under the row lock, not the (stale) user object.
+    const withAddon = (used: number) => {
+      db.$queryRaw.mockResolvedValue([{ addonUsage: JSON.stringify({ pdf: used }) }]);
+      return baseUser({ activeAddons: ["pdf"], addonUsage: { pdf: 0 } } as never);
+    };
 
     const included = await (await meterCall(withAddon(10), "/api/v1/pdf/matching/report", "pdf")).json();
     expect(included).toMatchObject({ valid: true, deductionType: "ADDON_QUOTA", creditsDeducted: 0, addonId: "pdf" });
@@ -228,5 +236,58 @@ describe("meterCall for reports", () => {
     expect(body.valid).toBe(true);
     expect(body.creditsDeducted).toBe(0);
     expect(body.reportPrice).toBeUndefined();
+  });
+});
+
+describe("meterCall add-on entitlement and usage", () => {
+  const addon = (id: string, name: string, features: string[] = []) =>
+    ({ id, name, category: "ENGINES", monthlyQuota: 1000, overageCost: 0.05, features, isActive: true });
+  const kp = addon("kp", "KP Astrology (Krishnamurti Paddhati)");
+  const doshaMatching = addon("dosha_matching", "Matchmaking & Dosha Engine");
+  const doshas = addon("doshas", "Comprehensive All-Dosha Suite");
+
+  it("counts add-on quota from the row read under lock, not the caller's stale copy", async () => {
+    db.addonPackage.findMany.mockResolvedValue([kp]);
+    db.$queryRaw.mockResolvedValue([{ addonUsage: { kp: 1000, pdf: 7 } }]); // a parallel call already used the last unit
+    const user = baseUser({ activeAddons: ["kp"], addonUsage: { kp: 3 } } as never);
+
+    const body = await (await meterCall(user, "/api/v1/kp/planets", "kp")).json();
+    expect(body).toMatchObject({ valid: true, deductionType: "ADDON_OVERAGE", creditsDeducted: 0.05 });
+    expect(db.$transaction).toHaveBeenCalledTimes(1);
+    expect(db.$queryRaw.mock.calls[0][0].join("?")).toContain("FOR UPDATE");
+    // other add-ons' counters are carried over from the locked row, not lost
+    expect(db.user.updateMany.mock.calls[0][0].data.addonUsage).toEqual({ kp: 1001, pdf: 7 });
+  });
+
+  it("refuses when the add-on quota and the wallet are both used up", async () => {
+    db.addonPackage.findMany.mockResolvedValue([kp]);
+    db.$queryRaw.mockResolvedValue([{ addonUsage: { kp: 1000 } }]);
+    db.user.updateMany.mockResolvedValue({ count: 0 });
+    const res = await meterCall(baseUser({ activeAddons: ["kp"] } as never), "/api/v1/kp/planets", "kp");
+    expect(res.status).toBe(403);
+    expect((await res.json()).details).toMatchObject({ addonId: "kp", usedQuota: 1000 });
+    expect(db.apiRequestLog.create).not.toHaveBeenCalled();
+  });
+
+  it("matches the engine's dash-style module ids to underscore plan / add-on ids", async () => {
+    db.systemSetting.findUnique.mockImplementation(async ({ where }: { where: { key: string } }) =>
+      where.key === "PLAN_MODULES_PRO" ? { value: "core,dosha_matching" } : null);
+    const pro = await meterCall(baseUser({ planTier: "PRO" } as never), "/api/v1/dosha-matching/manglik", "dosha-matching");
+    expect(pro.status).toBe(200);
+
+    clearCache(); // the add-on list is cached between calls
+    db.addonPackage.findMany.mockResolvedValue([doshaMatching, doshas]);
+    for (const active of ["dosha_matching", "doshas"]) {
+      const res = await meterCall(baseUser({ activeAddons: [active] } as never), "/api/v1/dosha-matching/manglik", "dosha-matching");
+      expect((await res.json()).deductionType).toBe("ADDON_QUOTA");
+    }
+  });
+
+  it("does not unlock a module because an add-on's description mentions it", async () => {
+    const remedies = addon("remedies", "Astrological Remedies Engine", ["Includes kp-based remedy timing"]);
+    db.addonPackage.findMany.mockResolvedValue([remedies]);
+    const res = await meterCall(baseUser({ activeAddons: ["remedies"] } as never), "/api/v1/kp/planets", "kp");
+    expect(res.status).toBe(403);
+    expect((await res.json()).error_code).toBe("PLAN_UPGRADE_OR_ADDON_REQUIRED");
   });
 });

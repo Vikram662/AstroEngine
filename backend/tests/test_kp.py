@@ -32,3 +32,27 @@ def test_kp_horary_chart():
     assert res["horary_number"] == 123
     assert "horary_ascendant" in res
     assert "sub_lord" in res["horary_ascendant"]
+
+def test_kp_2193_table_structure():
+    from fractions import Fraction
+    from app.modules.kp.calculator import KP_2193_TABLE
+    assert len(KP_2193_TABLE) == 2193  # 243 subs x 9 + 6 sign-boundary splits
+    assert KP_2193_TABLE[0]["start_deg"] == 0 and KP_2193_TABLE[-1]["end_deg"] == 360
+    for prev, nxt in zip(KP_2193_TABLE, KP_2193_TABLE[1:]):
+        assert prev["end_deg"] == nxt["start_deg"]
+    for e in KP_2193_TABLE:  # no arc crosses a sign, and its lords match the 249 system
+        assert e["start_deg"] // 30 == (e["end_deg"] - Fraction(1, 10**9)) // 30
+        assert get_kp_sub_lord(float((e["start_deg"] + e["end_deg"]) / 2)) == (e["sign_lord"], e["star_lord"], e["sub_lord"])
+
+def test_kp_horary_2193_is_proportional_and_starts_from_sub_lord():
+    from app.modules.kp.calculator import calculate_kp_horary_2193
+    first = calculate_kp_horary_2193(1, "2000-01-01", "12:00", 5.5)
+    # Ketu sub of Ketu star = 7/9 deg; its Ketu sub-sub = 7/120 of that.
+    assert first["sub_sub_lord"] == "KETU"
+    assert first["arc_end_deg"] == pytest.approx(7 / 9 * 7 / 120, abs=1e-5)
+    venus_sub = calculate_kp_horary_2193(10, "2000-01-01", "12:00", 5.5)
+    assert (venus_sub["sub_lord"], venus_sub["sub_sub_lord"]) == ("VENUS", "VENUS")
+    last = calculate_kp_horary_2193(2193, "2000-01-01", "12:00", 5.5)
+    assert (last["sub_249_number"], last["sub_sub_lord"]) == (249, "JUPITER")
+    with pytest.raises(ValueError):
+        calculate_kp_horary_2193(2194, "2000-01-01", "12:00", 5.5)

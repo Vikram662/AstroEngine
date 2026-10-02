@@ -236,3 +236,44 @@ def test_billing_service_outage_is_503_not_invalid_key(monkeypatch):
     monkeypatch.setattr(security.httpx, "AsyncClient", lambda **kw: real_client(transport=httpx.MockTransport(handler401), **kw))
     r = c.post("/api/v1/core/planets/positions", json=_BODY, headers={"x-api-key": "ak_live_x"})
     assert r.status_code == 401
+
+
+@pytest.mark.parametrize("method,path", [
+    ("POST", "/api/v1/tarot/daily-card"),
+    ("POST", "/api/v1/tarot/spread/3-card"),
+    ("POST", "/api/v1/tarot/spread/celtic-cross"),
+    ("GET", "/api/v1/tarot/deck"),
+    ("POST", "/api/v1/vastu/evaluate"),
+    ("GET", "/api/v1/vastu/zones-guide"),
+    ("GET", "/api/v1/vastu/preset-layouts"),
+])
+def test_tarot_and_vastu_require_api_key(method, path):
+    from fastapi.testclient import TestClient
+    from app.main import app
+    resp = TestClient(app).request(method, path, json={})
+    assert resp.status_code == 401
+    assert resp.json()["detail"]["error_code"] == "AUTH_HEADER_MISSING"
+
+
+@pytest.mark.parametrize("public_domain,expected", [
+    (None, None),  # private S3 endpoint must never be handed out as a download link
+    ("https://cdn.example.com/", "https://cdn.example.com/reports/"),
+])
+def test_r2_upload_link_is_public_or_absent(monkeypatch, public_domain, expected):
+    import asyncio
+    import httpx
+    from app.pdf_engine import storage
+
+    r2 = {"R2_ACCOUNT_ID": "acct", "R2_ACCESS_KEY_ID": "id", "R2_SECRET_ACCESS_KEY": "secret",
+          "R2_BUCKET_NAME": "bucket", "R2_PUBLIC_DOMAIN": public_domain}
+    monkeypatch.setattr(storage, "get_dynamic_setting", lambda key, default=None: r2.get(key))
+    monkeypatch.setattr(storage.settings, "R2_PUBLIC_DOMAIN", None)
+    real_client = httpx.AsyncClient
+    monkeypatch.setattr(storage.httpx, "AsyncClient",
+                        lambda **kw: real_client(transport=httpx.MockTransport(lambda r: httpx.Response(200)), **kw))
+
+    url = asyncio.run(storage.upload_to_r2_async("pdf_job_x", b"%PDF-1.4", "kundli_basic"))
+    if expected is None:
+        assert url is None
+    else:
+        assert url.startswith(expected) and url.endswith("/pdf_job_x.pdf")

@@ -525,9 +525,10 @@ def calculate_yogini_dasha(
     deg_traversed = norm_moon - (nak_idx * nak_span)
     fraction_remaining = 1.0 - (deg_traversed / nak_span)
 
-    # Starting Yogini index: (Ashwini=1 + 3) = 4 (Bhramari = index 3)
-    # (nak_idx + 1 + 3) % 8 = (nak_idx + 4) % 8
-    start_yogini_idx = (nak_idx + 4) % 8
+    # Classical rule: (Janma Nakshatra number + 3) mod 8, 1 = Mangala ... 0 = Sankata.
+    # Nakshatra number is nak_idx + 1, and the list is 0-based, so the index is
+    # (nak_idx + 1 + 3 - 1) % 8. E.g. Ashwini -> Bhramari, Ardra -> Mangala.
+    start_yogini_idx = (nak_idx + 3) % 8
 
     # Generate 2 complete 36-year cycles (72 years)
     periods = []

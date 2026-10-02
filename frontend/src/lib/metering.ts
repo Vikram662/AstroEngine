@@ -6,6 +6,31 @@ import { cached } from "@/lib/ttlCache";
 import type { ApiData } from "@/lib/apiTypes";
 import { isFreePdfEndpoint, reportPriceForPath } from "@/lib/reportPricing";
 import { notify } from "@/lib/notifications";
+import { claimAddonUnit } from "@/lib/addonUsage";
+
+/**
+ * Module ids arrive from the engine as URL segments ("dosha-matching") while plans and
+ * add-ons are stored with underscores ("dosha_matching"); compare them in one form.
+ */
+export function normalizeModuleId(id: string): string {
+  return String(id).trim().toLowerCase().replace(/-/g, "_");
+}
+
+// Add-ons whose id is not itself an engine module, mapped to the modules they unlock.
+const ADDON_MODULE_ALIASES: Record<string, string[]> = {
+  doshas: ["dosha_matching"], // Comprehensive All-Dosha Suite -> /api/v1/dosha-matching/*
+};
+
+/** The engine modules an add-on unlocks (its own id, plus any alias). */
+export function addonModules(addonId: unknown): string[] {
+  const id = normalizeModuleId(String(addonId || ""));
+  return id ? [id, ...(ADDON_MODULE_ALIASES[id] || [])] : [];
+}
+
+function hasWord(text: string, word: string): boolean {
+  const w = word.trim().toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return w.length > 0 && new RegExp(`(^|[^a-z0-9])${w}([^a-z0-9]|$)`).test(text);
+}
 
 // Plan / add-on / switch lookups are identical for every request, so they are cached
 // briefly; only the user row (balance, quota, blocked flag) is read fresh each call.
@@ -90,7 +115,7 @@ export async function meterCall(
   // =========================================================================
   // 100% DYNAMIC DB-DRIVEN MODULE & ADDON PERMISSION SYSTEM
   // =========================================================================
-  const normalizedModule = (moduleName || "GENERAL").toLowerCase();
+  const normalizedModule = normalizeModuleId(moduleName || "GENERAL");
   const isSuperOrAdmin = user.role === "ADMIN" || user.role === "SUPER_ADMIN";
 
   // 1. Fetch live plans, user's plan record, and all active addons directly from MySQL
@@ -107,17 +132,18 @@ export async function meterCall(
   // Otherwise, dynamically derive allowed modules from the plan's own DB record!
   let allowedModulesList: string[] = [];
   if (planModulesSetting?.value) {
-    allowedModulesList = planModulesSetting.value.split(",").map((m: string) => m.trim().toLowerCase());
+    allowedModulesList = planModulesSetting.value.split(",").map((m: string) => normalizeModuleId(m));
   } else if (isSuperOrAdmin) {
     allowedModulesList = ["*"];
   } else if (planRecord?.features && Array.isArray(planRecord.features)) {
-    // Dynamically extract allowed modules from plan features string in DB
+    // Dynamically extract allowed modules from plan features string in DB: a feature
+    // must name the add-on in full (a short id like "kp" inside another word is no match).
     allowedModulesList = ["core", "panchang", "parashari", "general"];
     for (const feat of planRecord.features as string[]) {
       const lowerFeat = feat.toLowerCase();
       for (const dbAddon of allDbAddons) {
-        if (lowerFeat.includes(dbAddon.id.toLowerCase()) || lowerFeat.includes(dbAddon.name.toLowerCase())) {
-          allowedModulesList.push(dbAddon.id.toLowerCase());
+        if (lowerFeat.includes(String(dbAddon.name || "").toLowerCase()) || hasWord(lowerFeat, String(dbAddon.id || ""))) {
+          allowedModulesList.push(...addonModules(dbAddon.id));
         }
       }
     }
@@ -128,23 +154,11 @@ export async function meterCall(
   const isWildcardAllowed = allowedModulesList.includes("*") || isSuperOrAdmin;
   const userActiveAddons: string[] = Array.isArray(user.activeAddons) ? (user.activeAddons as string[]) : [];
 
-  // 3. Find if this incoming request corresponds to an active Addon in MySQL
-  // Dynamically match against addon.id, addon.name, or any words in addon.features
-  let matchedAddonRecord = allDbAddons.find((addon: ApiData) => {
-    const aId = (addon.id || "").toLowerCase();
-    const aName = (addon.name || "").toLowerCase();
-    if (aId === normalizedModule) return true;
-    if (aName.includes(normalizedModule) || normalizedModule.includes(aId)) return true;
-
-    // Also check features array in DB
-    if (Array.isArray(addon.features)) {
-      for (const f of addon.features) {
-        const lowerF = String(f).toLowerCase();
-        if (lowerF.includes(normalizedModule) || normalizedModule.includes(lowerF)) return true;
-      }
-    }
-    return false;
-  });
+  // 3. Add-ons that cover this module, matched exactly by id (fuzzy text matching let an
+  //    add-on whose description merely mentioned a module unlock that module). Prefer one
+  //    the user has activated, so e.g. either dosha add-on unlocks the dosha endpoints.
+  const coveringAddons = allDbAddons.filter((addon: ApiData) => addonModules(addon.id).includes(normalizedModule));
+  let matchedAddonRecord = coveringAddons.find((addon: ApiData) => userActiveAddons.includes(addon.id)) || coveringAddons[0];
 
   const isAddonActive = matchedAddonRecord ? userActiveAddons.includes(matchedAddonRecord.id) : false;
 
@@ -197,38 +211,18 @@ export async function meterCall(
     const addonQuota = matchedAddonRecord.monthlyQuota !== undefined ? matchedAddonRecord.monthlyQuota : 1000;
     const addonOverage = matchedAddonRecord.overageCost !== undefined ? toMoney(matchedAddonRecord.overageCost) : 0.05;
     
-    const currentAddonUsageMap = (user.addonUsage && typeof user.addonUsage === "object" ? user.addonUsage : {}) as Record<string, number>;
-    const currentAddonUsage = Number(currentAddonUsageMap[matchedAddonRecord.id] || 0);
+    // Usage is read and written under a row lock, so concurrent calls cannot exceed the
+    // add-on quota or overwrite each other's counts.
+    const claim = await claimAddonUnit(user.id, matchedAddonRecord.id, Number(addonQuota), addonOverage);
+    const currentAddonUsage = claim.used;
 
     // 1. Within Add-on quota
-    if (currentAddonUsage < addonQuota) {
-      currentAddonUsageMap[matchedAddonRecord.id] = currentAddonUsage + 1;
-      await prisma.user.update({
-        where: { id: user.id },
-        data: {
-          addonUsage: currentAddonUsageMap,
-          monthlyUsage: { increment: 1 },
-          apiKeyLastUsedAt: new Date()
-        }
-      });
+    if (claim.result === "INCLUDED") {
       deductionType = "ADDON_QUOTA";
       creditsDeducted = 0;
     }
     // 2. Add-on quota exhausted -> Wallet Overage fallback
-    else if (
-      walletBalance >= addonOverage &&
-      // Conditional update: the balance check and debit are one atomic statement,
-      // so concurrent calls cannot overdraw the wallet.
-      (await prisma.user.updateMany({
-        where: { id: user.id, walletBalance: { gte: addonOverage } },
-        data: {
-          addonUsage: { ...currentAddonUsageMap, [matchedAddonRecord.id]: currentAddonUsage + 1 },
-          walletBalance: { decrement: addonOverage },
-          monthlyUsage: { increment: 1 },
-          apiKeyLastUsedAt: new Date()
-        }
-      })).count === 1
-    ) {
+    else if (claim.result === "OVERAGE") {
       deductionType = "ADDON_OVERAGE";
       creditsDeducted = addonOverage;
     }
@@ -420,14 +414,13 @@ async function meterReport(
   let creditsDeducted = 0;
   let addonId: string | null = null;
 
-  const debitWallet = async (extra: Record<string, unknown> = {}) => {
+  const debitWallet = async () => {
     const claim = await prisma.user.updateMany({
       where: { id: user.id, walletBalance: { gte: price } },
       data: {
         walletBalance: { decrement: price },
         monthlyUsage: { increment: 1 },
         apiKeyLastUsedAt: new Date(),
-        ...extra,
       },
     });
     return claim.count === 1;
@@ -435,18 +428,12 @@ async function meterReport(
 
   if (hasPdfAddon) {
     addonId = "pdf";
-    const usageMap = (user.addonUsage && typeof user.addonUsage === "object" ? user.addonUsage : {}) as Record<string, number>;
-    const used = Number(usageMap.pdf || 0);
     const included = pdfAddon!.monthlyQuota !== undefined ? Number(pdfAddon!.monthlyQuota) : 500;
-    const nextUsage = { ...usageMap, pdf: used + 1 };
+    const claim = await claimAddonUnit(user.id, "pdf", included, price);
 
-    if (used < included) {
-      await prisma.user.update({
-        where: { id: user.id },
-        data: { addonUsage: nextUsage, monthlyUsage: { increment: 1 }, apiKeyLastUsedAt: new Date() },
-      });
+    if (claim.result === "INCLUDED") {
       deductionType = "ADDON_QUOTA";
-    } else if (await debitWallet({ addonUsage: nextUsage })) {
+    } else if (claim.result === "OVERAGE") {
       deductionType = "ADDON_OVERAGE";
       creditsDeducted = price;
     } else {

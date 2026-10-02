@@ -451,35 +451,71 @@ def calculate_kp_event_combination(
         "event_fruition_likelihood": "VERY_HIGH" if len(fav_planets) > len(adv_planets) else "MODERATE"
     }
 
+def _generate_kp_2193_table() -> List[Dict[str, Any]]:
+    """
+    KP sub-sub table: every one of the 243 nakshatra subs is divided again into 9
+    sub-subs, in Vimshottari proportion and starting from the sub's own lord (the
+    same rule that divides a nakshatra into subs). A sub-sub that crosses a 30-degree
+    sign boundary is split in two, exactly as in the 249 table, which gives
+    243 * 9 + 6 = 2193 entries. Exact Fractions, so no float drift creates or hides a split.
+    """
+    table: List[Dict[str, Any]] = []
+    current_deg = Fraction(0)
+    THIRTY = Fraction(30)
+
+    def cycle_from(planet: str) -> List[Dict[str, Any]]:
+        i = next(k for k, item in enumerate(VIMSHOTTARI_CYCLE) if item["planet"] == planet)
+        return [VIMSHOTTARI_CYCLE[(i + k) % 9] for k in range(9)]
+
+    def add(start: Fraction, end: Fraction, star_lord: str, sub_lord: str, sub_sub_lord: str) -> None:
+        table.append({
+            "number": len(table) + 1,
+            "start_deg": start,
+            "end_deg": end,
+            "sign_lord": ZODIAC_SIGNS[int(start // THIRTY) % 12]["ruler"],
+            "star_lord": star_lord,
+            "sub_lord": sub_lord,
+            "sub_sub_lord": sub_sub_lord,
+        })
+
+    for nak_idx in range(27):
+        star_lord = NAKSHATRA_LORD_SEQUENCE[nak_idx]
+        for sub in cycle_from(star_lord):
+            sub_span = Fraction(int(sub["years"]), 9)
+            for sub_sub in cycle_from(sub["planet"]):
+                end_deg = current_deg + sub_span * Fraction(int(sub_sub["years"]), 120)
+                sign_boundary = (current_deg // THIRTY + 1) * THIRTY
+                if sign_boundary < end_deg:
+                    add(current_deg, sign_boundary, star_lord, sub["planet"], sub_sub["planet"])
+                    add(sign_boundary, end_deg, star_lord, sub["planet"], sub_sub["planet"])
+                else:
+                    add(current_deg, end_deg, star_lord, sub["planet"], sub_sub["planet"])
+                current_deg = end_deg
+
+    return table
+
+KP_2193_TABLE = _generate_kp_2193_table()
+
 def calculate_kp_horary_2193(seed_number: int, dob: str, tob: str, tz: float) -> Dict[str, Any]:
     """
     Module 5 — Endpoint 45: Advanced Sub-Sub Lord Horary (1–2193).
-    Each of the 249 sub-lord divisions is further split into 9 sub-sub segments = 2193 divisions.
+    Seed N is the N-th arc of the KP sub-sub table (see _generate_kp_2193_table).
     """
-    if seed_number < 1 or seed_number > 2193:
+    if seed_number < 1 or seed_number > len(KP_2193_TABLE):
         raise ValueError("KP Sub-Sub Horary seed must be between 1 and 2193.")
 
-    sub_249_idx = (seed_number - 1) // 9
-    sub_sub_offset = (seed_number - 1) % 9
-
-    sub_entry = KP_249_TABLE[sub_249_idx % len(KP_249_TABLE)]
-    sub_span = sub_entry["end_deg"] - sub_entry["start_deg"]
-
-    # Calculate proportional start degree for the sub-sub arc
-    ss_start = sub_entry["start_deg"] + (sub_span * (sub_sub_offset / 9.0))
-    ss_end = sub_entry["start_deg"] + (sub_span * ((sub_sub_offset + 1) / 9.0))
-
-    sub_sub_lords = ["KETU", "VENUS", "SUN", "MOON", "MARS", "RAHU", "JUPITER", "SATURN", "MERCURY"]
-    sub_sub_lord = sub_sub_lords[sub_sub_offset]
+    entry = KP_2193_TABLE[seed_number - 1]
+    # The 249-table arc that contains this sub-sub (sub-subs never straddle one).
+    sub_249 = next(e for e in KP_249_TABLE if e["start_deg"] <= float(entry["start_deg"]) < e["end_deg"])
 
     return {
         "seed_number": seed_number,
-        "sub_249_number": sub_249_idx + 1,
-        "sign_lord": sub_entry["sign_lord"],
-        "star_lord": sub_entry["star_lord"],
-        "sub_lord": sub_entry["sub_lord"],
-        "sub_sub_lord": sub_sub_lord,
-        "arc_start_deg": round(ss_start, 5),
-        "arc_end_deg": round(ss_end, 5)
+        "sub_249_number": sub_249["number"],
+        "sign_lord": entry["sign_lord"],
+        "star_lord": entry["star_lord"],
+        "sub_lord": entry["sub_lord"],
+        "sub_sub_lord": entry["sub_sub_lord"],
+        "arc_start_deg": round(float(entry["start_deg"]), 5),
+        "arc_end_deg": round(float(entry["end_deg"]), 5)
     }
 

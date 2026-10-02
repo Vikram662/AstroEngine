@@ -15,6 +15,7 @@ const db = vi.hoisted(() => {
     user: { findUnique: vi.fn(), update: vi.fn(), updateMany: vi.fn() },
     apiRequestLog: { findUnique: vi.fn(), updateMany: vi.fn() },
     $transaction: vi.fn(),
+    $queryRaw: vi.fn(),
   };
   return m;
 });
@@ -144,7 +145,7 @@ describe("POST /api/internal/refund", () => {
     db.apiRequestLog.findUnique.mockResolvedValue({ id: BigInt(42), userId: "u1", creditsCost: 0, statusCode: 200 });
     db.apiRequestLog.updateMany.mockResolvedValue({ count: 1 });
     db.user.updateMany.mockResolvedValue({ count: 1 });
-    db.user.findUnique.mockResolvedValue({ addonUsage: { pdf: 3 } });
+    db.$queryRaw.mockResolvedValue([{ addonUsage: { pdf: 3 } }]); // the row read under FOR UPDATE
   });
 
   it("requires the internal secret", async () => {
@@ -189,6 +190,8 @@ describe("POST /api/internal/refund", () => {
   it("decrements the add-on counter for ADDON_QUOTA", async () => {
     await refund(refundReq({ receiptId: "42", deductionType: "ADDON_QUOTA", addonId: "pdf" }));
     expect(db.user.update).toHaveBeenCalledWith({ where: { id: "u1" }, data: { addonUsage: { pdf: 2 } } });
+    // the usage is read with a row lock inside the refund transaction
+    expect(db.$queryRaw.mock.calls[0][0].join("?")).toContain("FOR UPDATE");
   });
 
   it("404s for an unknown receipt", async () => {

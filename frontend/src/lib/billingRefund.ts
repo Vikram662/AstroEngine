@@ -2,6 +2,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { toMoney } from "@/lib/money";
 import { notify } from "@/lib/notifications";
+import { lockAddonUsage } from "@/lib/addonUsage";
 
 const WALLET_TYPES = ["WALLET_CREDIT", "ADDON_OVERAGE"];
 const QUOTA_TYPES = ["QUOTA", "ADDON_QUOTA"];
@@ -63,8 +64,8 @@ export async function applyRefund(receipt: Receipt, httpStatus = 500): Promise<R
     }
 
     if (addonId && receipt.deductionType.startsWith("ADDON")) {
-      const user = await tx.user.findUnique({ where: { id: log.userId }, select: { addonUsage: true } });
-      const usage = (user?.addonUsage && typeof user.addonUsage === "object" ? user.addonUsage : {}) as Record<string, number>;
+      // Row lock: a metered call for the same user cannot interleave and lose this decrement.
+      const usage = await lockAddonUsage(tx, log.userId);
       if (Number(usage[addonId] || 0) > 0) {
         await tx.user.update({
           where: { id: log.userId },
